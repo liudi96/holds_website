@@ -365,8 +365,8 @@ func ptr(value float64) *float64 {
 
 func defaultState() AppState {
 	return AppState{
-		TotalCapital: 1100000,
-		Cash:         487794.75,
+		TotalCapital: 1150000,
+		Cash:         477238.13560642325,
 		FX:           map[string]float64{"CNY": 1, "HKD": 0.8716, "USD": 7.1},
 		Trades:       []Trade{},
 		Holdings: []Holding{
@@ -380,12 +380,15 @@ func defaultState() AppState {
 			{Symbol: "2669.HK", Name: "中海物业", Shares: 20000, Cost: 4.468, CurrentPrice: 4.468, PreviousClose: 4.468, Currency: "HKD"},
 			{Symbol: "6049.HK", Name: "保利物业", Shares: 2600, Cost: 32.663, CurrentPrice: 32.663, PreviousClose: 32.663, Currency: "HKD"},
 			{Symbol: "0883.HK", Name: "中海油", Shares: 2000, Cost: 29.326, CurrentPrice: 29.326, PreviousClose: 29.326, Currency: "HKD"},
+			{Symbol: "1448.HK", Name: "福寿园", Shares: 11000, Cost: 2.521, CurrentPrice: 2.64, PreviousClose: 2.64, CurrentPriceDate: "2026-05-07", PreviousCloseDate: "2026-05-07", Action: "暂不行动；不买入；不纳入核心替补，等待2025年报、审计意见、法证调查结论和复牌后再重估", Status: "未达标（停牌、年报延迟、治理与财务可靠性风险未解除）", MarginOfSafety: ptr(0), QualityScore: ptr(62), Risk: "已触发重大风险否决项：停牌、业绩延迟、现金及采购付款事项调查、管理层/内控可信度下降、墓穴ASP大幅下滑、资产和商誉减值风险", Industry: "殡葬服务/墓园运营/生命服务", Currency: "HKD", IntrinsicValue: ptr(2.65), FairValueRange: "HK$1.6-3.1", TargetBuyPrice: ptr(2), BusinessModel: ptr(22), Moat: ptr(16), Governance: ptr(5), FinancialQuality: ptr(19), UpdatedAt: "2026-05-07；停牌前最后价约HK$2.64；用户更新分析", Notes: "计划：剔除/仅风险观察。复牌前不行动；复牌后若审计无保留、调查无重大重述且价格≤HK$2.0-2.2，才重新评估普通候选价值。纪律：质量分低于75且有重大风险否决项；不因低估值或净现金买入，先等风险解除。最新市场状态：股份自2026-03-20起停牌，停牌前最后价约HK$2.64。最新可用财务口径：2024收入约RMB20.77亿，归母净利约RMB3.73亿，EPS约RMB0.164；2025H1收入约RMB6.11亿，归母亏损约RMB2.61亿，EPS约-RMB0.115。核心判断：福寿园当前不是单纯估值杀，而是业绩杀、治理杀和财报可信度风险叠加；内在价值区间仅为压力测试，不作为可执行买入依据。"},
+			{Symbol: "07489.HK", Name: "岚图汽车", Shares: 2132, Cost: 0, CurrentPrice: 5.89, PreviousClose: 5.89, CurrentPriceDate: "2026-05-07", PreviousCloseDate: "2026-05-07", Action: "放入普通候选池观察；当前不买入，等待扣非利润和自由现金流验证", Status: "未达标（质量分<75且安全边际不足）", MarginOfSafety: ptr(0.16), QualityScore: ptr(72), Risk: "盈利质量受政府补助影响，梦想家单一车型依赖较高，新能源车价格战和智能化竞争可能压缩毛利率", Industry: "新能源乘用车/高端MPV/央企汽车", Currency: "HKD", IntrinsicValue: ptr(7), FairValueRange: "HK$4.5-8.5", TargetBuyPrice: ptr(4.8), BusinessModel: ptr(21), Moat: ptr(16), Governance: ptr(16), FinancialQuality: ptr(19), UpdatedAt: "2026-05-07；估值基于HK$5.89附近股价；用户更新分析", Notes: "2025年收入约人民币348.65亿元，毛利率约20.9%，净利润约人民币10.17亿元，首次年度盈利；2025年交付约150169辆，2026年1-4月交付约49038辆。估值基于HK$5.89附近股价、市值约HK$216.8亿、PE约16.9倍、PB约1.78倍。核心假设是2026年需验证扣非利润、经营现金流和自由现金流质量。"},
 		},
 		Plan: []PlanItem{
 			{Rank: 1, Name: "腾讯控股", Priority: "观察/低优先级", Advice: "继续持有；新资金等待≤HK$432，HK$400-430可分批", Discipline: "优秀资产要求≥15%安全边际；当前约9%，未达标"},
 			{Rank: 2, Name: "美的集团", Priority: "核心替补/中优先级", Advice: "A股等待≤¥76分批；H股≤HK$86-87优先；当前不追买", Discipline: "优秀资产要求≥20%安全边际；A股当前约15.3%，未达标"},
 			{Rank: 3, Name: "海康威视", Priority: "重点预期差候选/中优先级", Advice: "不重仓；¥35-37仅适合小仓验证，¥30-32更从容；Q2验证后可升核心替补", Discipline: "质量分84，合格候选要求≥25%安全边际"},
 			{Rank: 4, Name: "伊利股份", Priority: "核心替补/中低优先级", Advice: "暂不追买；¥25-26开始关注，≤¥24可考虑分批", Discipline: "质量分83，合格候选要求≥25%安全边际"},
+			{Rank: 99, Name: "岚图汽车", Priority: "普通候选池/低优先级", Advice: "HK$4.2-4.8才接近可观察买入区；若2026H1扣非利润和自由现金流转正，可重新上修估值", Discipline: "质量分低于75原则上不进入核心资产池；安全边际不足时不试仓"},
 		},
 		Candidates: []Candidate{
 			{Symbol: "600690.SH", Name: "海尔智家A", Status: "候选池", Action: "放入普通候选池观察；A股暂不追，H股赔率更优", MarginOfSafety: ptr(0.17), QualityScore: ptr(83), Industry: "家电/全球化白电/智慧家庭", Currency: "CNY", IntrinsicValue: ptr(26), FairValueRange: "¥24-28", TargetBuyPrice: ptr(19.5)},
