@@ -12,6 +12,7 @@ const seedState = {
       shares: 200,
       cost: 480.43,
       currentPrice: 463,
+      previousClose: 463,
       action: "继续持有；新资金暂不追买，放入核心替补",
       status: "未达标（安全边际<15%）",
       marginOfSafety: 0.09,
@@ -35,6 +36,7 @@ const seedState = {
       shares: 600,
       cost: 79.638,
       currentPrice: 80.44,
+      previousClose: 80.44,
       action: "放入核心替补；A股暂不追买，H股优先但等待≤HK$86-87",
       status: "未达标（A股安全边际<20%；H股接近达标）",
       marginOfSafety: 0.153,
@@ -58,6 +60,7 @@ const seedState = {
       shares: 1200,
       cost: 34.54,
       currentPrice: 36.29,
+      previousClose: 36.29,
       action: "重点预期差候选/核心替补边缘；可小仓验证，不宜重仓；Q2验证后再升级",
       status: "未达标（安全边际约13.6%<25%；预期差仓可观察）",
       marginOfSafety: 0.136,
@@ -81,6 +84,7 @@ const seedState = {
       shares: 1300,
       cost: 26.469,
       currentPrice: 27.45,
+      previousClose: 27.45,
       action: "放入核心替补；暂不追买，等待¥24-26",
       status: "未达标（安全边际约14.2%<25%）",
       marginOfSafety: 0.1421875,
@@ -98,12 +102,12 @@ const seedState = {
       updatedAt: "2026-05-07；最新价约¥27.45；FY2025/2026Q1；奶周期底部右侧观察",
       notes: "2025拟派息¥1.38/股，按¥27.45股息率约5.0%；达标买入价≤¥24。"
     },
-    { symbol: "600036.SH", name: "招商银行", shares: 500, cost: 39.18, currentPrice: 39.18, currency: "CNY", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" },
-    { symbol: "0696.HK", name: "民航信", shares: 11000, cost: 10.648, currentPrice: 10.648, currency: "HKD", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" },
-    { symbol: "0506.HK", name: "中国食品", shares: 22000, cost: 4.041, currentPrice: 4.041, currency: "HKD", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" },
-    { symbol: "2669.HK", name: "中海物业", shares: 20000, cost: 4.468, currentPrice: 4.468, currency: "HKD", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" },
-    { symbol: "6049.HK", name: "保利物业", shares: 2600, cost: 32.663, currentPrice: 32.663, currency: "HKD", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" },
-    { symbol: "0883.HK", name: "中海油", shares: 2000, cost: 29.326, currentPrice: 29.326, currency: "HKD", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" }
+    { symbol: "600036.SH", name: "招商银行", shares: 500, cost: 39.18, currentPrice: 39.18, previousClose: 39.18, currency: "CNY", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" },
+    { symbol: "0696.HK", name: "民航信", shares: 11000, cost: 10.648, currentPrice: 10.648, previousClose: 10.648, currency: "HKD", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" },
+    { symbol: "0506.HK", name: "中国食品", shares: 22000, cost: 4.041, currentPrice: 4.041, previousClose: 4.041, currency: "HKD", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" },
+    { symbol: "2669.HK", name: "中海物业", shares: 20000, cost: 4.468, currentPrice: 4.468, previousClose: 4.468, currency: "HKD", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" },
+    { symbol: "6049.HK", name: "保利物业", shares: 2600, cost: 32.663, currentPrice: 32.663, previousClose: 32.663, currency: "HKD", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" },
+    { symbol: "0883.HK", name: "中海油", shares: 2000, cost: 29.326, currentPrice: 29.326, previousClose: 29.326, currency: "HKD", action: "", status: "", marginOfSafety: null, qualityScore: null, industry: "", notes: "" }
   ],
   plan: [
     { rank: 1, name: "腾讯控股", priority: "观察/低优先级", advice: "继续持有；新资金等待≤HK$432，HK$400-430可分批", discipline: "优秀资产要求≥15%安全边际；当前约9%，未达标" },
@@ -144,8 +148,8 @@ const pageTitles = {
   overview: "股票持仓管理",
   positions: "当前持仓",
   trades: "交易流水",
-  research: "研究与调仓计划",
-  candidates: "候选池"
+  candidates: "候选池",
+  "stock-detail": "股票分析详情"
 };
 
 const elements = {
@@ -154,9 +158,8 @@ const elements = {
   tradeList: document.querySelector("#tradeList"),
   allocationChart: document.querySelector("#allocationChart"),
   overviewPlanList: document.querySelector("#overviewPlanList"),
-  planList: document.querySelector("#planList"),
   candidateList: document.querySelector("#candidateList"),
-  rulesList: document.querySelector("#rulesList"),
+  stockDetail: document.querySelector("#stockDetail"),
   totalValue: document.querySelector("#totalValue"),
   totalPnl: document.querySelector("#totalPnl"),
   totalPnlRate: document.querySelector("#totalPnlRate"),
@@ -175,6 +178,10 @@ const elements = {
 syncCash();
 
 function loadState() {
+  if (USE_BACKEND) {
+    return structuredClone(seedState);
+  }
+
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return structuredClone(seedState);
 
@@ -186,6 +193,7 @@ function loadState() {
 }
 
 function saveState() {
+  if (USE_BACKEND) return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
@@ -208,7 +216,7 @@ async function loadBackendState() {
 
   try {
     state = await requestJSON("/api/state");
-    saveState();
+    localStorage.removeItem(STORAGE_KEY);
     return true;
   } catch (error) {
     console.warn("后端不可用，使用浏览器本地数据", error);
@@ -233,6 +241,31 @@ function percent(value, signed = true) {
   return `${prefix}${value.toFixed(2)}%`;
 }
 
+function stockHash(symbol) {
+  return `#stock=${encodeURIComponent(symbol)}`;
+}
+
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function displayText(value, fallback = "-") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function closeDateText(position) {
+  if (!position.currentPriceDate && !position.previousCloseDate) return "";
+  const currentDate = position.currentPriceDate || "未知";
+  const previousDate = position.previousCloseDate || "未知";
+  return `今收 ${currentDate} · 昨收 ${previousDate}`;
+}
+
 function computePositions() {
   return state.holdings
     .filter((holding) => holding.shares > 0)
@@ -242,6 +275,8 @@ function computePositions() {
       const marketValueCny = marketValueLocal * fx(holding.currency);
       const costValueCny = costValueLocal * fx(holding.currency);
       const pnlCny = marketValueCny - costValueCny;
+      const previousClose = holding.previousClose > 0 ? holding.previousClose : holding.currentPrice;
+      const dayChange = holding.shares * (holding.currentPrice - previousClose) * fx(holding.currency);
 
       return {
         ...holding,
@@ -250,7 +285,7 @@ function computePositions() {
         costValueCny,
         pnlCny,
         pnlRate: costValueCny ? (pnlCny / costValueCny) * 100 : 0,
-        dayChange: marketValueCny * ((Math.sin(holding.symbol.charCodeAt(0)) * 0.018) + 0.004)
+        dayChange
       };
     });
 }
@@ -327,15 +362,19 @@ function renderPositions(positions) {
           <td>
             <div class="stock-cell">
               <span class="ticker">${position.symbol.slice(0, 4)}</span>
-              <span class="stock-name">
-                <strong>${position.name}</strong>
-                <span>${position.symbol} · ${position.industry || "未分类"}</span>
-              </span>
+              <a class="stock-name stock-link" href="${stockHash(position.symbol)}">
+                <strong>${escapeHTML(position.name)}</strong>
+                <span>${escapeHTML(position.symbol)} · ${escapeHTML(position.industry || "未分类")}</span>
+              </a>
             </div>
           </td>
           <td>${position.shares}</td>
           <td>${currency(position.cost, position.currency)}</td>
-          <td>${currency(position.currentPrice, position.currency)}</td>
+          <td>
+            ${currency(position.currentPrice, position.currency)}
+            <br />
+            <small class="quote-date">${position.currentPriceDate || "收盘日未知"}</small>
+          </td>
           <td>${currency(position.marketValueCny)}</td>
           <td class="${pnlClass}">
             ${currency(position.pnlCny)}
@@ -353,12 +392,6 @@ function renderPositions(positions) {
             <button class="icon-button edit-holding" data-symbol="${position.symbol}" title="编辑 Excel 信息">✎</button>
           </td>
         </tr>
-        <tr class="detail-row">
-          <td colspan="10">
-            <strong>${position.status || "未填写达标状态"}</strong>
-            <span>${position.action || "未填写最终动作"}</span>
-          </td>
-        </tr>
       `;
     })
     .join("");
@@ -372,13 +405,16 @@ function renderAllocation(positions) {
     .map((position, index) => {
       const share = totalValue ? (position.marketValueCny / totalValue) * 100 : 0;
       return `
-        <div class="allocation-row">
-          <strong>${position.symbol}</strong>
+        <a class="allocation-row allocation-link" href="${stockHash(position.symbol)}">
+          <div class="allocation-label">
+            <strong>${escapeHTML(position.name)}</strong>
+            <span>${escapeHTML(position.symbol)}</span>
+          </div>
           <div class="allocation-track">
             <span style="width: ${share}%; background: ${palette[index % palette.length]}"></span>
           </div>
           <span>${share.toFixed(1)}%</span>
-        </div>
+        </a>
       `;
     })
     .join("");
@@ -408,47 +444,199 @@ function renderTrades() {
     .join("");
 }
 
-function renderResearch() {
+function renderPlanAndCandidates() {
   elements.overviewPlanList.innerHTML = state.plan
     .slice(0, 4)
     .map((item) => `
-      <div class="research-item">
-        <strong>${item.rank}. ${item.name}</strong>
-        <span>${item.priority}</span>
-        <small>${item.advice}</small>
-      </div>
-    `)
-    .join("");
-
-  elements.planList.innerHTML = state.plan
-    .map((item) => `
-      <div class="research-item">
-        <strong>${item.rank}. ${item.name}</strong>
-        <span>${item.priority}</span>
-        <small>${item.advice}</small>
-      </div>
+      <a class="plan-card" href="${stockHash(findSymbolByName(item.name))}">
+        <span class="plan-rank">${item.rank}</span>
+        <div>
+          <strong>${escapeHTML(item.name)}</strong>
+          <small>${escapeHTML(item.priority)}</small>
+        </div>
+        <p>${escapeHTML(item.advice)}</p>
+      </a>
     `)
     .join("");
 
   elements.candidateList.innerHTML = state.candidates
     .map((item) => `
-      <div class="research-item">
-        <strong>${item.name} · ${item.symbol}</strong>
-        <span>${item.action}</span>
-        <small>质量 ${item.qualityScore} · 安全边际 ${percent(item.marginOfSafety * 100, false)} · 买入价 ${currency(item.targetBuyPrice, item.currency)}</small>
-      </div>
+      <a class="candidate-card" href="${stockHash(item.symbol)}">
+        <div class="candidate-head">
+          <div>
+            <strong>${escapeHTML(item.name)}</strong>
+            <span>${escapeHTML(item.symbol)} · ${escapeHTML(item.industry)}</span>
+          </div>
+          <em>${escapeHTML(item.status)}</em>
+        </div>
+        <div class="candidate-metrics">
+          <span>质量 <strong>${Number.isFinite(item.qualityScore) ? item.qualityScore : "-"}</strong></span>
+          <span>安全边际 <strong>${Number.isFinite(item.marginOfSafety) ? percent(item.marginOfSafety * 100, false) : "-"}</strong></span>
+          <span>买入价 <strong>${Number.isFinite(item.targetBuyPrice) ? currency(item.targetBuyPrice, item.currency) : "-"}</strong></span>
+        </div>
+        <p>${escapeHTML(item.action)}</p>
+      </a>
     `)
     .join("");
+}
 
-  elements.rulesList.innerHTML = state.rules
-    .map((item) => `
-      <div class="rule-item">
-        <strong>${item.dimension}</strong>
-        <span>${item.score} 分</span>
-        <small>${item.standard}</small>
+function findSymbolByName(name) {
+  const normalized = String(name ?? "").trim();
+  const holding = state.holdings.find((item) => item.name === normalized || item.name.includes(normalized) || normalized.includes(item.name));
+  if (holding) return holding.symbol;
+  const candidate = state.candidates.find((item) => item.name === normalized || item.name.includes(normalized) || normalized.includes(item.name));
+  return candidate?.symbol ?? "";
+}
+
+function metricCard(label, value, detail = "") {
+  return `
+    <article class="metric">
+      <span>${escapeHTML(label)}</span>
+      <strong>${value}</strong>
+      <small>${escapeHTML(detail)}</small>
+    </article>
+  `;
+}
+
+function scoreItem(label, value, maxScore) {
+  const text = Number.isFinite(value) ? `${value}/${maxScore}` : "-";
+  const width = Number.isFinite(value) && maxScore ? Math.max(0, Math.min((value / maxScore) * 100, 100)) : 0;
+  return `
+    <div class="score-item">
+      <div>
+        <strong>${escapeHTML(label)}</strong>
+        <span>${text}</span>
       </div>
-    `)
-    .join("");
+      <div class="weight-bar"><span style="width: ${width}%"></span></div>
+    </div>
+  `;
+}
+
+function findStockRecord(symbol, positions) {
+  const normalized = symbol.toUpperCase();
+  const position = positions.find((item) => item.symbol.toUpperCase() === normalized);
+  if (position) return { stock: position, isHolding: true };
+
+  const candidate = state.candidates.find((item) => item.symbol.toUpperCase() === normalized);
+  if (!candidate) return { stock: null, isHolding: false };
+
+  return {
+    stock: {
+      ...candidate,
+      shares: 0,
+      cost: 0,
+      currentPrice: 0,
+      previousClose: 0,
+      marketValueCny: 0,
+      pnlCny: 0,
+      pnlRate: 0,
+      dayChange: 0
+    },
+    isHolding: false
+  };
+}
+
+function findPlanForStock(stock) {
+  return state.plan.find((item) => item.name === stock.name || stock.name.includes(item.name) || item.name.includes(stock.name));
+}
+
+function renderStockDetail(positions, symbol) {
+  const { stock, isHolding } = findStockRecord(symbol, positions);
+
+  if (!stock) {
+    elements.stockDetail.innerHTML = `
+      <section class="panel">
+        <div class="empty-state">未找到该股票</div>
+      </section>
+    `;
+    return;
+  }
+
+  const plan = findPlanForStock(stock);
+  const pnlClass = stock.pnlCny >= 0 ? "positive" : "negative";
+  const dayClass = stock.dayChange >= 0 ? "positive" : "negative";
+  const marginText = Number.isFinite(stock.marginOfSafety) ? percent(stock.marginOfSafety * 100, false) : "-";
+  const qualityText = Number.isFinite(stock.qualityScore) ? `${stock.qualityScore}` : "-";
+
+  elements.stockDetail.innerHTML = `
+    <section class="detail-hero">
+      <a class="ghost-button detail-back" href="#positions">返回持仓</a>
+      <div>
+        <p class="eyebrow">${escapeHTML(stock.symbol)} · ${escapeHTML(displayText(stock.industry, "未分类"))}</p>
+        <h2>${escapeHTML(stock.name)}</h2>
+      </div>
+      <div class="detail-hero-meta">
+        <span>${escapeHTML(closeDateText(stock) || displayText(stock.updatedAt, "行情日期未知"))}</span>
+      </div>
+    </section>
+
+    <section class="metrics-grid detail-metrics">
+      ${metricCard("今天收盘", isHolding ? currency(stock.currentPrice, stock.currency) : "-", stock.currentPriceDate || "收盘日未知")}
+      ${metricCard("昨天收盘", isHolding ? currency(stock.previousClose, stock.currency) : "-", stock.previousCloseDate || "收盘日未知")}
+      ${metricCard("浮动盈亏", `<span class="${pnlClass}">${isHolding ? currency(stock.pnlCny) : "-"}</span>`, isHolding ? percent(stock.pnlRate) : "")}
+      ${metricCard("今日变动", `<span class="${dayClass}">${isHolding ? currency(stock.dayChange) : "-"}</span>`, isHolding && stock.marketValueCny ? percent((stock.dayChange / stock.marketValueCny) * 100) : "")}
+    </section>
+
+    <section class="detail-grid">
+      <section class="panel">
+        <div class="panel-head compact">
+          <div>
+            <p class="eyebrow">Analysis</p>
+            <h2>股票分析</h2>
+          </div>
+        </div>
+        <div class="detail-content">
+          <dl class="detail-list">
+            <div><dt>达标状态</dt><dd>${escapeHTML(displayText(stock.status, "未填写"))}</dd></div>
+            <div><dt>最终动作</dt><dd>${escapeHTML(displayText(stock.action, "未填写"))}</dd></div>
+            <div><dt>主要风险</dt><dd>${escapeHTML(displayText(stock.risk, "未填写"))}</dd></div>
+            <div><dt>备注</dt><dd>${escapeHTML(displayText(stock.notes, "未填写"))}</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head compact">
+          <div>
+            <p class="eyebrow">Valuation</p>
+            <h2>估值与质量</h2>
+          </div>
+        </div>
+        <div class="detail-content">
+          <div class="valuation-grid">
+            <div><span>安全边际</span><strong>${marginText}</strong></div>
+            <div><span>质量总分</span><strong>${qualityText}</strong></div>
+            <div><span>内在价值</span><strong>${Number.isFinite(stock.intrinsicValue) ? currency(stock.intrinsicValue, stock.currency) : "-"}</strong></div>
+            <div><span>买入价</span><strong>${Number.isFinite(stock.targetBuyPrice) ? currency(stock.targetBuyPrice, stock.currency) : "-"}</strong></div>
+            <div><span>公允区间</span><strong>${escapeHTML(displayText(stock.fairValueRange))}</strong></div>
+            <div><span>持仓市值</span><strong>${isHolding ? currency(stock.marketValueCny) : "-"}</strong></div>
+          </div>
+          <div class="score-list">
+            ${scoreItem("商业模式", stock.businessModel, 30)}
+            ${scoreItem("护城河", stock.moat, 25)}
+            ${scoreItem("治理", stock.governance, 20)}
+            ${scoreItem("财务质量", stock.financialQuality, 25)}
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">Execution</p>
+          <h2>执行计划</h2>
+        </div>
+      </div>
+      <div class="detail-content">
+        <div class="execution-plan">
+          <strong>${plan ? `${plan.rank}. ${escapeHTML(plan.name)} · ${escapeHTML(plan.priority)}` : "未单独列入执行优先级"}</strong>
+          <span>${escapeHTML(plan ? plan.advice : displayText(stock.action, "暂无执行计划"))}</span>
+          <small>${escapeHTML(plan ? plan.discipline : displayText(stock.status, "暂无纪律说明"))}</small>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function render() {
@@ -457,7 +645,10 @@ function render() {
   renderPositions(positions);
   renderAllocation(positions);
   renderTrades();
-  renderResearch();
+  renderPlanAndCandidates();
+  if (window.location.hash.startsWith("#stock=")) {
+    renderStockDetail(positions, decodeURIComponent(window.location.hash.slice("#stock=".length)));
+  }
 }
 
 async function addTrade(formData) {
@@ -496,6 +687,9 @@ async function addTrade(formData) {
       shares: 0,
       cost: price,
       currentPrice: trade.currentPrice,
+      previousClose: trade.currentPrice,
+      currentPriceDate: new Date().toISOString().slice(0, 10),
+      previousCloseDate: new Date().toISOString().slice(0, 10),
       currency: currencyCode,
       action: "",
       status: "",
@@ -518,6 +712,9 @@ async function addTrade(formData) {
   holding.name = trade.name || holding.name;
   holding.currency = currencyCode;
   holding.currentPrice = trade.currentPrice;
+  holding.previousClose = holding.previousClose > 0 ? holding.previousClose : trade.currentPrice;
+  holding.currentPriceDate = holding.currentPriceDate || new Date().toISOString().slice(0, 10);
+  holding.previousCloseDate = holding.previousCloseDate || holding.currentPriceDate;
   state.trades.push(trade);
   state.cash += side === "sell" ? shares * price * fx(currencyCode) : -(shares * price * fx(currencyCode));
   saveState();
@@ -592,7 +789,13 @@ document.querySelectorAll(".nav-item").forEach((button) => {
 });
 
 function showPage(view) {
-  const nextView = pageTitles[view] ? view : "overview";
+  const isStockDetail = view.startsWith("stock=");
+  const nextView = isStockDetail ? "stock-detail" : pageTitles[view] ? view : "overview";
+
+  if (isStockDetail) {
+    renderStockDetail(computePositions(), decodeURIComponent(view.slice("stock=".length)));
+  }
+
   document.querySelector(".nav-item.active")?.classList.remove("active");
   document.querySelector(`.nav-item[data-view="${nextView}"]`)?.classList.add("active");
   document.querySelector(".page.active")?.classList.remove("active");

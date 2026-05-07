@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>持仓管理台</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=stock-detail-1" />
   </head>
   <body>
     <aside class="sidebar">
@@ -28,10 +28,6 @@
         <button class="nav-item" data-view="trades" title="交易">
           <span class="nav-icon">＋</span>
           交易
-        </button>
-        <button class="nav-item" data-view="research" title="研究">
-          <span class="nav-icon">◇</span>
-          研究
         </button>
         <button class="nav-item" data-view="candidates" title="候选池">
           <span class="nav-icon">○</span>
@@ -163,24 +159,6 @@
         </section>
       </section>
 
-      <section class="page" data-page="research" id="researchPanel">
-        <section class="panel">
-          <div class="panel-head compact">
-            <div>
-              <p class="eyebrow">Excel Research</p>
-              <h2>调仓计划</h2>
-            </div>
-          </div>
-          <div class="research-content two-column">
-            <div class="plan-list" id="planList"></div>
-            <div>
-              <h3>评分规则</h3>
-              <div class="rules-list" id="rulesList"></div>
-            </div>
-          </div>
-        </section>
-      </section>
-
       <section class="page" data-page="candidates">
         <section class="panel">
           <div class="panel-head compact">
@@ -191,6 +169,10 @@
           </div>
           <div class="candidate-list candidate-page" id="candidateList"></div>
         </section>
+      </section>
+
+      <section class="page" data-page="stock-detail">
+        <div id="stockDetail"></div>
       </section>
     </main>
 
@@ -298,6 +280,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js"></script>
+    <script src="./app.js?v=stock-detail-1"></script>
   </body>
 </html>
