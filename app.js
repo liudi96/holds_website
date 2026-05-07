@@ -446,7 +446,6 @@ function renderTrades() {
 
 function renderPlanAndCandidates() {
   elements.overviewPlanList.innerHTML = state.plan
-    .slice(0, 4)
     .map((item) => `
       <a class="plan-card" href="${stockHash(findSymbolByName(item.name))}">
         <span class="plan-rank">${item.rank}</span>
@@ -810,10 +809,6 @@ window.addEventListener("hashchange", () => {
 elements.searchInput.addEventListener("input", (event) => {
   searchTerm = event.target.value.trim().toLowerCase();
   render();
-});
-
-document.querySelector("#openTradePanel").addEventListener("click", () => {
-  elements.tradeDialog.showModal();
 });
 
 document.querySelector("#openTradePanelSecondary").addEventListener("click", () => {
