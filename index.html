@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>持仓管理台</title>
-    <link rel="stylesheet" href="./styles.css?v=plan-all-1" />
+    <title>纸牌屋</title>
+    <link rel="stylesheet" href="./styles.css?v=decision-area-1" />
   </head>
   <body>
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">¥</div>
         <div>
-          <strong>持仓管理台</strong>
+          <strong>纸牌屋</strong>
           <span>Portfolio Desk</span>
         </div>
       </div>
@@ -45,18 +45,35 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Stock Portfolio</p>
-          <h1 id="pageTitle">股票持仓管理</h1>
+          <h1 id="pageTitle">纸牌屋</h1>
         </div>
         <div class="topbar-actions">
           <div class="search-wrap">
             <span>⌕</span>
             <input id="searchInput" type="search" placeholder="搜索代码或名称" />
           </div>
-          <button class="icon-button" id="seedButton" title="载入示例数据">↺</button>
         </div>
       </header>
 
       <section class="page active" data-page="overview">
+        <div class="overview-toolbar">
+          <div class="overview-toolbar-copy">
+            <p class="eyebrow">Dashboard</p>
+            <strong>总览操作</strong>
+            <span id="quoteUpdateStatus">行情待更新</span>
+          </div>
+          <div class="overview-actions">
+            <button class="ghost-button" id="openResearchPanel" type="button">
+              <span>⇪</span>
+              导入分析
+            </button>
+            <button class="primary-button" id="updateQuotesButton" type="button">
+              <span>↻</span>
+              更新行情
+            </button>
+          </div>
+        </div>
+
         <section class="metrics-grid" aria-label="资产概览">
           <article class="metric">
             <span>总市值</span>
@@ -80,6 +97,38 @@
           </article>
         </section>
 
+        <section class="decision-grid" aria-label="投资决策区">
+          <section class="panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Radar</p>
+                <h2>机会雷达</h2>
+              </div>
+            </div>
+            <div class="decision-list" id="opportunityRadar"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Discipline</p>
+                <h2>组合纪律</h2>
+              </div>
+            </div>
+            <div class="discipline-grid" id="disciplineDashboard"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Triggers</p>
+                <h2>行情触发</h2>
+              </div>
+            </div>
+            <div class="trigger-list" id="triggerAlerts"></div>
+          </section>
+        </section>
+
         <section class="overview-grid">
           <section class="panel">
             <div class="panel-head compact">
@@ -100,6 +149,16 @@
             </div>
             <div class="plan-list" id="overviewPlanList"></div>
           </section>
+        </section>
+
+        <section class="panel decision-log-panel">
+          <div class="panel-head compact">
+            <div>
+              <p class="eyebrow">Timeline</p>
+              <h2>决策日志</h2>
+            </div>
+          </div>
+          <div class="decision-log-list" id="decisionLogList"></div>
         </section>
       </section>
 
@@ -130,6 +189,7 @@
                   <th>安全边际</th>
                   <th>质量</th>
                   <th>仓位</th>
+                  <th>健康</th>
                   <th></th>
                 </tr>
               </thead>
@@ -161,6 +221,16 @@
             <div>
               <p class="eyebrow">Watchlist</p>
               <h2>候选池</h2>
+            </div>
+            <div class="candidate-sort">
+              <label for="candidateSort">排序</label>
+              <select id="candidateSort">
+                <option value="priority">执行优先级</option>
+                <option value="margin">安全边际</option>
+                <option value="quality">质量分</option>
+                <option value="buyDistance">距离买入价</option>
+                <option value="industry">行业</option>
+              </select>
             </div>
           </div>
           <div class="candidate-list candidate-page" id="candidateList"></div>
@@ -256,8 +326,8 @@
             <input name="status" />
           </label>
           <label>
-            安全边际
-            <input name="marginOfSafety" type="number" step="0.001" />
+            安全边际（自动计算）
+            <input name="marginOfSafety" type="number" step="0.001" readonly />
           </label>
           <label>
             质量总分
@@ -276,6 +346,32 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=plan-all-1"></script>
+    <dialog class="trade-dialog research-dialog" id="researchDialog">
+      <form id="researchForm" method="dialog">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Research Import</p>
+            <h2>导入股票分析</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeResearchPanel" title="关闭">×</button>
+        </div>
+
+        <label class="wide-field">
+          ChatGPT JSON
+          <textarea id="researchJSON" class="research-json" name="researchJSON" rows="14" placeholder='{"symbol":"0700.HK","name":"腾讯控股",...}' required></textarea>
+        </label>
+
+        <div class="research-status" id="researchStatus"></div>
+        <div class="research-preview" id="researchPreview"></div>
+
+        <div class="dialog-actions">
+          <button type="button" class="ghost-button" id="cancelResearch">取消</button>
+          <button type="submit" class="ghost-button" id="previewResearch">校验预览</button>
+          <button type="button" class="primary-button" id="importResearch" disabled>确认导入</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="./app.js?v=decision-area-1"></script>
   </body>
 </html>

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -13,12 +14,14 @@ import (
 )
 
 const dataFile = "data/portfolio.json"
+const decisionLogLimit = 500
 
 type AppState struct {
 	TotalCapital float64            `json:"totalCapital"`
 	Cash         float64            `json:"cash"`
 	FX           map[string]float64 `json:"fx"`
 	Trades       []Trade            `json:"trades"`
+	DecisionLogs []DecisionLog      `json:"decisionLogs"`
 	Holdings     []Holding          `json:"holdings"`
 	Plan         []PlanItem         `json:"plan"`
 	Candidates   []Candidate        `json:"candidates"`
@@ -35,6 +38,19 @@ type Trade struct {
 	Price        float64 `json:"price"`
 	Currency     string  `json:"currency"`
 	CurrentPrice float64 `json:"currentPrice"`
+}
+
+type DecisionLog struct {
+	ID         int64    `json:"id"`
+	Date       string   `json:"date"`
+	Type       string   `json:"type"`
+	Symbol     string   `json:"symbol,omitempty"`
+	Name       string   `json:"name,omitempty"`
+	Price      *float64 `json:"price,omitempty"`
+	Currency   string   `json:"currency,omitempty"`
+	Decision   string   `json:"decision"`
+	Discipline string   `json:"discipline"`
+	Detail     string   `json:"detail,omitempty"`
 }
 
 type Holding struct {
@@ -62,10 +78,21 @@ type Holding struct {
 	FinancialQuality  *float64 `json:"financialQuality"`
 	UpdatedAt         string   `json:"updatedAt"`
 	Notes             string   `json:"notes"`
+	Reports           []Report `json:"reports,omitempty"`
+}
+
+type Report struct {
+	Period string `json:"period"`
+	Kind   string `json:"kind"`
+	Title  string `json:"title"`
+	Date   string `json:"date"`
+	Source string `json:"source"`
+	URL    string `json:"url"`
 }
 
 type PlanItem struct {
 	Rank       int    `json:"rank"`
+	Symbol     string `json:"symbol,omitempty"`
 	Name       string `json:"name"`
 	Priority   string `json:"priority"`
 	Advice     string `json:"advice"`
@@ -73,17 +100,29 @@ type PlanItem struct {
 }
 
 type Candidate struct {
-	Symbol         string   `json:"symbol"`
-	Name           string   `json:"name"`
-	Status         string   `json:"status"`
-	Action         string   `json:"action"`
-	MarginOfSafety *float64 `json:"marginOfSafety"`
-	QualityScore   *float64 `json:"qualityScore"`
-	Industry       string   `json:"industry"`
-	Currency       string   `json:"currency"`
-	IntrinsicValue *float64 `json:"intrinsicValue"`
-	FairValueRange string   `json:"fairValueRange"`
-	TargetBuyPrice *float64 `json:"targetBuyPrice"`
+	Symbol            string   `json:"symbol"`
+	Name              string   `json:"name"`
+	Status            string   `json:"status"`
+	Action            string   `json:"action"`
+	CurrentPrice      float64  `json:"currentPrice"`
+	PreviousClose     float64  `json:"previousClose"`
+	CurrentPriceDate  string   `json:"currentPriceDate"`
+	PreviousCloseDate string   `json:"previousCloseDate"`
+	MarginOfSafety    *float64 `json:"marginOfSafety"`
+	QualityScore      *float64 `json:"qualityScore"`
+	Risk              string   `json:"risk"`
+	Industry          string   `json:"industry"`
+	Currency          string   `json:"currency"`
+	IntrinsicValue    *float64 `json:"intrinsicValue"`
+	FairValueRange    string   `json:"fairValueRange"`
+	TargetBuyPrice    *float64 `json:"targetBuyPrice"`
+	BusinessModel     *float64 `json:"businessModel"`
+	Moat              *float64 `json:"moat"`
+	Governance        *float64 `json:"governance"`
+	FinancialQuality  *float64 `json:"financialQuality"`
+	UpdatedAt         string   `json:"updatedAt"`
+	Notes             string   `json:"notes"`
+	Reports           []Report `json:"reports,omitempty"`
 }
 
 type Rule struct {
@@ -109,6 +148,9 @@ func main() {
 	mux.HandleFunc("POST /api/reset", server.handleReset)
 	mux.HandleFunc("POST /api/trades", server.handleCreateTrade)
 	mux.HandleFunc("PUT /api/holdings/", server.handleUpdateHolding)
+	mux.HandleFunc("POST /api/research/preview", server.handlePreviewResearch)
+	mux.HandleFunc("POST /api/research/import", server.handleImportResearch)
+	mux.HandleFunc("POST /api/quotes/update", server.handleUpdateQuotes)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
@@ -137,17 +179,12 @@ func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if state, err := loadState(); err == nil {
-		s.state = state
-	}
-
-	nextState := defaultState()
-	preserveQuoteFields(nextState.Holdings, s.state.Holdings)
-	s.state = nextState
-	if err := saveState(s.state); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save state")
+	state, err := loadState()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
 		return
 	}
+	s.state = state
 	writeJSON(w, http.StatusOK, s.state)
 }
 
@@ -198,6 +235,7 @@ func (s *Server) handleCreateTrade(w http.ResponseWriter, r *http.Request) {
 	trade.Currency = strings.ToUpper(strings.TrimSpace(trade.Currency))
 
 	s.applyTrade(trade)
+	appendTradeDecisionLog(&s.state, trade)
 	if err := saveState(s.state); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save state")
 		return
@@ -229,7 +267,7 @@ func (s *Server) handleUpdateHolding(w http.ResponseWriter, r *http.Request) {
 			s.state.Holdings[i].Industry = strings.TrimSpace(patch.Industry)
 			s.state.Holdings[i].Action = strings.TrimSpace(patch.Action)
 			s.state.Holdings[i].Status = strings.TrimSpace(patch.Status)
-			s.state.Holdings[i].MarginOfSafety = patch.MarginOfSafety
+			s.state.Holdings[i].MarginOfSafety = marginOfSafetyFromPrice(s.state.Holdings[i].IntrinsicValue, s.state.Holdings[i].CurrentPrice, patch.MarginOfSafety)
 			s.state.Holdings[i].QualityScore = patch.QualityScore
 			s.state.Holdings[i].Notes = strings.TrimSpace(patch.Notes)
 			if err := saveState(s.state); err != nil {
@@ -318,6 +356,186 @@ func validateTrade(trade Trade) error {
 	return nil
 }
 
+func appendDecisionLog(state *AppState, entry DecisionLog) {
+	entry.Type = strings.TrimSpace(entry.Type)
+	if entry.Type == "" {
+		entry.Type = "event"
+	}
+	entry.Symbol = strings.ToUpper(strings.TrimSpace(entry.Symbol))
+	entry.Name = strings.TrimSpace(entry.Name)
+	entry.Currency = strings.ToUpper(strings.TrimSpace(entry.Currency))
+	entry.Decision = strings.TrimSpace(entry.Decision)
+	entry.Discipline = strings.TrimSpace(entry.Discipline)
+	entry.Detail = strings.TrimSpace(entry.Detail)
+	if entry.ID == 0 {
+		entry.ID = time.Now().UnixNano()
+	}
+	if strings.TrimSpace(entry.Date) == "" {
+		entry.Date = time.Now().Format("2006-01-02 15:04:05")
+	}
+
+	state.DecisionLogs = append(state.DecisionLogs, entry)
+	if len(state.DecisionLogs) > decisionLogLimit {
+		state.DecisionLogs = state.DecisionLogs[len(state.DecisionLogs)-decisionLogLimit:]
+	}
+}
+
+func appendResearchDecisionLog(state *AppState, research ResearchImport, summary string, targetType string) {
+	name, price, currency, decision, discipline := decisionLogContext(state, research.Symbol)
+	name = firstNonEmpty(name, research.Name)
+	currency = firstNonEmpty(currency, research.Currency)
+	decision = firstNonEmpty(decision, research.Action, research.Status)
+	discipline = firstNonEmpty(discipline, research.Plan.Discipline, research.Status)
+	detail := strings.TrimSpace(summary)
+	if strings.TrimSpace(targetType) != "" {
+		detail = strings.TrimSpace(targetType + "；" + detail)
+	}
+
+	appendDecisionLog(state, DecisionLog{
+		Type:       "research",
+		Symbol:     research.Symbol,
+		Name:       name,
+		Price:      price,
+		Currency:   currency,
+		Decision:   decision,
+		Discipline: discipline,
+		Detail:     detail,
+	})
+}
+
+func appendTradeDecisionLog(state *AppState, trade Trade) {
+	name, _, currency, decision, discipline := decisionLogContext(state, trade.Symbol)
+	name = firstNonEmpty(name, trade.Name)
+	currency = firstNonEmpty(currency, trade.Currency)
+	sideText := "买入"
+	if trade.Side == "sell" {
+		sideText = "卖出"
+	}
+	decision = firstNonEmpty(decision, fmt.Sprintf("%s %s", sideText, firstNonEmpty(name, trade.Symbol)))
+	detail := fmt.Sprintf("%s %.2f 股；成交价 %s %.4f；录入最新价 %s %.4f", sideText, trade.Shares, strings.ToUpper(trade.Currency), trade.Price, strings.ToUpper(trade.Currency), trade.CurrentPrice)
+
+	appendDecisionLog(state, DecisionLog{
+		Type:       "trade",
+		Symbol:     trade.Symbol,
+		Name:       name,
+		Price:      ptr(trade.Price),
+		Currency:   currency,
+		Decision:   decision,
+		Discipline: discipline,
+		Detail:     detail,
+	})
+}
+
+func appendQuoteDecisionLogs(state *AppState, now time.Time) {
+	updateLabel := now.Format("2006-01-02 15:04:05")
+	for i := range state.Holdings {
+		holding := state.Holdings[i]
+		if !strings.HasPrefix(holding.UpdatedAt, updateLabel) {
+			continue
+		}
+		_, _, _, decision, discipline := decisionLogContext(state, holding.Symbol)
+		appendDecisionLog(state, DecisionLog{
+			Date:       updateLabel,
+			Type:       "quote",
+			Symbol:     holding.Symbol,
+			Name:       holding.Name,
+			Price:      pricePointer(holding.CurrentPrice),
+			Currency:   holding.Currency,
+			Decision:   firstNonEmpty(decision, holding.Action, holding.Status),
+			Discipline: firstNonEmpty(discipline, holding.Status),
+			Detail:     quoteDecisionDetail(holding.CurrentPriceDate, holding.PreviousCloseDate),
+		})
+	}
+
+	for i := range state.Candidates {
+		candidate := state.Candidates[i]
+		if !strings.HasPrefix(candidate.UpdatedAt, updateLabel) {
+			continue
+		}
+		_, _, _, decision, discipline := decisionLogContext(state, candidate.Symbol)
+		appendDecisionLog(state, DecisionLog{
+			Date:       updateLabel,
+			Type:       "quote",
+			Symbol:     candidate.Symbol,
+			Name:       candidate.Name,
+			Price:      pricePointer(candidate.CurrentPrice),
+			Currency:   candidate.Currency,
+			Decision:   firstNonEmpty(decision, candidate.Action, candidate.Status),
+			Discipline: firstNonEmpty(discipline, candidate.Status),
+			Detail:     quoteDecisionDetail(candidate.CurrentPriceDate, candidate.PreviousCloseDate),
+		})
+	}
+}
+
+func decisionLogContext(state *AppState, symbol string) (string, *float64, string, string, string) {
+	normalizedSymbol := normalizeSymbol(symbol)
+	for i := range state.Holdings {
+		holding := state.Holdings[i]
+		if normalizeSymbol(holding.Symbol) != normalizedSymbol {
+			continue
+		}
+		plan := findPlanForDecisionLog(state, holding.Symbol, holding.Name)
+		discipline := firstNonEmpty(planDiscipline(plan), holding.Status)
+		return holding.Name, pricePointer(holding.CurrentPrice), holding.Currency, firstNonEmpty(holding.Action, holding.Status), discipline
+	}
+
+	for i := range state.Candidates {
+		candidate := state.Candidates[i]
+		if normalizeSymbol(candidate.Symbol) != normalizedSymbol {
+			continue
+		}
+		plan := findPlanForDecisionLog(state, candidate.Symbol, candidate.Name)
+		discipline := firstNonEmpty(planDiscipline(plan), candidate.Status)
+		return candidate.Name, pricePointer(candidate.CurrentPrice), candidate.Currency, firstNonEmpty(candidate.Action, candidate.Status), discipline
+	}
+
+	plan := findPlanForDecisionLog(state, symbol, "")
+	return "", nil, "", "", planDiscipline(plan)
+}
+
+func findPlanForDecisionLog(state *AppState, symbol string, name string) *PlanItem {
+	normalizedSymbol := normalizeSymbol(symbol)
+	normalizedName := strings.TrimSpace(name)
+	for i := range state.Plan {
+		itemSymbol := normalizeSymbol(state.Plan[i].Symbol)
+		if itemSymbol != "" && normalizedSymbol != "" && itemSymbol == normalizedSymbol {
+			return &state.Plan[i]
+		}
+		itemName := strings.TrimSpace(state.Plan[i].Name)
+		if itemName != "" && normalizedName != "" && (strings.EqualFold(itemName, normalizedName) || strings.Contains(normalizedName, itemName) || strings.Contains(itemName, normalizedName)) {
+			return &state.Plan[i]
+		}
+	}
+	return nil
+}
+
+func planDiscipline(plan *PlanItem) string {
+	if plan == nil {
+		return ""
+	}
+	return strings.TrimSpace(plan.Discipline)
+}
+
+func pricePointer(value float64) *float64 {
+	if value <= 0 {
+		return nil
+	}
+	return ptr(value)
+}
+
+func quoteDecisionDetail(currentDate string, previousDate string) string {
+	return fmt.Sprintf("今收 %s；昨收 %s", firstNonEmpty(currentDate, "未知"), firstNonEmpty(previousDate, "未知"))
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if text := strings.TrimSpace(value); text != "" {
+			return text
+		}
+	}
+	return ""
+}
+
 func loadState() (AppState, error) {
 	if _, err := os.Stat(dataFile); errors.Is(err, os.ErrNotExist) {
 		state := defaultState()
@@ -369,6 +587,7 @@ func defaultState() AppState {
 		Cash:         477238.13560642325,
 		FX:           map[string]float64{"CNY": 1, "HKD": 0.8716, "USD": 7.1},
 		Trades:       []Trade{},
+		DecisionLogs: []DecisionLog{},
 		Holdings: []Holding{
 			{Symbol: "0700.HK", Name: "腾讯控股", Shares: 200, Cost: 480.43, CurrentPrice: 463, PreviousClose: 463, Action: "继续持有；新资金暂不追买，放入核心替补", Status: "未达标（安全边际<15%）", MarginOfSafety: ptr(0.09), QualityScore: ptr(89), Risk: "无立即否决；政策/地缘/AI投入需折价", Industry: "互联网平台/游戏/广告/金融科技", Currency: "HKD", IntrinsicValue: ptr(508), FairValueRange: "HK$480-560", TargetBuyPrice: ptr(432), BusinessModel: ptr(28), Moat: ptr(23), Governance: ptr(17), FinancialQuality: ptr(21), UpdatedAt: "2026-05-06；最新价约HK$463.00；HKD/CNY约0.8716；FY2025", Notes: "FY2025：收入RMB7518亿、Non-IFRS净利RMB2596亿、FCF RMB1826亿、净现金RMB1071亿。"},
 			{Symbol: "000333.SZ", Name: "美的集团", Shares: 600, Cost: 79.638, CurrentPrice: 80.44, PreviousClose: 80.44, Action: "放入核心替补；A股暂不追买，H股优先但等待≤HK$86-87", Status: "未达标（A股安全边际<20%；H股接近达标）", MarginOfSafety: ptr(0.153), QualityScore: ptr(88), Risk: "无立即否决；Q1扣非下滑、海外关税/汇率、价格战需跟踪", Industry: "家电/全球化制造/ToB楼宇科技/机器人自动化", Currency: "CNY", IntrinsicValue: ptr(95), FairValueRange: "¥90-100", TargetBuyPrice: ptr(76), BusinessModel: ptr(28), Moat: ptr(23), Governance: ptr(18), FinancialQuality: ptr(19), UpdatedAt: "2026-05-06；A股最新价约¥80.44；H股约HK$87.70；FY2025/2026Q1", Notes: "FY2025：营收RMB4585亿、归母净利RMB439.45亿、年度分红¥4.30/股。"},

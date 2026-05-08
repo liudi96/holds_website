@@ -1,0 +1,463 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"math"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+)
+
+type ResearchImport struct {
+	Symbol    string    `json:"symbol"`
+	Name      string    `json:"name"`
+	AsOf      string    `json:"asOf"`
+	Currency  string    `json:"currency"`
+	Industry  string    `json:"industry"`
+	Status    string    `json:"status"`
+	Action    string    `json:"action"`
+	Risk      string    `json:"risk"`
+	Valuation Valuation `json:"valuation"`
+	Quality   Quality   `json:"quality"`
+	Plan      PlanInput `json:"plan"`
+	Notes     string    `json:"notes"`
+}
+
+type Valuation struct {
+	IntrinsicValue *float64 `json:"intrinsicValue"`
+	FairValueRange string   `json:"fairValueRange"`
+	TargetBuyPrice *float64 `json:"targetBuyPrice"`
+	MarginOfSafety *float64 `json:"marginOfSafety"`
+}
+
+type Quality struct {
+	TotalScore       *float64 `json:"totalScore"`
+	BusinessModel    *float64 `json:"businessModel"`
+	Moat             *float64 `json:"moat"`
+	Governance       *float64 `json:"governance"`
+	FinancialQuality *float64 `json:"financialQuality"`
+}
+
+type PlanInput struct {
+	Rank       int    `json:"rank"`
+	Priority   string `json:"priority"`
+	Advice     string `json:"advice"`
+	Discipline string `json:"discipline"`
+}
+
+type ResearchResponse struct {
+	Summary    string         `json:"summary"`
+	TargetType string         `json:"targetType"`
+	Warnings   []string       `json:"warnings"`
+	Research   ResearchImport `json:"research"`
+	Plan       []PlanItem     `json:"plan"`
+	BackupPath string         `json:"backupPath,omitempty"`
+	State      *AppState      `json:"state,omitempty"`
+}
+
+func (s *Server) handlePreviewResearch(w http.ResponseWriter, r *http.Request) {
+	research, err := decodeResearch(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	warnings, err := validateResearch(research)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	s.mu.Lock()
+	state, err := loadState()
+	s.mu.Unlock()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
+		return
+	}
+
+	summary, targetType := applyResearch(&state, research)
+	writeJSON(w, http.StatusOK, ResearchResponse{
+		Summary:    summary,
+		TargetType: targetType,
+		Warnings:   warnings,
+		Research:   normalizeResearch(research),
+		Plan:       state.Plan,
+	})
+}
+
+func (s *Server) handleImportResearch(w http.ResponseWriter, r *http.Request) {
+	research, err := decodeResearch(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	warnings, err := validateResearch(research)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state, err := loadState()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
+		return
+	}
+
+	summary, targetType := applyResearch(&state, research)
+	appendResearchDecisionLog(&state, research, summary, targetType)
+	backupPath, err := backupPortfolioFile()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to backup portfolio data")
+		return
+	}
+	if err := saveState(state); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save state")
+		return
+	}
+
+	s.state = state
+	writeJSON(w, http.StatusOK, ResearchResponse{
+		Summary:    summary,
+		TargetType: targetType,
+		Warnings:   warnings,
+		Research:   normalizeResearch(research),
+		Plan:       state.Plan,
+		BackupPath: backupPath,
+		State:      &state,
+	})
+}
+
+func decodeResearch(r *http.Request) (ResearchImport, error) {
+	defer r.Body.Close()
+
+	var research ResearchImport
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&research); err != nil {
+		return ResearchImport{}, fmt.Errorf("invalid research JSON: %w", err)
+	}
+	return normalizeResearch(research), nil
+}
+
+func validateResearch(research ResearchImport) ([]string, error) {
+	warnings := []string{}
+
+	if strings.TrimSpace(research.Symbol) == "" {
+		return nil, errors.New("symbol is required")
+	}
+	if strings.TrimSpace(research.Name) == "" {
+		return nil, errors.New("name is required")
+	}
+	if strings.TrimSpace(research.AsOf) == "" {
+		return nil, errors.New("asOf is required")
+	}
+
+	asOfDate, err := time.Parse("2006-01-02", research.AsOf)
+	if err != nil {
+		return nil, fmt.Errorf("asOf must be YYYY-MM-DD: %w", err)
+	}
+	today, _ := time.Parse("2006-01-02", time.Now().Format("2006-01-02"))
+	if asOfDate.After(today) {
+		return nil, fmt.Errorf("asOf cannot be later than today: %s", today.Format("2006-01-02"))
+	}
+
+	if err := validatePercent("valuation.marginOfSafety", research.Valuation.MarginOfSafety); err != nil {
+		return nil, err
+	}
+	if err := validateScore("quality.totalScore", research.Quality.TotalScore, 100); err != nil {
+		return nil, err
+	}
+	if err := validateScore("quality.businessModel", research.Quality.BusinessModel, 30); err != nil {
+		return nil, err
+	}
+	if err := validateScore("quality.moat", research.Quality.Moat, 25); err != nil {
+		return nil, err
+	}
+	if err := validateScore("quality.governance", research.Quality.Governance, 20); err != nil {
+		return nil, err
+	}
+	if err := validateScore("quality.financialQuality", research.Quality.FinancialQuality, 25); err != nil {
+		return nil, err
+	}
+
+	if expected := expectedCurrency(research.Symbol); expected != "" && research.Currency != "" && research.Currency != expected {
+		warnings = append(warnings, fmt.Sprintf("currency is %s, but %s usually uses %s", research.Currency, research.Symbol, expected))
+	}
+	if hasAllQualityScores(research.Quality) {
+		sum := *research.Quality.BusinessModel + *research.Quality.Moat + *research.Quality.Governance + *research.Quality.FinancialQuality
+		if math.Abs(*research.Quality.TotalScore-sum) > 0.01 {
+			warnings = append(warnings, fmt.Sprintf("quality.totalScore is %.2f, but component scores add up to %.2f", *research.Quality.TotalScore, sum))
+		}
+	}
+	if strings.TrimSpace(research.Status) == "" {
+		warnings = append(warnings, "status is empty")
+	}
+	if strings.TrimSpace(research.Action) == "" {
+		warnings = append(warnings, "action is empty")
+	}
+	if strings.TrimSpace(research.Risk) == "" {
+		warnings = append(warnings, "risk is empty")
+	}
+	if strings.TrimSpace(research.Notes) == "" {
+		warnings = append(warnings, "notes is empty")
+	}
+	if strings.TrimSpace(research.Plan.Priority) == "" &&
+		strings.TrimSpace(research.Plan.Advice) == "" &&
+		strings.TrimSpace(research.Plan.Discipline) == "" {
+		warnings = append(warnings, "plan is empty; overview execution plan will not be updated")
+	}
+
+	return warnings, nil
+}
+
+func applyResearch(state *AppState, research ResearchImport) (string, string) {
+	symbol := normalizeSymbol(research.Symbol)
+	now := time.Now().Format("2006-01-02 15:04:05")
+	updateLabel := fmt.Sprintf("%s；ChatGPT分析导入；分析日 %s", now, research.AsOf)
+
+	for i := range state.Holdings {
+		if normalizeSymbol(state.Holdings[i].Symbol) == symbol {
+			applyHoldingResearch(&state.Holdings[i], research, updateLabel)
+			upsertPlan(state, research)
+			return fmt.Sprintf("updated holding %s (%s)", research.Symbol, research.Name), "holding"
+		}
+	}
+
+	for i := range state.Candidates {
+		if normalizeSymbol(state.Candidates[i].Symbol) == symbol {
+			applyCandidateResearch(&state.Candidates[i], research, updateLabel)
+			upsertPlan(state, research)
+			return fmt.Sprintf("updated candidate %s (%s)", research.Symbol, research.Name), "candidate"
+		}
+	}
+
+	state.Candidates = append(state.Candidates, Candidate{Symbol: normalizeDisplaySymbol(research.Symbol)})
+	applyCandidateResearch(&state.Candidates[len(state.Candidates)-1], research, updateLabel)
+	upsertPlan(state, research)
+	return fmt.Sprintf("added candidate %s (%s)", research.Symbol, research.Name), "newCandidate"
+}
+
+func applyHoldingResearch(holding *Holding, research ResearchImport, updateLabel string) {
+	holding.Symbol = normalizeDisplaySymbol(research.Symbol)
+	holding.Name = strings.TrimSpace(research.Name)
+	holding.Industry = strings.TrimSpace(research.Industry)
+	holding.Status = strings.TrimSpace(research.Status)
+	holding.Action = strings.TrimSpace(research.Action)
+	holding.Risk = strings.TrimSpace(research.Risk)
+	holding.Currency = prefer(holding.Currency, research.Currency)
+	holding.QualityScore = research.Quality.TotalScore
+	holding.IntrinsicValue = research.Valuation.IntrinsicValue
+	holding.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
+	holding.TargetBuyPrice = research.Valuation.TargetBuyPrice
+	holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, research.Valuation.MarginOfSafety)
+	holding.BusinessModel = research.Quality.BusinessModel
+	holding.Moat = research.Quality.Moat
+	holding.Governance = research.Quality.Governance
+	holding.FinancialQuality = research.Quality.FinancialQuality
+	holding.UpdatedAt = updateLabel
+	holding.Notes = strings.TrimSpace(research.Notes)
+}
+
+func applyCandidateResearch(candidate *Candidate, research ResearchImport, updateLabel string) {
+	candidate.Symbol = normalizeDisplaySymbol(research.Symbol)
+	candidate.Name = strings.TrimSpace(research.Name)
+	candidate.Status = strings.TrimSpace(research.Status)
+	candidate.Action = strings.TrimSpace(research.Action)
+	candidate.Risk = strings.TrimSpace(research.Risk)
+	candidate.Industry = strings.TrimSpace(research.Industry)
+	candidate.Currency = prefer(candidate.Currency, research.Currency)
+	candidate.MarginOfSafety = research.Valuation.MarginOfSafety
+	candidate.QualityScore = research.Quality.TotalScore
+	candidate.IntrinsicValue = research.Valuation.IntrinsicValue
+	candidate.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
+	candidate.TargetBuyPrice = research.Valuation.TargetBuyPrice
+	candidate.BusinessModel = research.Quality.BusinessModel
+	candidate.Moat = research.Quality.Moat
+	candidate.Governance = research.Quality.Governance
+	candidate.FinancialQuality = research.Quality.FinancialQuality
+	candidate.UpdatedAt = updateLabel
+	candidate.Notes = strings.TrimSpace(research.Notes)
+}
+
+func upsertPlan(state *AppState, research ResearchImport) {
+	if strings.TrimSpace(research.Plan.Priority) == "" &&
+		strings.TrimSpace(research.Plan.Advice) == "" &&
+		strings.TrimSpace(research.Plan.Discipline) == "" {
+		return
+	}
+
+	next := PlanItem{
+		Rank:       research.Plan.Rank,
+		Symbol:     normalizeDisplaySymbol(research.Symbol),
+		Name:       strings.TrimSpace(research.Name),
+		Priority:   strings.TrimSpace(research.Plan.Priority),
+		Advice:     strings.TrimSpace(research.Plan.Advice),
+		Discipline: strings.TrimSpace(research.Plan.Discipline),
+	}
+	if next.Rank <= 0 {
+		next.Rank = nextPlanRank(state.Plan)
+	}
+
+	for i := range state.Plan {
+		if samePlanItem(state.Plan[i], next) {
+			state.Plan[i] = next
+			normalizePlanRanks(state.Plan)
+			return
+		}
+	}
+
+	state.Plan = append(state.Plan, next)
+	normalizePlanRanks(state.Plan)
+}
+
+func samePlanItem(current, next PlanItem) bool {
+	if normalizeSymbol(current.Symbol) != "" && normalizeSymbol(current.Symbol) == normalizeSymbol(next.Symbol) {
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(current.Name), strings.TrimSpace(next.Name))
+}
+
+func nextPlanRank(plan []PlanItem) int {
+	next := 1
+	for _, item := range plan {
+		if item.Rank >= next {
+			next = item.Rank + 1
+		}
+	}
+	return next
+}
+
+func normalizePlanRanks(plan []PlanItem) {
+	sort.SliceStable(plan, func(i, j int) bool {
+		if plan[i].Rank == plan[j].Rank {
+			return false
+		}
+		if plan[i].Rank <= 0 {
+			return false
+		}
+		if plan[j].Rank <= 0 {
+			return true
+		}
+		return plan[i].Rank < plan[j].Rank
+	})
+	for i := range plan {
+		plan[i].Rank = i + 1
+	}
+}
+
+func backupPortfolioFile() (string, error) {
+	body, err := os.ReadFile(dataFile)
+	if err != nil {
+		return "", err
+	}
+
+	backupDir := filepath.Join(filepath.Dir(dataFile), "backups")
+	if err := os.MkdirAll(backupDir, 0o755); err != nil {
+		return "", err
+	}
+
+	now := time.Now()
+	backupPath := filepath.Join(backupDir, fmt.Sprintf("portfolio-%s-%03d.json", now.Format("20060102-150405"), now.UnixMilli()%1000))
+	if err := os.WriteFile(backupPath, body, 0o644); err != nil {
+		return "", err
+	}
+	return backupPath, nil
+}
+
+func normalizeResearch(research ResearchImport) ResearchImport {
+	research.Symbol = normalizeDisplaySymbol(research.Symbol)
+	research.Name = strings.TrimSpace(research.Name)
+	research.AsOf = strings.TrimSpace(research.AsOf)
+	research.Currency = strings.ToUpper(strings.TrimSpace(research.Currency))
+	research.Industry = strings.TrimSpace(research.Industry)
+	research.Status = strings.TrimSpace(research.Status)
+	research.Action = strings.TrimSpace(research.Action)
+	research.Risk = strings.TrimSpace(research.Risk)
+	research.Valuation.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
+	research.Plan.Priority = strings.TrimSpace(research.Plan.Priority)
+	research.Plan.Advice = strings.TrimSpace(research.Plan.Advice)
+	research.Plan.Discipline = strings.TrimSpace(research.Plan.Discipline)
+	research.Notes = strings.TrimSpace(research.Notes)
+	return research
+}
+
+func hasAllQualityScores(quality Quality) bool {
+	return quality.TotalScore != nil &&
+		quality.BusinessModel != nil &&
+		quality.Moat != nil &&
+		quality.Governance != nil &&
+		quality.FinancialQuality != nil
+}
+
+func validatePercent(field string, value *float64) error {
+	if value == nil {
+		return nil
+	}
+	if *value < -1 || *value > 1 {
+		return fmt.Errorf("%s must be decimal ratio, for example 0.09 for 9%%", field)
+	}
+	return nil
+}
+
+func validateScore(field string, value *float64, max float64) error {
+	if value == nil {
+		return nil
+	}
+	if *value < 0 || *value > max {
+		return fmt.Errorf("%s must be between 0 and %.0f", field, max)
+	}
+	return nil
+}
+
+func expectedCurrency(symbol string) string {
+	symbol = normalizeSymbol(symbol)
+	switch {
+	case strings.HasSuffix(symbol, ".HK"):
+		return "HKD"
+	case strings.HasSuffix(symbol, ".SH"), strings.HasSuffix(symbol, ".SZ"), strings.HasSuffix(symbol, ".SS"):
+		return "CNY"
+	default:
+		return ""
+	}
+}
+
+func marginOfSafetyFromPrice(intrinsicValue *float64, currentPrice float64, fallback *float64) *float64 {
+	if intrinsicValue == nil || *intrinsicValue <= 0 || currentPrice <= 0 {
+		return fallback
+	}
+	value := (*intrinsicValue - currentPrice) / *intrinsicValue
+	return &value
+}
+
+func prefer(current, next string) string {
+	if strings.TrimSpace(next) != "" {
+		return strings.ToUpper(strings.TrimSpace(next))
+	}
+	return strings.ToUpper(strings.TrimSpace(current))
+}
+
+func normalizeSymbol(symbol string) string {
+	return normalizeDisplaySymbol(symbol)
+}
+
+func normalizeDisplaySymbol(symbol string) string {
+	symbol = strings.ToUpper(strings.TrimSpace(symbol))
+	if strings.HasSuffix(symbol, ".HK") {
+		code := strings.TrimSuffix(symbol, ".HK")
+		if value, err := strconv.Atoi(code); err == nil {
+			return fmt.Sprintf("%04d.HK", value)
+		}
+	}
+	return symbol
+}
