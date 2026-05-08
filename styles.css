@@ -29,12 +29,18 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
 button {
   cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
 }
 
 .sidebar {
@@ -757,6 +763,10 @@ tbody tr:hover {
   padding: 20px;
 }
 
+.research-dialog {
+  width: min(780px, calc(100vw - 28px));
+}
+
 .dialog-head {
   justify-content: space-between;
   margin-bottom: 18px;
@@ -798,8 +808,148 @@ label textarea {
   resize: vertical;
 }
 
+.research-json {
+  min-height: 270px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .wide-field {
   grid-column: 1 / -1;
+}
+
+.research-status {
+  min-height: 20px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.research-status.ready {
+  color: var(--blue);
+}
+
+.research-status.success {
+  color: var(--green);
+}
+
+.research-status.error {
+  color: var(--red);
+}
+
+.research-preview {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.research-summary {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faf9;
+}
+
+.research-summary span,
+.research-summary small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.research-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.research-preview-grid div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.research-preview-grid span,
+.research-preview-grid small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-preview-grid strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-warnings {
+  display: grid;
+  gap: 6px;
+}
+
+.research-warnings span {
+  padding: 8px 10px;
+  border: 1px solid #f1c27d;
+  border-radius: 8px;
+  background: #fff8ed;
+  color: #8a5a12;
+  font-size: 12px;
+}
+
+.preview-plan {
+  max-height: 190px;
+  display: grid;
+  gap: 6px;
+  overflow: auto;
+}
+
+.preview-plan div {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) minmax(120px, 0.5fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.preview-plan div.active {
+  border-color: rgba(8, 127, 91, 0.36);
+  background: #f0faf6;
+}
+
+.preview-plan span {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #e6f4ef;
+  color: var(--green);
+  font-weight: 800;
+}
+
+.preview-plan strong,
+.preview-plan small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-plan small {
+  color: var(--muted);
 }
 
 .dialog-actions {
@@ -874,12 +1024,14 @@ label textarea {
     width: 100%;
   }
 
-  .metrics-grid,
-  .form-grid,
-  .valuation-grid,
-  .candidate-metrics {
-    grid-template-columns: 1fr;
-  }
+	  .metrics-grid,
+	  .form-grid,
+	  .valuation-grid,
+	  .candidate-metrics,
+	  .research-preview-grid,
+	  .preview-plan div {
+	    grid-template-columns: 1fr;
+	  }
 
   .sidebar-footer {
     margin-left: 0;

@@ -5,14 +5,16 @@ Use this bridge when ChatGPT performs the stock analysis and Codex imports the r
 ## Workflow
 
 1. Ask ChatGPT to analyze one stock and output only the JSON schema below.
-2. Save the JSON under `data/research/<SYMBOL>.json`, for example `data/research/0700.HK.json`.
-3. Import it:
+2. Open the website and click `导入分析`.
+3. Paste the JSON, run preview validation, then confirm the import.
+
+The website writes the confirmed result into `data/portfolio.json` and creates a backup under `data/backups/`.
+
+CLI import is still available for saved files:
 
 ```bash
 go run ./cmd/import-research data/research/0700.HK.json
 ```
-
-4. Refresh the website.
 
 ## ChatGPT Prompt
 
@@ -22,8 +24,11 @@ Analyze the following stock for a long-term value-investing portfolio.
 Requirements:
 - Output only valid JSON. No Markdown fences, no explanation outside JSON.
 - Use the exact schema below.
+- Do not add extra fields. Unknown fields are rejected by the importer.
 - Use decimal ratios for percentages, for example 0.09 means 9%.
 - Use null when a numeric field is unknown.
+- `currency` should match the listing: `.HK` uses `HKD`, `.SH`/`.SZ`/`.SS` use `CNY`.
+- `quality.totalScore` should equal `businessModel + moat + governance + financialQuality`.
 - Keep action, risk, notes, advice, and discipline concise but specific.
 - asOf must be YYYY-MM-DD.
 
@@ -71,5 +76,8 @@ JSON schema:
 - If `symbol` matches an existing holding, the holding analysis fields are updated.
 - If `symbol` matches an existing candidate, the candidate fields are updated.
 - If `symbol` is new, it is added to the candidate pool.
-- `plan` is upserted by stock name.
+- `plan` is upserted by the top-level `symbol` when possible, then by stock name for old data.
+- Do not include `symbol` inside `plan`; the importer derives Plan identity from the top-level `symbol`.
+- `plan.rank` may be approximate. The importer normalizes Plan ranks into a unique sequence after import.
+- The website preview validates the JSON before writing. Confirmed imports update `data/portfolio.json` and first create a backup under `data/backups/`.
 - Quote fields such as `currentPrice`, `previousClose`, and close dates are owned by `cmd/update-quotes`, not this import.

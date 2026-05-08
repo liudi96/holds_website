@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>持仓管理台</title>
-    <link rel="stylesheet" href="./styles.css?v=no-reset-1" />
+    <title>纸牌屋</title>
+    <link rel="stylesheet" href="./styles.css?v=site-name-1" />
   </head>
   <body>
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">¥</div>
         <div>
-          <strong>持仓管理台</strong>
+          <strong>纸牌屋</strong>
           <span>Portfolio Desk</span>
         </div>
       </div>
@@ -45,9 +45,13 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Stock Portfolio</p>
-          <h1 id="pageTitle">股票持仓管理</h1>
+          <h1 id="pageTitle">纸牌屋</h1>
         </div>
         <div class="topbar-actions">
+          <button class="primary-button" id="openResearchPanel" type="button">
+            <span>⇪</span>
+            导入分析
+          </button>
           <div class="search-wrap">
             <span>⌕</span>
             <input id="searchInput" type="search" placeholder="搜索代码或名称" />
@@ -275,6 +279,32 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=no-reset-1"></script>
+    <dialog class="trade-dialog research-dialog" id="researchDialog">
+      <form id="researchForm" method="dialog">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Research Import</p>
+            <h2>导入股票分析</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeResearchPanel" title="关闭">×</button>
+        </div>
+
+        <label class="wide-field">
+          ChatGPT JSON
+          <textarea id="researchJSON" class="research-json" name="researchJSON" rows="14" placeholder='{"symbol":"0700.HK","name":"腾讯控股",...}' required></textarea>
+        </label>
+
+        <div class="research-status" id="researchStatus"></div>
+        <div class="research-preview" id="researchPreview"></div>
+
+        <div class="dialog-actions">
+          <button type="button" class="ghost-button" id="cancelResearch">取消</button>
+          <button type="submit" class="ghost-button" id="previewResearch">校验预览</button>
+          <button type="button" class="primary-button" id="importResearch" disabled>确认导入</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="./app.js?v=site-name-1"></script>
   </body>
 </html>

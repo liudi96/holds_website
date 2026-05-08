@@ -66,6 +66,7 @@ type Holding struct {
 
 type PlanItem struct {
 	Rank       int    `json:"rank"`
+	Symbol     string `json:"symbol,omitempty"`
 	Name       string `json:"name"`
 	Priority   string `json:"priority"`
 	Advice     string `json:"advice"`
@@ -73,17 +74,24 @@ type PlanItem struct {
 }
 
 type Candidate struct {
-	Symbol         string   `json:"symbol"`
-	Name           string   `json:"name"`
-	Status         string   `json:"status"`
-	Action         string   `json:"action"`
-	MarginOfSafety *float64 `json:"marginOfSafety"`
-	QualityScore   *float64 `json:"qualityScore"`
-	Industry       string   `json:"industry"`
-	Currency       string   `json:"currency"`
-	IntrinsicValue *float64 `json:"intrinsicValue"`
-	FairValueRange string   `json:"fairValueRange"`
-	TargetBuyPrice *float64 `json:"targetBuyPrice"`
+	Symbol           string   `json:"symbol"`
+	Name             string   `json:"name"`
+	Status           string   `json:"status"`
+	Action           string   `json:"action"`
+	MarginOfSafety   *float64 `json:"marginOfSafety"`
+	QualityScore     *float64 `json:"qualityScore"`
+	Risk             string   `json:"risk"`
+	Industry         string   `json:"industry"`
+	Currency         string   `json:"currency"`
+	IntrinsicValue   *float64 `json:"intrinsicValue"`
+	FairValueRange   string   `json:"fairValueRange"`
+	TargetBuyPrice   *float64 `json:"targetBuyPrice"`
+	BusinessModel    *float64 `json:"businessModel"`
+	Moat             *float64 `json:"moat"`
+	Governance       *float64 `json:"governance"`
+	FinancialQuality *float64 `json:"financialQuality"`
+	UpdatedAt        string   `json:"updatedAt"`
+	Notes            string   `json:"notes"`
 }
 
 type Rule struct {

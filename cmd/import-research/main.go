@@ -64,6 +64,7 @@ type Holding struct {
 
 type PlanItem struct {
 	Rank       int    `json:"rank"`
+	Symbol     string `json:"symbol,omitempty"`
 	Name       string `json:"name"`
 	Priority   string `json:"priority"`
 	Advice     string `json:"advice"`
@@ -71,17 +72,24 @@ type PlanItem struct {
 }
 
 type Candidate struct {
-	Symbol         string   `json:"symbol"`
-	Name           string   `json:"name"`
-	Status         string   `json:"status"`
-	Action         string   `json:"action"`
-	MarginOfSafety *float64 `json:"marginOfSafety"`
-	QualityScore   *float64 `json:"qualityScore"`
-	Industry       string   `json:"industry"`
-	Currency       string   `json:"currency"`
-	IntrinsicValue *float64 `json:"intrinsicValue"`
-	FairValueRange string   `json:"fairValueRange"`
-	TargetBuyPrice *float64 `json:"targetBuyPrice"`
+	Symbol           string   `json:"symbol"`
+	Name             string   `json:"name"`
+	Status           string   `json:"status"`
+	Action           string   `json:"action"`
+	MarginOfSafety   *float64 `json:"marginOfSafety"`
+	QualityScore     *float64 `json:"qualityScore"`
+	Risk             string   `json:"risk"`
+	Industry         string   `json:"industry"`
+	Currency         string   `json:"currency"`
+	IntrinsicValue   *float64 `json:"intrinsicValue"`
+	FairValueRange   string   `json:"fairValueRange"`
+	TargetBuyPrice   *float64 `json:"targetBuyPrice"`
+	BusinessModel    *float64 `json:"businessModel"`
+	Moat             *float64 `json:"moat"`
+	Governance       *float64 `json:"governance"`
+	FinancialQuality *float64 `json:"financialQuality"`
+	UpdatedAt        string   `json:"updatedAt"`
+	Notes            string   `json:"notes"`
 }
 
 type Rule struct {
@@ -241,14 +249,14 @@ func applyResearch(state *AppState, research ResearchImport) string {
 
 	for i := range state.Candidates {
 		if normalizeSymbol(state.Candidates[i].Symbol) == symbol {
-			applyCandidateResearch(&state.Candidates[i], research)
+			applyCandidateResearch(&state.Candidates[i], research, updateLabel)
 			upsertPlan(state, research)
 			return fmt.Sprintf("updated candidate %s (%s)", research.Symbol, research.Name)
 		}
 	}
 
 	state.Candidates = append(state.Candidates, Candidate{Symbol: normalizeDisplaySymbol(research.Symbol)})
-	applyCandidateResearch(&state.Candidates[len(state.Candidates)-1], research)
+	applyCandidateResearch(&state.Candidates[len(state.Candidates)-1], research, updateLabel)
 	upsertPlan(state, research)
 	return fmt.Sprintf("added candidate %s (%s)", research.Symbol, research.Name)
 }
@@ -274,11 +282,12 @@ func applyHoldingResearch(holding *Holding, research ResearchImport, updateLabel
 	holding.Notes = strings.TrimSpace(research.Notes)
 }
 
-func applyCandidateResearch(candidate *Candidate, research ResearchImport) {
+func applyCandidateResearch(candidate *Candidate, research ResearchImport, updateLabel string) {
 	candidate.Symbol = normalizeDisplaySymbol(research.Symbol)
 	candidate.Name = strings.TrimSpace(research.Name)
 	candidate.Status = strings.TrimSpace(research.Status)
 	candidate.Action = strings.TrimSpace(research.Action)
+	candidate.Risk = strings.TrimSpace(research.Risk)
 	candidate.Industry = strings.TrimSpace(research.Industry)
 	candidate.Currency = prefer(candidate.Currency, research.Currency)
 	candidate.MarginOfSafety = research.Valuation.MarginOfSafety
@@ -286,6 +295,12 @@ func applyCandidateResearch(candidate *Candidate, research ResearchImport) {
 	candidate.IntrinsicValue = research.Valuation.IntrinsicValue
 	candidate.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
 	candidate.TargetBuyPrice = research.Valuation.TargetBuyPrice
+	candidate.BusinessModel = research.Quality.BusinessModel
+	candidate.Moat = research.Quality.Moat
+	candidate.Governance = research.Quality.Governance
+	candidate.FinancialQuality = research.Quality.FinancialQuality
+	candidate.UpdatedAt = updateLabel
+	candidate.Notes = strings.TrimSpace(research.Notes)
 }
 
 func upsertPlan(state *AppState, research ResearchImport) {
@@ -297,6 +312,7 @@ func upsertPlan(state *AppState, research ResearchImport) {
 
 	next := PlanItem{
 		Rank:       research.Plan.Rank,
+		Symbol:     normalizeDisplaySymbol(research.Symbol),
 		Name:       strings.TrimSpace(research.Name),
 		Priority:   strings.TrimSpace(research.Plan.Priority),
 		Advice:     strings.TrimSpace(research.Plan.Advice),
@@ -307,15 +323,22 @@ func upsertPlan(state *AppState, research ResearchImport) {
 	}
 
 	for i := range state.Plan {
-		if strings.EqualFold(state.Plan[i].Name, next.Name) {
+		if samePlanItem(state.Plan[i], next) {
 			state.Plan[i] = next
-			sortPlan(state.Plan)
+			normalizePlanRanks(state.Plan)
 			return
 		}
 	}
 
 	state.Plan = append(state.Plan, next)
-	sortPlan(state.Plan)
+	normalizePlanRanks(state.Plan)
+}
+
+func samePlanItem(current, next PlanItem) bool {
+	if normalizeSymbol(current.Symbol) != "" && normalizeSymbol(current.Symbol) == normalizeSymbol(next.Symbol) {
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(current.Name), strings.TrimSpace(next.Name))
 }
 
 func nextPlanRank(plan []PlanItem) int {
@@ -328,10 +351,22 @@ func nextPlanRank(plan []PlanItem) int {
 	return next
 }
 
-func sortPlan(plan []PlanItem) {
+func normalizePlanRanks(plan []PlanItem) {
 	sort.SliceStable(plan, func(i, j int) bool {
+		if plan[i].Rank == plan[j].Rank {
+			return false
+		}
+		if plan[i].Rank <= 0 {
+			return false
+		}
+		if plan[j].Rank <= 0 {
+			return true
+		}
 		return plan[i].Rank < plan[j].Rank
 	})
+	for i := range plan {
+		plan[i].Rank = i + 1
+	}
 }
 
 func prefer(current, next string) string {

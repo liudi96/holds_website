@@ -197,8 +197,9 @@ const USE_BACKEND = location.protocol === "http:" || location.protocol === "http
 let state = loadState();
 let activeFilter = "all";
 let searchTerm = "";
+let pendingResearch = null;
 const pageTitles = {
-  overview: "股票持仓管理",
+  overview: "纸牌屋",
   positions: "当前持仓",
   trades: "交易流水",
   candidates: "候选池",
@@ -225,7 +226,13 @@ const elements = {
   tradeDialog: document.querySelector("#tradeDialog"),
   tradeForm: document.querySelector("#tradeForm"),
   holdingDialog: document.querySelector("#holdingDialog"),
-  holdingForm: document.querySelector("#holdingForm")
+  holdingForm: document.querySelector("#holdingForm"),
+  researchDialog: document.querySelector("#researchDialog"),
+  researchForm: document.querySelector("#researchForm"),
+  researchJSON: document.querySelector("#researchJSON"),
+  researchPreview: document.querySelector("#researchPreview"),
+  researchStatus: document.querySelector("#researchStatus"),
+  importResearchButton: document.querySelector("#importResearch")
 };
 
 syncCash();
@@ -317,6 +324,80 @@ function closeDateText(position) {
   const currentDate = position.currentPriceDate || "未知";
   const previousDate = position.previousCloseDate || "未知";
   return `今收 ${currentDate} · 昨收 ${previousDate}`;
+}
+
+function cleanResearchJSON(raw) {
+  return String(raw ?? "")
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```$/i, "")
+    .trim()
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'");
+}
+
+function parseResearchJSON() {
+  const text = cleanResearchJSON(elements.researchJSON.value);
+  if (!text) throw new Error("请粘贴 ChatGPT 生成的 JSON");
+  return JSON.parse(text);
+}
+
+function setResearchStatus(message, tone = "") {
+  elements.researchStatus.textContent = message;
+  elements.researchStatus.className = `research-status ${tone}`.trim();
+}
+
+function targetTypeText(type) {
+  if (type === "holding") return "更新现有持仓";
+  if (type === "candidate") return "更新候选池";
+  if (type === "newCandidate") return "新增到候选池";
+  return "准备导入";
+}
+
+function numberText(value, fallback = "-") {
+  return Number.isFinite(value) ? String(value) : fallback;
+}
+
+function renderResearchPreview(result, imported = false) {
+  const research = result.research ?? {};
+  const valuation = research.valuation ?? {};
+  const quality = research.quality ?? {};
+  const warnings = result.warnings ?? [];
+  const plan = result.plan ?? [];
+  const targetPlan = plan.find((item) => {
+    const itemSymbol = String(item.symbol ?? "").toUpperCase();
+    return itemSymbol ? itemSymbol === String(research.symbol ?? "").toUpperCase() : item.name === research.name;
+  });
+
+  elements.researchPreview.innerHTML = `
+    <div class="research-summary">
+      <strong>${escapeHTML(targetTypeText(result.targetType))}</strong>
+      <span>${escapeHTML(result.summary ?? "")}</span>
+      ${result.backupPath ? `<small>备份：${escapeHTML(result.backupPath)}</small>` : ""}
+    </div>
+    <div class="research-preview-grid">
+      <div><span>股票</span><strong>${escapeHTML(research.name ?? "-")}</strong><small>${escapeHTML(research.symbol ?? "-")} · ${escapeHTML(research.asOf ?? "-")}</small></div>
+      <div><span>安全边际</span><strong>${Number.isFinite(valuation.marginOfSafety) ? percent(valuation.marginOfSafety * 100, false) : "-"}</strong><small>${escapeHTML(valuation.fairValueRange ?? "-")}</small></div>
+      <div><span>质量总分</span><strong>${numberText(quality.totalScore)}</strong><small>${numberText(quality.businessModel)}/${numberText(quality.moat)}/${numberText(quality.governance)}/${numberText(quality.financialQuality)}</small></div>
+      <div><span>执行排序</span><strong>${targetPlan ? targetPlan.rank : "-"}</strong><small>${escapeHTML(targetPlan ? targetPlan.priority : "未列入 Plan")}</small></div>
+    </div>
+    ${warnings.length ? `
+      <div class="research-warnings">
+        ${warnings.map((item) => `<span>${escapeHTML(item)}</span>`).join("")}
+      </div>
+    ` : ""}
+    <div class="preview-plan">
+      ${plan.map((item) => `
+        <div class="${item.name === research.name ? "active" : ""}">
+          <span>${item.rank}</span>
+          <strong>${escapeHTML(item.name)}</strong>
+          <small>${escapeHTML(item.priority)}</small>
+        </div>
+      `).join("")}
+    </div>
+  `;
+
+  setResearchStatus(imported ? "已导入并刷新页面数据" : "校验通过，可以确认导入", imported ? "success" : "ready");
 }
 
 function computePositions() {
@@ -500,7 +581,7 @@ function renderTrades() {
 function renderPlanAndCandidates() {
   elements.overviewPlanList.innerHTML = state.plan
     .map((item) => `
-      <a class="plan-card" href="${stockHash(findSymbolByName(item.name))}">
+      <a class="plan-card" href="${stockHash(findSymbolForPlan(item))}">
         <span class="plan-rank">${item.rank}</span>
         <div>
           <strong>${escapeHTML(item.name)}</strong>
@@ -530,6 +611,11 @@ function renderPlanAndCandidates() {
       </a>
     `)
     .join("");
+}
+
+function findSymbolForPlan(item) {
+  const symbol = String(item.symbol ?? "").trim();
+  return symbol || findSymbolByName(item.name);
 }
 
 function findSymbolByName(name) {
@@ -589,7 +675,12 @@ function findStockRecord(symbol, positions) {
 }
 
 function findPlanForStock(stock) {
-  return state.plan.find((item) => item.name === stock.name || stock.name.includes(item.name) || item.name.includes(stock.name));
+  const stockSymbol = String(stock.symbol ?? "").toUpperCase();
+  return state.plan.find((item) => {
+    const itemSymbol = String(item.symbol ?? "").toUpperCase();
+    if (itemSymbol && stockSymbol) return itemSymbol === stockSymbol;
+    return item.name === stock.name || stock.name.includes(item.name) || item.name.includes(stock.name);
+  });
 }
 
 function renderStockDetail(positions, symbol) {
@@ -773,6 +864,42 @@ async function addTrade(formData) {
   render();
 }
 
+async function previewResearch() {
+  if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能导入到 portfolio.json");
+
+  const research = parseResearchJSON();
+  const result = await requestJSON("/api/research/preview", {
+    method: "POST",
+    body: JSON.stringify(research)
+  });
+  pendingResearch = research;
+  elements.importResearchButton.disabled = false;
+  renderResearchPreview(result);
+}
+
+async function importResearch() {
+  if (!pendingResearch) {
+    await previewResearch();
+    if (!pendingResearch) return;
+  }
+
+  const result = await requestJSON("/api/research/import", {
+    method: "POST",
+    body: JSON.stringify(pendingResearch)
+  });
+
+  state = result.state;
+  localStorage.removeItem(STORAGE_KEY);
+  pendingResearch = null;
+  elements.importResearchButton.disabled = true;
+  renderResearchPreview(result, true);
+  render();
+
+  if (result.research?.symbol) {
+    window.location.hash = stockHash(result.research.symbol);
+  }
+}
+
 function openHoldingEditor(symbol) {
   const holding = state.holdings.find((item) => item.symbol === symbol);
   if (!holding) return;
@@ -868,6 +995,14 @@ document.querySelector("#openTradePanelSecondary").addEventListener("click", () 
   elements.tradeDialog.showModal();
 });
 
+document.querySelector("#openResearchPanel").addEventListener("click", () => {
+  pendingResearch = null;
+  elements.importResearchButton.disabled = true;
+  elements.researchPreview.innerHTML = "";
+  setResearchStatus("");
+  elements.researchDialog.showModal();
+});
+
 document.querySelector("#closeTradePanel").addEventListener("click", () => {
   elements.tradeDialog.close();
 });
@@ -884,6 +1019,14 @@ document.querySelector("#cancelHolding").addEventListener("click", () => {
   elements.holdingDialog.close();
 });
 
+document.querySelector("#closeResearchPanel").addEventListener("click", () => {
+  elements.researchDialog.close();
+});
+
+document.querySelector("#cancelResearch").addEventListener("click", () => {
+  elements.researchDialog.close();
+});
+
 elements.tradeForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await addTrade(new FormData(elements.tradeForm));
@@ -895,6 +1038,37 @@ elements.holdingForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await saveHolding(new FormData(elements.holdingForm));
   elements.holdingDialog.close();
+});
+
+elements.researchForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    elements.importResearchButton.disabled = true;
+    setResearchStatus("正在校验...");
+    await previewResearch();
+  } catch (error) {
+    pendingResearch = null;
+    elements.researchPreview.innerHTML = "";
+    setResearchStatus(error.message, "error");
+  }
+});
+
+elements.importResearchButton.addEventListener("click", async () => {
+  try {
+    elements.importResearchButton.disabled = true;
+    setResearchStatus("正在写入 portfolio.json...");
+    await importResearch();
+  } catch (error) {
+    elements.importResearchButton.disabled = false;
+    setResearchStatus(error.message, "error");
+  }
+});
+
+elements.researchJSON.addEventListener("input", () => {
+  pendingResearch = null;
+  elements.importResearchButton.disabled = true;
+  elements.researchPreview.innerHTML = "";
+  setResearchStatus("");
 });
 
 elements.positionsBody.addEventListener("click", (event) => {

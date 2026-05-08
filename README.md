@@ -1,6 +1,6 @@
-# holds_website
+# 纸牌屋
 
-股票持仓管理台。
+股票投资组合管理台。
 
 ## 本地运行
 
@@ -30,7 +30,11 @@ go run ./cmd/update-quotes -dry-run
 
 ## 导入 ChatGPT 股票分析
 
-先按 [docs/chatgpt-research-bridge.md](docs/chatgpt-research-bridge.md) 的格式让 ChatGPT 输出 JSON，保存到 `data/research/`，例如：
+先按 [docs/chatgpt-research-bridge.md](docs/chatgpt-research-bridge.md) 的格式让 ChatGPT 输出 JSON。
+
+推荐在网站右上角点击“导入分析”，粘贴 JSON，先校验预览，再确认写入。确认导入会更新 `data/portfolio.json`，并自动备份旧文件到 `data/backups/`。
+
+也可以保存到 `data/research/` 后用命令导入，例如：
 
 ```text
 data/research/0700.HK.json
