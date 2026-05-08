@@ -164,6 +164,7 @@ func main() {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	updated := 0
 	cache := make(map[string]quote)
+	fallbackCache, fallbackErr := fetchFallbackQuotes(client, quoteSymbols(&state))
 
 	for i := range state.Holdings {
 		holding := &state.Holdings[i]
@@ -171,7 +172,7 @@ func main() {
 			continue
 		}
 
-		quote, err := fetchQuoteCached(client, cache, holding.Symbol)
+		quote, err := fetchQuoteCached(client, cache, fallbackCache, fallbackErr, holding.Symbol)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "skip %s: %v\n", holding.Symbol, err)
 			continue
@@ -183,7 +184,10 @@ func main() {
 		holding.CurrentPriceDate = quote.PriceDate
 		holding.PreviousCloseDate = quote.PreviousCloseDate
 		holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, holding.MarginOfSafety)
-		holding.UpdatedAt = fmt.Sprintf("%s；行情源 Yahoo Finance 日线收盘价；代码 %s；币种 %s；收盘日 %s/%s", now, quote.SourceSymbol, quote.Currency, quote.PreviousCloseDate, quote.PriceDate)
+		if strings.TrimSpace(holding.Currency) == "" {
+			holding.Currency = strings.ToUpper(strings.TrimSpace(quote.Currency))
+		}
+		holding.UpdatedAt = quoteUpdateLabel(now, quote)
 		appendQuoteDecisionLog(&state, holding.Symbol, holding.Name, holding.Currency, holding.CurrentPrice, holding.CurrentPriceDate, holding.PreviousCloseDate, now)
 		updated++
 	}
@@ -194,7 +198,7 @@ func main() {
 			continue
 		}
 
-		quote, err := fetchQuoteCached(client, cache, candidate.Symbol)
+		quote, err := fetchQuoteCached(client, cache, fallbackCache, fallbackErr, candidate.Symbol)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "skip %s: %v\n", candidate.Symbol, err)
 			continue
@@ -209,7 +213,7 @@ func main() {
 		if strings.TrimSpace(candidate.Currency) == "" {
 			candidate.Currency = strings.ToUpper(strings.TrimSpace(quote.Currency))
 		}
-		candidate.UpdatedAt = fmt.Sprintf("%s；行情源 Yahoo Finance 日线收盘价；代码 %s；币种 %s；收盘日 %s/%s", now, quote.SourceSymbol, quote.Currency, quote.PreviousCloseDate, quote.PriceDate)
+		candidate.UpdatedAt = quoteUpdateLabel(now, quote)
 		appendQuoteDecisionLog(&state, candidate.Symbol, candidate.Name, candidate.Currency, candidate.CurrentPrice, candidate.CurrentPriceDate, candidate.PreviousCloseDate, now)
 		updated++
 	}
@@ -236,9 +240,31 @@ type quote struct {
 	PreviousCloseDate string
 	Currency          string
 	SourceSymbol      string
+	SourceName        string
 }
 
-func fetchQuote(client *http.Client, symbol string) (quote, error) {
+func fetchQuote(client *http.Client, symbol string, fallbackCache map[string]quote, fallbackErr error) (quote, error) {
+	quote, yahooErr := fetchYahooQuote(client, symbol)
+	if yahooErr == nil {
+		return quote, nil
+	}
+
+	if quote, ok := fallbackCache[normalizeSymbol(symbol)]; ok {
+		return quote, nil
+	}
+	if fallbackErr != nil {
+		return quote, fmt.Errorf("yahoo: %v; fallback: %v", yahooErr, fallbackErr)
+	}
+
+	return quote, fmt.Errorf("yahoo: %v; fallback: no quote for %s", yahooErr, symbol)
+}
+
+func quoteUpdateLabel(updateLabel string, quote quote) string {
+	sourceName := firstNonEmpty(quote.SourceName, "Yahoo Finance 日线收盘价")
+	return fmt.Sprintf("%s；行情源 %s；代码 %s；币种 %s；日期 %s/%s", updateLabel, sourceName, quote.SourceSymbol, quote.Currency, quote.PreviousCloseDate, quote.PriceDate)
+}
+
+func fetchYahooQuote(client *http.Client, symbol string) (quote, error) {
 	sourceSymbol := yahooSymbol(symbol)
 	endpoint := "https://query1.finance.yahoo.com/v8/finance/chart/" + url.PathEscape(sourceSymbol) + "?range=5d&interval=1d"
 
@@ -296,15 +322,416 @@ func fetchQuote(client *http.Client, symbol string) (quote, error) {
 		PreviousCloseDate: previousClose.Date,
 		Currency:          result.Meta.Currency,
 		SourceSymbol:      sourceSymbol,
+		SourceName:        "Yahoo Finance 日线收盘价",
 	}, nil
 }
 
-func fetchQuoteCached(client *http.Client, cache map[string]quote, symbol string) (quote, error) {
+func fetchEastmoneyQuote(client *http.Client, symbol string) (quote, error) {
+	sourceSymbol, scale, err := eastmoneySymbol(symbol)
+	if err != nil {
+		return quote{}, err
+	}
+
+	endpoint := "https://push2.eastmoney.com/api/qt/stock/get?secid=" + url.QueryEscape(sourceSymbol) + "&fields=f43,f57,f58,f60,f86,f107"
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return quote{}, err
+	}
+	req.Header.Set("Accept", "application/json,text/plain,*/*")
+	req.Header.Set("Referer", "https://quote.eastmoney.com/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website quote updater)")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return quote{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return quote{}, fmt.Errorf("quote request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	var payload struct {
+		RC   int            `json:"rc"`
+		Data map[string]any `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return quote{}, err
+	}
+	if payload.RC != 0 || len(payload.Data) == 0 {
+		return quote{}, errors.New("empty quote response")
+	}
+
+	rawPrice, err := numberField(payload.Data, "f43")
+	if err != nil {
+		return quote{}, err
+	}
+	rawPreviousClose, err := numberField(payload.Data, "f60")
+	if err != nil {
+		return quote{}, err
+	}
+	if rawPrice <= 0 || rawPreviousClose <= 0 {
+		return quote{}, errors.New("missing price series")
+	}
+
+	priceDate := eastmoneyQuoteDate(payload.Data)
+	return quote{
+		Price:             rawPrice / scale,
+		PreviousClose:     rawPreviousClose / scale,
+		PriceDate:         priceDate,
+		PreviousCloseDate: priceDate,
+		Currency:          currencyForSymbol(symbol),
+		SourceSymbol:      sourceSymbol,
+		SourceName:        "东方财富实时行情",
+	}, nil
+}
+
+func fetchFallbackQuotes(client *http.Client, symbols []string) (map[string]quote, error) {
+	quotes, err := fetchTencentQuotes(client, symbols)
+	if err == nil {
+		return quotes, nil
+	}
+
+	eastmoneyQuotes, eastmoneyErr := fetchEastmoneyQuotes(client, symbols)
+	if eastmoneyErr == nil {
+		return eastmoneyQuotes, nil
+	}
+
+	return nil, fmt.Errorf("tencent: %v; eastmoney: %v", err, eastmoneyErr)
+}
+
+func fetchTencentQuotes(client *http.Client, symbols []string) (map[string]quote, error) {
+	querySymbols := []string{}
+	normalizedByQuery := map[string]string{}
+	for _, symbol := range symbols {
+		querySymbol, normalized, err := tencentSymbol(symbol)
+		if err != nil {
+			continue
+		}
+		querySymbols = append(querySymbols, querySymbol)
+		normalizedByQuery[querySymbol] = normalized
+	}
+	if len(querySymbols) == 0 {
+		return map[string]quote{}, errors.New("no supported tencent symbols")
+	}
+
+	endpoint := "http://qt.gtimg.cn/q=" + strings.Join(querySymbols, ",")
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "text/plain,*/*")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website quote updater)")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("quote request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, err
+	}
+
+	quotes := map[string]quote{}
+	for _, line := range strings.Split(string(body), ";") {
+		querySymbol, fields, ok := parseTencentLine(line)
+		if !ok {
+			continue
+		}
+		normalized := normalizedByQuery[querySymbol]
+		if normalized == "" || len(fields) <= 30 {
+			continue
+		}
+		price, err := strconv.ParseFloat(strings.TrimSpace(fields[3]), 64)
+		if err != nil || price <= 0 {
+			continue
+		}
+		previousClose, err := strconv.ParseFloat(strings.TrimSpace(fields[4]), 64)
+		if err != nil || previousClose <= 0 {
+			continue
+		}
+		priceDate := tencentQuoteDate(fields[30])
+		quotes[normalized] = quote{
+			Price:             price,
+			PreviousClose:     previousClose,
+			PriceDate:         priceDate,
+			PreviousCloseDate: priceDate,
+			Currency:          currencyForSymbol(normalized),
+			SourceSymbol:      querySymbol,
+			SourceName:        "腾讯实时行情",
+		}
+	}
+	if len(quotes) == 0 {
+		return nil, errors.New("empty quote response")
+	}
+	return quotes, nil
+}
+
+func parseTencentLine(line string) (string, []string, bool) {
+	line = strings.TrimSpace(line)
+	if !strings.HasPrefix(line, "v_") {
+		return "", nil, false
+	}
+	equalIndex := strings.Index(line, "=")
+	if equalIndex <= 2 {
+		return "", nil, false
+	}
+	querySymbol := strings.TrimSpace(strings.TrimPrefix(line[:equalIndex], "v_"))
+	payload := strings.TrimSpace(line[equalIndex+1:])
+	payload = strings.Trim(payload, "\"")
+	if querySymbol == "" || payload == "" {
+		return "", nil, false
+	}
+	return querySymbol, strings.Split(payload, "~"), true
+}
+
+func tencentQuoteDate(value string) string {
+	value = strings.TrimSpace(value)
+	if len(value) >= len("2006/01/02") && strings.Contains(value[:len("2006/01/02")], "/") {
+		return strings.ReplaceAll(value[:len("2006/01/02")], "/", "-")
+	}
+	if len(value) >= len("20060102") {
+		if parsed, err := time.Parse("20060102", value[:len("20060102")]); err == nil {
+			return parsed.Format("2006-01-02")
+		}
+	}
+	return time.Now().Format("2006-01-02")
+}
+
+func tencentSymbol(symbol string) (string, string, error) {
+	symbol = normalizeSymbol(symbol)
+	switch {
+	case strings.HasSuffix(symbol, ".SH"):
+		code := strings.TrimSuffix(symbol, ".SH")
+		return "sh" + code, symbol, nil
+	case strings.HasSuffix(symbol, ".SZ"):
+		code := strings.TrimSuffix(symbol, ".SZ")
+		return "sz" + code, symbol, nil
+	case strings.HasSuffix(symbol, ".HK"):
+		code := strings.TrimSuffix(symbol, ".HK")
+		if value, err := strconv.Atoi(code); err == nil {
+			code = fmt.Sprintf("%05d", value)
+		}
+		return "hk" + code, symbol, nil
+	default:
+		return "", "", fmt.Errorf("unsupported tencent symbol: %s", symbol)
+	}
+}
+
+func fetchEastmoneyQuotes(client *http.Client, symbols []string) (map[string]quote, error) {
+	secIDs := []string{}
+	for _, symbol := range symbols {
+		secID, _, err := eastmoneySymbol(symbol)
+		if err == nil {
+			secIDs = append(secIDs, secID)
+		}
+	}
+	if len(secIDs) == 0 {
+		return map[string]quote{}, errors.New("no supported eastmoney symbols")
+	}
+
+	endpoint := "https://push2.eastmoney.com/api/qt/ulist.np/get?secids=" + strings.Join(secIDs, ",") + "&fields=f2,f12,f13,f14,f18,f124"
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json,text/plain,*/*")
+	req.Header.Set("Referer", "https://quote.eastmoney.com/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website quote updater)")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("quote request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	var payload struct {
+		RC   int `json:"rc"`
+		Data struct {
+			Diff []map[string]any `json:"diff"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	if payload.RC != 0 || len(payload.Data.Diff) == 0 {
+		return nil, errors.New("empty quote response")
+	}
+
+	quotes := make(map[string]quote, len(payload.Data.Diff))
+	for _, item := range payload.Data.Diff {
+		normalized, sourceSymbol, scale, err := eastmoneyDiffSymbol(item)
+		if err != nil {
+			continue
+		}
+		rawPrice, err := numberField(item, "f2")
+		if err != nil {
+			continue
+		}
+		rawPreviousClose, err := numberField(item, "f18")
+		if err != nil {
+			continue
+		}
+		if rawPrice <= 0 || rawPreviousClose <= 0 {
+			continue
+		}
+		priceDate := eastmoneyQuoteDate(item)
+		quotes[normalized] = quote{
+			Price:             rawPrice / scale,
+			PreviousClose:     rawPreviousClose / scale,
+			PriceDate:         priceDate,
+			PreviousCloseDate: priceDate,
+			Currency:          currencyForSymbol(normalized),
+			SourceSymbol:      sourceSymbol,
+			SourceName:        "东方财富实时行情",
+		}
+	}
+	if len(quotes) == 0 {
+		return nil, errors.New("empty quote response")
+	}
+	return quotes, nil
+}
+
+func numberField(data map[string]any, key string) (float64, error) {
+	value, ok := data[key]
+	if !ok {
+		return 0, fmt.Errorf("missing %s", key)
+	}
+	switch typed := value.(type) {
+	case float64:
+		return typed, nil
+	case string:
+		number, err := strconv.ParseFloat(strings.TrimSpace(typed), 64)
+		if err != nil {
+			return 0, fmt.Errorf("invalid %s", key)
+		}
+		return number, nil
+	default:
+		return 0, fmt.Errorf("invalid %s", key)
+	}
+}
+
+func eastmoneyQuoteDate(data map[string]any) string {
+	for _, key := range []string{"f86", "f124"} {
+		value, err := numberField(data, key)
+		if err == nil && value > 0 {
+			return time.Unix(int64(value), 0).In(loadLocation("Asia/Shanghai")).Format("2006-01-02")
+		}
+	}
+	return time.Now().Format("2006-01-02")
+}
+
+func eastmoneyDiffSymbol(data map[string]any) (string, string, float64, error) {
+	rawMarket, err := numberField(data, "f13")
+	if err != nil {
+		return "", "", 0, err
+	}
+	code, err := stringField(data, "f12")
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	market := int(rawMarket)
+	sourceSymbol := fmt.Sprintf("%d.%s", market, code)
+	switch market {
+	case 0:
+		return normalizeSymbol(code + ".SZ"), sourceSymbol, 100, nil
+	case 1:
+		return normalizeSymbol(code + ".SH"), sourceSymbol, 100, nil
+	case 116:
+		if value, err := strconv.Atoi(code); err == nil {
+			return normalizeSymbol(fmt.Sprintf("%d.HK", value)), sourceSymbol, 1000, nil
+		}
+		return normalizeSymbol(code + ".HK"), sourceSymbol, 1000, nil
+	default:
+		return "", "", 0, fmt.Errorf("unsupported eastmoney market: %d", market)
+	}
+}
+
+func stringField(data map[string]any, key string) (string, error) {
+	value, ok := data[key]
+	if !ok {
+		return "", fmt.Errorf("missing %s", key)
+	}
+	switch typed := value.(type) {
+	case string:
+		return strings.TrimSpace(typed), nil
+	case float64:
+		return strconv.FormatInt(int64(typed), 10), nil
+	default:
+		return "", fmt.Errorf("invalid %s", key)
+	}
+}
+
+func eastmoneySymbol(symbol string) (string, float64, error) {
+	symbol = normalizeSymbol(symbol)
+	switch {
+	case strings.HasSuffix(symbol, ".SH"):
+		return "1." + strings.TrimSuffix(symbol, ".SH"), 100, nil
+	case strings.HasSuffix(symbol, ".SZ"):
+		return "0." + strings.TrimSuffix(symbol, ".SZ"), 100, nil
+	case strings.HasSuffix(symbol, ".HK"):
+		code := strings.TrimSuffix(symbol, ".HK")
+		if value, err := strconv.Atoi(code); err == nil {
+			code = fmt.Sprintf("%05d", value)
+		}
+		return "116." + code, 1000, nil
+	default:
+		return "", 0, fmt.Errorf("unsupported eastmoney symbol: %s", symbol)
+	}
+}
+
+func currencyForSymbol(symbol string) string {
+	symbol = normalizeSymbol(symbol)
+	switch {
+	case strings.HasSuffix(symbol, ".HK"):
+		return "HKD"
+	case strings.HasSuffix(symbol, ".SH"), strings.HasSuffix(symbol, ".SZ"):
+		return "CNY"
+	default:
+		return ""
+	}
+}
+
+func quoteSymbols(state *AppState) []string {
+	symbols := []string{}
+	seen := map[string]bool{}
+	for _, holding := range state.Holdings {
+		normalized := normalizeSymbol(holding.Symbol)
+		if normalized != "" && !seen[normalized] {
+			symbols = append(symbols, holding.Symbol)
+			seen[normalized] = true
+		}
+	}
+	for _, candidate := range state.Candidates {
+		normalized := normalizeSymbol(candidate.Symbol)
+		if normalized != "" && !seen[normalized] {
+			symbols = append(symbols, candidate.Symbol)
+			seen[normalized] = true
+		}
+	}
+	return symbols
+}
+
+func fetchQuoteCached(client *http.Client, cache map[string]quote, fallbackCache map[string]quote, fallbackErr error, symbol string) (quote, error) {
 	normalized := strings.ToUpper(strings.TrimSpace(symbol))
 	if cached, ok := cache[normalized]; ok {
 		return cached, nil
 	}
-	quote, err := fetchQuote(client, normalized)
+	quote, err := fetchQuote(client, normalized, fallbackCache, fallbackErr)
 	if err != nil {
 		return quote, err
 	}
