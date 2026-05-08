@@ -66,8 +66,10 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updated, skipped := updateQuotes(&state, &http.Client{Timeout: 12 * time.Second}, time.Now())
+	now := time.Now()
+	updated, skipped := updateQuotes(&state, &http.Client{Timeout: 12 * time.Second}, now)
 	if updated > 0 {
+		appendQuoteDecisionLogs(&state, now)
 		if err := saveState(state); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to save state")
 			return
@@ -245,15 +247,9 @@ func closeDate(timestamps []int64, index int, location *time.Location) string {
 }
 
 func yahooSymbol(symbol string) string {
-	symbol = strings.ToUpper(strings.TrimSpace(symbol))
+	symbol = normalizeSymbol(symbol)
 	if strings.HasSuffix(symbol, ".SH") {
 		return strings.TrimSuffix(symbol, ".SH") + ".SS"
-	}
-	if strings.HasSuffix(symbol, ".HK") {
-		code := strings.TrimSuffix(symbol, ".HK")
-		if len(code) == 5 && strings.HasPrefix(code, "0") {
-			return strings.TrimPrefix(code, "0") + ".HK"
-		}
 	}
 	return symbol
 }

@@ -8,15 +8,19 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
+
+const decisionLogLimit = 500
 
 type AppState struct {
 	TotalCapital float64            `json:"totalCapital"`
 	Cash         float64            `json:"cash"`
 	FX           map[string]float64 `json:"fx"`
 	Trades       []Trade            `json:"trades"`
+	DecisionLogs []DecisionLog      `json:"decisionLogs"`
 	Holdings     []Holding          `json:"holdings"`
 	Plan         []PlanItem         `json:"plan"`
 	Candidates   []Candidate        `json:"candidates"`
@@ -33,6 +37,19 @@ type Trade struct {
 	Price        float64 `json:"price"`
 	Currency     string  `json:"currency"`
 	CurrentPrice float64 `json:"currentPrice"`
+}
+
+type DecisionLog struct {
+	ID         int64    `json:"id"`
+	Date       string   `json:"date"`
+	Type       string   `json:"type"`
+	Symbol     string   `json:"symbol,omitempty"`
+	Name       string   `json:"name,omitempty"`
+	Price      *float64 `json:"price,omitempty"`
+	Currency   string   `json:"currency,omitempty"`
+	Decision   string   `json:"decision"`
+	Discipline string   `json:"discipline"`
+	Detail     string   `json:"detail,omitempty"`
 }
 
 type Holding struct {
@@ -60,6 +77,16 @@ type Holding struct {
 	FinancialQuality  *float64 `json:"financialQuality"`
 	UpdatedAt         string   `json:"updatedAt"`
 	Notes             string   `json:"notes"`
+	Reports           []Report `json:"reports,omitempty"`
+}
+
+type Report struct {
+	Period string `json:"period"`
+	Kind   string `json:"kind"`
+	Title  string `json:"title"`
+	Date   string `json:"date"`
+	Source string `json:"source"`
+	URL    string `json:"url"`
 }
 
 type PlanItem struct {
@@ -94,6 +121,7 @@ type Candidate struct {
 	FinancialQuality  *float64 `json:"financialQuality"`
 	UpdatedAt         string   `json:"updatedAt"`
 	Notes             string   `json:"notes"`
+	Reports           []Report `json:"reports,omitempty"`
 }
 
 type Rule struct {
@@ -162,6 +190,7 @@ func main() {
 	}
 
 	summary := applyResearch(&state, research)
+	appendResearchDecisionLog(&state, research, summary)
 	if *dryRun {
 		fmt.Println(summary)
 		fmt.Println("dry run: portfolio data was not changed")
@@ -381,11 +410,18 @@ func prefer(current, next string) string {
 }
 
 func normalizeSymbol(symbol string) string {
-	return strings.ToUpper(strings.TrimSpace(symbol))
+	return normalizeDisplaySymbol(symbol)
 }
 
 func normalizeDisplaySymbol(symbol string) string {
-	return normalizeSymbol(symbol)
+	symbol = strings.ToUpper(strings.TrimSpace(symbol))
+	if strings.HasSuffix(symbol, ".HK") {
+		code := strings.TrimSuffix(symbol, ".HK")
+		if value, err := strconv.Atoi(code); err == nil {
+			return fmt.Sprintf("%04d.HK", value)
+		}
+	}
+	return symbol
 }
 
 func marginOfSafetyFromPrice(intrinsicValue *float64, currentPrice float64, fallback *float64) *float64 {
@@ -394,6 +430,107 @@ func marginOfSafetyFromPrice(intrinsicValue *float64, currentPrice float64, fall
 	}
 	value := (*intrinsicValue - currentPrice) / *intrinsicValue
 	return &value
+}
+
+func appendResearchDecisionLog(state *AppState, research ResearchImport, summary string) {
+	name, price, currency, decision, discipline := decisionLogContext(state, research.Symbol)
+	appendDecisionLog(state, DecisionLog{
+		Type:       "research",
+		Symbol:     research.Symbol,
+		Name:       firstNonEmpty(name, research.Name),
+		Price:      price,
+		Currency:   firstNonEmpty(currency, research.Currency),
+		Decision:   firstNonEmpty(decision, research.Action, research.Status),
+		Discipline: firstNonEmpty(discipline, research.Plan.Discipline, research.Status),
+		Detail:     summary,
+	})
+}
+
+func appendDecisionLog(state *AppState, entry DecisionLog) {
+	entry.Type = strings.TrimSpace(entry.Type)
+	if entry.Type == "" {
+		entry.Type = "event"
+	}
+	entry.Symbol = normalizeSymbol(entry.Symbol)
+	entry.Name = strings.TrimSpace(entry.Name)
+	entry.Currency = normalizeSymbol(entry.Currency)
+	entry.Decision = strings.TrimSpace(entry.Decision)
+	entry.Discipline = strings.TrimSpace(entry.Discipline)
+	entry.Detail = strings.TrimSpace(entry.Detail)
+	if entry.ID == 0 {
+		entry.ID = time.Now().UnixNano()
+	}
+	if strings.TrimSpace(entry.Date) == "" {
+		entry.Date = time.Now().Format("2006-01-02 15:04:05")
+	}
+
+	state.DecisionLogs = append(state.DecisionLogs, entry)
+	if len(state.DecisionLogs) > decisionLogLimit {
+		state.DecisionLogs = state.DecisionLogs[len(state.DecisionLogs)-decisionLogLimit:]
+	}
+}
+
+func decisionLogContext(state *AppState, symbol string) (string, *float64, string, string, string) {
+	normalizedSymbol := normalizeSymbol(symbol)
+	for i := range state.Holdings {
+		holding := state.Holdings[i]
+		if normalizeSymbol(holding.Symbol) != normalizedSymbol {
+			continue
+		}
+		plan := findPlanForDecisionLog(state, holding.Symbol, holding.Name)
+		return holding.Name, pricePointer(holding.CurrentPrice), holding.Currency, firstNonEmpty(holding.Action, holding.Status), firstNonEmpty(planDiscipline(plan), holding.Status)
+	}
+
+	for i := range state.Candidates {
+		candidate := state.Candidates[i]
+		if normalizeSymbol(candidate.Symbol) != normalizedSymbol {
+			continue
+		}
+		plan := findPlanForDecisionLog(state, candidate.Symbol, candidate.Name)
+		return candidate.Name, pricePointer(candidate.CurrentPrice), candidate.Currency, firstNonEmpty(candidate.Action, candidate.Status), firstNonEmpty(planDiscipline(plan), candidate.Status)
+	}
+
+	plan := findPlanForDecisionLog(state, symbol, "")
+	return "", nil, "", "", planDiscipline(plan)
+}
+
+func findPlanForDecisionLog(state *AppState, symbol string, name string) *PlanItem {
+	normalizedSymbol := normalizeSymbol(symbol)
+	normalizedName := strings.TrimSpace(name)
+	for i := range state.Plan {
+		itemSymbol := normalizeSymbol(state.Plan[i].Symbol)
+		if itemSymbol != "" && normalizedSymbol != "" && itemSymbol == normalizedSymbol {
+			return &state.Plan[i]
+		}
+		itemName := strings.TrimSpace(state.Plan[i].Name)
+		if itemName != "" && normalizedName != "" && (strings.EqualFold(itemName, normalizedName) || strings.Contains(normalizedName, itemName) || strings.Contains(itemName, normalizedName)) {
+			return &state.Plan[i]
+		}
+	}
+	return nil
+}
+
+func planDiscipline(plan *PlanItem) string {
+	if plan == nil {
+		return ""
+	}
+	return strings.TrimSpace(plan.Discipline)
+}
+
+func pricePointer(value float64) *float64 {
+	if value <= 0 {
+		return nil
+	}
+	return &value
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if text := strings.TrimSpace(value); text != "" {
+			return text
+		}
+	}
+	return ""
 }
 
 func loadState(path string) (AppState, error) {

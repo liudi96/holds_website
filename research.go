@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -114,6 +115,7 @@ func (s *Server) handleImportResearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	summary, targetType := applyResearch(&state, research)
+	appendResearchDecisionLog(&state, research, summary, targetType)
 	backupPath, err := backupPortfolioFile()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to backup portfolio data")
@@ -446,9 +448,16 @@ func prefer(current, next string) string {
 }
 
 func normalizeSymbol(symbol string) string {
-	return strings.ToUpper(strings.TrimSpace(symbol))
+	return normalizeDisplaySymbol(symbol)
 }
 
 func normalizeDisplaySymbol(symbol string) string {
-	return normalizeSymbol(symbol)
+	symbol = strings.ToUpper(strings.TrimSpace(symbol))
+	if strings.HasSuffix(symbol, ".HK") {
+		code := strings.TrimSuffix(symbol, ".HK")
+		if value, err := strconv.Atoi(code); err == nil {
+			return fmt.Sprintf("%04d.HK", value)
+		}
+	}
+	return symbol
 }

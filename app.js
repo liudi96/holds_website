@@ -5,6 +5,7 @@ const seedState = {
   cash: 477238.13560642325,
   fx: { CNY: 1, HKD: 0.8716, USD: 7.1 },
   trades: [],
+  decisionLogs: [],
   holdings: [
     {
       symbol: "0700.HK",
@@ -200,6 +201,7 @@ let state = loadState();
 let activeFilter = "all";
 let searchTerm = "";
 let pendingResearch = null;
+let candidateSort = "priority";
 const pageTitles = {
   overview: "纸牌屋",
   positions: "当前持仓",
@@ -217,7 +219,9 @@ const elements = {
   opportunityRadar: document.querySelector("#opportunityRadar"),
   disciplineDashboard: document.querySelector("#disciplineDashboard"),
   triggerAlerts: document.querySelector("#triggerAlerts"),
+  decisionLogList: document.querySelector("#decisionLogList"),
   candidateList: document.querySelector("#candidateList"),
+  candidateSort: document.querySelector("#candidateSort"),
   stockDetail: document.querySelector("#stockDetail"),
   totalValue: document.querySelector("#totalValue"),
   totalPnl: document.querySelector("#totalPnl"),
@@ -313,8 +317,23 @@ function finiteNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
 function stockHash(symbol) {
   return `#stock=${encodeURIComponent(symbol)}`;
+}
+
+function normalizeSymbol(symbol) {
+  const text = String(symbol ?? "").trim().toUpperCase();
+  if (text.endsWith(".HK")) {
+    const code = text.slice(0, -3);
+    if (/^\d+$/.test(code)) {
+      return `${String(Number(code)).padStart(4, "0")}.HK`;
+    }
+  }
+  return text;
 }
 
 function escapeHTML(value) {
@@ -374,6 +393,23 @@ function setResearchStatus(message, tone = "") {
 function setQuoteUpdateStatus(message, tone = "") {
   elements.quoteUpdateStatus.textContent = message;
   elements.quoteUpdateStatus.className = tone;
+}
+
+function appendClientDecisionLog(entry) {
+  const nextEntry = {
+    id: Date.now(),
+    date: new Date().toISOString().slice(0, 19).replace("T", " "),
+    type: "event",
+    symbol: "",
+    name: "",
+    price: null,
+    currency: "",
+    decision: "",
+    discipline: "",
+    detail: "",
+    ...entry
+  };
+  state.decisionLogs = [...(state.decisionLogs ?? []), nextEntry].slice(-500);
 }
 
 function targetTypeText(type) {
@@ -483,6 +519,52 @@ function getFilteredPositions(positions) {
   });
 }
 
+function holdingHealth(position, totalValue) {
+  const margin = calculatedMarginOfSafety(position) ?? finiteNumber(position.marginOfSafety);
+  const quality = finiteNumber(position.qualityScore);
+  const weight = totalValue ? position.marketValueCny / totalValue : 0;
+  const text = [position.risk, position.status, position.action].join(" ");
+  const highRisk = /停牌|重大风险|否决|调查|内控|退市|财报可信|风险暴露/.test(text);
+  const reduceSignal = /减仓|降权|剔除|风险观察|不纳入核心/.test(text);
+  const marginScore = Number.isFinite(margin) ? clamp(((margin + 0.1) / 0.35) * 100, 0, 100) : 45;
+  const qualityScore = Number.isFinite(quality) ? quality : 60;
+  const pnlScore = clamp(((position.pnlRate ?? 0) + 20) / 40 * 100, 0, 100);
+  const weightScore = weight <= 0.15 ? 100 : weight <= 0.25 ? 72 : 45;
+  const riskScore = highRisk ? 0 : reduceSignal ? 35 : 100;
+  const score = Math.round(qualityScore * 0.35 + marginScore * 0.3 + pnlScore * 0.15 + weightScore * 0.1 + riskScore * 0.1);
+
+  if (highRisk || (Number.isFinite(quality) && quality < 75)) {
+    return {
+      status: "风险暴露",
+      tone: "risk",
+      score,
+      detail: "风险标签或质量分不达标"
+    };
+  }
+  if (reduceSignal || (Number.isFinite(margin) && margin < 0) || position.pnlRate <= -15) {
+    return {
+      status: "降权",
+      tone: "reduce",
+      score,
+      detail: "进入降权或复盘区"
+    };
+  }
+  if (Number.isFinite(quality) && quality >= 85 && Number.isFinite(margin) && margin >= 0.15 && weight <= 0.2) {
+    return {
+      status: "核心",
+      tone: "core",
+      score,
+      detail: `${percent(weight * 100, false)}仓位 · ${displayMarginOfSafety(position)}安全边际`
+    };
+  }
+  return {
+    status: "观察",
+    tone: "watch",
+    score,
+    detail: `${percent(weight * 100, false)}仓位 · ${displayMarginOfSafety(position)}安全边际`
+  };
+}
+
 function renderMetrics(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   const totalCost = positions.reduce((sum, item) => sum + item.costValueCny, 0);
@@ -508,7 +590,7 @@ function renderPositions(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
 
   if (!filtered.length) {
-    elements.positionsBody.innerHTML = `<tr><td colspan="10" class="empty-state">暂无符合条件的持仓</td></tr>`;
+    elements.positionsBody.innerHTML = `<tr><td colspan="11" class="empty-state">暂无符合条件的持仓</td></tr>`;
     return;
   }
 
@@ -518,6 +600,7 @@ function renderPositions(positions) {
       const pnlClass = position.pnlCny >= 0 ? "positive" : "negative";
       const marginText = displayMarginOfSafety(position);
       const qualityText = Number.isFinite(position.qualityScore) ? position.qualityScore : "-";
+      const health = holdingHealth(position, totalValue);
 
       return `
         <tr>
@@ -549,6 +632,11 @@ function renderPositions(positions) {
             <div class="weight-bar" title="${weight.toFixed(2)}%">
               <span style="width: ${Math.min(weight, 100)}%"></span>
             </div>
+          </td>
+          <td>
+            <span class="health-pill ${health.tone}" title="${escapeHTML(health.detail)}">${health.status}</span>
+            <br />
+            <small class="health-score">${health.score} 分</small>
           </td>
           <td>
             <button class="icon-button edit-holding" data-symbol="${position.symbol}" title="编辑 Excel 信息">✎</button>
@@ -606,52 +694,85 @@ function renderTrades() {
     .join("");
 }
 
+function findStockForPlanItem(item) {
+  const symbol = findSymbolForPlan(item);
+  const normalized = normalizeSymbol(symbol);
+  return (
+    state.holdings.find((stock) => normalizeSymbol(stock.symbol) === normalized) ||
+    state.candidates.find((stock) => normalizeSymbol(stock.symbol) === normalized) ||
+    state.holdings.find((stock) => stock.name === item.name || stock.name.includes(item.name) || item.name.includes(stock.name)) ||
+    state.candidates.find((stock) => stock.name === item.name || stock.name.includes(item.name) || item.name.includes(stock.name)) ||
+    null
+  );
+}
+
+function sortedPlanItems() {
+  return state.plan
+    .map((item) => {
+      const stock = findStockForPlanItem(item);
+      const margin = stock ? calculatedMarginOfSafety(stock) ?? finiteNumber(stock.marginOfSafety) : null;
+      const quality = stock ? finiteNumber(stock.qualityScore) : null;
+      return { item, stock, margin, quality };
+    })
+    .sort((a, b) => {
+      const marginA = Number.isFinite(a.margin) ? a.margin : -Infinity;
+      const marginB = Number.isFinite(b.margin) ? b.margin : -Infinity;
+      return marginB - marginA || (b.quality ?? -Infinity) - (a.quality ?? -Infinity) || a.item.name.localeCompare(b.item.name, "zh-CN");
+    });
+}
+
 function renderPlanAndCandidates() {
-  elements.overviewPlanList.innerHTML = state.plan
-    .map((item) => `
-      <a class="plan-card" href="${stockHash(findSymbolForPlan(item))}">
-        <span class="plan-rank">${item.rank}</span>
+  const plans = sortedPlanItems();
+  elements.overviewPlanList.innerHTML = plans.length
+    ? plans.map(({ item, stock, margin }, index) => `
+      <a class="plan-card" href="${stockHash(stock?.symbol || findSymbolForPlan(item))}">
+        <span class="plan-rank">${index + 1}</span>
         <div>
           <strong>${escapeHTML(item.name)}</strong>
-          <small>${escapeHTML(item.priority)}</small>
+          <small>${escapeHTML(item.priority)} · 安全边际 ${Number.isFinite(margin) ? percent(margin * 100, false) : "-"}</small>
         </div>
         <p>${escapeHTML(item.advice)}</p>
       </a>
     `)
-    .join("");
+    .join("")
+    : `<div class="empty-state compact-empty">暂无执行计划</div>`;
 
-  elements.candidateList.innerHTML = state.candidates
-    .map((item) => `
-      <a class="candidate-card" href="${stockHash(item.symbol)}">
-        <div class="candidate-head">
-          <div>
-            <strong>${escapeHTML(item.name)}</strong>
-            <span>${escapeHTML(item.symbol)} · ${escapeHTML(item.industry)}</span>
+  elements.candidateList.innerHTML = sortedCandidates()
+    .map((item) => {
+      const plan = findPlanForStock(item);
+      return `
+        <a class="candidate-card" href="${stockHash(item.symbol)}">
+          <div class="candidate-head">
+            <div>
+              <strong>${escapeHTML(item.name)}</strong>
+              <span>${escapeHTML(item.symbol)} · ${escapeHTML(item.industry)}</span>
+            </div>
+            <em>${escapeHTML(plan ? `#${plan.rank} ${plan.priority}` : item.status)}</em>
           </div>
-          <em>${escapeHTML(item.status)}</em>
-        </div>
-        <div class="candidate-metrics">
-          <span>质量 <strong>${Number.isFinite(item.qualityScore) ? item.qualityScore : "-"}</strong></span>
-          <span>最新价 <strong>${Number.isFinite(item.currentPrice) && item.currentPrice > 0 ? currency(item.currentPrice, item.currency) : "-"}</strong></span>
-          <span>安全边际 <strong>${displayMarginOfSafety(item)}</strong></span>
-          <span>买入价 <strong>${Number.isFinite(item.targetBuyPrice) ? currency(item.targetBuyPrice, item.currency) : "-"}</strong></span>
-        </div>
-        <p>${escapeHTML(item.action)}</p>
-      </a>
-    `)
+          <div class="candidate-metrics">
+            <span>质量 <strong>${Number.isFinite(item.qualityScore) ? item.qualityScore : "-"}</strong></span>
+            <span>最新价 <strong>${Number.isFinite(item.currentPrice) && item.currentPrice > 0 ? currency(item.currentPrice, item.currency) : "-"}</strong></span>
+            <span>安全边际 <strong>${displayMarginOfSafety(item)}</strong></span>
+            <span>买入价 <strong>${Number.isFinite(item.targetBuyPrice) ? currency(item.targetBuyPrice, item.currency) : "-"}</strong></span>
+            <span>距买点 <strong>${displayBuyDistance(item)}</strong></span>
+          </div>
+          <p>${escapeHTML(item.action)}</p>
+        </a>
+      `;
+    })
     .join("");
 }
 
 function decisionUniverse(positions) {
   const seen = new Set();
   const holdings = positions.map((position) => {
-    const symbol = String(position.symbol ?? "").toUpperCase();
+    const symbol = normalizeSymbol(position.symbol);
     seen.add(symbol);
     return { ...position, sourceType: "holding" };
   });
   const candidates = state.candidates
     .filter((candidate) => {
-      const symbol = String(candidate.symbol ?? "").toUpperCase();
+      const symbol = normalizeSymbol(candidate.symbol);
       return symbol && !seen.has(symbol);
     })
     .map((candidate) => ({
@@ -673,6 +794,45 @@ function localPrice(stock, key) {
 function planRank(stock) {
   const plan = findPlanForStock(stock);
   return Number.isFinite(plan?.rank) ? plan.rank : 999;
+}
+
+function candidateBuyDistance(candidate) {
+  const currentPrice = finiteNumber(candidate.currentPrice);
+  const targetBuyPrice = finiteNumber(candidate.targetBuyPrice);
+  if (!currentPrice || !targetBuyPrice) return null;
+  return (currentPrice - targetBuyPrice) / targetBuyPrice;
+}
+
+function displayBuyDistance(candidate) {
+  const distance = candidateBuyDistance(candidate);
+  if (!Number.isFinite(distance)) return "-";
+  return distance <= 0 ? "已到买点" : percent(distance * 100, false);
+}
+
+function sortedCandidates() {
+  const holdingSymbols = new Set(state.holdings.filter((holding) => holding.shares > 0).map((holding) => normalizeSymbol(holding.symbol)));
+  return state.candidates
+    .filter((candidate) => !holdingSymbols.has(normalizeSymbol(candidate.symbol)))
+    .sort((a, b) => {
+      const byName = () => a.name.localeCompare(b.name, "zh-CN");
+      if (candidateSort === "margin") {
+        const marginA = calculatedMarginOfSafety(a) ?? finiteNumber(a.marginOfSafety) ?? -Infinity;
+        const marginB = calculatedMarginOfSafety(b) ?? finiteNumber(b.marginOfSafety) ?? -Infinity;
+        return marginB - marginA || planRank(a) - planRank(b) || byName();
+      }
+      if (candidateSort === "quality") {
+        return (finiteNumber(b.qualityScore) ?? -Infinity) - (finiteNumber(a.qualityScore) ?? -Infinity) || planRank(a) - planRank(b) || byName();
+      }
+      if (candidateSort === "buyDistance") {
+        const distanceA = candidateBuyDistance(a);
+        const distanceB = candidateBuyDistance(b);
+        return (Number.isFinite(distanceA) ? distanceA : Infinity) - (Number.isFinite(distanceB) ? distanceB : Infinity) || planRank(a) - planRank(b) || byName();
+      }
+      if (candidateSort === "industry") {
+        return firstIndustry(a.industry).localeCompare(firstIndustry(b.industry), "zh-CN") || planRank(a) - planRank(b) || byName();
+      }
+      return planRank(a) - planRank(b) || byName();
+    });
 }
 
 function buildOpportunitySignals(positions) {
@@ -840,6 +1000,65 @@ function renderTriggerAlerts(positions) {
     : `<div class="empty-state compact-empty">暂无行情触发提醒</div>`;
 }
 
+function decisionLogTypeText(type) {
+  if (type === "research") return "导入分析";
+  if (type === "quote") return "更新行情";
+  if (type === "trade") return "新增交易";
+  return "记录";
+}
+
+function decisionLogTone(type) {
+  if (type === "research") return "research";
+  if (type === "quote") return "quote";
+  if (type === "trade") return "trade";
+  return "";
+}
+
+function sortedDecisionLogs(symbol = "") {
+  const normalizedSymbol = String(symbol ?? "").toUpperCase();
+  return [...(state.decisionLogs ?? [])]
+    .filter((log) => !normalizedSymbol || String(log.symbol ?? "").toUpperCase() === normalizedSymbol)
+    .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")) || (Number(b.id) || 0) - (Number(a.id) || 0));
+}
+
+function renderDecisionLogItems(logs, emptyText) {
+  if (!logs.length) {
+    return `<div class="empty-state compact-empty">${escapeHTML(emptyText)}</div>`;
+  }
+
+  return logs
+    .map((log) => {
+      const price = finiteNumber(log.price);
+      const priceText = Number.isFinite(price) ? currency(price, log.currency || "CNY") : "价格未记录";
+      const title = displayText(log.name, log.symbol || "未知标的");
+      return `
+        <div class="timeline-item ${decisionLogTone(log.type)}">
+          <div class="timeline-head">
+            <strong>${escapeHTML(title)}</strong>
+            <span>${escapeHTML(displayText(log.date, "时间未知"))}</span>
+          </div>
+          <div class="timeline-meta">
+            <span>${escapeHTML(decisionLogTypeText(log.type))}</span>
+            <span>${escapeHTML(displayText(log.symbol, "-"))}</span>
+            <span>${priceText}</span>
+          </div>
+          <p>${escapeHTML(displayText(log.decision, "未记录判断"))}</p>
+          <small>${escapeHTML(displayText(log.discipline, "未记录纪律"))}</small>
+          ${log.detail ? `<em>${escapeHTML(log.detail)}</em>` : ""}
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderDecisionLogs() {
+  elements.decisionLogList.innerHTML = renderDecisionLogItems(sortedDecisionLogs().slice(0, 10), "暂无决策日志");
+}
+
+function renderStockDecisionLogs(stock) {
+  return renderDecisionLogItems(sortedDecisionLogs(stock.symbol).slice(0, 8), "暂无该股票的决策日志");
+}
+
 function renderDecisionArea(positions) {
   renderOpportunityRadar(positions);
   renderDisciplineDashboard(positions);
@@ -848,15 +1067,15 @@ function renderDecisionArea(positions) {
 
 function findSymbolForPlan(item) {
   const symbol = String(item.symbol ?? "").trim();
-  return symbol || findSymbolByName(item.name);
+  return symbol ? normalizeSymbol(symbol) : findSymbolByName(item.name);
 }
 
 function findSymbolByName(name) {
   const normalized = String(name ?? "").trim();
   const holding = state.holdings.find((item) => item.name === normalized || item.name.includes(normalized) || normalized.includes(item.name));
-  if (holding) return holding.symbol;
+  if (holding) return normalizeSymbol(holding.symbol);
   const candidate = state.candidates.find((item) => item.name === normalized || item.name.includes(normalized) || normalized.includes(item.name));
-  return candidate?.symbol ?? "";
+  return candidate ? normalizeSymbol(candidate.symbol) : "";
 }
 
 function metricCard(label, value, detail = "") {
@@ -884,11 +1103,11 @@ function scoreItem(label, value, maxScore) {
 }
 
 function findStockRecord(symbol, positions) {
-  const normalized = symbol.toUpperCase();
-  const position = positions.find((item) => item.symbol.toUpperCase() === normalized);
+  const normalized = normalizeSymbol(symbol);
+  const position = positions.find((item) => normalizeSymbol(item.symbol) === normalized);
   if (position) return { stock: position, isHolding: true };
 
-  const candidate = state.candidates.find((item) => item.symbol.toUpperCase() === normalized);
+  const candidate = state.candidates.find((item) => normalizeSymbol(item.symbol) === normalized);
   if (!candidate) return { stock: null, isHolding: false };
 
   return {
@@ -910,12 +1129,35 @@ function findStockRecord(symbol, positions) {
 }
 
 function findPlanForStock(stock) {
-  const stockSymbol = String(stock.symbol ?? "").toUpperCase();
+  const stockSymbol = normalizeSymbol(stock.symbol);
   return state.plan.find((item) => {
-    const itemSymbol = String(item.symbol ?? "").toUpperCase();
+    const itemSymbol = normalizeSymbol(item.symbol);
     if (itemSymbol && stockSymbol) return itemSymbol === stockSymbol;
     return item.name === stock.name || stock.name.includes(item.name) || item.name.includes(stock.name);
   });
+}
+
+function renderReportLibrary(stock) {
+  const reports = [...(stock.reports ?? [])].sort((a, b) => {
+    const dateCompare = String(b.date ?? "").localeCompare(String(a.date ?? ""));
+    return dateCompare || String(b.period ?? "").localeCompare(String(a.period ?? ""));
+  });
+
+  if (!reports.length) {
+    return `<div class="empty-state compact-empty">暂无近两年定期报告 PDF</div>`;
+  }
+
+  return `
+    <div class="report-list">
+      ${reports.map((report) => `
+        <a class="report-card" href="${escapeHTML(report.url)}" target="_blank" rel="noopener noreferrer">
+          <span>${escapeHTML(displayText(report.period, "报告期未知"))}</span>
+          <strong>${escapeHTML(displayText(report.title, "未命名报告"))}</strong>
+          <small>${escapeHTML(displayText(report.kind, "财报"))} · ${escapeHTML(displayText(report.date, "日期未知"))} · ${escapeHTML(displayText(report.source, "官方来源"))}</small>
+        </a>
+      `).join("")}
+    </div>
+  `;
 }
 
 function renderStockDetail(positions, symbol) {
@@ -939,6 +1181,8 @@ function renderStockDetail(positions, symbol) {
   const hasPreviousQuote = Number.isFinite(stock.previousClose) && stock.previousClose > 0;
   const priceChange = hasCurrentQuote && hasPreviousQuote ? stock.currentPrice - stock.previousClose : null;
   const priceChangeClass = Number.isFinite(priceChange) && priceChange >= 0 ? "positive" : "negative";
+  const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const health = isHolding ? holdingHealth(stock, totalValue) : null;
 
   elements.stockDetail.innerHTML = `
     <section class="detail-hero">
@@ -998,6 +1242,8 @@ function renderStockDetail(positions, symbol) {
           <div class="valuation-grid">
             <div><span>安全边际</span><strong>${marginText}</strong></div>
             <div><span>质量总分</span><strong>${qualityText}</strong></div>
+            <div><span>健康状态</span><strong>${health ? `<span class="health-pill ${health.tone}">${health.status}</span>` : "-"}</strong></div>
+            <div><span>健康评分</span><strong>${health ? `${health.score} 分` : "-"}</strong></div>
             <div><span>内在价值</span><strong>${Number.isFinite(stock.intrinsicValue) ? currency(stock.intrinsicValue, stock.currency) : "-"}</strong></div>
             <div><span>买入价</span><strong>${Number.isFinite(stock.targetBuyPrice) ? currency(stock.targetBuyPrice, stock.currency) : "-"}</strong></div>
             <div><span>公允区间</span><strong>${escapeHTML(displayText(stock.fairValueRange))}</strong></div>
@@ -1028,6 +1274,30 @@ function renderStockDetail(positions, symbol) {
         </div>
       </div>
     </section>
+
+    <section class="panel decision-log-panel detail-log-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">Timeline</p>
+          <h2>决策日志</h2>
+        </div>
+      </div>
+      <div class="decision-log-list">
+        ${renderStockDecisionLogs(stock)}
+      </div>
+    </section>
+
+    <section class="panel report-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">Reports</p>
+          <h2>近两年财报 PDF</h2>
+        </div>
+      </div>
+      <div class="detail-content">
+        ${renderReportLibrary(stock)}
+      </div>
+    </section>
   `;
 }
 
@@ -1036,6 +1306,7 @@ function render() {
   renderMetrics(positions);
   renderPositions(positions);
   renderDecisionArea(positions);
+  renderDecisionLogs();
   renderAllocation(positions);
   renderTrades();
   renderPlanAndCandidates();
@@ -1110,6 +1381,18 @@ async function addTrade(formData) {
   holding.previousCloseDate = holding.previousCloseDate || holding.currentPriceDate;
   state.trades.push(trade);
   state.cash += side === "sell" ? shares * price * fx(currencyCode) : -(shares * price * fx(currencyCode));
+  const plan = findPlanForStock(holding);
+  const sideText = side === "buy" ? "买入" : "卖出";
+  appendClientDecisionLog({
+    type: "trade",
+    symbol,
+    name: holding.name,
+    price,
+    currency: currencyCode,
+    decision: `${sideText} ${holding.name}`,
+    discipline: plan?.discipline || holding.status || "未记录纪律",
+    detail: `${sideText} ${shares} 股；成交价 ${currencyCode} ${price.toFixed(4)}；录入最新价 ${currencyCode} ${trade.currentPrice.toFixed(4)}`
+  });
   saveState();
   render();
 }
@@ -1267,6 +1550,11 @@ window.addEventListener("hashchange", () => {
 elements.searchInput.addEventListener("input", (event) => {
   searchTerm = event.target.value.trim().toLowerCase();
   render();
+});
+
+elements.candidateSort.addEventListener("change", (event) => {
+  candidateSort = event.target.value;
+  renderPlanAndCandidates();
 });
 
 document.querySelector("#openTradePanelSecondary").addEventListener("click", () => {
