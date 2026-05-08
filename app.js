@@ -884,17 +884,6 @@ document.querySelector("#cancelHolding").addEventListener("click", () => {
   elements.holdingDialog.close();
 });
 
-document.querySelector("#seedButton").addEventListener("click", async () => {
-  if (USE_BACKEND) {
-    state = await requestJSON("/api/reset", { method: "POST" });
-  } else {
-    state = structuredClone(seedState);
-    syncCash();
-  }
-  saveState();
-  render();
-});
-
 elements.tradeForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await addTrade(new FormData(elements.tradeForm));

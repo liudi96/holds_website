@@ -137,17 +137,12 @@ func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if state, err := loadState(); err == nil {
-		s.state = state
-	}
-
-	nextState := defaultState()
-	preserveQuoteFields(nextState.Holdings, s.state.Holdings)
-	s.state = nextState
-	if err := saveState(s.state); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save state")
+	state, err := loadState()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
 		return
 	}
+	s.state = state
 	writeJSON(w, http.StatusOK, s.state)
 }
 
