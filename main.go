@@ -74,24 +74,28 @@ type PlanItem struct {
 }
 
 type Candidate struct {
-	Symbol           string   `json:"symbol"`
-	Name             string   `json:"name"`
-	Status           string   `json:"status"`
-	Action           string   `json:"action"`
-	MarginOfSafety   *float64 `json:"marginOfSafety"`
-	QualityScore     *float64 `json:"qualityScore"`
-	Risk             string   `json:"risk"`
-	Industry         string   `json:"industry"`
-	Currency         string   `json:"currency"`
-	IntrinsicValue   *float64 `json:"intrinsicValue"`
-	FairValueRange   string   `json:"fairValueRange"`
-	TargetBuyPrice   *float64 `json:"targetBuyPrice"`
-	BusinessModel    *float64 `json:"businessModel"`
-	Moat             *float64 `json:"moat"`
-	Governance       *float64 `json:"governance"`
-	FinancialQuality *float64 `json:"financialQuality"`
-	UpdatedAt        string   `json:"updatedAt"`
-	Notes            string   `json:"notes"`
+	Symbol            string   `json:"symbol"`
+	Name              string   `json:"name"`
+	Status            string   `json:"status"`
+	Action            string   `json:"action"`
+	CurrentPrice      float64  `json:"currentPrice"`
+	PreviousClose     float64  `json:"previousClose"`
+	CurrentPriceDate  string   `json:"currentPriceDate"`
+	PreviousCloseDate string   `json:"previousCloseDate"`
+	MarginOfSafety    *float64 `json:"marginOfSafety"`
+	QualityScore      *float64 `json:"qualityScore"`
+	Risk              string   `json:"risk"`
+	Industry          string   `json:"industry"`
+	Currency          string   `json:"currency"`
+	IntrinsicValue    *float64 `json:"intrinsicValue"`
+	FairValueRange    string   `json:"fairValueRange"`
+	TargetBuyPrice    *float64 `json:"targetBuyPrice"`
+	BusinessModel     *float64 `json:"businessModel"`
+	Moat              *float64 `json:"moat"`
+	Governance        *float64 `json:"governance"`
+	FinancialQuality  *float64 `json:"financialQuality"`
+	UpdatedAt         string   `json:"updatedAt"`
+	Notes             string   `json:"notes"`
 }
 
 type Rule struct {
@@ -119,6 +123,7 @@ func main() {
 	mux.HandleFunc("PUT /api/holdings/", server.handleUpdateHolding)
 	mux.HandleFunc("POST /api/research/preview", server.handlePreviewResearch)
 	mux.HandleFunc("POST /api/research/import", server.handleImportResearch)
+	mux.HandleFunc("POST /api/quotes/update", server.handleUpdateQuotes)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
@@ -234,7 +239,7 @@ func (s *Server) handleUpdateHolding(w http.ResponseWriter, r *http.Request) {
 			s.state.Holdings[i].Industry = strings.TrimSpace(patch.Industry)
 			s.state.Holdings[i].Action = strings.TrimSpace(patch.Action)
 			s.state.Holdings[i].Status = strings.TrimSpace(patch.Status)
-			s.state.Holdings[i].MarginOfSafety = patch.MarginOfSafety
+			s.state.Holdings[i].MarginOfSafety = marginOfSafetyFromPrice(s.state.Holdings[i].IntrinsicValue, s.state.Holdings[i].CurrentPrice, patch.MarginOfSafety)
 			s.state.Holdings[i].QualityScore = patch.QualityScore
 			s.state.Holdings[i].Notes = strings.TrimSpace(patch.Notes)
 			if err := saveState(s.state); err != nil {

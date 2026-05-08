@@ -193,6 +193,8 @@ const seedState = {
 
 const palette = ["#087f5b", "#1c4f82", "#a16207", "#7c3aed", "#be123c", "#0f766e"];
 const USE_BACKEND = location.protocol === "http:" || location.protocol === "https:";
+const BUY_PROXIMITY = 0.05;
+const SAFETY_MARGIN_TARGET = 0.25;
 
 let state = loadState();
 let activeFilter = "all";
@@ -212,6 +214,9 @@ const elements = {
   tradeList: document.querySelector("#tradeList"),
   allocationChart: document.querySelector("#allocationChart"),
   overviewPlanList: document.querySelector("#overviewPlanList"),
+  opportunityRadar: document.querySelector("#opportunityRadar"),
+  disciplineDashboard: document.querySelector("#disciplineDashboard"),
+  triggerAlerts: document.querySelector("#triggerAlerts"),
   candidateList: document.querySelector("#candidateList"),
   stockDetail: document.querySelector("#stockDetail"),
   totalValue: document.querySelector("#totalValue"),
@@ -223,6 +228,8 @@ const elements = {
   positionCount: document.querySelector("#positionCount"),
   recordCount: document.querySelector("#recordCount"),
   searchInput: document.querySelector("#searchInput"),
+  updateQuotesButton: document.querySelector("#updateQuotesButton"),
+  quoteUpdateStatus: document.querySelector("#quoteUpdateStatus"),
   tradeDialog: document.querySelector("#tradeDialog"),
   tradeForm: document.querySelector("#tradeForm"),
   holdingDialog: document.querySelector("#holdingDialog"),
@@ -301,6 +308,11 @@ function percent(value, signed = true) {
   return `${prefix}${value.toFixed(2)}%`;
 }
 
+function finiteNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function stockHash(symbol) {
   return `#stock=${encodeURIComponent(symbol)}`;
 }
@@ -326,6 +338,18 @@ function closeDateText(position) {
   return `今收 ${currentDate} · 昨收 ${previousDate}`;
 }
 
+function calculatedMarginOfSafety(stock) {
+  if (!Number.isFinite(stock?.intrinsicValue) || stock.intrinsicValue <= 0) return null;
+  if (!Number.isFinite(stock?.currentPrice) || stock.currentPrice <= 0) return null;
+  return (stock.intrinsicValue - stock.currentPrice) / stock.intrinsicValue;
+}
+
+function displayMarginOfSafety(stock) {
+  const computed = calculatedMarginOfSafety(stock);
+  const value = Number.isFinite(computed) ? computed : stock?.marginOfSafety;
+  return Number.isFinite(value) ? percent(value * 100, false) : "-";
+}
+
 function cleanResearchJSON(raw) {
   return String(raw ?? "")
     .trim()
@@ -345,6 +369,11 @@ function parseResearchJSON() {
 function setResearchStatus(message, tone = "") {
   elements.researchStatus.textContent = message;
   elements.researchStatus.className = `research-status ${tone}`.trim();
+}
+
+function setQuoteUpdateStatus(message, tone = "") {
+  elements.quoteUpdateStatus.textContent = message;
+  elements.quoteUpdateStatus.className = tone;
 }
 
 function targetTypeText(type) {
@@ -414,6 +443,7 @@ function computePositions() {
 
       return {
         ...holding,
+        marginOfSafety: calculatedMarginOfSafety(holding) ?? holding.marginOfSafety,
         marketValueLocal,
         marketValueCny,
         costValueCny,
@@ -486,9 +516,7 @@ function renderPositions(positions) {
     .map((position) => {
       const weight = totalValue ? (position.marketValueCny / totalValue) * 100 : 0;
       const pnlClass = position.pnlCny >= 0 ? "positive" : "negative";
-      const marginText = Number.isFinite(position.marginOfSafety)
-        ? percent(position.marginOfSafety * 100, false)
-        : "-";
+      const marginText = displayMarginOfSafety(position);
       const qualityText = Number.isFinite(position.qualityScore) ? position.qualityScore : "-";
 
       return `
@@ -604,13 +632,218 @@ function renderPlanAndCandidates() {
         </div>
         <div class="candidate-metrics">
           <span>质量 <strong>${Number.isFinite(item.qualityScore) ? item.qualityScore : "-"}</strong></span>
-          <span>安全边际 <strong>${Number.isFinite(item.marginOfSafety) ? percent(item.marginOfSafety * 100, false) : "-"}</strong></span>
+          <span>最新价 <strong>${Number.isFinite(item.currentPrice) && item.currentPrice > 0 ? currency(item.currentPrice, item.currency) : "-"}</strong></span>
+          <span>安全边际 <strong>${displayMarginOfSafety(item)}</strong></span>
           <span>买入价 <strong>${Number.isFinite(item.targetBuyPrice) ? currency(item.targetBuyPrice, item.currency) : "-"}</strong></span>
         </div>
         <p>${escapeHTML(item.action)}</p>
       </a>
     `)
     .join("");
+}
+
+function decisionUniverse(positions) {
+  const seen = new Set();
+  const holdings = positions.map((position) => {
+    const symbol = String(position.symbol ?? "").toUpperCase();
+    seen.add(symbol);
+    return { ...position, sourceType: "holding" };
+  });
+  const candidates = state.candidates
+    .filter((candidate) => {
+      const symbol = String(candidate.symbol ?? "").toUpperCase();
+      return symbol && !seen.has(symbol);
+    })
+    .map((candidate) => ({
+      ...candidate,
+      sourceType: "candidate",
+      currentPrice: finiteNumber(candidate.currentPrice),
+      previousClose: finiteNumber(candidate.previousClose),
+      marginOfSafety: calculatedMarginOfSafety(candidate) ?? candidate.marginOfSafety
+    }));
+
+  return [...holdings, ...candidates].filter((stock) => stock.symbol && stock.name);
+}
+
+function localPrice(stock, key) {
+  const value = finiteNumber(stock?.[key]);
+  return value && value > 0 ? currency(value, stock.currency ?? "CNY") : "-";
+}
+
+function planRank(stock) {
+  const plan = findPlanForStock(stock);
+  return Number.isFinite(plan?.rank) ? plan.rank : 999;
+}
+
+function buildOpportunitySignals(positions) {
+  return decisionUniverse(positions)
+    .map((stock) => {
+      const currentPrice = finiteNumber(stock.currentPrice);
+      const targetBuyPrice = finiteNumber(stock.targetBuyPrice);
+      const intrinsicValue = finiteNumber(stock.intrinsicValue);
+      const marginOfSafety = calculatedMarginOfSafety(stock) ?? finiteNumber(stock.marginOfSafety);
+      const reasons = [];
+      let priority = 99;
+      let tone = "watch";
+
+      if (currentPrice && targetBuyPrice && currentPrice <= targetBuyPrice) {
+        reasons.push("进入买入区");
+        priority = Math.min(priority, 1);
+        tone = "buy";
+      } else if (currentPrice && targetBuyPrice && (currentPrice - targetBuyPrice) / targetBuyPrice <= BUY_PROXIMITY) {
+        reasons.push("接近买点");
+        priority = Math.min(priority, 2);
+      }
+
+      if (Number.isFinite(marginOfSafety) && marginOfSafety >= SAFETY_MARGIN_TARGET) {
+        reasons.push("安全边际充足");
+        priority = Math.min(priority, 3);
+        if (tone !== "buy") tone = "safe";
+      }
+
+      if (
+        stock.sourceType === "holding" &&
+        currentPrice &&
+        intrinsicValue &&
+        currentPrice >= intrinsicValue &&
+        Number.isFinite(marginOfSafety) &&
+        marginOfSafety < 0
+      ) {
+        reasons.push("复盘/减仓");
+        priority = Math.min(priority, 4);
+        tone = "reduce";
+      }
+
+      return { stock, reasons, priority, tone, marginOfSafety };
+    })
+    .filter((item) => item.reasons.length)
+    .sort((a, b) => a.priority - b.priority || planRank(a.stock) - planRank(b.stock) || a.stock.name.localeCompare(b.stock.name, "zh-CN"));
+}
+
+function renderDecisionItem(signal) {
+  const { stock, reasons, tone, marginOfSafety } = signal;
+  const sourceText = stock.sourceType === "holding" ? "持仓" : "候选";
+
+  return `
+    <a class="decision-item ${tone}" href="${stockHash(stock.symbol)}">
+      <div class="decision-title">
+        <strong>${escapeHTML(stock.name)}</strong>
+        <span>${escapeHTML(sourceText)} · ${escapeHTML(stock.symbol)}</span>
+      </div>
+      <div class="decision-tags">
+        ${reasons.map((reason) => `<span>${escapeHTML(reason)}</span>`).join("")}
+      </div>
+      <div class="decision-metrics">
+        <span>现价 <strong>${localPrice(stock, "currentPrice")}</strong></span>
+        <span>买入价 <strong>${localPrice(stock, "targetBuyPrice")}</strong></span>
+        <span>内在价值 <strong>${localPrice(stock, "intrinsicValue")}</strong></span>
+        <span>安全边际 <strong>${Number.isFinite(marginOfSafety) ? percent(marginOfSafety * 100, false) : "-"}</strong></span>
+      </div>
+      <p>${escapeHTML(displayText(stock.action, stock.status))}</p>
+    </a>
+  `;
+}
+
+function renderOpportunityRadar(positions) {
+  const signals = buildOpportunitySignals(positions);
+  elements.opportunityRadar.innerHTML = signals.length
+    ? signals.slice(0, 6).map(renderDecisionItem).join("")
+    : `<div class="empty-state compact-empty">暂无进入买点的标的</div>`;
+}
+
+function firstIndustry(industry) {
+  return String(industry ?? "").split("/").map((item) => item.trim()).find(Boolean) || "未分类";
+}
+
+function topGroups(items, keyGetter, valueGetter, limit = 3) {
+  const groups = new Map();
+  items.forEach((item) => {
+    const key = keyGetter(item);
+    groups.set(key, (groups.get(key) ?? 0) + valueGetter(item));
+  });
+  return [...groups.entries()]
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, limit);
+}
+
+function renderDisciplineDashboard(positions) {
+  const investedValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const cashValue = finiteNumber(state.cash) ?? 0;
+  const totalAssets = investedValue + cashValue;
+  const maxPosition = positions.reduce((max, item) => (item.marketValueCny > (max?.marketValueCny ?? 0) ? item : max), null);
+  const lowSafety = positions.filter((item) => {
+    const margin = calculatedMarginOfSafety(item) ?? finiteNumber(item.marginOfSafety);
+    return !Number.isFinite(margin) || margin < SAFETY_MARGIN_TARGET;
+  });
+  const lowSafetyValue = lowSafety.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const industryText = topGroups(positions, (item) => firstIndustry(item.industry), (item) => item.marketValueCny)
+    .map((item) => `${item.name} ${percent(investedValue ? (item.value / investedValue) * 100 : 0, false)}`)
+    .join(" · ") || "-";
+  const currencyText = topGroups(positions, (item) => item.currency ?? "CNY", (item) => item.marketValueCny, 4)
+    .map((item) => `${item.name} ${percent(investedValue ? (item.value / investedValue) * 100 : 0, false)}`)
+    .join(" · ") || "-";
+
+  const items = [
+    {
+      label: "现金比例",
+      value: percent(totalAssets ? (cashValue / totalAssets) * 100 : 0, false),
+      detail: `现金 ${currency(cashValue)}`
+    },
+    {
+      label: "单股最大仓位",
+      value: maxPosition ? percent(totalAssets ? (maxPosition.marketValueCny / totalAssets) * 100 : 0, false) : "-",
+      detail: maxPosition ? `${maxPosition.name} · ${currency(maxPosition.marketValueCny)}` : "-"
+    },
+    {
+      label: "行业集中度 Top 3",
+      value: industryText,
+      detail: "按持仓市值计算"
+    },
+    {
+      label: "币种暴露",
+      value: currencyText,
+      detail: "按持仓市值折人民币计算"
+    },
+    {
+      label: "安全边际不足",
+      value: `${lowSafety.length}/${positions.length} 只`,
+      detail: `占持仓市值 ${percent(investedValue ? (lowSafetyValue / investedValue) * 100 : 0, false)}`
+    }
+  ];
+
+  elements.disciplineDashboard.innerHTML = items
+    .map((item) => `
+      <div class="discipline-item">
+        <span>${escapeHTML(item.label)}</span>
+        <strong>${escapeHTML(item.value)}</strong>
+        <small>${escapeHTML(item.detail)}</small>
+      </div>
+    `)
+    .join("");
+}
+
+function renderTriggerAlerts(positions) {
+  const signals = buildOpportunitySignals(positions);
+  elements.triggerAlerts.innerHTML = signals.length
+    ? signals.slice(0, 5).map((signal) => {
+        const stock = signal.stock;
+        return `
+          <a class="trigger-item ${signal.tone}" href="${stockHash(stock.symbol)}">
+            <strong>${escapeHTML(stock.name)}</strong>
+            <span>${signal.reasons.map(escapeHTML).join(" / ")}</span>
+            <small>现价 ${localPrice(stock, "currentPrice")} · 买入价 ${localPrice(stock, "targetBuyPrice")} · 内在价值 ${localPrice(stock, "intrinsicValue")} · 安全边际 ${Number.isFinite(signal.marginOfSafety) ? percent(signal.marginOfSafety * 100, false) : "-"}</small>
+            <p>${escapeHTML(displayText(stock.action, stock.status))}</p>
+          </a>
+        `;
+      }).join("")
+    : `<div class="empty-state compact-empty">暂无行情触发提醒</div>`;
+}
+
+function renderDecisionArea(positions) {
+  renderOpportunityRadar(positions);
+  renderDisciplineDashboard(positions);
+  renderTriggerAlerts(positions);
 }
 
 function findSymbolForPlan(item) {
@@ -663,8 +896,10 @@ function findStockRecord(symbol, positions) {
       ...candidate,
       shares: 0,
       cost: 0,
-      currentPrice: 0,
-      previousClose: 0,
+      currentPrice: candidate.currentPrice ?? 0,
+      previousClose: candidate.previousClose ?? 0,
+      currentPriceDate: candidate.currentPriceDate ?? "",
+      previousCloseDate: candidate.previousCloseDate ?? "",
       marketValueCny: 0,
       pnlCny: 0,
       pnlRate: 0,
@@ -698,8 +933,12 @@ function renderStockDetail(positions, symbol) {
   const plan = findPlanForStock(stock);
   const pnlClass = stock.pnlCny >= 0 ? "positive" : "negative";
   const dayClass = stock.dayChange >= 0 ? "positive" : "negative";
-  const marginText = Number.isFinite(stock.marginOfSafety) ? percent(stock.marginOfSafety * 100, false) : "-";
+  const marginText = displayMarginOfSafety(stock);
   const qualityText = Number.isFinite(stock.qualityScore) ? `${stock.qualityScore}` : "-";
+  const hasCurrentQuote = Number.isFinite(stock.currentPrice) && stock.currentPrice > 0;
+  const hasPreviousQuote = Number.isFinite(stock.previousClose) && stock.previousClose > 0;
+  const priceChange = hasCurrentQuote && hasPreviousQuote ? stock.currentPrice - stock.previousClose : null;
+  const priceChangeClass = Number.isFinite(priceChange) && priceChange >= 0 ? "positive" : "negative";
 
   elements.stockDetail.innerHTML = `
     <section class="detail-hero">
@@ -714,10 +953,20 @@ function renderStockDetail(positions, symbol) {
     </section>
 
     <section class="metrics-grid detail-metrics">
-      ${metricCard("今天收盘", isHolding ? currency(stock.currentPrice, stock.currency) : "-", stock.currentPriceDate || "收盘日未知")}
-      ${metricCard("昨天收盘", isHolding ? currency(stock.previousClose, stock.currency) : "-", stock.previousCloseDate || "收盘日未知")}
+      ${metricCard("今天收盘", hasCurrentQuote ? currency(stock.currentPrice, stock.currency) : "-", stock.currentPriceDate || "收盘日未知")}
+      ${metricCard("昨天收盘", hasPreviousQuote ? currency(stock.previousClose, stock.currency) : "-", stock.previousCloseDate || "收盘日未知")}
       ${metricCard("浮动盈亏", `<span class="${pnlClass}">${isHolding ? currency(stock.pnlCny) : "-"}</span>`, isHolding ? percent(stock.pnlRate) : "")}
-      ${metricCard("今日变动", `<span class="${dayClass}">${isHolding ? currency(stock.dayChange) : "-"}</span>`, isHolding && stock.marketValueCny ? percent((stock.dayChange / stock.marketValueCny) * 100) : "")}
+      ${metricCard(
+        "今日变动",
+        isHolding
+          ? `<span class="${dayClass}">${currency(stock.dayChange)}</span>`
+          : `<span class="${priceChangeClass}">${Number.isFinite(priceChange) ? currency(priceChange, stock.currency) : "-"}</span>`,
+        isHolding && stock.marketValueCny
+          ? percent((stock.dayChange / stock.marketValueCny) * 100)
+          : Number.isFinite(priceChange) && stock.previousClose
+            ? percent((priceChange / stock.previousClose) * 100)
+            : ""
+      )}
     </section>
 
     <section class="detail-grid">
@@ -786,6 +1035,7 @@ function render() {
   const positions = computePositions();
   renderMetrics(positions);
   renderPositions(positions);
+  renderDecisionArea(positions);
   renderAllocation(positions);
   renderTrades();
   renderPlanAndCandidates();
@@ -900,6 +1150,34 @@ async function importResearch() {
   }
 }
 
+async function updateQuotes() {
+  if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能更新行情");
+
+  elements.updateQuotesButton.disabled = true;
+  elements.updateQuotesButton.innerHTML = "<span>↻</span> 更新中";
+  setQuoteUpdateStatus("正在拉取持仓和候选池最新日线收盘价...");
+
+  try {
+    const result = await requestJSON("/api/quotes/update", { method: "POST" });
+    state = result.state;
+    localStorage.removeItem(STORAGE_KEY);
+    syncCash();
+    render();
+
+    const alertCount = buildOpportunitySignals(computePositions()).length;
+    const skipped = result.skipped ?? [];
+    if (skipped.length) {
+      const preview = skipped.slice(0, 3).map((item) => `${item.symbol} ${item.error}`).join("；");
+      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，触发 ${alertCount} 条提醒，${skipped.length} 个失败：${preview}`, "error");
+    } else {
+      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，触发 ${alertCount} 条提醒`, "success");
+    }
+  } finally {
+    elements.updateQuotesButton.disabled = false;
+    elements.updateQuotesButton.innerHTML = "<span>↻</span> 更新行情";
+  }
+}
+
 function openHoldingEditor(symbol) {
   const holding = state.holdings.find((item) => item.symbol === symbol);
   if (!holding) return;
@@ -910,7 +1188,7 @@ function openHoldingEditor(symbol) {
   form.industry.value = holding.industry ?? "";
   form.action.value = holding.action ?? "";
   form.status.value = holding.status ?? "";
-  form.marginOfSafety.value = Number.isFinite(holding.marginOfSafety) ? holding.marginOfSafety : "";
+  form.marginOfSafety.value = Number.isFinite(calculatedMarginOfSafety(holding)) ? calculatedMarginOfSafety(holding) : "";
   form.qualityScore.value = Number.isFinite(holding.qualityScore) ? holding.qualityScore : "";
   form.notes.value = holding.notes ?? "";
   elements.holdingDialog.showModal();
@@ -926,7 +1204,7 @@ async function saveHolding(formData) {
     industry: String(formData.get("industry")).trim(),
     action: String(formData.get("action")).trim(),
     status: String(formData.get("status")).trim(),
-    marginOfSafety: formData.get("marginOfSafety") === "" ? null : Number(formData.get("marginOfSafety")),
+    marginOfSafety: calculatedMarginOfSafety(holding),
     qualityScore: formData.get("qualityScore") === "" ? null : Number(formData.get("qualityScore")),
     notes: String(formData.get("notes")).trim()
   };
@@ -1001,6 +1279,14 @@ document.querySelector("#openResearchPanel").addEventListener("click", () => {
   elements.researchPreview.innerHTML = "";
   setResearchStatus("");
   elements.researchDialog.showModal();
+});
+
+elements.updateQuotesButton.addEventListener("click", async () => {
+  try {
+    await updateQuotes();
+  } catch (error) {
+    setQuoteUpdateStatus(error.message, "error");
+  }
 });
 
 document.querySelector("#closeTradePanel").addEventListener("click", () => {

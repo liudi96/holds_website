@@ -254,11 +254,11 @@ func applyHoldingResearch(holding *Holding, research ResearchImport, updateLabel
 	holding.Action = strings.TrimSpace(research.Action)
 	holding.Risk = strings.TrimSpace(research.Risk)
 	holding.Currency = prefer(holding.Currency, research.Currency)
-	holding.MarginOfSafety = research.Valuation.MarginOfSafety
 	holding.QualityScore = research.Quality.TotalScore
 	holding.IntrinsicValue = research.Valuation.IntrinsicValue
 	holding.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
 	holding.TargetBuyPrice = research.Valuation.TargetBuyPrice
+	holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, research.Valuation.MarginOfSafety)
 	holding.BusinessModel = research.Quality.BusinessModel
 	holding.Moat = research.Quality.Moat
 	holding.Governance = research.Quality.Governance
@@ -428,6 +428,14 @@ func expectedCurrency(symbol string) string {
 	default:
 		return ""
 	}
+}
+
+func marginOfSafetyFromPrice(intrinsicValue *float64, currentPrice float64, fallback *float64) *float64 {
+	if intrinsicValue == nil || *intrinsicValue <= 0 || currentPrice <= 0 {
+		return fallback
+	}
+	value := (*intrinsicValue - currentPrice) / *intrinsicValue
+	return &value
 }
 
 func prefer(current, next string) string {

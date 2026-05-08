@@ -16,7 +16,9 @@ http://127.0.0.1:8080
 
 ## 更新行情
 
-拉取 Yahoo Finance 日线收盘价，并更新 `data/portfolio.json`：
+推荐在总览页点击“更新行情”。网站会拉取 Yahoo Finance 日线收盘价，更新持仓和候选池，并写入 `data/portfolio.json`。持仓和已拉取行情的候选股安全边际会按 `(内在价值 - 最新收盘价) / 内在价值` 同步重算。
+
+也可以用命令行更新：
 
 ```bash
 go run ./cmd/update-quotes

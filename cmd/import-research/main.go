@@ -72,24 +72,28 @@ type PlanItem struct {
 }
 
 type Candidate struct {
-	Symbol           string   `json:"symbol"`
-	Name             string   `json:"name"`
-	Status           string   `json:"status"`
-	Action           string   `json:"action"`
-	MarginOfSafety   *float64 `json:"marginOfSafety"`
-	QualityScore     *float64 `json:"qualityScore"`
-	Risk             string   `json:"risk"`
-	Industry         string   `json:"industry"`
-	Currency         string   `json:"currency"`
-	IntrinsicValue   *float64 `json:"intrinsicValue"`
-	FairValueRange   string   `json:"fairValueRange"`
-	TargetBuyPrice   *float64 `json:"targetBuyPrice"`
-	BusinessModel    *float64 `json:"businessModel"`
-	Moat             *float64 `json:"moat"`
-	Governance       *float64 `json:"governance"`
-	FinancialQuality *float64 `json:"financialQuality"`
-	UpdatedAt        string   `json:"updatedAt"`
-	Notes            string   `json:"notes"`
+	Symbol            string   `json:"symbol"`
+	Name              string   `json:"name"`
+	Status            string   `json:"status"`
+	Action            string   `json:"action"`
+	CurrentPrice      float64  `json:"currentPrice"`
+	PreviousClose     float64  `json:"previousClose"`
+	CurrentPriceDate  string   `json:"currentPriceDate"`
+	PreviousCloseDate string   `json:"previousCloseDate"`
+	MarginOfSafety    *float64 `json:"marginOfSafety"`
+	QualityScore      *float64 `json:"qualityScore"`
+	Risk              string   `json:"risk"`
+	Industry          string   `json:"industry"`
+	Currency          string   `json:"currency"`
+	IntrinsicValue    *float64 `json:"intrinsicValue"`
+	FairValueRange    string   `json:"fairValueRange"`
+	TargetBuyPrice    *float64 `json:"targetBuyPrice"`
+	BusinessModel     *float64 `json:"businessModel"`
+	Moat              *float64 `json:"moat"`
+	Governance        *float64 `json:"governance"`
+	FinancialQuality  *float64 `json:"financialQuality"`
+	UpdatedAt         string   `json:"updatedAt"`
+	Notes             string   `json:"notes"`
 }
 
 type Rule struct {
@@ -269,11 +273,11 @@ func applyHoldingResearch(holding *Holding, research ResearchImport, updateLabel
 	holding.Action = strings.TrimSpace(research.Action)
 	holding.Risk = strings.TrimSpace(research.Risk)
 	holding.Currency = prefer(holding.Currency, research.Currency)
-	holding.MarginOfSafety = research.Valuation.MarginOfSafety
 	holding.QualityScore = research.Quality.TotalScore
 	holding.IntrinsicValue = research.Valuation.IntrinsicValue
 	holding.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
 	holding.TargetBuyPrice = research.Valuation.TargetBuyPrice
+	holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, research.Valuation.MarginOfSafety)
 	holding.BusinessModel = research.Quality.BusinessModel
 	holding.Moat = research.Quality.Moat
 	holding.Governance = research.Quality.Governance
@@ -382,6 +386,14 @@ func normalizeSymbol(symbol string) string {
 
 func normalizeDisplaySymbol(symbol string) string {
 	return normalizeSymbol(symbol)
+}
+
+func marginOfSafetyFromPrice(intrinsicValue *float64, currentPrice float64, fallback *float64) *float64 {
+	if intrinsicValue == nil || *intrinsicValue <= 0 || currentPrice <= 0 {
+		return fallback
+	}
+	value := (*intrinsicValue - currentPrice) / *intrinsicValue
+	return &value
 }
 
 func loadState(path string) (AppState, error) {

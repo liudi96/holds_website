@@ -27,6 +27,7 @@ Requirements:
 - Do not add extra fields. Unknown fields are rejected by the importer.
 - Use decimal ratios for percentages, for example 0.09 means 9%.
 - Use null when a numeric field is unknown.
+- `valuation.marginOfSafety` is the analysis-time estimate. For existing holdings, the website recalculates displayed safety margin from `intrinsicValue` and the latest close price.
 - `currency` should match the listing: `.HK` uses `HKD`, `.SH`/`.SZ`/`.SS` use `CNY`.
 - `quality.totalScore` should equal `businessModel + moat + governance + financialQuality`.
 - Keep action, risk, notes, advice, and discipline concise but specific.
@@ -80,4 +81,5 @@ JSON schema:
 - Do not include `symbol` inside `plan`; the importer derives Plan identity from the top-level `symbol`.
 - `plan.rank` may be approximate. The importer normalizes Plan ranks into a unique sequence after import.
 - The website preview validates the JSON before writing. Confirmed imports update `data/portfolio.json` and first create a backup under `data/backups/`.
-- Quote fields such as `currentPrice`, `previousClose`, and close dates are owned by `cmd/update-quotes`, not this import.
+- Holding safety margin is calculated as `(intrinsicValue - currentPrice) / intrinsicValue`. Candidate-pool stocks use the same formula after the overview `更新行情` button has fetched quote data; otherwise they continue to use the imported `valuation.marginOfSafety`.
+- Quote fields such as `currentPrice`, `previousClose`, and close dates are owned by the overview `更新行情` button or `cmd/update-quotes`, not this import.

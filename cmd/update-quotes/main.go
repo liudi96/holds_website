@@ -74,24 +74,28 @@ type PlanItem struct {
 }
 
 type Candidate struct {
-	Symbol           string   `json:"symbol"`
-	Name             string   `json:"name"`
-	Status           string   `json:"status"`
-	Action           string   `json:"action"`
-	MarginOfSafety   *float64 `json:"marginOfSafety"`
-	QualityScore     *float64 `json:"qualityScore"`
-	Risk             string   `json:"risk"`
-	Industry         string   `json:"industry"`
-	Currency         string   `json:"currency"`
-	IntrinsicValue   *float64 `json:"intrinsicValue"`
-	FairValueRange   string   `json:"fairValueRange"`
-	TargetBuyPrice   *float64 `json:"targetBuyPrice"`
-	BusinessModel    *float64 `json:"businessModel"`
-	Moat             *float64 `json:"moat"`
-	Governance       *float64 `json:"governance"`
-	FinancialQuality *float64 `json:"financialQuality"`
-	UpdatedAt        string   `json:"updatedAt"`
-	Notes            string   `json:"notes"`
+	Symbol            string   `json:"symbol"`
+	Name              string   `json:"name"`
+	Status            string   `json:"status"`
+	Action            string   `json:"action"`
+	CurrentPrice      float64  `json:"currentPrice"`
+	PreviousClose     float64  `json:"previousClose"`
+	CurrentPriceDate  string   `json:"currentPriceDate"`
+	PreviousCloseDate string   `json:"previousCloseDate"`
+	MarginOfSafety    *float64 `json:"marginOfSafety"`
+	QualityScore      *float64 `json:"qualityScore"`
+	Risk              string   `json:"risk"`
+	Industry          string   `json:"industry"`
+	Currency          string   `json:"currency"`
+	IntrinsicValue    *float64 `json:"intrinsicValue"`
+	FairValueRange    string   `json:"fairValueRange"`
+	TargetBuyPrice    *float64 `json:"targetBuyPrice"`
+	BusinessModel     *float64 `json:"businessModel"`
+	Moat              *float64 `json:"moat"`
+	Governance        *float64 `json:"governance"`
+	FinancialQuality  *float64 `json:"financialQuality"`
+	UpdatedAt         string   `json:"updatedAt"`
+	Notes             string   `json:"notes"`
 }
 
 type Rule struct {
@@ -131,14 +135,15 @@ func main() {
 	client := &http.Client{Timeout: 12 * time.Second}
 	now := time.Now().Format("2006-01-02 15:04:05")
 	updated := 0
+	cache := make(map[string]quote)
 
 	for i := range state.Holdings {
 		holding := &state.Holdings[i]
-		if strings.TrimSpace(holding.Symbol) == "" || holding.CurrentPrice <= 0 {
+		if strings.TrimSpace(holding.Symbol) == "" {
 			continue
 		}
 
-		quote, err := fetchQuote(client, holding.Symbol)
+		quote, err := fetchQuoteCached(client, cache, holding.Symbol)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "skip %s: %v\n", holding.Symbol, err)
 			continue
@@ -149,23 +154,49 @@ func main() {
 		holding.PreviousClose = quote.PreviousClose
 		holding.CurrentPriceDate = quote.PriceDate
 		holding.PreviousCloseDate = quote.PreviousCloseDate
+		holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, holding.MarginOfSafety)
 		holding.UpdatedAt = fmt.Sprintf("%s；行情源 Yahoo Finance 日线收盘价；代码 %s；币种 %s；收盘日 %s/%s", now, quote.SourceSymbol, quote.Currency, quote.PreviousCloseDate, quote.PriceDate)
 		updated++
 	}
 
+	for i := range state.Candidates {
+		candidate := &state.Candidates[i]
+		if strings.TrimSpace(candidate.Symbol) == "" {
+			continue
+		}
+
+		quote, err := fetchQuoteCached(client, cache, candidate.Symbol)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "skip %s: %v\n", candidate.Symbol, err)
+			continue
+		}
+
+		fmt.Printf("%s %s: %.4f -> %.4f (%s), yesterday close %.4f (%s) [%s]\n", candidate.Symbol, candidate.Name, candidate.CurrentPrice, quote.Price, quote.PriceDate, quote.PreviousClose, quote.PreviousCloseDate, quote.SourceSymbol)
+		candidate.CurrentPrice = quote.Price
+		candidate.PreviousClose = quote.PreviousClose
+		candidate.CurrentPriceDate = quote.PriceDate
+		candidate.PreviousCloseDate = quote.PreviousCloseDate
+		candidate.MarginOfSafety = marginOfSafetyFromPrice(candidate.IntrinsicValue, candidate.CurrentPrice, candidate.MarginOfSafety)
+		if strings.TrimSpace(candidate.Currency) == "" {
+			candidate.Currency = strings.ToUpper(strings.TrimSpace(quote.Currency))
+		}
+		candidate.UpdatedAt = fmt.Sprintf("%s；行情源 Yahoo Finance 日线收盘价；代码 %s；币种 %s；收盘日 %s/%s", now, quote.SourceSymbol, quote.Currency, quote.PreviousCloseDate, quote.PriceDate)
+		updated++
+	}
+
 	if updated == 0 {
-		fail(errors.New("no holdings were updated"))
+		fail(errors.New("no quotes were updated"))
 	}
 
 	if *dryRun {
-		fmt.Printf("dry run: %d holdings would be updated\n", updated)
+		fmt.Printf("dry run: %d quote records would be updated\n", updated)
 		return
 	}
 
 	if err := saveState(*dataPath, state); err != nil {
 		fail(err)
 	}
-	fmt.Printf("updated %d holdings in %s\n", updated, *dataPath)
+	fmt.Printf("updated %d quote records in %s\n", updated, *dataPath)
 }
 
 type quote struct {
@@ -238,6 +269,19 @@ func fetchQuote(client *http.Client, symbol string) (quote, error) {
 	}, nil
 }
 
+func fetchQuoteCached(client *http.Client, cache map[string]quote, symbol string) (quote, error) {
+	normalized := strings.ToUpper(strings.TrimSpace(symbol))
+	if cached, ok := cache[normalized]; ok {
+		return cached, nil
+	}
+	quote, err := fetchQuote(client, normalized)
+	if err != nil {
+		return quote, err
+	}
+	cache[normalized] = quote
+	return quote, nil
+}
+
 type dailyClose struct {
 	Price float64
 	Date  string
@@ -266,7 +310,21 @@ func yahooSymbol(symbol string) string {
 	if strings.HasSuffix(symbol, ".SH") {
 		return strings.TrimSuffix(symbol, ".SH") + ".SS"
 	}
+	if strings.HasSuffix(symbol, ".HK") {
+		code := strings.TrimSuffix(symbol, ".HK")
+		if len(code) == 5 && strings.HasPrefix(code, "0") {
+			return strings.TrimPrefix(code, "0") + ".HK"
+		}
+	}
 	return symbol
+}
+
+func marginOfSafetyFromPrice(intrinsicValue *float64, currentPrice float64, fallback *float64) *float64 {
+	if intrinsicValue == nil || *intrinsicValue <= 0 || currentPrice <= 0 {
+		return fallback
+	}
+	value := (*intrinsicValue - currentPrice) / *intrinsicValue
+	return &value
 }
 
 func loadState(path string) (AppState, error) {
