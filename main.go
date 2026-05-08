@@ -156,8 +156,8 @@ func main() {
 	})
 	mux.Handle("/", http.FileServer(http.Dir(".")))
 
-	addr := ":8080"
-	log.Printf("portfolio desk listening on http://127.0.0.1%s", addr)
+	addr := "0.0.0.0:8080"
+	log.Printf("portfolio desk listening on http://%s", addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
 }
 
