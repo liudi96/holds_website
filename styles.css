@@ -786,6 +786,12 @@ h2 {
   color: #a16207;
 }
 
+.master-tag.lynch,
+.master-mini.lynch {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
 .master-tag.risk,
 .master-mini.risk {
   background: #fff1f2;
@@ -1302,7 +1308,7 @@ h2 {
 .master-matrix-head,
 .master-matrix-row {
   display: grid;
-  grid-template-columns: minmax(190px, 1.3fr) 120px 120px 120px 96px;
+  grid-template-columns: minmax(190px, 1.3fr) repeat(4, minmax(92px, 120px)) 96px;
   gap: 10px;
   align-items: center;
 }
@@ -1360,7 +1366,7 @@ h2 {
 
 .masters-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 1.05fr) minmax(280px, 0.9fr) minmax(280px, 0.9fr);
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
   align-items: start;
   gap: 14px;
 }
@@ -1388,6 +1394,10 @@ h2 {
 
 .master-section.buffett {
   border-top-color: #a16207;
+}
+
+.master-section.lynch {
+  border-top-color: #2563eb;
 }
 
 .master-section > .panel-head {
@@ -1462,6 +1472,10 @@ h2 {
 
 .master-stock-card.buffett {
   border-left-color: #a16207;
+}
+
+.master-stock-card.lynch {
+  border-left-color: #2563eb;
 }
 
 .master-stock-card.risk {
@@ -2047,9 +2061,22 @@ tbody tr:hover {
 }
 
 .detail-hero-meta {
+  display: grid;
+  gap: 4px;
   color: var(--muted);
   font-size: 12px;
   text-align: right;
+}
+
+.detail-hero-meta small {
+  font-size: 11px;
+}
+
+.detail-hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .detail-metrics {
@@ -2109,7 +2136,7 @@ tbody tr:hover {
 
 .master-vote-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   padding: 16px 18px 18px;
 }
@@ -2135,6 +2162,10 @@ tbody tr:hover {
 
 .master-vote-card.buffett {
   border-top-color: #a16207;
+}
+
+.master-vote-card.lynch {
+  border-top-color: #2563eb;
 }
 
 .master-vote-card.risk {
@@ -2292,6 +2323,92 @@ tbody tr:hover {
 
 .report-panel {
   margin-top: 18px;
+}
+
+.financials-panel {
+  margin-bottom: 18px;
+}
+
+.financials-meta {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.financials-meta strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.financial-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.financial-summary-grid div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.financial-summary-grid span,
+.financial-summary-grid small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.financial-summary-grid strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.financial-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.financial-table {
+  min-width: 980px;
+}
+
+.financial-table th {
+  white-space: nowrap;
+}
+
+.financial-table td {
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.financial-table td strong,
+.financial-table td small {
+  display: block;
+}
+
+.financial-table td small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.financial-source-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .report-list {
@@ -2738,6 +2855,7 @@ label textarea {
   .source-grid,
   .candidate-metrics,
   .research-preview-grid,
+  .financial-summary-grid,
   .research-diff div,
   .preview-plan div {
     grid-template-columns: 1fr;
@@ -2859,7 +2977,41 @@ label textarea {
     grid-template-columns: 1fr;
   }
 
+  .detail-hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .detail-hero-meta {
+    text-align: left;
+  }
+
+  .financial-table {
+    min-width: 980px;
+  }
+
+  .financial-table thead {
+    display: table-header-group;
+  }
+
+  .financial-table tbody {
+    display: table-row-group;
+  }
+
+  .financial-table tr {
+    display: table-row;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .financial-table th,
+  .financial-table td {
+    display: table-cell;
+    width: auto;
+    padding: 12px;
+    border-bottom: 1px solid var(--line);
     text-align: left;
   }
 }

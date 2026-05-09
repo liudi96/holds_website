@@ -85,6 +85,7 @@ type Holding struct {
 	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
 	Reports             []Report        `json:"reports,omitempty"`
 	Dividend            *Dividend       `json:"dividend,omitempty"`
+	Financials          *Financials     `json:"financials,omitempty"`
 }
 
 type PriceLevels struct {
@@ -155,6 +156,7 @@ type Candidate struct {
 	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
 	Reports             []Report        `json:"reports,omitempty"`
 	Dividend            *Dividend       `json:"dividend,omitempty"`
+	Financials          *Financials     `json:"financials,omitempty"`
 }
 
 type Rule struct {
@@ -185,14 +187,26 @@ func main() {
 	mux.HandleFunc("POST /api/research/import", server.handleImportResearch)
 	mux.HandleFunc("GET /api/chatgpt/export", server.handleExportChatGPTContext)
 	mux.HandleFunc("POST /api/quotes/update", server.handleUpdateQuotes)
+	mux.HandleFunc("POST /api/financials/update/", server.handleUpdateFinancials)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 	mux.Handle("/", noCache(http.FileServer(http.Dir("."))))
 
-	addr := "0.0.0.0:8080"
+	addr := listenAddress()
 	log.Printf("portfolio desk listening on http://%s", addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
+}
+
+func listenAddress() string {
+	port := strings.TrimSpace(os.Getenv("PORT"))
+	if port == "" {
+		return "0.0.0.0:8080"
+	}
+	if strings.Contains(port, ":") {
+		return port
+	}
+	return "0.0.0.0:" + port
 }
 
 func noCache(next http.Handler) http.Handler {

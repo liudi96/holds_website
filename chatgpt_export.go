@@ -48,6 +48,7 @@ type chatGPTStockRecord struct {
 	Notes             string
 	Reports           []Report
 	Dividend          *Dividend
+	Financials        *Financials
 	Plan              *PlanItem
 	DecisionLogs      []DecisionLog
 	MarketValueCNY    float64
@@ -111,6 +112,8 @@ func buildChatGPTContextZip(state AppState, generatedAt time.Time) ([]byte, erro
 		{"02_decision_rules.md", renderDecisionRules(meta, state)},
 		{"03_watchlist_and_triggers.md", renderWatchlistAndTriggers(meta, records)},
 		{"04_recent_decision_logs.md", renderRecentDecisionLogs(meta, state.DecisionLogs, 100)},
+		{"05_master_lens_tables.md", renderMasterLensTables(meta, records)},
+		{"06_risk_committee_memo.md", renderRiskCommitteeMemo(meta, state, records, totalPositions, totalAssets)},
 		{"import_schema.md", renderImportSchema(meta)},
 	}
 
@@ -232,6 +235,7 @@ func chatGPTHoldingRecord(state AppState, holding Holding, totalAssets float64) 
 		Notes:             holding.Notes,
 		Reports:           holding.Reports,
 		Dividend:          holding.Dividend,
+		Financials:        holding.Financials,
 		Plan:              findPlanForDecisionLog(&state, holding.Symbol, holding.Name),
 		DecisionLogs:      chatGPTLogsForStock(state.DecisionLogs, holding.Symbol),
 		MarketValueCNY:    marketValue,
@@ -272,6 +276,7 @@ func chatGPTCandidateRecord(state AppState, candidate Candidate, totalAssets flo
 		Notes:             candidate.Notes,
 		Reports:           candidate.Reports,
 		Dividend:          candidate.Dividend,
+		Financials:        candidate.Financials,
 		Plan:              findPlanForDecisionLog(&state, candidate.Symbol, candidate.Name),
 		DecisionLogs:      chatGPTLogsForStock(state.DecisionLogs, candidate.Symbol),
 	}
@@ -296,6 +301,8 @@ func renderProjectInstructions(meta string) string {
 ## 使用原则
 
 - 优先读取 ` + "`00_reference_tables.md`" + ` 建立横向比较视图，再读取 ` + "`01_portfolio_snapshot.md`" + ` 理解当前现金、仓位、汇率、持仓和候选池。
+- 做个股分析时读取 ` + "`05_master_lens_tables.md`" + `，按格雷厄姆、巴菲特/芒格、彼得林奇三种视角交叉审查。
+- 做仓位和风险判断时读取 ` + "`06_risk_committee_memo.md`" + `，由霍华德马克斯视角决定进攻、防守或等待。
 - 深度研究单只股票前，先读取 ` + "`stocks/`" + ` 下对应股票档案，避免重复询问已经存在的成本、目标价、风险和历史决策。
 - 所有建议必须同时考虑估值、安全边际、质量评分、仓位和既有投资纪律。
 - 如果研究结论需要回写网站，请输出符合 ` + "`import_schema.md`" + ` 的 JSON；不要输出散乱字段。
@@ -607,6 +614,123 @@ func renderWatchlistAndTriggers(meta string, records []chatGPTStockRecord) strin
 	return builder.String()
 }
 
+func renderMasterLensTables(meta string, records []chatGPTStockRecord) string {
+	var builder strings.Builder
+	builder.WriteString(meta)
+	builder.WriteString("# 三大师个股分析表\n\n")
+	builder.WriteString("本文件用于让 ChatGPT 先按三位个股大师审查标的，再回到单股档案补证据。\n\n")
+
+	builder.WriteString("## 格雷厄姆：安全边际与估值纪律\n\n")
+	builder.WriteString("| 状态 | 档案 | 最新价 | 内在价值 | 首买价 | 安全边际 | 财务质量 | 判断 | 主要风险 |\n")
+	builder.WriteString("| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |\n")
+	for _, record := range records {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			mdCell(record.Status),
+			mdCell(chatGPTStockLink(record)),
+			formatNumber(record.CurrentPrice),
+			formatFloatPtr(record.IntrinsicValue),
+			formatPriceLevel(record.PriceLevels, "initial"),
+			formatPercentPtr(record.MarginOfSafety),
+			formatScorePtr(record.FinancialQuality),
+			mdCell(exportGrahamStatus(record)),
+			mdCell(record.Risk),
+		))
+	}
+
+	builder.WriteString("\n## 巴菲特/芒格：好生意、护城河与长期复利\n\n")
+	builder.WriteString("| 状态 | 档案 | 质量分 | 商业模式 | 护城河 | 治理 | 财务质量 | 安全边际 | 判断 | 当前动作 |\n")
+	builder.WriteString("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |\n")
+	for _, record := range records {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			mdCell(record.Status),
+			mdCell(chatGPTStockLink(record)),
+			formatScorePtr(record.QualityScore),
+			formatScorePtr(record.BusinessModel),
+			formatScorePtr(record.Moat),
+			formatScorePtr(record.Governance),
+			formatScorePtr(record.FinancialQuality),
+			formatPercentPtr(record.MarginOfSafety),
+			mdCell(exportBuffettStatus(record)),
+			mdCell(record.Action),
+		))
+	}
+
+	builder.WriteString("\n## 彼得林奇：成长故事、分类与预期差\n\n")
+	builder.WriteString("| 状态 | 档案 | 林奇分类 | 质量分 | 安全边际 | 价格距离首买价 | 成长/预期差信号 | 判断 | 下一步验证 |\n")
+	builder.WriteString("| --- | --- | --- | ---: | ---: | ---: | --- | --- | --- |\n")
+	for _, record := range records {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			mdCell(record.Status),
+			mdCell(chatGPTStockLink(record)),
+			mdCell(exportLynchCategory(record)),
+			formatScorePtr(record.QualityScore),
+			formatPercentPtr(record.MarginOfSafety),
+			formatTargetDistance(record.CurrentPrice, record.TargetBuyPrice),
+			mdCell(exportGrowthCue(record)),
+			mdCell(exportLynchStatus(record)),
+			mdCell(firstNonEmpty(record.Action, record.Notes)),
+		))
+	}
+
+	return builder.String()
+}
+
+func renderRiskCommitteeMemo(meta string, state AppState, records []chatGPTStockRecord, totalPositions float64, totalAssets float64) string {
+	var builder strings.Builder
+	builder.WriteString(meta)
+	builder.WriteString("# 风险委员会备忘录\n\n")
+	builder.WriteString("霍华德马克斯视角不负责选出好股票，而是负责判断风险补偿、周期暴露和组合进攻/防守节奏。\n\n")
+
+	cashRatio := ratioOrZero(state.Cash, totalAssets)
+	positionsRatio := ratioOrZero(totalPositions, totalAssets)
+	riskRecords := exportRiskReviewRecords(records)
+	builder.WriteString("## 当前姿态\n\n")
+	builder.WriteString("| 项目 | 数值 |\n| --- | --- |\n")
+	builder.WriteString(fmt.Sprintf("| 建议姿态 | %s |\n", mdCell(exportPortfolioPosture(cashRatio, riskRecords))))
+	builder.WriteString(fmt.Sprintf("| 现金比例 | %s |\n", formatPercent(cashRatio)))
+	builder.WriteString(fmt.Sprintf("| 持仓比例 | %s |\n", formatPercent(positionsRatio)))
+	builder.WriteString(fmt.Sprintf("| 风险复盘标的数 | %d |\n", len(riskRecords)))
+
+	builder.WriteString("\n## 仓位集中度\n\n")
+	builder.WriteString("| 档案 | 状态 | 仓位 | 市值(CNY) | 安全边际 | 风险主席判断 |\n")
+	builder.WriteString("| --- | --- | ---: | ---: | ---: | --- |\n")
+	for _, record := range exportTopWeightRecords(records, 8) {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s |\n",
+			mdCell(chatGPTStockLink(record)),
+			mdCell(record.Status),
+			formatPercent(record.Weight),
+			formatNumber(record.MarketValueCNY),
+			formatPercentPtr(record.MarginOfSafety),
+			mdCell(exportRiskStatus(record)),
+		))
+	}
+
+	builder.WriteString("\n## 风险复盘清单\n\n")
+	builder.WriteString("| 档案 | 状态 | 质量分 | 安全边际 | 触发原因 | 当前动作 |\n")
+	builder.WriteString("| --- | --- | ---: | ---: | --- | --- |\n")
+	for _, record := range riskRecords {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s |\n",
+			mdCell(chatGPTStockLink(record)),
+			mdCell(record.Status),
+			formatScorePtr(record.QualityScore),
+			formatPercentPtr(record.MarginOfSafety),
+			mdCell(exportRiskReason(record)),
+			mdCell(record.Action),
+		))
+	}
+	if len(riskRecords) == 0 {
+		builder.WriteString("| - | - | - | - | 暂无显著复盘项 | - |\n")
+	}
+
+	builder.WriteString("\n## 马克斯式问题清单\n\n")
+	builder.WriteString("- 当前价格给出的风险补偿是否足够，还是仅仅因为资产质量好而想买？\n")
+	builder.WriteString("- 组合是否过度暴露于同一周期、同一宏观变量或同一政策风险？\n")
+	builder.WriteString("- 现金比例是否允许在更好赔率出现时行动？\n")
+	builder.WriteString("- 高股息、低估值或预期差是否掩盖了治理、现金流或基本面恶化？\n")
+	builder.WriteString("- 如果市场再下跌 20%，哪些持仓应该加仓，哪些只能被动承受？\n")
+	return builder.String()
+}
+
 func renderRecentDecisionLogs(meta string, logs []DecisionLog, limit int) string {
 	var builder strings.Builder
 	builder.WriteString(meta)
@@ -730,6 +854,8 @@ func renderStockMarkdown(meta string, record chatGPTStockRecord) string {
 	builder.WriteString(fmt.Sprintf("| 治理 | %s |\n", formatScorePtr(record.Governance)))
 	builder.WriteString(fmt.Sprintf("| 财务质量 | %s |\n", formatScorePtr(record.FinancialQuality)))
 
+	builder.WriteString(renderFinancialsMarkdown(record.Financials))
+
 	builder.WriteString("\n## 决策\n\n")
 	builder.WriteString(fmt.Sprintf("- 当前动作：%s\n", mdText(record.Action)))
 	if record.Plan != nil {
@@ -778,6 +904,43 @@ func renderStockMarkdown(meta string, record chatGPTStockRecord) string {
 	return builder.String()
 }
 
+func renderFinancialsMarkdown(financials *Financials) string {
+	if financials == nil || len(financials.Annual) == 0 {
+		return "\n## 多年财务数据\n\n暂无结构化多年财务数据。\n"
+	}
+
+	var builder strings.Builder
+	builder.WriteString("\n## 多年财务数据\n\n")
+	builder.WriteString(fmt.Sprintf("- 来源：%s\n", mdText(financials.Source)))
+	builder.WriteString(fmt.Sprintf("- 更新时间：%s\n", mdText(financials.UpdatedAt)))
+	if financials.Valuation != nil {
+		builder.WriteString(fmt.Sprintf("- 当前 PE/PB/PEG：%s / %s / %s\n",
+			formatFloatPtr(financials.Valuation.PE),
+			formatFloatPtr(financials.Valuation.PB),
+			formatFloatPtr(financials.Valuation.PEG),
+		))
+	}
+	builder.WriteString("\n| 年度 | 收入 | 收入同比 | 归母利润 | 利润同比 | 经营现金流 | FCF | ROE | ROIC | 负债率 | PE | PB |\n")
+	builder.WriteString("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
+	for _, item := range financials.Annual {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			mdCell(firstNonEmpty(item.FiscalYear, item.ReportDate)),
+			formatFloatPtr(item.Revenue),
+			formatPercentPtr(item.RevenueYoY),
+			formatFloatPtr(item.NetProfit),
+			formatPercentPtr(item.NetProfitYoY),
+			formatFloatPtr(item.OperatingCashFlow),
+			formatFloatPtr(item.FreeCashFlow),
+			formatPercentPtr(item.ROE),
+			formatPercentPtr(item.ROIC),
+			formatPercentPtr(item.DebtRatio),
+			formatFloatPtr(item.PEAtCurrentPrice),
+			formatFloatPtr(item.PBAtCurrentPrice),
+		))
+	}
+	return builder.String()
+}
+
 func chatGPTLogsForStock(logs []DecisionLog, symbol string) []DecisionLog {
 	normalized := normalizeSymbol(symbol)
 	filtered := make([]DecisionLog, 0)
@@ -821,6 +984,217 @@ func sortedPlanItems(plan []PlanItem) []PlanItem {
 		return leftRank < rightRank
 	})
 	return sorted
+}
+
+func exportGrahamStatus(record chatGPTStockRecord) string {
+	margin := exportPtrFloat(record.MarginOfSafety)
+	financial := exportPtrFloat(record.FinancialQuality)
+	if exportHasMajorRisk(record) {
+		return "风险否决/先复盘"
+	}
+	if margin >= 0.25 && financial >= 20 {
+		return "防御合格"
+	}
+	if margin >= 0.15 {
+		return "勉强可观察"
+	}
+	return "不够便宜"
+}
+
+func exportBuffettStatus(record chatGPTStockRecord) string {
+	quality := exportPtrFloat(record.QualityScore)
+	moat := exportPtrFloat(record.Moat)
+	financial := exportPtrFloat(record.FinancialQuality)
+	margin := exportPtrFloat(record.MarginOfSafety)
+	if exportHasMajorRisk(record) || (quality > 0 && quality < 75) {
+		return "能力圈外/特殊观察"
+	}
+	if quality >= 85 && moat >= 22 && financial >= 20 && margin >= 0.1 {
+		return "长期核心候选"
+	}
+	if quality >= 78 {
+		return "好生意等价格"
+	}
+	return "普通机会"
+}
+
+func exportLynchStatus(record chatGPTStockRecord) string {
+	if exportHasMajorRisk(record) {
+		return "等待验证"
+	}
+	quality := exportPtrFloat(record.QualityScore)
+	margin := exportPtrFloat(record.MarginOfSafety)
+	hasGrowthCue := exportHasGrowthCue(record)
+	if quality >= 82 && margin >= 0.1 && hasGrowthCue {
+		return "成长故事清晰"
+	}
+	if (quality >= 75 && hasGrowthCue) || strings.Contains(exportLynchCategory(record), "预期差") {
+		return "预期差可验证"
+	}
+	if !hasGrowthCue {
+		return "故事不足"
+	}
+	return "继续跟踪"
+}
+
+func exportRiskStatus(record chatGPTStockRecord) string {
+	margin := exportPtrFloat(record.MarginOfSafety)
+	if exportHasMajorRisk(record) {
+		return "风险复盘"
+	}
+	if margin >= 0.2 {
+		return "补偿足够"
+	}
+	if margin >= 0.15 {
+		return "仅观察"
+	}
+	return "等待补偿"
+}
+
+func exportLynchCategory(record chatGPTStockRecord) string {
+	text := exportRecordText(record)
+	if exportHasMajorRisk(record) {
+		return "困境反转/问题股"
+	}
+	if strings.Contains(text, "预期差") || strings.Contains(text, "反转") || strings.Contains(text, "复苏") || strings.Contains(text, "修复") || strings.Contains(text, "验证") || strings.Contains(text, "重估") {
+		return "困境反转/预期差"
+	}
+	if containsAnyText(text, []string{"新能源", "AI", "机器人", "自动化", "科技", "互联网", "智能"}) {
+		return "快速增长/高波动"
+	}
+	if containsAnyText(text, []string{"油气", "银行", "地产", "物业", "航空", "周期", "白酒", "乳制品", "家电"}) {
+		return "稳定增长/周期敏感"
+	}
+	return "稳定增长/普通成长"
+}
+
+func exportGrowthCue(record chatGPTStockRecord) string {
+	text := exportRecordText(record)
+	cues := []string{"增长", "复苏", "修复", "预期差", "验证", "扩张", "现金流", "回购", "分红", "海外", "AI", "机器人", "新能源", "重估"}
+	found := make([]string, 0, 3)
+	for _, cue := range cues {
+		if strings.Contains(text, cue) {
+			found = append(found, cue)
+		}
+		if len(found) >= 3 {
+			break
+		}
+	}
+	if len(found) == 0 {
+		return "成长线索待补充"
+	}
+	return strings.Join(found, "、")
+}
+
+func exportHasGrowthCue(record chatGPTStockRecord) bool {
+	return exportGrowthCue(record) != "成长线索待补充"
+}
+
+func exportRiskReviewRecords(records []chatGPTStockRecord) []chatGPTStockRecord {
+	riskRecords := make([]chatGPTStockRecord, 0)
+	for _, record := range records {
+		margin := exportPtrFloat(record.MarginOfSafety)
+		quality := exportPtrFloat(record.QualityScore)
+		if exportRiskStatus(record) == "风险复盘" || (quality > 0 && quality < 75) || (margin > 0 && margin < 0.1) {
+			riskRecords = append(riskRecords, record)
+		}
+	}
+	sort.SliceStable(riskRecords, func(i, j int) bool {
+		return exportRiskSortScore(riskRecords[i]) > exportRiskSortScore(riskRecords[j])
+	})
+	return riskRecords
+}
+
+func exportTopWeightRecords(records []chatGPTStockRecord, limit int) []chatGPTStockRecord {
+	held := make([]chatGPTStockRecord, 0)
+	for _, record := range records {
+		if record.Status == "持仓" {
+			held = append(held, record)
+		}
+	}
+	sort.SliceStable(held, func(i, j int) bool {
+		return held[i].Weight > held[j].Weight
+	})
+	if limit > 0 && len(held) > limit {
+		return held[:limit]
+	}
+	return held
+}
+
+func exportPortfolioPosture(cashRatio float64, riskRecords []chatGPTStockRecord) string {
+	if len(riskRecords) >= 3 {
+		return "先复盘风险，暂缓进攻"
+	}
+	if cashRatio >= 0.35 {
+		return "现金充足，等待高赔率机会"
+	}
+	if cashRatio < 0.12 {
+		return "现金偏低，控制新增仓位"
+	}
+	return "防守等待，小额验证"
+}
+
+func exportRiskReason(record chatGPTStockRecord) string {
+	reasons := make([]string, 0, 3)
+	margin := exportPtrFloat(record.MarginOfSafety)
+	quality := exportPtrFloat(record.QualityScore)
+	if exportHasMajorRisk(record) {
+		reasons = append(reasons, "重大风险/治理或数据可信度")
+	}
+	if quality > 0 && quality < 75 {
+		reasons = append(reasons, "质量分低于 75")
+	}
+	if margin > 0 && margin < 0.1 {
+		reasons = append(reasons, "安全边际低于 10%")
+	}
+	if len(reasons) == 0 {
+		reasons = append(reasons, exportRiskStatus(record))
+	}
+	return strings.Join(reasons, "；")
+}
+
+func exportRiskSortScore(record chatGPTStockRecord) float64 {
+	score := record.Weight * 100
+	if exportHasMajorRisk(record) {
+		score += 10
+	}
+	quality := exportPtrFloat(record.QualityScore)
+	if quality > 0 && quality < 75 {
+		score += 5
+	}
+	margin := exportPtrFloat(record.MarginOfSafety)
+	if margin > 0 && margin < 0.1 {
+		score += 3
+	}
+	return score
+}
+
+func exportHasMajorRisk(record chatGPTStockRecord) bool {
+	text := exportRecordText(record)
+	text = strings.ReplaceAll(text, "无一票否决", "")
+	text = strings.ReplaceAll(text, "无立即否决", "")
+	text = strings.ReplaceAll(text, "没有一票否决", "")
+	return containsAnyText(text, []string{"否决", "停牌", "造假", "调查", "重大风险", "低可信", "内控", "退市", "财报可信", "治理风险", "治理与财务可靠性", "质量分<75", "低于75"})
+}
+
+func exportRecordText(record chatGPTStockRecord) string {
+	return strings.Join([]string{record.Industry, record.Action, record.Risk, record.Notes, record.FairValueRange}, " ")
+}
+
+func containsAnyText(text string, needles []string) bool {
+	for _, needle := range needles {
+		if strings.Contains(text, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+func exportPtrFloat(value *float64) float64 {
+	if value == nil {
+		return 0
+	}
+	return *value
 }
 
 func recordForPlan(records []chatGPTStockRecord, plan PlanItem) *chatGPTStockRecord {

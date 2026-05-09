@@ -87,6 +87,7 @@ type Holding struct {
 	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
 	Reports             []Report        `json:"reports,omitempty"`
 	Dividend            *Dividend       `json:"dividend,omitempty"`
+	Financials          json.RawMessage `json:"financials,omitempty"`
 }
 
 type PriceLevels struct {
@@ -157,6 +158,7 @@ type Candidate struct {
 	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
 	Reports             []Report        `json:"reports,omitempty"`
 	Dividend            *Dividend       `json:"dividend,omitempty"`
+	Financials          json.RawMessage `json:"financials,omitempty"`
 }
 
 type Rule struct {

@@ -238,6 +238,8 @@ const elements = {
   grahamList: document.querySelector("#grahamList"),
   buffettSummary: document.querySelector("#buffettSummary"),
   buffettList: document.querySelector("#buffettList"),
+  lynchSummary: document.querySelector("#lynchSummary"),
+  lynchList: document.querySelector("#lynchList"),
   candidateList: document.querySelector("#candidateList"),
   candidateSort: document.querySelector("#candidateSort"),
   candidateFilters: document.querySelector("#candidateFilters"),
@@ -571,6 +573,75 @@ function displayDividendRatio(value) {
   return Number.isFinite(value) ? percent(value * 100, false) : "-";
 }
 
+function financialAnnuals(stock) {
+  return Array.isArray(stock?.financials?.annual) ? stock.financials.annual : [];
+}
+
+function latestAnnualFinancial(stock) {
+  return financialAnnuals(stock)[0] ?? {};
+}
+
+function financialValuation(stock) {
+  return stock?.financials?.valuation ?? {};
+}
+
+function financialRatio(value, fallback = "-") {
+  const number = finiteNumber(value);
+  return Number.isFinite(number) ? percent(number * 100, false) : fallback;
+}
+
+function financialMultiple(value, fallback = "-") {
+  const number = finiteNumber(value);
+  return Number.isFinite(number) ? `${number.toFixed(number >= 10 ? 1 : 2)}x` : fallback;
+}
+
+function recentAverage(stock, key, count = 5) {
+  const values = financialAnnuals(stock)
+    .slice(0, count)
+    .map((item) => finiteNumber(item?.[key]))
+    .filter(Number.isFinite);
+  if (!values.length) return NaN;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function positiveRecordRatio(stock, key, count = 5) {
+  const values = financialAnnuals(stock)
+    .slice(0, count)
+    .map((item) => finiteNumber(item?.[key]))
+    .filter(Number.isFinite);
+  if (!values.length) return NaN;
+  return values.filter((value) => value > 0).length / values.length;
+}
+
+function compoundGrowth(stock, key, count = 5) {
+  const values = financialAnnuals(stock)
+    .slice(0, count)
+    .map((item) => finiteNumber(item?.[key]))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  if (values.length < 2) return NaN;
+  const current = values[0];
+  const oldest = values[values.length - 1];
+  if (oldest <= 0) return NaN;
+  return Math.pow(current / oldest, 1 / (values.length - 1)) - 1;
+}
+
+function financialAmount(value, currencyCode = "") {
+  const number = finiteNumber(value);
+  if (!Number.isFinite(number)) return "-";
+  const sign = number < 0 ? "-" : "";
+  const abs = Math.abs(number);
+  const code = currencyCode ? `${currencyCode} ` : "";
+  if (abs >= 1e12) return `${sign}${code}${(abs / 1e12).toFixed(2)}万亿`;
+  if (abs >= 1e8) return `${sign}${code}${(abs / 1e8).toFixed(2)}亿`;
+  if (abs >= 1e4) return `${sign}${code}${(abs / 1e4).toFixed(2)}万`;
+  return `${sign}${code}${abs.toFixed(2)}`;
+}
+
+function rangeText(range, formatter = financialMultiple) {
+  if (!range) return "-";
+  return `${formatter(range.min)} / ${formatter(range.median)} / ${formatter(range.max)}`;
+}
+
 function dividendReliability(stock) {
   const explicit = String(stock?.dividend?.reliability ?? "").trim().toLowerCase();
   if (["stable", "review", "risk"].includes(explicit)) {
@@ -857,9 +928,68 @@ function qualityValue(stock) {
   return finiteNumber(stock?.qualityScore);
 }
 
+function scoreBand(value, low, high, fallback = 0) {
+  const number = finiteNumber(value);
+  if (!Number.isFinite(number)) return fallback;
+  if (high === low) return number >= high ? 1 : 0;
+  return clamp((number - low) / (high - low), 0, 1);
+}
+
+function inverseScoreBand(value, good, bad, fallback = 0) {
+  const number = finiteNumber(value);
+  if (!Number.isFinite(number)) return fallback;
+  if (bad === good) return number <= good ? 1 : 0;
+  return clamp((bad - number) / (bad - good), 0, 1);
+}
+
+function dividendScore(stock) {
+  const reliability = dividendReliability(stock).value;
+  if (reliability === "stable") return 1;
+  if (reliability === "review") return 0.55;
+  return 0;
+}
+
+function confidenceValue(stock) {
+  const confidence = valuationConfidence(stock);
+  if (confidence === "high") return 1;
+  if (confidence === "medium") return 0.65;
+  return 0.2;
+}
+
+function isFinancialBusiness(stock) {
+  return /银行|保险|证券|券商|金融/.test([stock?.name, stock?.industry].filter(Boolean).join(" "));
+}
+
+function balanceSheetScore(stock, fallback = 0.55) {
+  if (isFinancialBusiness(stock)) return fallback;
+  return inverseScoreBand(latestAnnualFinancial(stock).debtRatio, 0.35, 0.75, fallback);
+}
+
+function qualityComposite(stock) {
+  const quality = qualityValue(stock);
+  if (Number.isFinite(quality)) return clamp(quality / 100, 0, 1);
+
+  const business = finiteNumber(stock?.businessModel);
+  const moat = finiteNumber(stock?.moat);
+  const governance = finiteNumber(stock?.governance);
+  const financial = finiteNumber(stock?.financialQuality);
+  const parts = [
+    Number.isFinite(business) ? (business / 30) * 0.3 : null,
+    Number.isFinite(moat) ? (moat / 25) * 0.25 : null,
+    Number.isFinite(governance) ? (governance / 20) * 0.2 : null,
+    Number.isFinite(financial) ? (financial / 25) * 0.25 : null
+  ].filter((value) => value !== null);
+  if (!parts.length) return 0.6;
+  return clamp(parts.reduce((sum, value) => sum + value, 0), 0, 1);
+}
+
+function weightedScore(parts) {
+  return Math.round(clamp(parts.reduce((sum, part) => sum + part.weight * clamp(part.score, 0, 1), 0), 0, 100));
+}
+
 function masterTone(status) {
-  if (/复盘|不合格|能力圈外|投机|低可信|降权/.test(status)) return "risk";
-  if (/合格|核心|足够|认可/.test(status)) return "strong";
+  if (/复盘|不合格|能力圈外|投机|低可信|降权|故事不足/.test(status)) return "risk";
+  if (/合格|核心|足够|认可|清晰|可验证/.test(status)) return "strong";
   return "watch";
 }
 
@@ -868,31 +998,68 @@ function marksView(stock, totalValue = 0) {
   const confidence = valuationConfidence(stock);
   const weight = totalValue && stock.marketValueCny ? stock.marketValueCny / totalValue : 0;
   const dividendRisk = dividendReliability(stock).value === "risk";
-  const highRisk = hasMajorRisk(stock) || confidence === "low";
-  const lowMargin = !Number.isFinite(margin) || margin < SAFETY_MARGIN_TARGET;
-  let score = 72;
-
-  if (Number.isFinite(margin)) score += clamp(margin * 100, -20, 35) * 0.65;
-  if (confidence === "high") score += 8;
-  if (confidence === "low") score -= 24;
-  if (highRisk) score -= 22;
-  if (dividendRisk) score -= 10;
-  if (weight > 0.15) score -= 8;
-  score = Math.round(clamp(score, 0, 100));
+  const latestFinancial = latestAnnualFinancial(stock);
+  const valuation = financialValuation(stock);
+  const debtRatio = finiteNumber(latestFinancial.debtRatio);
+  const freeCashFlow = finiteNumber(latestFinancial.freeCashFlow);
+  const fcfRecord = positiveRecordRatio(stock, "freeCashFlow");
+  const revenueGrowth = finiteNumber(latestFinancial.revenueYoY);
+  const profitGrowth = finiteNumber(latestFinancial.netProfitYoY);
+  const peg = finiteNumber(valuation.peg);
+  const financialStress = (!isFinancialBusiness(stock) && Number.isFinite(debtRatio) && debtRatio > 0.65) ||
+    (Number.isFinite(freeCashFlow) && freeCashFlow < 0);
+  const highRisk = hasMajorRisk(stock) || confidence === "low" || financialStress;
+  const requiredMargin = (confidence === "high" ? 0.25 : confidence === "medium" ? 0.3 : 0.38) +
+    (financialStress ? 0.08 : 0) +
+    (dividendRisk ? 0.04 : 0);
+  const riskCompensationScore = scoreBand(margin, 0, requiredMargin, 0);
+  const resilienceScore = (
+    balanceSheetScore(stock, 0.5) * 0.4 +
+    (Number.isFinite(freeCashFlow) ? (freeCashFlow > 0 ? 1 : 0) : 0.45) * 0.35 +
+    (Number.isFinite(fcfRecord) ? fcfRecord : 0.45) * 0.25
+  );
+  const uncertaintyScore = (
+    confidenceValue(stock) * 0.4 +
+    (hasMajorRisk(stock) ? 0 : 1) * 0.45 +
+    (dividendRisk ? 0 : 1) * 0.15
+  );
+  const cycleScore = (
+    scoreBand(profitGrowth, -0.2, 0.12, 0.45) * 0.4 +
+    scoreBand(revenueGrowth, -0.1, 0.1, 0.45) * 0.25 +
+    inverseScoreBand(peg, 1, 3, 0.55) * 0.15 +
+    riskCompensationScore * 0.2
+  );
+  const positionScore = weight > 0 ? inverseScoreBand(weight, 0.08, 0.22, 0.75) : 1;
+  let score = weightedScore([
+    { weight: 30, score: riskCompensationScore },
+    { weight: 25, score: resilienceScore },
+    { weight: 20, score: uncertaintyScore },
+    { weight: 15, score: cycleScore },
+    { weight: 10, score: positionScore }
+  ]);
+  if (!Number.isFinite(margin)) score = Math.min(score, 60);
+  else if (margin < requiredMargin * 0.5) score = Math.min(score, 68);
+  else if (margin < requiredMargin) score = Math.min(score, 82);
+  if (highRisk) score = Math.min(score, 58);
 
   let status = "等待补偿";
-  if (highRisk || dividendRisk) status = "风险复盘";
-  else if (!lowMargin && confidence !== "low") status = "补偿足够";
-  else if (Number.isFinite(margin) && margin >= 0.15) status = "仅观察";
+  if (highRisk || dividendRisk || resilienceScore < 0.35) status = "风险复盘";
+  else if (riskCompensationScore >= 0.95 && score >= 78) status = "补偿足够";
+  else if (score >= 65 && Number.isFinite(margin) && margin >= 0.15) status = "仅观察";
 
   const support = [
     Number.isFinite(margin) ? `安全边际 ${percent(margin * 100, false)}` : "安全边际待补充",
+    `要求补偿 ${percent(requiredMargin * 100, false)}`,
     `${confidenceMeta(stock).text}`,
+    isFinancialBusiness(stock) ? "金融股需另看资本充足/拨备" : Number.isFinite(debtRatio) ? `负债率 ${financialRatio(debtRatio)}` : "",
+    Number.isFinite(freeCashFlow) ? `FCF ${financialAmount(freeCashFlow, latestFinancial.currency || stock.currency)}` : "",
     weight ? `仓位 ${percent(weight * 100, false)}` : ""
   ].filter(Boolean);
   const against = [
-    lowMargin ? "风险补偿不足" : "",
+    riskCompensationScore < 1 ? "风险补偿不足" : "",
     highRisk ? "存在重大风险或低可信" : "",
+    financialStress ? "杠杆或自由现金流有压力" : "",
+    weight > 0.15 ? "仓位过高，新增风险补偿要求提高" : "",
     dividendRisk ? "股息质量需复盘" : ""
   ].filter(Boolean);
 
@@ -915,29 +1082,51 @@ function grahamView(stock) {
   const dividend = dividendReliability(stock);
   const confidence = valuationConfidence(stock);
   const highRisk = hasMajorRisk(stock) || confidence === "low";
+  const latestFinancial = latestAnnualFinancial(stock);
+  const debtRatio = finiteNumber(latestFinancial.debtRatio);
+  const earningsRecord = positiveRecordRatio(stock, "netProfit");
+  const cashFlowRecord = positiveRecordRatio(stock, "operatingCashFlow");
   const defensiveMargin = Number.isFinite(margin) && margin >= (confidence === "high" ? SAFETY_MARGIN_TARGET : 0.33);
-  let score = 45;
-
-  if (Number.isFinite(margin)) score += clamp(margin, -0.2, 0.5) * 90;
-  if (Number.isFinite(financial)) score += (financial / 25) * 24;
-  if (dividend.value === "stable") score += 12;
-  if (dividend.value === "risk") score -= 18;
-  if (confidence === "high") score += 7;
-  if (highRisk) score -= 28;
-  score = Math.round(clamp(score, 0, 100));
+  const resilienceScore = (
+    (Number.isFinite(financial) ? clamp(financial / 25, 0, 1) : 0.5) * 0.55 +
+    balanceSheetScore(stock, 0.5) * 0.45
+  );
+  const stabilityScore = (
+    (Number.isFinite(earningsRecord) ? earningsRecord : 0.4) * 0.55 +
+    (Number.isFinite(cashFlowRecord) ? cashFlowRecord : 0.4) * 0.45
+  );
+  const riskScore = (
+    confidenceValue(stock) * 0.45 +
+    (hasMajorRisk(stock) ? 0 : 1) * 0.55
+  );
+  let score = weightedScore([
+    { weight: 35, score: scoreBand(margin, 0, 0.3, 0) },
+    { weight: 20, score: resilienceScore },
+    { weight: 20, score: stabilityScore },
+    { weight: 10, score: dividendScore(stock) },
+    { weight: 15, score: riskScore }
+  ]);
+  if (!Number.isFinite(margin)) score = Math.min(score, 62);
+  else if (margin < 0.1) score = Math.min(score, 58);
+  else if (margin < 0.15) score = Math.min(score, 68);
+  else if (margin < SAFETY_MARGIN_TARGET) score = Math.min(score, 79);
+  if (highRisk) score = Math.min(score, 55);
 
   let status = "不合格";
-  if (!highRisk && defensiveMargin && score >= 72) status = "防御合格";
-  else if (!highRisk && score >= 55) status = "勉强";
+  if (!highRisk && defensiveMargin && score >= 75) status = "防御合格";
+  else if (!highRisk && Number.isFinite(margin) && margin >= 0.15 && score >= 60) status = "勉强";
 
   const support = [
     Number.isFinite(margin) ? `安全边际 ${percent(margin * 100, false)}` : "安全边际待补充",
     Number.isFinite(financial) ? `财务质量 ${financial}/25` : "财务质量待补充",
+    Number.isFinite(earningsRecord) ? `近年盈利为正 ${Math.round(earningsRecord * 100)}%` : "",
+    isFinancialBusiness(stock) ? "金融股需另看资本充足/拨备" : Number.isFinite(debtRatio) ? `负债率 ${financialRatio(debtRatio)}` : "",
     `股息${dividend.text}`
-  ];
+  ].filter(Boolean);
   const against = [
     defensiveMargin ? "" : "防御型折价不足",
     highRisk ? "财报/治理/低可信风险" : "",
+    !isFinancialBusiness(stock) && Number.isFinite(debtRatio) && debtRatio > 0.7 ? "资产负债表防守性不足" : "",
     dividend.value === "risk" ? "分红可靠性不足" : ""
   ].filter(Boolean);
 
@@ -956,44 +1145,67 @@ function grahamView(stock) {
 
 function buffettView(stock) {
   const quality = qualityValue(stock);
-  const business = finiteNumber(stock?.businessModel);
   const moat = finiteNumber(stock?.moat);
-  const governance = finiteNumber(stock?.governance);
   const financial = finiteNumber(stock?.financialQuality);
   const margin = marginValue(stock);
   const confidence = valuationConfidence(stock);
   const highRisk = hasMajorRisk(stock) || confidence === "low";
-  const qualityBase = (Number.isFinite(quality) ? quality : 60) * 0.35 +
-    (Number.isFinite(business) ? (business / 30) * 100 : 60) * 0.18 +
-    (Number.isFinite(moat) ? (moat / 25) * 100 : 60) * 0.2 +
-    (Number.isFinite(governance) ? (governance / 20) * 100 : 60) * 0.12 +
-    (Number.isFinite(financial) ? (financial / 25) * 100 : 60) * 0.15;
-  let score = qualityBase;
-  if (confidence === "high") score += 8;
-  if (confidence === "low") score -= 24;
-  if (Number.isFinite(margin) && margin >= 0.1) score += 5;
-  if (highRisk) score -= 22;
-  score = Math.round(clamp(score, 0, 100));
+  const avgRoe = recentAverage(stock, "roe");
+  const avgRoic = recentAverage(stock, "roic");
+  const fcfRecord = positiveRecordRatio(stock, "freeCashFlow");
+  const economicsScore = (
+    scoreBand(avgRoe, 0.08, 0.2, 0.45) * 0.5 +
+    scoreBand(avgRoic, 0.08, 0.18, 0.45) * 0.5
+  );
+  const cashScore = (
+    (Number.isFinite(fcfRecord) ? fcfRecord : 0.45) * 0.7 +
+    scoreBand(latestAnnualFinancial(stock).operatingCashFlowToRevenue, 0.05, 0.25, 0.45) * 0.3
+  );
+  const durabilityScore = (
+    confidenceValue(stock) * 0.4 +
+    (hasMajorRisk(stock) ? 0 : 1) * 0.45 +
+    balanceSheetScore(stock, 0.55) * 0.15
+  );
+  let score = weightedScore([
+    { weight: 35, score: qualityComposite(stock) },
+    { weight: 25, score: economicsScore },
+    { weight: 15, score: cashScore },
+    { weight: 15, score: durabilityScore },
+    { weight: 10, score: scoreBand(margin, 0, 0.2, 0.35) }
+  ]);
+  if (highRisk) score = Math.min(score, 58);
+  if (Number.isFinite(quality) && quality < 75) score = Math.min(score, 65);
 
   let status = "普通机会";
   if (highRisk || (Number.isFinite(quality) && quality < 75)) status = "能力圈外";
-  else if (score >= 84 && Number.isFinite(margin) && margin >= 0.15) status = "长期核心";
+  else if (
+    score >= 86 &&
+    Number.isFinite(quality) && quality >= 85 &&
+    Number.isFinite(avgRoic) && avgRoic >= 0.12 &&
+    Number.isFinite(fcfRecord) && fcfRecord >= 0.8 &&
+    Number.isFinite(margin) && margin >= 0.2
+  ) status = "长期核心";
   else if (score >= 78) status = "好生意等价格";
 
   const support = [
     Number.isFinite(quality) ? `质量 ${quality}` : "质量待补充",
     Number.isFinite(moat) ? `护城河 ${moat}/25` : "护城河待补充",
+    Number.isFinite(avgRoe) ? `近年 ROE ${financialRatio(avgRoe)}` : "",
+    Number.isFinite(avgRoic) ? `近年 ROIC ${financialRatio(avgRoic)}` : "",
+    Number.isFinite(fcfRecord) ? `FCF 为正 ${Math.round(fcfRecord * 100)}%` : "",
     confidenceMeta(stock).text
-  ];
+  ].filter(Boolean);
   const against = [
     Number.isFinite(margin) && margin < 0.2 ? "价格仍不够舒服" : "",
     highRisk ? "低可信或重大风险" : "",
+    Number.isFinite(avgRoe) && avgRoe < 0.1 ? "长期 ROE 不够突出" : "",
+    Number.isFinite(fcfRecord) && fcfRecord < 0.6 ? "自由现金流连续性不足" : "",
     Number.isFinite(financial) && financial < 20 ? "现金流/财务质量不够强" : ""
   ].filter(Boolean);
 
   return {
     key: "buffett",
-    name: "巴菲特",
+    name: "巴菲特/芒格",
     title: "好生意与复利",
     status,
     score,
@@ -1004,18 +1216,154 @@ function buffettView(stock) {
   };
 }
 
-function masterVotes(stock, totalValue = 0) {
+function lynchCategory(stock) {
+  const text = [stock?.industry, stock?.action, stock?.status, stock?.risk, stock?.notes].filter(Boolean).join(" ");
+  if (hasMajorRisk(stock)) return "困境反转/问题股";
+  if (/预期差|反转|复苏|修复|验证|重估|改善/.test(text)) return "困境反转/预期差";
+  if (/新能源|AI|机器人|自动化|科技|互联网|智能/.test(text)) return "快速增长/高波动";
+  if (/油气|银行|地产|物业|航空|周期|白酒|乳制品|家电/.test(text)) return "稳定增长/周期敏感";
+  return "稳定增长/普通成长";
+}
+
+function lynchView(stock) {
+  const quality = qualityValue(stock);
+  const margin = marginValue(stock);
+  const confidence = valuationConfidence(stock);
+  const highRisk = hasMajorRisk(stock) || confidence === "low";
+  const latestFinancial = latestAnnualFinancial(stock);
+  const valuation = financialValuation(stock);
+  const revenueGrowth = finiteNumber(latestFinancial.revenueYoY);
+  const profitGrowth = finiteNumber(latestFinancial.netProfitYoY);
+  const revenueCagr = compoundGrowth(stock, "revenue");
+  const profitCagr = compoundGrowth(stock, "netProfit");
+  const cycleRevenueCagr = compoundGrowth(stock, "revenue", 7);
+  const cycleProfitCagr = compoundGrowth(stock, "netProfit", 7);
+  const fcfRecord = positiveRecordRatio(stock, "freeCashFlow");
+  const debtRatio = finiteNumber(latestFinancial.debtRatio);
+  const cashConversion = finiteNumber(latestFinancial.operatingCashFlowToRevenue);
+  const peg = finiteNumber(valuation.peg);
+  const text = [stock?.industry, stock?.action, stock?.status, stock?.risk, stock?.notes].filter(Boolean).join(" ");
+  const hasNegativeGrowthCue = /增长弹性不足|增长乏力|增长放缓|增长承压|缺少增长|低增长|成熟|周期敏感|修复已兑现|低基数|高基数/.test(text);
+  const hasNarrativeCue = /复苏|修复|预期差|验证|扩张|海外|AI|机器人|新能源|重估|新业务|份额提升|渗透率|订单/.test(text) ||
+    (/增长/.test(text) && !hasNegativeGrowthCue);
+  const hasGrowthCue = hasNarrativeCue ||
+    (Number.isFinite(revenueGrowth) && revenueGrowth > 0.08) ||
+    (Number.isFinite(profitGrowth) && profitGrowth > 0.08) ||
+    (Number.isFinite(revenueCagr) && revenueCagr > 0.08) ||
+    (Number.isFinite(profitCagr) && profitCagr > 0.08);
+  const target = finiteNumber(stock?.targetBuyPrice);
+  const price = finiteNumber(stock?.currentPrice);
+  const nearTarget = Number.isFinite(target) && target > 0 && Number.isFinite(price) && price <= target * 1.08;
+  const category = lynchCategory(stock);
+  const growthScore = (
+    scoreBand(revenueGrowth, -0.05, 0.15, 0.45) * 0.25 +
+    scoreBand(profitGrowth, -0.1, 0.2, 0.45) * 0.25 +
+    scoreBand(revenueCagr, 0, 0.12, 0.45) * 0.15 +
+    scoreBand(profitCagr, 0, 0.15, 0.45) * 0.15 +
+    scoreBand(cycleRevenueCagr, 0, 0.1, 0.45) * 0.1 +
+    scoreBand(cycleProfitCagr, 0, 0.12, 0.45) * 0.1
+  );
+  const storyScore = (
+    (hasNarrativeCue ? 1 : hasNegativeGrowthCue ? 0.35 : 0.45) * 0.45 +
+    qualityComposite(stock) * 0.3 +
+    (hasMajorRisk(stock) ? 0 : 1) * 0.25
+  );
+  const valuationGrowthScore = (
+    inverseScoreBand(peg, 0.8, 2.5, 0.5) * 0.45 +
+    scoreBand(margin, 0, 0.2, 0.35) * 0.35 +
+    (nearTarget ? 1 : 0.45) * 0.2
+  );
+  const financialVerificationScore = (
+    (Number.isFinite(fcfRecord) ? fcfRecord : 0.45) * 0.35 +
+    scoreBand(cashConversion, 0.05, 0.25, 0.45) * 0.3 +
+    balanceSheetScore(stock, 0.55) * 0.2 +
+    confidenceValue(stock) * 0.15
+  );
+  const riskExecutionScore = (
+    confidenceValue(stock) * 0.35 +
+    (hasMajorRisk(stock) ? 0 : 1) * 0.45 +
+    (Number.isFinite(profitGrowth) && profitGrowth < 0 ? 0.25 : 1) * 0.2
+  );
+  let score = weightedScore([
+    { weight: 25, score: growthScore },
+    { weight: 20, score: storyScore },
+    { weight: 25, score: valuationGrowthScore },
+    { weight: 15, score: financialVerificationScore },
+    { weight: 15, score: riskExecutionScore }
+  ]);
+  if (!hasGrowthCue) score = Math.min(score, 58);
+  if (Number.isFinite(profitGrowth) && profitGrowth < 0 && Number.isFinite(revenueGrowth) && revenueGrowth < 0) score = Math.min(score, 62);
+  if (Number.isFinite(revenueGrowth) && revenueGrowth < 0 && Number.isFinite(cycleProfitCagr) && cycleProfitCagr <= 0) score = Math.min(score, 74);
+  if (Number.isFinite(peg) && peg > 2.5) score = Math.min(score, 72);
+  if (highRisk) score = Math.min(score, 55);
+
+  let status = "继续跟踪";
+  if (highRisk) status = "等待验证";
+  else if (
+    score >= 82 &&
+    growthScore >= 0.65 &&
+    valuationGrowthScore >= 0.6 &&
+    (!Number.isFinite(revenueGrowth) || revenueGrowth >= 0) &&
+    (!Number.isFinite(cycleProfitCagr) || cycleProfitCagr > 0)
+  ) status = "成长故事清晰";
+  else if (score >= 68 && (growthScore >= 0.5 || hasNarrativeCue)) status = "预期差可验证";
+  else if (score < 52) status = "故事不足";
+
+  const support = [
+    `类型：${category}`,
+    hasGrowthCue ? "已有成长/修复线索" : "成长线索待补充",
+    Number.isFinite(revenueGrowth) ? `收入增速 ${financialRatio(revenueGrowth)}` : "",
+    Number.isFinite(profitGrowth) ? `利润增速 ${financialRatio(profitGrowth)}` : "",
+    Number.isFinite(revenueCagr) ? `收入CAGR ${financialRatio(revenueCagr)}` : "",
+    Number.isFinite(profitCagr) ? `利润CAGR ${financialRatio(profitCagr)}` : "",
+    Number.isFinite(cycleRevenueCagr) ? `长周期收入 ${financialRatio(cycleRevenueCagr)}` : "",
+    Number.isFinite(cycleProfitCagr) ? `长周期利润 ${financialRatio(cycleProfitCagr)}` : "",
+    Number.isFinite(peg) ? `PEG ${peg.toFixed(2)}` : "",
+    Number.isFinite(margin) ? `安全边际 ${percent(margin * 100, false)}` : "安全边际待补充",
+    nearTarget ? "价格接近买入纪律" : ""
+  ].filter(Boolean);
+  const against = [
+    highRisk ? "风险或数据可信度仍需验证" : "",
+    !hasGrowthCue ? "缺少清晰增长故事" : "",
+    hasNegativeGrowthCue ? "文本含低增长或周期敏感线索" : "",
+    Number.isFinite(revenueGrowth) && revenueGrowth < 0 ? "收入同比下滑" : "",
+    Number.isFinite(cycleProfitCagr) && cycleProfitCagr <= 0 ? "长周期利润未验证持续增长" : "",
+    Number.isFinite(profitGrowth) && profitGrowth < 0 ? "利润同比下滑" : "",
+    Number.isFinite(peg) && peg > 2.5 ? "成长与估值匹配度不足" : "",
+    financialVerificationScore < 0.5 ? "增长缺少现金流或资产负债表验证" : "",
+    Number.isFinite(margin) && margin < 0.1 ? "估值赔率不够" : ""
+  ].filter(Boolean);
+
   return {
-    marks: marksView(stock, totalValue),
-    graham: grahamView(stock),
-    buffett: buffettView(stock)
+    key: "lynch",
+    name: "彼得林奇",
+    title: "成长故事与预期差",
+    status,
+    score,
+    tone: masterTone(status),
+    support,
+    against,
+    action: status === "成长故事清晰" ? "可进入成长假设复核" : status === "预期差可验证" ? "跟踪关键验证点" : status === "等待验证" ? "先等财报或风险落地" : "暂不消耗主要仓位"
   };
 }
 
+function masterVotes(stock, totalValue = 0) {
+  return {
+    graham: grahamView(stock),
+    buffett: buffettView(stock),
+    lynch: lynchView(stock)
+  };
+}
+
+function riskCommitteeVote(stock, totalValue = 0) {
+  return marksView(stock, totalValue);
+}
+
 function masterApproval(vote) {
-  if (vote.key === "marks") return vote.status === "补偿足够" || vote.status === "仅观察";
   if (vote.key === "graham") return vote.status === "防御合格" || vote.status === "勉强";
-  return vote.status === "长期核心" || vote.status === "好生意等价格";
+  if (vote.key === "buffett") return vote.status === "长期核心" || vote.status === "好生意等价格";
+  if (vote.key === "lynch") return vote.status === "成长故事清晰" || vote.status === "预期差可验证";
+  return false;
 }
 
 function consensusCount(stock, totalValue = 0) {
@@ -1080,6 +1428,7 @@ function renderPositions(positions) {
       const qualityText = Number.isFinite(position.qualityScore) ? position.qualityScore : "-";
       const health = holdingHealth(position, totalValue);
       const votes = masterVotes(position, totalValue);
+      const riskVote = riskCommitteeVote(position, totalValue);
 
       return `
         <tr>
@@ -1110,9 +1459,10 @@ function renderPositions(positions) {
           </td>
           <td data-label="委员会">
             <div class="position-committee">
-              ${compactMasterCell(votes.marks)}
               ${compactMasterCell(votes.graham)}
               ${compactMasterCell(votes.buffett)}
+              ${compactMasterCell(votes.lynch)}
+              ${compactMasterCell(riskVote)}
             </div>
           </td>
           <td data-label="操作">
@@ -1245,9 +1595,9 @@ function renderPlanAndCandidates() {
             <span>距买点 <strong>${displayBuyDistance(item)}</strong></span>
           </div>
           <div class="master-tags candidate-master-tags">
-            ${masterTag(votes.marks)}
             ${masterTag(votes.graham)}
             ${masterTag(votes.buffett)}
+            ${masterTag(votes.lynch)}
           </div>
           <p>${escapeHTML(item.action)}</p>
         </a>
@@ -1551,21 +1901,27 @@ function committeeUniverse(positions) {
 function committeeStats(positions) {
   const universe = committeeUniverse(positions);
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
-  const withVotes = universe.map((stock) => ({ stock, votes: masterVotes(stock, totalValue), consensus: consensusCount(stock, totalValue) }));
+  const withVotes = universe.map((stock) => ({
+    stock,
+    votes: masterVotes(stock, totalValue),
+    riskVote: riskCommitteeVote(stock, totalValue),
+    consensus: consensusCount(stock, totalValue)
+  }));
   const holdingsValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   const longTermValue = positions
     .filter((stock) => buffettView(stock).status === "长期核心" || buffettView(stock).status === "好生意等价格")
     .reduce((sum, item) => sum + item.marketValueCny, 0);
-  const riskReview = withVotes.filter((item) => item.votes.marks.status === "风险复盘");
+  const riskReview = withVotes.filter((item) => item.riskVote.status === "风险复盘");
   const defensive = withVotes.filter((item) => item.votes.graham.status === "防御合格");
   const compounders = withVotes.filter((item) => item.votes.buffett.status === "长期核心" || item.votes.buffett.status === "好生意等价格");
-  return { universe, withVotes, totalValue, holdingsValue, longTermValue, riskReview, defensive, compounders };
+  const growthStories = withVotes.filter((item) => item.votes.lynch.status === "成长故事清晰" || item.votes.lynch.status === "预期差可验证");
+  return { universe, withVotes, totalValue, holdingsValue, longTermValue, riskReview, defensive, compounders, growthStories };
 }
 
 function committeePortfolioStatus(stats) {
   const riskCount = stats.riskReview.filter((item) => item.stock.sourceType === "holding").length;
   const highConsensus = stats.withVotes.filter((item) => item.consensus >= 2).length;
-  const buyable = stats.withVotes.some((item) => item.consensus >= 2 && item.votes.marks.status === "补偿足够");
+  const buyable = stats.withVotes.some((item) => item.consensus >= 2 && item.riskVote.status === "补偿足够");
   if (riskCount > 0) return "当前组合：风险复盘";
   if (buyable) return "当前组合：可小额加仓";
   if (highConsensus >= 3) return "当前组合：防守等待";
@@ -1591,7 +1947,7 @@ function executiveActionItems(stats, positions) {
       symbol: item.stock.symbol,
       name: item.stock.name,
       meta: `${displayMarginOfSafety(item.stock)} · ${confidenceMeta(item.stock).text}`,
-      detail: item.votes.marks.action
+      detail: item.riskVote.action
     }));
 
   buildOpportunitySignals(positions)
@@ -1651,11 +2007,12 @@ function renderExecutiveActionItem(item, index) {
 function renderCommitteeOverview(positions) {
   const stats = committeeStats(positions);
   elements.actionConclusionStatus.textContent = committeePortfolioStatus(stats);
-  elements.actionConclusionDetail.textContent = "先看风险补偿，再看防守折价，最后筛长期复利。";
+  elements.actionConclusionDetail.textContent = "三大师先筛个股，马克斯负责最后的风险补偿与仓位节奏。";
   elements.actionConclusionReasons.innerHTML = [
     `风险复盘 ${stats.riskReview.length}`,
     `防御合格 ${stats.defensive.length}`,
-    `复利候选 ${stats.compounders.length}`
+    `复利候选 ${stats.compounders.length}`,
+    `成长通过 ${stats.growthStories.length}`
   ].map((item) => `<span>${escapeHTML(item)}</span>`).join("");
 
   const actions = executiveActionItems(stats, positions);
@@ -1672,9 +2029,9 @@ function renderConsensusItem(stock, votes, consensus) {
         <span>${escapeHTML(stock.symbol)} · ${escapeHTML(consensusText(consensus))}</span>
       </div>
       <div class="master-tags">
-        ${masterTag(votes.marks)}
         ${masterTag(votes.graham)}
         ${masterTag(votes.buffett)}
+        ${masterTag(votes.lynch)}
       </div>
       <small>${escapeHTML(displayText(stock.action, stock.status))}</small>
     </a>
@@ -1719,18 +2076,20 @@ function renderMasterVoteCard(vote) {
 
 function renderMasterVotesPanel(stock, totalValue) {
   const votes = masterVotes(stock, totalValue);
+  const riskVote = riskCommitteeVote(stock, totalValue);
   return `
     <section class="panel master-votes-panel">
       <div class="panel-head compact">
         <div>
           <p class="eyebrow">Committee Vote</p>
-          <h2>三大师投票</h2>
+          <h2>三大师与风险委员会</h2>
         </div>
       </div>
       <div class="master-vote-grid">
-        ${renderMasterVoteCard(votes.marks)}
         ${renderMasterVoteCard(votes.graham)}
         ${renderMasterVoteCard(votes.buffett)}
+        ${renderMasterVoteCard(votes.lynch)}
+        ${renderMasterVoteCard(riskVote)}
       </div>
     </section>
   `;
@@ -1741,7 +2100,7 @@ function masterUniverseItems(positions, key) {
   return committeeUniverse(positions)
     .map((stock) => {
       const votes = masterVotes(stock, totalValue);
-      const vote = votes[key];
+      const vote = key === "marks" ? riskCommitteeVote(stock, totalValue) : votes[key];
       const margin = calculatedMarginOfSafety(stock) ?? finiteNumber(stock.marginOfSafety);
       return {
         stock,
@@ -1769,12 +2128,21 @@ function masterUniverseItems(positions, key) {
       if (key === "buffett") {
         return b.vote.score - a.vote.score || (b.quality ?? -Infinity) - (a.quality ?? -Infinity) || b.confidence - a.confidence || a.stock.name.localeCompare(b.stock.name, "zh-CN");
       }
+      if (key === "lynch") {
+        const lynchOrder = { "成长故事清晰": 3, "预期差可验证": 2, "继续跟踪": 1, "等待验证": 0, "故事不足": -1 };
+        return (lynchOrder[b.vote.status] ?? 0) - (lynchOrder[a.vote.status] ?? 0) ||
+          b.vote.score - a.vote.score ||
+          b.confidence - a.confidence ||
+          a.stock.name.localeCompare(b.stock.name, "zh-CN");
+      }
       return b.vote.score - a.vote.score || b.consensus - a.consensus || a.stock.name.localeCompare(b.stock.name, "zh-CN");
     });
 }
 
 function renderMasterSummary(items, key) {
-  const approved = items.filter((item) => masterApproval(item.vote)).length;
+  const approved = key === "marks"
+    ? items.filter((item) => item.vote.status === "补偿足够" || item.vote.status === "仅观察").length
+    : items.filter((item) => masterApproval(item.vote)).length;
   const holdings = items.filter((item) => item.stock.sourceType === "holding").length;
   const top = items[0];
   const statusCounts = items.reduce((counts, item) => {
@@ -1786,7 +2154,7 @@ function renderMasterSummary(items, key) {
     .slice(0, 2)
     .map(([status, count]) => `${status} ${count}`)
     .join(" · ");
-  const primaryLabel = key === "marks" ? "补偿/观察" : key === "graham" ? "防御认可" : "复利认可";
+  const primaryLabel = key === "marks" ? "风险可承受" : key === "graham" ? "防御认可" : key === "buffett" ? "复利认可" : "成长认可";
 
   return `
     <div class="master-summary-grid">
@@ -1842,16 +2210,19 @@ function renderMasterStockList(items) {
 }
 
 function renderMastersPage(positions) {
-  if (!elements.marksSummary || !elements.marksList || !elements.grahamSummary || !elements.grahamList || !elements.buffettSummary || !elements.buffettList) return;
+  if (!elements.marksSummary || !elements.marksList || !elements.grahamSummary || !elements.grahamList || !elements.buffettSummary || !elements.buffettList || !elements.lynchSummary || !elements.lynchList) return;
   const marksItems = masterUniverseItems(positions, "marks");
   const grahamItems = masterUniverseItems(positions, "graham");
   const buffettItems = masterUniverseItems(positions, "buffett");
+  const lynchItems = masterUniverseItems(positions, "lynch");
   elements.marksSummary.innerHTML = renderMasterSummary(marksItems, "marks");
   elements.marksList.innerHTML = renderMasterStockList(marksItems.slice(0, 8));
   elements.grahamSummary.innerHTML = renderMasterSummary(grahamItems, "graham");
   elements.grahamList.innerHTML = renderMasterStockList(grahamItems);
   elements.buffettSummary.innerHTML = renderMasterSummary(buffettItems, "buffett");
   elements.buffettList.innerHTML = renderMasterStockList(buffettItems);
+  elements.lynchSummary.innerHTML = renderMasterSummary(lynchItems, "lynch");
+  elements.lynchList.innerHTML = renderMasterStockList(lynchItems);
   renderMasterMatrix(positions);
 }
 
@@ -1861,30 +2232,34 @@ function renderMasterMatrix(positions) {
   const rows = committeeUniverse(positions)
     .map((stock) => {
       const votes = masterVotes(stock, totalValue);
+      const riskVote = riskCommitteeVote(stock, totalValue);
       const consensus = Object.values(votes).filter(masterApproval).length;
       const disagreement = 3 - consensus;
-      return { stock, votes, consensus, disagreement, margin: marginValue(stock), quality: qualityValue(stock) };
+      const riskWeight = riskVote.status === "风险复盘" ? 2 : riskVote.status === "等待补偿" ? 1 : 0;
+      return { stock, votes, riskVote, consensus, disagreement, riskWeight, margin: marginValue(stock), quality: qualityValue(stock) };
     })
-    .sort((a, b) => b.disagreement - a.disagreement || b.consensus - a.consensus || disciplineRankScore(b.stock) - disciplineRankScore(a.stock));
+    .sort((a, b) => b.riskWeight - a.riskWeight || b.disagreement - a.disagreement || b.consensus - a.consensus || disciplineRankScore(b.stock) - disciplineRankScore(a.stock));
 
   elements.masterMatrix.innerHTML = rows.length
     ? `
       <div class="master-matrix-head">
         <span>标的</span>
-        <span>马克斯</span>
         <span>格雷厄姆</span>
-        <span>巴菲特</span>
+        <span>巴菲特/芒格</span>
+        <span>彼得林奇</span>
+        <span>风险主席</span>
         <span>共识</span>
       </div>
-      ${rows.map(({ stock, votes, consensus, margin, quality }) => `
+      ${rows.map(({ stock, votes, riskVote, consensus, margin, quality }) => `
         <a class="master-matrix-row" href="${stockHash(stock.symbol)}">
           <div>
             <strong>${escapeHTML(stock.name)}</strong>
             <small>${escapeHTML(stock.symbol)} · 安全边际 ${Number.isFinite(margin) ? percent(margin * 100, false) : "-"} · 质量 ${Number.isFinite(quality) ? quality : "-"}</small>
           </div>
-          ${compactMasterCell(votes.marks)}
           ${compactMasterCell(votes.graham)}
           ${compactMasterCell(votes.buffett)}
+          ${compactMasterCell(votes.lynch)}
+          ${compactMasterCell(riskVote)}
           <em>${escapeHTML(consensusText(consensus))}</em>
         </a>
       `).join("")}
@@ -2148,6 +2523,7 @@ function decisionLogTypeText(type) {
   if (type === "research") return "导入分析";
   if (type === "quote") return "更新行情";
   if (type === "trade") return "新增交易";
+  if (type === "financials") return "更新财务";
   return "记录";
 }
 
@@ -2155,6 +2531,7 @@ function decisionLogTone(type) {
   if (type === "research") return "research";
   if (type === "quote") return "quote";
   if (type === "trade") return "trade";
+  if (type === "financials") return "financials";
   return "";
 }
 
@@ -2473,6 +2850,128 @@ function renderDataSourcePanel(stock) {
   `;
 }
 
+function financialMetricCard(label, value, detail = "") {
+  return `
+    <div>
+      <span>${escapeHTML(label)}</span>
+      <strong>${value}</strong>
+      <small>${escapeHTML(detail)}</small>
+    </div>
+  `;
+}
+
+function renderFinancialTable(annual, currencyCode) {
+  return `
+    <div class="financial-table-wrap">
+      <table class="financial-table">
+        <thead>
+          <tr>
+            <th>年度</th>
+            <th>收入</th>
+            <th>归母利润</th>
+            <th>经营现金流</th>
+            <th>FCF</th>
+            <th>ROE/ROIC</th>
+            <th>负债率</th>
+            <th>毛利/净利率</th>
+            <th>PE/PB</th>
+            <th>存货/应收</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${annual.map((item) => `
+            <tr>
+              <td>
+                <strong>${escapeHTML(displayText(item.fiscalYear, item.reportDate || "-"))}</strong>
+                <small>${escapeHTML(displayText(item.reportType, item.reportDate || ""))}</small>
+              </td>
+              <td>
+                ${financialAmount(item.revenue, item.currency || currencyCode)}
+                <small>${financialRatio(item.revenueYoY, "")}</small>
+              </td>
+              <td>
+                ${financialAmount(item.netProfit, item.currency || currencyCode)}
+                <small>${financialRatio(item.netProfitYoY, "")}</small>
+              </td>
+              <td>${financialAmount(item.operatingCashFlow, item.currency || currencyCode)}</td>
+              <td>${financialAmount(item.freeCashFlow, item.currency || currencyCode)}</td>
+              <td>
+                ${financialRatio(item.roe)}
+                <small>${financialRatio(item.roic, "")}</small>
+              </td>
+              <td>${financialRatio(item.debtRatio)}</td>
+              <td>
+                ${financialRatio(item.grossMargin)}
+                <small>${financialRatio(item.netMargin, "")}</small>
+              </td>
+              <td>
+                ${financialMultiple(item.peAtCurrentPrice)}
+                <small>${financialMultiple(item.pbAtCurrentPrice, "")}</small>
+              </td>
+              <td>
+                ${Number.isFinite(finiteNumber(item.inventoryTurnoverDays)) ? `${finiteNumber(item.inventoryTurnoverDays).toFixed(0)}天` : "-"}
+                <small>${Number.isFinite(finiteNumber(item.receivableTurnoverDays)) ? `${finiteNumber(item.receivableTurnoverDays).toFixed(0)}天` : ""}</small>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderFinancialsPanel(stock) {
+  const financials = stock.financials ?? {};
+  const annual = financialAnnuals(stock);
+  if (!annual.length) {
+    return `
+      <section class="panel financials-panel">
+        <div class="panel-head compact">
+          <div>
+            <p class="eyebrow">Financials</p>
+            <h2>多年财务数据</h2>
+          </div>
+        </div>
+        <div class="empty-state compact-empty">暂无结构化多年财务数据，点击页面顶部「更新财务」拉取</div>
+      </section>
+    `;
+  }
+
+  const latest = annual[0] ?? {};
+  const valuation = financialValuation(stock);
+  const currencyCode = financials.currency || latest.currency || stock.currency;
+  const avgRoe = recentAverage(stock, "roe");
+  const avgRoic = recentAverage(stock, "roic");
+  const fcfRecord = positiveRecordRatio(stock, "freeCashFlow");
+
+  return `
+    <section class="panel financials-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">Financials</p>
+          <h2>多年财务数据</h2>
+        </div>
+        <div class="financials-meta">
+          <span>${escapeHTML(displayText(financials.source, "数据源未知"))}</span>
+          <strong>${escapeHTML(displayText(financials.updatedAt, "未记录更新时间"))}</strong>
+        </div>
+      </div>
+      <div class="detail-content">
+        <div class="financial-summary-grid">
+          ${financialMetricCard("最新年收入", financialAmount(latest.revenue, currencyCode), `${displayText(latest.fiscalYear, "最新年")} · ${financialRatio(latest.revenueYoY, "同比未知")}`)}
+          ${financialMetricCard("最新年利润", financialAmount(latest.netProfit, currencyCode), financialRatio(latest.netProfitYoY, "同比未知"))}
+          ${financialMetricCard("经营现金流", financialAmount(latest.operatingCashFlow, currencyCode), `FCF ${financialAmount(latest.freeCashFlow, currencyCode)}`)}
+          ${financialMetricCard("ROE / ROIC", `${financialRatio(latest.roe)} / ${financialRatio(latest.roic)}`, `近年均值 ${financialRatio(avgRoe)} / ${financialRatio(avgRoic)}`)}
+          ${financialMetricCard("负债率", financialRatio(latest.debtRatio), `FCF 为正 ${Number.isFinite(fcfRecord) ? `${Math.round(fcfRecord * 100)}%` : "未知"}`)}
+          ${financialMetricCard("PE / PB / PEG", `${financialMultiple(valuation.pe)} / ${financialMultiple(valuation.pb)} / ${Number.isFinite(finiteNumber(valuation.peg)) ? finiteNumber(valuation.peg).toFixed(2) : "-"}`, `PE低/中/高 ${rangeText(valuation.peRange)}`)}
+        </div>
+        ${renderFinancialTable(annual, currencyCode)}
+        <p class="financial-source-note">${escapeHTML(displayText(valuation.sourceNote, "财务指标来自数据源披露口径；缺失字段会留空，不参与打分。"))}</p>
+      </div>
+    </section>
+  `;
+}
+
 function killCriteriaItems(stock) {
   if (Array.isArray(stock?.killCriteria)) {
     return stock.killCriteria.map((item) => String(item ?? "").trim()).filter(Boolean);
@@ -2541,8 +3040,15 @@ function renderStockDetail(positions, symbol) {
         <p class="eyebrow">${escapeHTML(stock.symbol)} · ${escapeHTML(displayText(stock.industry, "未分类"))}</p>
         <h2>${escapeHTML(stock.name)}</h2>
       </div>
-      <div class="detail-hero-meta">
-        <span>${escapeHTML(closeDateText(stock) || displayText(stock.updatedAt, "行情日期未知"))}</span>
+      <div class="detail-hero-actions">
+        <button class="ghost-button compact-link" type="button" data-update-financials="${escapeHTML(stock.symbol)}">
+          <span>↻</span>
+          更新财务
+        </button>
+        <div class="detail-hero-meta">
+          <span>${escapeHTML(closeDateText(stock) || displayText(stock.updatedAt, "行情日期未知"))}</span>
+          <small>${escapeHTML(stock.financials?.updatedAt ? `财务 ${stock.financials.updatedAt}` : "财务数据待更新")}</small>
+        </div>
       </div>
     </section>
 
@@ -2567,6 +3073,7 @@ function renderStockDetail(positions, symbol) {
 
     <nav class="detail-section-nav" aria-label="详情分段导航">
       <button type="button" data-detail-section="detailValuation">估值质量</button>
+      <button type="button" data-detail-section="detailFinancials">多年财务</button>
       <button type="button" data-detail-section="detailIncome">股息现金流</button>
       <button type="button" data-detail-section="detailRisk">风险反证</button>
       <button type="button" data-detail-section="detailRecords">财报日志</button>
@@ -2625,6 +3132,14 @@ function renderStockDetail(positions, symbol) {
         </div>
       </section>
       </section>
+    </section>
+
+    <section class="detail-section" id="detailFinancials">
+      <div class="detail-section-head">
+        <p class="eyebrow">Financials</p>
+        <h2>多年财务</h2>
+      </div>
+    ${renderFinancialsPanel(stock)}
     </section>
 
     <section class="detail-section" id="detailIncome">
@@ -2854,6 +3369,29 @@ async function updateQuotes() {
   }
 }
 
+async function updateFinancials(symbol, button) {
+  if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能更新财务数据");
+
+  const originalHTML = button?.innerHTML;
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = "<span>↻</span> 更新中";
+  }
+
+  try {
+    const result = await requestJSON(`/api/financials/update/${encodeURIComponent(symbol)}`, { method: "POST" });
+    state = result.state;
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+    window.location.hash = stockHash(result.symbol);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = originalHTML;
+    }
+  }
+}
+
 function filenameFromContentDisposition(header, fallback) {
   const raw = header ?? "";
   const utf8Match = raw.match(/filename\*=UTF-8''([^;]+)/i);
@@ -3058,6 +3596,16 @@ document.addEventListener("click", (event) => {
   const button = event.target.closest("[data-detail-section]");
   if (!button) return;
   document.getElementById(button.dataset.detailSection)?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-update-financials]");
+  if (!button) return;
+  try {
+    await updateFinancials(button.dataset.updateFinancials, button);
+  } catch (error) {
+    window.alert(error.message);
+  }
 });
 
 document.querySelector("#openTradePanelSecondary").addEventListener("click", () => {
