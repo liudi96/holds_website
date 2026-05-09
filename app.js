@@ -196,12 +196,14 @@ const palette = ["#087f5b", "#1c4f82", "#a16207", "#7c3aed", "#be123c", "#0f766e
 const USE_BACKEND = location.protocol === "http:" || location.protocol === "https:";
 const BUY_PROXIMITY = 0.05;
 const SAFETY_MARGIN_TARGET = 0.25;
+const AGGRESSIVE_BUY_DISCOUNT = 0.1;
+const MAJOR_RISK_PATTERN = /停牌|重大风险|否决|调查|内控|退市|财报可信|风险暴露|治理风险|治理与财务可靠性|质量分<75|低于75/;
 
 let state = loadState();
 let activeFilter = "all";
 let searchTerm = "";
 let pendingResearch = null;
-let candidateSort = "priority";
+let candidateSort = "discipline";
 const pageTitles = {
   overview: "纸牌屋",
   positions: "当前持仓",
@@ -218,7 +220,8 @@ const elements = {
   overviewPlanList: document.querySelector("#overviewPlanList"),
   opportunityRadar: document.querySelector("#opportunityRadar"),
   disciplineDashboard: document.querySelector("#disciplineDashboard"),
-  triggerAlerts: document.querySelector("#triggerAlerts"),
+  dataQualityList: document.querySelector("#dataQualityList"),
+  dividendCashList: document.querySelector("#dividendCashList"),
   decisionLogList: document.querySelector("#decisionLogList"),
   candidateList: document.querySelector("#candidateList"),
   candidateSort: document.querySelector("#candidateSort"),
@@ -229,6 +232,14 @@ const elements = {
   dayChange: document.querySelector("#dayChange"),
   dayChangeRate: document.querySelector("#dayChangeRate"),
   cashBalance: document.querySelector("#cashBalance"),
+  annualDividend: document.querySelector("#annualDividend"),
+  portfolioDividendYield: document.querySelector("#portfolioDividendYield"),
+  dataQualityMetric: document.querySelector("#dataQualityMetric"),
+  dataQualityDetail: document.querySelector("#dataQualityDetail"),
+  actionConclusion: document.querySelector("#actionConclusion"),
+  actionConclusionStatus: document.querySelector("#actionConclusionStatus"),
+  actionConclusionDetail: document.querySelector("#actionConclusionDetail"),
+  actionConclusionReasons: document.querySelector("#actionConclusionReasons"),
   positionCount: document.querySelector("#positionCount"),
   recordCount: document.querySelector("#recordCount"),
   searchInput: document.querySelector("#searchInput"),
@@ -370,6 +381,187 @@ function displayMarginOfSafety(stock) {
   return Number.isFinite(value) ? percent(value * 100, false) : "-";
 }
 
+function computedInitialBuyPrice(stock) {
+  const intrinsicValue = finiteNumber(stock?.intrinsicValue);
+  if (Number.isFinite(intrinsicValue) && intrinsicValue > 0) {
+    return intrinsicValue * (1 - SAFETY_MARGIN_TARGET);
+  }
+  const targetBuyPrice = finiteNumber(stock?.targetBuyPrice);
+  if (Number.isFinite(targetBuyPrice) && targetBuyPrice > 0) return targetBuyPrice;
+  return null;
+}
+
+function priceLevels(stock) {
+  const initialBuyPrice = computedInitialBuyPrice(stock);
+  if (!Number.isFinite(initialBuyPrice) || initialBuyPrice <= 0) {
+    return { watchPrice: null, initialBuyPrice: null, aggressiveBuyPrice: null };
+  }
+  return {
+    watchPrice: initialBuyPrice * (1 + BUY_PROXIMITY),
+    initialBuyPrice,
+    aggressiveBuyPrice: initialBuyPrice * (1 - AGGRESSIVE_BUY_DISCOUNT)
+  };
+}
+
+function displayPriceLevel(stock, key) {
+  const value = priceLevels(stock)[key];
+  return Number.isFinite(value) ? currency(value, stock.currency ?? "CNY") : "-";
+}
+
+function riskText(stock) {
+  return [stock?.risk, stock?.status, stock?.action, stock?.notes].filter(Boolean).join(" ");
+}
+
+function hasMajorRisk(stock) {
+  const text = riskText(stock).replace(/无一票否决|无立即否决|没有一票否决/g, "");
+  return MAJOR_RISK_PATTERN.test(text);
+}
+
+function valuationConfidence(stock) {
+  const explicit = String(stock?.valuationConfidence ?? "").trim().toLowerCase();
+  if (["high", "medium", "low"].includes(explicit)) return explicit;
+  const quality = finiteNumber(stock?.qualityScore);
+  if (hasMajorRisk(stock) || (Number.isFinite(quality) && quality < 75)) return "low";
+  if (Number.isFinite(quality) && quality >= 85) return "high";
+  return "medium";
+}
+
+function confidenceMeta(stock) {
+  const value = valuationConfidence(stock);
+  if (value === "high") return { value, text: "高可信", tone: "strong" };
+  if (value === "low") return { value, text: "低可信", tone: "risk" };
+  return { value, text: "中可信", tone: "watch" };
+}
+
+function confidenceScore(stock) {
+  const confidence = valuationConfidence(stock);
+  if (confidence === "high") return 1;
+  if (confidence === "medium") return 0.7;
+  return 0.2;
+}
+
+function badge(text, tone = "watch") {
+  return `<span class="status-badge ${tone}">${escapeHTML(text)}</span>`;
+}
+
+function dividendCurrency(stock) {
+  return String(stock?.dividend?.dividendCurrency || stock?.currency || "CNY").toUpperCase();
+}
+
+function cashDividendTotalCurrency(stock) {
+  return String(stock?.dividend?.cashDividendCurrency || stock?.dividend?.dividendCurrency || stock?.currency || "CNY").toUpperCase();
+}
+
+function buybackCurrency(stock) {
+  return String(stock?.dividend?.buybackCurrency || stock?.currency || "CNY").toUpperCase();
+}
+
+function marketCapCurrency(stock) {
+  return String(stock?.marketCapCurrency || stock?.currency || "CNY").toUpperCase();
+}
+
+function dividendYieldInputs(stock) {
+  const dividend = stock?.dividend;
+  const cashDividendTotal = finiteNumber(dividend?.cashDividendTotal);
+  const marketCap = finiteNumber(stock?.marketCap);
+  if (Number.isFinite(cashDividendTotal) && cashDividendTotal > 0 && Number.isFinite(marketCap) && marketCap > 0) {
+    return {
+      cashDividendTotalCny: cashDividendTotal * fx(cashDividendTotalCurrency(stock)),
+      marketCapCny: marketCap * fx(marketCapCurrency(stock))
+    };
+  }
+
+  // Same-share fallback: total cash dividend / total market cap reduces to DPS / price.
+  const perShare = finiteNumber(dividend?.dividendPerShare);
+  const currentPrice = finiteNumber(stock?.currentPrice);
+  if (!Number.isFinite(perShare) || perShare <= 0 || !Number.isFinite(currentPrice) || currentPrice <= 0) {
+    return null;
+  }
+
+  return {
+    cashDividendTotalCny: perShare * fx(dividendCurrency(stock)),
+    marketCapCny: currentPrice * fx(stock?.currency || dividendCurrency(stock))
+  };
+}
+
+function calculatedDividendYield(stock) {
+  const inputs = dividendYieldInputs(stock);
+  if (!inputs || !Number.isFinite(inputs.marketCapCny) || inputs.marketCapCny <= 0) return null;
+  return inputs.cashDividendTotalCny / inputs.marketCapCny;
+}
+
+function calculatedShareholderReturnYield(stock) {
+  const inputs = dividendYieldInputs(stock);
+  if (!inputs || !Number.isFinite(inputs.marketCapCny) || inputs.marketCapCny <= 0) return null;
+  const buybackAmount = finiteNumber(stock?.dividend?.buybackAmount);
+  const buybackCny = Number.isFinite(buybackAmount) && buybackAmount > 0
+    ? buybackAmount * fx(buybackCurrency(stock))
+    : 0;
+  return (inputs.cashDividendTotalCny + buybackCny) / inputs.marketCapCny;
+}
+
+function dividendAnnualCashLocal(stock) {
+  const dividend = stock?.dividend;
+  if (!dividend) return null;
+  const perShare = finiteNumber(dividend.dividendPerShare);
+  if (Number.isFinite(perShare) && Number.isFinite(stock.shares) && stock.shares > 0) {
+    return perShare * stock.shares;
+  }
+  return finiteNumber(dividend.estimatedAnnualCash);
+}
+
+function dividendAnnualCashCny(stock) {
+  const localCash = dividendAnnualCashLocal(stock);
+  if (!Number.isFinite(localCash)) return 0;
+  return localCash * fx(dividendCurrency(stock));
+}
+
+function dividendSummary(positions) {
+  const items = positions
+    .map((position) => ({
+      position,
+      annualCashCny: dividendAnnualCashCny(position),
+      reliability: dividendReliability(position)
+    }))
+    .filter((item) => item.annualCashCny > 0)
+    .sort((a, b) => b.annualCashCny - a.annualCashCny);
+  const annualCashCny = items.reduce((sum, item) => sum + item.annualCashCny, 0);
+  const highRiskCashCny = items
+    .filter((item) => item.reliability.value === "risk")
+    .reduce((sum, item) => sum + item.annualCashCny, 0);
+  return {
+    annualCashCny,
+    highRiskCashCny,
+    topContributor: items.find((item) => item.reliability.value !== "risk") ?? items[0] ?? null
+  };
+}
+
+function displayDividendRatio(value) {
+  return Number.isFinite(value) ? percent(value * 100, false) : "-";
+}
+
+function dividendReliability(stock) {
+  const explicit = String(stock?.dividend?.reliability ?? "").trim().toLowerCase();
+  if (["stable", "review", "risk"].includes(explicit)) {
+    if (explicit === "stable") return { value: "stable", text: "稳定", tone: "strong" };
+    if (explicit === "risk") return { value: "risk", text: "高风险", tone: "risk" };
+    return { value: "review", text: "需复核", tone: "watch" };
+  }
+
+  const dividend = stock?.dividend;
+  if (!dividend) return { value: "review", text: "需复核", tone: "watch" };
+  const fiscalYear = String(dividend.fiscalYear ?? "").trim();
+  const cashDividendTotal = finiteNumber(dividend.cashDividendTotal);
+  const marketCap = finiteNumber(stock?.marketCap);
+  if (hasMajorRisk(stock) || valuationConfidence(stock) === "low") {
+    return { value: "risk", text: "高风险", tone: "risk" };
+  }
+  if (!Number.isFinite(cashDividendTotal) || cashDividendTotal <= 0 || !Number.isFinite(marketCap) || marketCap <= 0 || /^TTM/i.test(fiscalYear)) {
+    return { value: "review", text: "需复核", tone: "watch" };
+  }
+  return { value: "stable", text: "稳定", tone: "strong" };
+}
+
 function cleanResearchJSON(raw) {
   return String(raw ?? "")
     .trim()
@@ -424,12 +616,59 @@ function numberText(value, fallback = "-") {
   return Number.isFinite(value) ? String(value) : fallback;
 }
 
+function findRawStock(symbol) {
+  const normalized = normalizeSymbol(symbol);
+  return (
+    state.holdings.find((stock) => normalizeSymbol(stock.symbol) === normalized) ||
+    state.candidates.find((stock) => normalizeSymbol(stock.symbol) === normalized) ||
+    null
+  );
+}
+
+function previewValue(value, formatter = (item) => displayText(item)) {
+  if (value === null || value === undefined || value === "") return "空";
+  return formatter(value);
+}
+
+function researchPreviewDiff(existing, research) {
+  if (!existing) return [];
+  const valuation = research.valuation ?? {};
+  const quality = research.quality ?? {};
+  const nextLevels = priceLevels({
+    targetBuyPrice: valuation.targetBuyPrice,
+    intrinsicValue: valuation.intrinsicValue
+  });
+  const currentLevels = priceLevels(existing);
+  const rows = [];
+  const push = (label, before, after, formatter) => {
+    const beforeText = previewValue(before, formatter);
+    const afterText = previewValue(after, formatter);
+    if (beforeText !== afterText) rows.push({ label, beforeText, afterText });
+  };
+
+  push("内在价值", existing.intrinsicValue, valuation.intrinsicValue, (value) => currency(Number(value), research.currency || existing.currency || "CNY"));
+  push("公允区间", existing.fairValueRange, valuation.fairValueRange);
+  push("首买价", currentLevels.initialBuyPrice, nextLevels.initialBuyPrice, (value) => currency(Number(value), research.currency || existing.currency || "CNY"));
+  push("质量总分", existing.qualityScore, quality.totalScore, (value) => String(value));
+  push("达标状态", existing.status, research.status);
+  push("最终动作", existing.action, research.action);
+  push("主要风险", existing.risk, research.risk);
+  return rows;
+}
+
 function renderResearchPreview(result, imported = false) {
   const research = result.research ?? {};
   const valuation = research.valuation ?? {};
+  const levels = priceLevels({
+    targetBuyPrice: valuation.targetBuyPrice,
+    intrinsicValue: valuation.intrinsicValue
+  });
+  const dividend = research.dividend ?? {};
   const quality = research.quality ?? {};
   const warnings = result.warnings ?? [];
   const plan = result.plan ?? [];
+  const existing = findRawStock(research.symbol);
+  const diffRows = researchPreviewDiff(existing, research);
   const targetPlan = plan.find((item) => {
     const itemSymbol = String(item.symbol ?? "").toUpperCase();
     return itemSymbol ? itemSymbol === String(research.symbol ?? "").toUpperCase() : item.name === research.name;
@@ -446,12 +685,25 @@ function renderResearchPreview(result, imported = false) {
       <div><span>安全边际</span><strong>${Number.isFinite(valuation.marginOfSafety) ? percent(valuation.marginOfSafety * 100, false) : "-"}</strong><small>${escapeHTML(valuation.fairValueRange ?? "-")}</small></div>
       <div><span>质量总分</span><strong>${numberText(quality.totalScore)}</strong><small>${numberText(quality.businessModel)}/${numberText(quality.moat)}/${numberText(quality.governance)}/${numberText(quality.financialQuality)}</small></div>
       <div><span>执行排序</span><strong>${targetPlan ? targetPlan.rank : "-"}</strong><small>${escapeHTML(targetPlan ? targetPlan.priority : "未列入 Plan")}</small></div>
+      <div><span>买入分层</span><strong>${Number.isFinite(levels.initialBuyPrice) ? currency(levels.initialBuyPrice, research.currency || "CNY") : "-"}</strong><small>观察 ${Number.isFinite(levels.watchPrice) ? currency(levels.watchPrice, research.currency || "CNY") : "-"} · 重仓 ${Number.isFinite(levels.aggressiveBuyPrice) ? currency(levels.aggressiveBuyPrice, research.currency || "CNY") : "-"}</small></div>
+      <div><span>股息</span><strong>${Number.isFinite(dividend.dividendPerShare) ? currency(dividend.dividendPerShare, dividend.dividendCurrency || research.currency || "CNY") : "-"}</strong><small>${dividend.fiscalYear ? `${escapeHTML(dividend.fiscalYear)} · ` : ""}股息率按总分红/总市值计算</small></div>
     </div>
     ${warnings.length ? `
       <div class="research-warnings">
         ${warnings.map((item) => `<span>${escapeHTML(item)}</span>`).join("")}
       </div>
     ` : ""}
+    ${diffRows.length ? `
+      <div class="research-diff">
+        <strong>将更新字段</strong>
+        ${diffRows.map((row) => `
+          <div>
+            <span>${escapeHTML(row.label)}</span>
+            <small>${escapeHTML(row.beforeText)} → ${escapeHTML(row.afterText)}</small>
+          </div>
+        `).join("")}
+      </div>
+    ` : existing ? `<div class="research-diff compact">未发现核心字段变化</div>` : ""}
     <div class="preview-plan">
       ${plan.map((item) => `
         <div class="${item.name === research.name ? "active" : ""}">
@@ -525,7 +777,7 @@ function holdingHealth(position, totalValue) {
   const quality = finiteNumber(position.qualityScore);
   const weight = totalValue ? position.marketValueCny / totalValue : 0;
   const text = [position.risk, position.status, position.action].join(" ");
-  const highRisk = /停牌|重大风险|否决|调查|内控|退市|财报可信|风险暴露/.test(text);
+  const highRisk = hasMajorRisk(position);
   const reduceSignal = /减仓|降权|剔除|风险观察|不纳入核心/.test(text);
   const marginScore = Number.isFinite(margin) ? clamp(((margin + 0.1) / 0.35) * 100, 0, 100) : 45;
   const qualityScore = Number.isFinite(quality) ? quality : 60;
@@ -571,6 +823,8 @@ function renderMetrics(positions) {
   const totalCost = positions.reduce((sum, item) => sum + item.costValueCny, 0);
   const totalPnl = totalValue - totalCost;
   const dayChange = positions.reduce((sum, item) => sum + item.dayChange, 0);
+  const dividends = dividendSummary(positions);
+  const dividendYield = totalValue ? dividends.annualCashCny / totalValue : 0;
 
   elements.totalValue.textContent = currency(totalValue);
   elements.totalPnl.textContent = currency(totalPnl);
@@ -582,6 +836,10 @@ function renderMetrics(positions) {
   elements.dayChangeRate.textContent = percent(totalValue ? (dayChange / totalValue) * 100 : 0);
   elements.dayChangeRate.className = dayChange >= 0 ? "positive" : "negative";
   elements.cashBalance.textContent = currency(state.cash);
+  elements.annualDividend.textContent = currency(dividends.annualCashCny);
+  elements.portfolioDividendYield.textContent = dividends.topContributor
+    ? `组合股息率 ${percent(dividendYield * 100, false)} · 高风险 ${percent(dividends.annualCashCny ? (dividends.highRiskCashCny / dividends.annualCashCny) * 100 : 0, false)}`
+    : "组合股息率 0.00%";
   elements.positionCount.textContent = `${positions.length} 只股票`;
   elements.recordCount.textContent = `${state.holdings.length} 条持仓 · ${state.trades.length} 条交易`;
 }
@@ -713,28 +971,32 @@ function sortedPlanItems() {
       const stock = findStockForPlanItem(item);
       const margin = stock ? calculatedMarginOfSafety(stock) ?? finiteNumber(stock.marginOfSafety) : null;
       const quality = stock ? finiteNumber(stock.qualityScore) : null;
-      return { item, stock, margin, quality };
+      const confidence = stock ? confidenceScore(stock) : 0;
+      return { item, stock, margin, quality, confidence };
     })
     .sort((a, b) => {
       const marginA = Number.isFinite(a.margin) ? a.margin : -Infinity;
       const marginB = Number.isFinite(b.margin) ? b.margin : -Infinity;
-      return marginB - marginA || (b.quality ?? -Infinity) - (a.quality ?? -Infinity) || a.item.name.localeCompare(b.item.name, "zh-CN");
+      return marginB - marginA || b.confidence - a.confidence || (b.quality ?? -Infinity) - (a.quality ?? -Infinity) || a.item.name.localeCompare(b.item.name, "zh-CN");
     });
 }
 
 function renderPlanAndCandidates() {
   const plans = sortedPlanItems();
   elements.overviewPlanList.innerHTML = plans.length
-    ? plans.map(({ item, stock, margin }, index) => `
+    ? plans.map(({ item, stock, margin }, index) => {
+      const confidence = stock ? confidenceMeta(stock) : null;
+      return `
       <a class="plan-card" href="${stockHash(stock?.symbol || findSymbolForPlan(item))}">
         <span class="plan-rank">${index + 1}</span>
         <div>
           <strong>${escapeHTML(item.name)}</strong>
-          <small>${escapeHTML(item.priority)} · 安全边际 ${Number.isFinite(margin) ? percent(margin * 100, false) : "-"}</small>
+          <small>${escapeHTML(item.priority)} · 安全边际 ${Number.isFinite(margin) ? percent(margin * 100, false) : "-"}${confidence ? ` · ${escapeHTML(confidence.text)}` : ""}</small>
         </div>
         <p>${escapeHTML(item.advice)}</p>
       </a>
-    `)
+    `;
+    })
     .join("")
     : `<div class="empty-state compact-empty">暂无执行计划</div>`;
 
@@ -752,9 +1014,10 @@ function renderPlanAndCandidates() {
           </div>
           <div class="candidate-metrics">
             <span>质量 <strong>${Number.isFinite(item.qualityScore) ? item.qualityScore : "-"}</strong></span>
+            <span>可信度 <strong>${escapeHTML(confidenceMeta(item).text)}</strong></span>
             <span>最新价 <strong>${Number.isFinite(item.currentPrice) && item.currentPrice > 0 ? currency(item.currentPrice, item.currency) : "-"}</strong></span>
             <span>安全边际 <strong>${displayMarginOfSafety(item)}</strong></span>
-            <span>买入价 <strong>${Number.isFinite(item.targetBuyPrice) ? currency(item.targetBuyPrice, item.currency) : "-"}</strong></span>
+            <span>首买价 <strong>${displayPriceLevel(item, "initialBuyPrice")}</strong></span>
             <span>距买点 <strong>${displayBuyDistance(item)}</strong></span>
           </div>
           <p>${escapeHTML(item.action)}</p>
@@ -799,9 +1062,9 @@ function planRank(stock) {
 
 function candidateBuyDistance(candidate) {
   const currentPrice = finiteNumber(candidate.currentPrice);
-  const targetBuyPrice = finiteNumber(candidate.targetBuyPrice);
-  if (!currentPrice || !targetBuyPrice) return null;
-  return (currentPrice - targetBuyPrice) / targetBuyPrice;
+  const initialBuyPrice = priceLevels(candidate).initialBuyPrice;
+  if (!currentPrice || !initialBuyPrice) return null;
+  return (currentPrice - initialBuyPrice) / initialBuyPrice;
 }
 
 function displayBuyDistance(candidate) {
@@ -810,12 +1073,23 @@ function displayBuyDistance(candidate) {
   return distance <= 0 ? "已到买点" : percent(distance * 100, false);
 }
 
+function disciplineRankScore(stock) {
+  const margin = calculatedMarginOfSafety(stock) ?? finiteNumber(stock.marginOfSafety) ?? -0.5;
+  const quality = finiteNumber(stock.qualityScore) ?? 60;
+  const distance = candidateBuyDistance(stock);
+  const distanceScore = Number.isFinite(distance) ? clamp(1 - Math.max(distance, 0), 0, 1) : 0;
+  return quality * 0.45 + clamp(margin, -0.2, 0.5) * 100 * 0.3 + confidenceScore(stock) * 20 + distanceScore * 5;
+}
+
 function sortedCandidates() {
   const holdingSymbols = new Set(state.holdings.filter((holding) => holding.shares > 0).map((holding) => normalizeSymbol(holding.symbol)));
   return state.candidates
     .filter((candidate) => !holdingSymbols.has(normalizeSymbol(candidate.symbol)))
     .sort((a, b) => {
       const byName = () => a.name.localeCompare(b.name, "zh-CN");
+      if (candidateSort === "discipline") {
+        return disciplineRankScore(b) - disciplineRankScore(a) || planRank(a) - planRank(b) || byName();
+      }
       if (candidateSort === "margin") {
         const marginA = calculatedMarginOfSafety(a) ?? finiteNumber(a.marginOfSafety) ?? -Infinity;
         const marginB = calculatedMarginOfSafety(b) ?? finiteNumber(b.marginOfSafety) ?? -Infinity;
@@ -840,18 +1114,33 @@ function buildOpportunitySignals(positions) {
   return decisionUniverse(positions)
     .map((stock) => {
       const currentPrice = finiteNumber(stock.currentPrice);
-      const targetBuyPrice = finiteNumber(stock.targetBuyPrice);
+      const levels = priceLevels(stock);
+      const watchPrice = levels.watchPrice;
+      const initialBuyPrice = levels.initialBuyPrice;
+      const aggressiveBuyPrice = levels.aggressiveBuyPrice;
       const intrinsicValue = finiteNumber(stock.intrinsicValue);
       const marginOfSafety = calculatedMarginOfSafety(stock) ?? finiteNumber(stock.marginOfSafety);
+      const quality = finiteNumber(stock.qualityScore);
+      const confidence = valuationConfidence(stock);
       const reasons = [];
       let priority = 99;
       let tone = "watch";
 
-      if (currentPrice && targetBuyPrice && currentPrice <= targetBuyPrice) {
-        reasons.push("进入买入区");
+      if (currentPrice && aggressiveBuyPrice && currentPrice <= aggressiveBuyPrice) {
+        reasons.push("进入重仓区");
         priority = Math.min(priority, 1);
         tone = "buy";
-      } else if (currentPrice && targetBuyPrice && (currentPrice - targetBuyPrice) / targetBuyPrice <= BUY_PROXIMITY) {
+      } else if (currentPrice && initialBuyPrice && currentPrice <= initialBuyPrice) {
+        reasons.push("进入首买区");
+        priority = Math.min(priority, 1);
+        tone = "buy";
+      } else if (currentPrice && watchPrice && currentPrice <= watchPrice) {
+        reasons.push("进入观察区");
+        priority = Math.min(priority, 2);
+      } else if (currentPrice && watchPrice && (currentPrice - watchPrice) / watchPrice <= BUY_PROXIMITY) {
+        reasons.push("接近观察价");
+        priority = Math.min(priority, 2);
+      } else if (currentPrice && initialBuyPrice && (currentPrice - initialBuyPrice) / initialBuyPrice <= BUY_PROXIMITY) {
         reasons.push("接近买点");
         priority = Math.min(priority, 2);
       }
@@ -860,6 +1149,12 @@ function buildOpportunitySignals(positions) {
         reasons.push("安全边际充足");
         priority = Math.min(priority, 3);
         if (tone !== "buy") tone = "safe";
+      }
+
+      if ((Number.isFinite(quality) && quality < 75) || confidence === "low") {
+        reasons.push("低可信仅观察");
+        priority = Math.max(priority, 3);
+        if (tone === "buy") tone = "watch";
       }
 
       if (
@@ -884,6 +1179,7 @@ function buildOpportunitySignals(positions) {
 function renderDecisionItem(signal) {
   const { stock, reasons, tone, marginOfSafety } = signal;
   const sourceText = stock.sourceType === "holding" ? "持仓" : "候选";
+  const confidence = confidenceMeta(stock);
 
   return `
     <a class="decision-item ${tone}" href="${stockHash(stock.symbol)}">
@@ -893,10 +1189,13 @@ function renderDecisionItem(signal) {
       </div>
       <div class="decision-tags">
         ${reasons.map((reason) => `<span>${escapeHTML(reason)}</span>`).join("")}
+        ${badge(confidence.text, confidence.tone)}
       </div>
       <div class="decision-metrics">
         <span>现价 <strong>${localPrice(stock, "currentPrice")}</strong></span>
-        <span>买入价 <strong>${localPrice(stock, "targetBuyPrice")}</strong></span>
+        <span>观察价 <strong>${displayPriceLevel(stock, "watchPrice")}</strong></span>
+        <span>首买价 <strong>${displayPriceLevel(stock, "initialBuyPrice")}</strong></span>
+        <span>重仓价 <strong>${displayPriceLevel(stock, "aggressiveBuyPrice")}</strong></span>
         <span>内在价值 <strong>${localPrice(stock, "intrinsicValue")}</strong></span>
         <span>安全边际 <strong>${Number.isFinite(marginOfSafety) ? percent(marginOfSafety * 100, false) : "-"}</strong></span>
       </div>
@@ -908,8 +1207,87 @@ function renderDecisionItem(signal) {
 function renderOpportunityRadar(positions) {
   const signals = buildOpportunitySignals(positions);
   elements.opportunityRadar.innerHTML = signals.length
-    ? signals.slice(0, 6).map(renderDecisionItem).join("")
+    ? signals.map(renderDecisionItem).join("")
     : `<div class="empty-state compact-empty">暂无进入买点的标的</div>`;
+}
+
+function buildActionConclusion(positions) {
+  const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const totalAssets = totalValue + (finiteNumber(state.cash) ?? 0);
+  const cashRatio = totalAssets ? (finiteNumber(state.cash) ?? 0) / totalAssets : 0;
+  const signals = buildOpportunitySignals(positions);
+  const buySignals = signals.filter(({ stock, reasons }) => {
+    const quality = finiteNumber(stock.qualityScore);
+    return reasons.some((reason) => reason === "进入首买区" || reason === "进入重仓区" || reason === "安全边际充足") &&
+      valuationConfidence(stock) !== "low" &&
+      (!Number.isFinite(quality) || quality >= 75);
+  });
+  const reduceSignals = signals.filter(({ reasons }) => reasons.includes("复盘/减仓"));
+  const riskHoldings = positions.filter((position) => {
+    const health = holdingHealth(position, totalValue);
+    return health.tone === "risk" || health.tone === "reduce";
+  });
+  const lowSafetyValue = positions
+    .filter((position) => {
+      const margin = calculatedMarginOfSafety(position) ?? finiteNumber(position.marginOfSafety);
+      return !Number.isFinite(margin) || margin < SAFETY_MARGIN_TARGET;
+    })
+    .reduce((sum, position) => sum + position.marketValueCny, 0);
+  const lowSafetyRatio = totalValue ? lowSafetyValue / totalValue : 0;
+  const dividendRisk = dividendSummary(positions);
+  const highRiskDividendRatio = dividendRisk.annualCashCny ? dividendRisk.highRiskCashCny / dividendRisk.annualCashCny : 0;
+  const reasons = [];
+
+  if (lowSafetyRatio >= 0.8) {
+    reasons.push(`安全边际不足持仓占 ${percent(lowSafetyRatio * 100, false)}`);
+  }
+  if (cashRatio >= 0.3) {
+    reasons.push(`现金比例 ${percent(cashRatio * 100, false)}，适合等待高赔率`);
+  }
+  if (highRiskDividendRatio >= 0.15) {
+    reasons.push(`高风险股息占 ${percent(highRiskDividendRatio * 100, false)}，需复核现金流质量`);
+  }
+
+  if (reduceSignals.length || riskHoldings.length) {
+    return {
+      tone: "risk",
+      status: "优先复盘/降权",
+      detail: `${reduceSignals[0]?.stock.name || riskHoldings[0]?.name} 触发风险或复盘信号`,
+      reasons: [reasons[0], ...riskHoldings.slice(0, 2).map((item) => `${item.name}：${holdingHealth(item, totalValue).status}`)].filter(Boolean).slice(0, 3)
+    };
+  }
+  if (buySignals.length) {
+    return {
+      tone: "buy",
+      status: "可小额买入",
+      detail: `${buySignals[0].stock.name} 进入纪律区，仍需按仓位分批`,
+      reasons: [buySignals[0].reasons[0], confidenceMeta(buySignals[0].stock).text, ...reasons].slice(0, 3)
+    };
+  }
+  if (signals.length) {
+    return {
+      tone: "watch",
+      status: "仅观察",
+      detail: `${signals[0].stock.name} 接近观察区，但赔率尚未充分`,
+      reasons: [signals[0].reasons[0], ...reasons].slice(0, 3)
+    };
+  }
+  return {
+    tone: "wait",
+    status: "无操作，继续等待",
+    detail: "当前没有进入买入区的高可信标的",
+    reasons: reasons.slice(0, 3)
+  };
+}
+
+function renderActionConclusion(positions) {
+  const conclusion = buildActionConclusion(positions);
+  elements.actionConclusion.className = `action-conclusion panel ${conclusion.tone}`;
+  elements.actionConclusionStatus.textContent = conclusion.status;
+  elements.actionConclusionDetail.textContent = conclusion.detail;
+  elements.actionConclusionReasons.innerHTML = conclusion.reasons.length
+    ? conclusion.reasons.map((reason) => `<span>${escapeHTML(reason)}</span>`).join("")
+    : `<span>纪律优先，等待价格给出更好补偿</span>`;
 }
 
 function firstIndustry(industry) {
@@ -984,21 +1362,182 @@ function renderDisciplineDashboard(positions) {
     .join("");
 }
 
-function renderTriggerAlerts(positions) {
-  const signals = buildOpportunitySignals(positions);
-  elements.triggerAlerts.innerHTML = signals.length
-    ? signals.slice(0, 5).map((signal) => {
-        const stock = signal.stock;
-        return `
-          <a class="trigger-item ${signal.tone}" href="${stockHash(stock.symbol)}">
-            <strong>${escapeHTML(stock.name)}</strong>
-            <span>${signal.reasons.map(escapeHTML).join(" / ")}</span>
-            <small>现价 ${localPrice(stock, "currentPrice")} · 买入价 ${localPrice(stock, "targetBuyPrice")} · 内在价值 ${localPrice(stock, "intrinsicValue")} · 安全边际 ${Number.isFinite(signal.marginOfSafety) ? percent(signal.marginOfSafety * 100, false) : "-"}</small>
-            <p>${escapeHTML(displayText(stock.action, stock.status))}</p>
-          </a>
-        `;
-      }).join("")
-    : `<div class="empty-state compact-empty">暂无行情触发提醒</div>`;
+function quoteReferenceDate(stocks) {
+  return stocks
+    .map((stock) => stock.currentPriceDate)
+    .filter(Boolean)
+    .sort()
+    .at(-1) ?? "";
+}
+
+function dateDiffDays(fromDate, toDate) {
+  if (!fromDate || !toDate) return null;
+  const from = new Date(`${fromDate}T00:00:00`);
+  const to = new Date(`${toDate}T00:00:00`);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return null;
+  return Math.round((to.getTime() - from.getTime()) / 86400000);
+}
+
+function auditUniverse(positions) {
+  const holdingSymbols = new Set(positions.map((position) => normalizeSymbol(position.symbol)));
+  const holdings = positions.map((position) => ({ ...position, sourceType: "holding" }));
+  const candidates = state.candidates.map((candidate) => ({
+    ...candidate,
+    sourceType: "candidate",
+    duplicateHolding: holdingSymbols.has(normalizeSymbol(candidate.symbol))
+  }));
+  return [...holdings, ...candidates].filter((stock) => stock.symbol && stock.name);
+}
+
+function buildDataQualityIssues(positions) {
+  const stocks = auditUniverse(positions);
+  const referenceDate = quoteReferenceDate(stocks);
+  const issues = [];
+  const pushIssue = (tone, stock, title, detail) => {
+    issues.push({
+      tone,
+      symbol: stock?.symbol ?? "",
+      name: stock?.name ?? "",
+      sourceType: stock?.sourceType ?? "",
+      title,
+      detail
+    });
+  };
+
+  stocks.forEach((stock) => {
+    const currentPrice = finiteNumber(stock.currentPrice);
+    const previousClose = finiteNumber(stock.previousClose);
+    const intrinsicValue = finiteNumber(stock.intrinsicValue);
+    const qualityScore = finiteNumber(stock.qualityScore);
+    const dividend = stock.dividend;
+    const dividendYield = calculatedDividendYield(stock);
+    const lagDays = dateDiffDays(stock.currentPriceDate, referenceDate);
+
+    if (stock.duplicateHolding) {
+      pushIssue("warn", stock, "候选池重复持仓", "该标的已有持仓，候选池展示会被过滤；建议只保留一处维护。");
+    }
+    if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
+      pushIssue("warn", stock, "缺最新价", "会影响市值、安全边际、机会雷达和股息率计算。");
+    }
+    if (!stock.currentPriceDate) {
+      pushIssue("warn", stock, "缺收盘日期", "无法判断行情是否为最新收盘价。");
+    } else if (Number.isFinite(lagDays) && lagDays > 2) {
+      pushIssue("info", stock, "行情日期落后", `当前收盘日 ${stock.currentPriceDate}，组合最新收盘日 ${referenceDate}。`);
+    }
+    if (!Number.isFinite(previousClose) || previousClose <= 0 || !stock.previousCloseDate) {
+      pushIssue("warn", stock, "缺昨收口径", "今日变动会退化或无法计算。");
+    }
+    if (!Number.isFinite(intrinsicValue) || intrinsicValue <= 0) {
+      pushIssue("warn", stock, "缺内在价值", "安全边际和买入价分层无法按公式计算。");
+    }
+    if (!Number.isFinite(qualityScore)) {
+      pushIssue("info", stock, "缺质量分", "持仓健康评分会使用保守默认值。");
+    }
+    if (!displayText(stock.action, "")) {
+      pushIssue("info", stock, "缺执行动作", "详情页和决策日志会缺少可复盘结论。");
+    }
+
+    if (!dividend) {
+      if (stock.sourceType === "holding") {
+        pushIssue("info", stock, "缺股息数据", "股息现金流不会计入该持仓。");
+      }
+      return;
+    }
+
+    const fiscalYear = String(dividend.fiscalYear ?? "").trim();
+    const perShare = finiteNumber(dividend.dividendPerShare);
+    const cashDividendTotal = finiteNumber(dividend.cashDividendTotal);
+    const marketCap = finiteNumber(stock.marketCap);
+    if (/^TTM/i.test(fiscalYear)) {
+      pushIssue("warn", stock, "分红口径仍为 TTM", "应优先改为最新完整财年现金分红总额。");
+    }
+    if (Number.isFinite(perShare) && perShare > 0 && (!Number.isFinite(cashDividendTotal) || !Number.isFinite(marketCap))) {
+      pushIssue("info", stock, "股息率使用每股回退", "缺现金分红总额或总市值时，会用每股分红/现价等价计算。");
+    }
+    if (Number.isFinite(dividendYield) && dividendYield > 0.1) {
+      pushIssue("warn", stock, "股息率异常偏高", "可能混入特别股息或 TTM 派息事件，建议复核财年口径。");
+    }
+  });
+
+  state.plan.forEach((item) => {
+    if (!String(item.symbol ?? "").trim()) {
+      pushIssue("info", { name: item.name, sourceType: "plan" }, "Plan 缺股票代码", "可按名称匹配，但代码缺失会降低跳转和更新稳定性。");
+    }
+  });
+
+  const toneRank = { warn: 0, info: 1, error: -1 };
+  return issues.sort((a, b) => {
+    return (toneRank[a.tone] ?? 9) - (toneRank[b.tone] ?? 9) || a.name.localeCompare(b.name, "zh-CN") || a.title.localeCompare(b.title, "zh-CN");
+  });
+}
+
+function renderDataQuality(positions) {
+  const issues = buildDataQualityIssues(positions);
+  const warningCount = issues.filter((issue) => issue.tone === "warn" || issue.tone === "error").length;
+  const infoCount = issues.length - warningCount;
+  elements.dataQualityMetric.textContent = warningCount ? `${warningCount} 项` : "通过";
+  elements.dataQualityMetric.className = warningCount ? "negative" : "positive";
+  elements.dataQualityDetail.textContent = warningCount ? `提醒 ${warningCount} · 备注 ${infoCount}` : infoCount ? `${infoCount} 项备注` : "关键数据完整";
+
+  elements.dataQualityList.innerHTML = issues.length
+    ? issues.slice(0, 14).map((issue) => {
+      const tag = issue.sourceType === "holding" ? "持仓" : issue.sourceType === "candidate" ? "候选" : "Plan";
+      const content = `
+        <div class="data-quality-head">
+          <strong>${escapeHTML(issue.title)}</strong>
+          <span>${escapeHTML(tag)}</span>
+        </div>
+        <div class="data-quality-symbol">${escapeHTML(issue.name || issue.symbol || "未命名")} ${issue.symbol ? `· ${escapeHTML(issue.symbol)}` : ""}</div>
+        <small>${escapeHTML(issue.detail)}</small>
+      `;
+      return issue.symbol
+        ? `<a class="data-quality-item ${issue.tone}" href="${stockHash(issue.symbol)}">${content}</a>`
+        : `<div class="data-quality-item ${issue.tone}">${content}</div>`;
+    }).join("")
+    : `<div class="empty-state compact-empty">关键数据完整</div>`;
+}
+
+function dividendCashItems(positions) {
+  return positions
+    .map((position) => {
+      const dividend = position.dividend;
+      const perShare = finiteNumber(dividend?.dividendPerShare);
+      const annualLocal = dividendAnnualCashLocal(position);
+      const annualCny = dividendAnnualCashCny(position);
+      const dividendYield = calculatedDividendYield(position);
+      return {
+        position,
+        perShare,
+        annualLocal,
+        annualCny,
+        dividendYield,
+        reliability: dividendReliability(position),
+        currencyCode: dividendCurrency(position),
+        fiscalYear: dividend?.fiscalYear
+      };
+    })
+    .filter((item) => Number.isFinite(item.perShare) && item.perShare > 0 && Number.isFinite(item.annualLocal) && item.annualLocal > 0)
+    .sort((a, b) => b.annualCny - a.annualCny || a.position.name.localeCompare(b.position.name, "zh-CN"));
+}
+
+function renderDividendCashList(positions) {
+  const items = dividendCashItems(positions);
+  elements.dividendCashList.innerHTML = items.length
+    ? items.map((item) => `
+      <a class="dividend-cash-item" href="${stockHash(item.position.symbol)}">
+        <div class="dividend-cash-head">
+          <strong>${escapeHTML(item.position.name)}</strong>
+          <span>${escapeHTML(item.position.symbol)} · ${escapeHTML(item.reliability.text)}</span>
+        </div>
+        <div class="dividend-cash-metrics">
+          <span>每股股息 <strong>${currency(item.perShare, item.currencyCode)}</strong></span>
+          <span>股息率 <strong>${displayDividendRatio(item.dividendYield)}</strong></span>
+          <span>预期年现金 <strong>${currency(item.annualLocal, item.currencyCode)}</strong></span>
+        </div>
+        <small>${item.annualCny > 0 ? `折人民币 ${currency(item.annualCny)}` : "折人民币 -"}${item.fiscalYear ? ` · ${escapeHTML(item.fiscalYear)}` : ""}${item.reliability.value === "risk" ? " · 高股息不等于低风险" : ""}</small>
+      </a>
+    `).join("")
+    : `<div class="empty-state compact-empty">暂无股息现金流数据，点击更新行情后获取</div>`;
 }
 
 function decisionLogTypeText(type) {
@@ -1015,10 +1554,16 @@ function decisionLogTone(type) {
   return "";
 }
 
+function isMeaningfulDecisionLog(log) {
+  if (log.type !== "quote") return true;
+  return /触发|进入|离开|跨过|跌破|高于|复盘|减仓|安全边际/.test([log.decision, log.discipline, log.detail].join(" "));
+}
+
 function sortedDecisionLogs(symbol = "") {
   const normalizedSymbol = String(symbol ?? "").toUpperCase();
   return [...(state.decisionLogs ?? [])]
     .filter((log) => !normalizedSymbol || String(log.symbol ?? "").toUpperCase() === normalizedSymbol)
+    .filter(isMeaningfulDecisionLog)
     .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")) || (Number(b.id) || 0) - (Number(a.id) || 0));
 }
 
@@ -1061,9 +1606,11 @@ function renderStockDecisionLogs(stock) {
 }
 
 function renderDecisionArea(positions) {
+  renderActionConclusion(positions);
   renderOpportunityRadar(positions);
   renderDisciplineDashboard(positions);
-  renderTriggerAlerts(positions);
+  renderDataQuality(positions);
+  renderDividendCashList(positions);
 }
 
 function findSymbolForPlan(item) {
@@ -1161,6 +1708,144 @@ function renderReportLibrary(stock) {
   `;
 }
 
+function renderDividendPanel(stock, isHolding) {
+  const dividend = stock.dividend;
+  if (!dividend) {
+    return `
+      <section class="panel dividend-panel">
+        <div class="panel-head compact">
+          <div>
+            <p class="eyebrow">Dividend</p>
+            <h2>股息与现金流</h2>
+          </div>
+        </div>
+        <div class="empty-state compact-empty">暂无股息数据</div>
+      </section>
+    `;
+  }
+
+  const currencyCode = dividendCurrency(stock);
+  const perShare = finiteNumber(dividend.dividendPerShare);
+  const annualLocal = dividendAnnualCashLocal(stock);
+  const annualCny = dividendAnnualCashCny(stock);
+  const estimatedCash = finiteNumber(dividend.estimatedAnnualCash);
+  const dividendYield = calculatedDividendYield(stock);
+  const shareholderReturnYield = calculatedShareholderReturnYield(stock);
+  const reliability = dividendReliability(stock);
+
+  return `
+    <section class="panel dividend-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">Dividend</p>
+          <h2>股息与现金流</h2>
+        </div>
+      </div>
+      <div class="detail-content">
+        <div class="dividend-grid">
+          <div><span>财年</span><strong>${escapeHTML(displayText(dividend.fiscalYear, "-"))}</strong></div>
+          <div><span>每股分红</span><strong>${Number.isFinite(perShare) ? currency(perShare, currencyCode) : "-"}</strong></div>
+          <div><span>股息率</span><strong>${displayDividendRatio(dividendYield)}</strong></div>
+          <div><span>综合回报率</span><strong>${displayDividendRatio(shareholderReturnYield)}</strong></div>
+          <div><span>股息可靠性</span><strong>${badge(reliability.text, reliability.tone)}</strong></div>
+          <div><span>预估年现金</span><strong>${Number.isFinite(annualLocal) ? currency(annualLocal, currencyCode) : Number.isFinite(estimatedCash) ? currency(estimatedCash, currencyCode) : "-"}</strong><small>${isHolding && annualCny > 0 ? `折人民币 ${currency(annualCny)}` : ""}</small></div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderDataSourcePanel(stock) {
+  const dividend = stock.dividend ?? {};
+  const hasCashDividendFormula = Number.isFinite(finiteNumber(dividend.cashDividendTotal)) && Number.isFinite(finiteNumber(stock.marketCap));
+  const hasBuyback = Number.isFinite(finiteNumber(dividend.buybackAmount)) && finiteNumber(dividend.buybackAmount) > 0;
+  const dividendFormula = hasCashDividendFormula
+    ? "现金分红总额 / 总市值"
+    : dividend.dividendPerShare
+      ? "每股分红 / 最新价"
+      : "暂无";
+  const returnFormula = hasBuyback ? "现金分红总额 + 回购金额 / 总市值" : "同股息率";
+
+  return `
+    <section class="panel source-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">Source</p>
+          <h2>数据口径</h2>
+        </div>
+      </div>
+      <div class="source-grid">
+        <div>
+          <span>行情</span>
+          <strong>${escapeHTML(displayText(stock.currentPriceDate, "收盘日未知"))}</strong>
+          <small>最新价与昨收来自行情更新</small>
+        </div>
+        <div>
+          <span>内在价值</span>
+          <strong>${Number.isFinite(stock.intrinsicValue) ? currency(stock.intrinsicValue, stock.currency) : "-"}</strong>
+          <small>由分析 JSON 导入</small>
+        </div>
+        <div>
+          <span>安全边际</span>
+          <strong>${displayMarginOfSafety(stock)}</strong>
+          <small>(内在价值 - 最新价) / 内在价值</small>
+        </div>
+        <div>
+          <span>买入分层</span>
+          <strong>${displayPriceLevel(stock, "initialBuyPrice")}</strong>
+          <small>首买价=内在价值×75%；观察价+5%；重仓价-10%</small>
+        </div>
+        <div>
+          <span>股息率</span>
+          <strong>${escapeHTML(dividendFormula)}</strong>
+          <small>${escapeHTML(displayText(dividend.fiscalYear, "财年未知"))}</small>
+        </div>
+        <div>
+          <span>综合回报率</span>
+          <strong>${escapeHTML(returnFormula)}</strong>
+          <small>${hasBuyback ? "包含回购" : "未录入回购金额"}</small>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function killCriteriaItems(stock) {
+  if (Array.isArray(stock?.killCriteria)) {
+    return stock.killCriteria.map((item) => String(item ?? "").trim()).filter(Boolean);
+  }
+  if (String(stock?.killCriteria ?? "").trim()) {
+    return [String(stock.killCriteria).trim()];
+  }
+  const candidates = [];
+  const risk = String(stock?.risk ?? "").trim();
+  const status = String(stock?.status ?? "").trim();
+  if (risk) candidates.push(risk);
+  if (/停牌|调查|内控|财报可信|治理|否决|低于75|自由现金流|扣非利润|毛利率|应收|减值/.test(status)) {
+    candidates.push(status);
+  }
+  return candidates.slice(0, 3);
+}
+
+function renderKillCriteriaPanel(stock) {
+  const items = killCriteriaItems(stock);
+  return `
+    <section class="panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">Bear Case</p>
+          <h2>我可能错在哪里</h2>
+        </div>
+      </div>
+      <div class="detail-content">
+        ${items.length
+          ? `<div class="risk-check-list">${items.map((item) => `<div>${escapeHTML(item)}</div>`).join("")}</div>`
+          : `<div class="empty-state compact-empty">暂无明确反证条件，建议下次分析补充</div>`}
+      </div>
+    </section>
+  `;
+}
+
 function renderStockDetail(positions, symbol) {
   const { stock, isHolding } = findStockRecord(symbol, positions);
 
@@ -1184,6 +1869,7 @@ function renderStockDetail(positions, symbol) {
   const priceChangeClass = Number.isFinite(priceChange) && priceChange >= 0 ? "positive" : "negative";
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   const health = isHolding ? holdingHealth(stock, totalValue) : null;
+  const confidence = confidenceMeta(stock);
 
   elements.stockDetail.innerHTML = `
     <section class="detail-hero">
@@ -1242,11 +1928,14 @@ function renderStockDetail(positions, symbol) {
         <div class="detail-content">
           <div class="valuation-grid">
             <div><span>安全边际</span><strong>${marginText}</strong></div>
+            <div><span>估值可信度</span><strong>${badge(confidence.text, confidence.tone)}</strong></div>
             <div><span>质量总分</span><strong>${qualityText}</strong></div>
             <div><span>健康状态</span><strong>${health ? `<span class="health-pill ${health.tone}">${health.status}</span>` : "-"}</strong></div>
             <div><span>健康评分</span><strong>${health ? `${health.score} 分` : "-"}</strong></div>
             <div><span>内在价值</span><strong>${Number.isFinite(stock.intrinsicValue) ? currency(stock.intrinsicValue, stock.currency) : "-"}</strong></div>
-            <div><span>买入价</span><strong>${Number.isFinite(stock.targetBuyPrice) ? currency(stock.targetBuyPrice, stock.currency) : "-"}</strong></div>
+            <div><span>观察价</span><strong>${displayPriceLevel(stock, "watchPrice")}</strong></div>
+            <div><span>首买价</span><strong>${displayPriceLevel(stock, "initialBuyPrice")}</strong></div>
+            <div><span>重仓价</span><strong>${displayPriceLevel(stock, "aggressiveBuyPrice")}</strong></div>
             <div><span>公允区间</span><strong>${escapeHTML(displayText(stock.fairValueRange))}</strong></div>
             <div><span>持仓市值</span><strong>${isHolding ? currency(stock.marketValueCny) : "-"}</strong></div>
           </div>
@@ -1259,6 +1948,12 @@ function renderStockDetail(positions, symbol) {
         </div>
       </section>
     </section>
+
+    ${renderDividendPanel(stock, isHolding)}
+
+    ${renderDataSourcePanel(stock)}
+
+    ${renderKillCriteriaPanel(stock)}
 
     <section class="panel">
       <div class="panel-head compact">
@@ -1439,7 +2134,7 @@ async function updateQuotes() {
 
   elements.updateQuotesButton.disabled = true;
   elements.updateQuotesButton.innerHTML = "<span>↻</span> 更新中";
-  setQuoteUpdateStatus("正在拉取持仓和候选池最新日线收盘价...");
+  setQuoteUpdateStatus("正在拉取持仓和候选池最新日线收盘价及股息数据...");
 
   try {
     const result = await requestJSON("/api/quotes/update", { method: "POST" });
@@ -1448,13 +2143,12 @@ async function updateQuotes() {
     syncCash();
     render();
 
-    const alertCount = buildOpportunitySignals(computePositions()).length;
     const skipped = result.skipped ?? [];
     if (skipped.length) {
       const preview = skipped.slice(0, 3).map((item) => `${item.symbol} ${item.error}`).join("；");
-      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，触发 ${alertCount} 条提醒，${skipped.length} 个失败：${preview}`, "error");
+      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，股息现金流已刷新，${skipped.length} 个失败：${preview}`, "error");
     } else {
-      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，触发 ${alertCount} 条提醒`, "success");
+      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，股息现金流已刷新`, "success");
     }
   } finally {
     elements.updateQuotesButton.disabled = false;

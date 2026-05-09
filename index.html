@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>纸牌屋</title>
-    <link rel="stylesheet" href="./styles.css?v=decision-area-1" />
+    <link rel="stylesheet" href="./styles.css?v=discipline-1" />
   </head>
   <body>
     <aside class="sidebar">
@@ -78,6 +78,15 @@
           </div>
         </div>
 
+        <section class="action-conclusion panel" id="actionConclusion" aria-label="今日行动结论">
+          <div class="action-conclusion-main">
+            <p class="eyebrow">Decision</p>
+            <strong id="actionConclusionStatus">继续等待</strong>
+            <span id="actionConclusionDetail">等待行情和安全边际信号</span>
+          </div>
+          <div class="action-conclusion-reasons" id="actionConclusionReasons"></div>
+        </section>
+
         <section class="metrics-grid" aria-label="资产概览">
           <article class="metric">
             <span>总市值</span>
@@ -98,6 +107,16 @@
             <span>现金余额</span>
             <strong id="cashBalance">¥0.00</strong>
             <small>可用于新交易</small>
+          </article>
+          <article class="metric">
+            <span>预计年股息</span>
+            <strong id="annualDividend">¥0.00</strong>
+            <small id="portfolioDividendYield">组合股息率 0.00%</small>
+          </article>
+          <article class="metric">
+            <span>数据体检</span>
+            <strong id="dataQualityMetric">0 项</strong>
+            <small id="dataQualityDetail">关键数据完整</small>
           </article>
         </section>
 
@@ -125,11 +144,21 @@
           <section class="panel">
             <div class="panel-head compact">
               <div>
-                <p class="eyebrow">Triggers</p>
-                <h2>行情触发</h2>
+                <p class="eyebrow">Audit</p>
+                <h2>数据体检</h2>
               </div>
             </div>
-            <div class="trigger-list" id="triggerAlerts"></div>
+            <div class="data-quality-list" id="dataQualityList"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Dividends</p>
+                <h2>股息现金流</h2>
+              </div>
+            </div>
+            <div class="dividend-cash-list" id="dividendCashList"></div>
           </section>
         </section>
 
@@ -229,6 +258,7 @@
             <div class="candidate-sort">
               <label for="candidateSort">排序</label>
               <select id="candidateSort">
+                <option value="discipline">纪律优先</option>
                 <option value="priority">执行优先级</option>
                 <option value="margin">安全边际</option>
                 <option value="quality">质量分</option>
@@ -376,6 +406,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=decision-area-1"></script>
+    <script src="./app.js?v=discipline-1"></script>
   </body>
 </html>

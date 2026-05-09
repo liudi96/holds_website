@@ -54,31 +54,57 @@ type DecisionLog struct {
 }
 
 type Holding struct {
-	Symbol            string   `json:"symbol"`
-	Name              string   `json:"name"`
-	Shares            float64  `json:"shares"`
-	Cost              float64  `json:"cost"`
-	CurrentPrice      float64  `json:"currentPrice"`
-	PreviousClose     float64  `json:"previousClose"`
-	CurrentPriceDate  string   `json:"currentPriceDate"`
-	PreviousCloseDate string   `json:"previousCloseDate"`
-	Action            string   `json:"action"`
-	Status            string   `json:"status"`
-	MarginOfSafety    *float64 `json:"marginOfSafety"`
-	QualityScore      *float64 `json:"qualityScore"`
-	Risk              string   `json:"risk"`
-	Industry          string   `json:"industry"`
-	Currency          string   `json:"currency"`
-	IntrinsicValue    *float64 `json:"intrinsicValue"`
-	FairValueRange    string   `json:"fairValueRange"`
-	TargetBuyPrice    *float64 `json:"targetBuyPrice"`
-	BusinessModel     *float64 `json:"businessModel"`
-	Moat              *float64 `json:"moat"`
-	Governance        *float64 `json:"governance"`
-	FinancialQuality  *float64 `json:"financialQuality"`
-	UpdatedAt         string   `json:"updatedAt"`
-	Notes             string   `json:"notes"`
-	Reports           []Report `json:"reports,omitempty"`
+	Symbol              string          `json:"symbol"`
+	Name                string          `json:"name"`
+	Shares              float64         `json:"shares"`
+	Cost                float64         `json:"cost"`
+	CurrentPrice        float64         `json:"currentPrice"`
+	PreviousClose       float64         `json:"previousClose"`
+	MarketCap           *float64        `json:"marketCap,omitempty"`
+	MarketCapCurrency   string          `json:"marketCapCurrency,omitempty"`
+	CurrentPriceDate    string          `json:"currentPriceDate"`
+	PreviousCloseDate   string          `json:"previousCloseDate"`
+	Action              string          `json:"action"`
+	Status              string          `json:"status"`
+	MarginOfSafety      *float64        `json:"marginOfSafety"`
+	QualityScore        *float64        `json:"qualityScore"`
+	Risk                string          `json:"risk"`
+	Industry            string          `json:"industry"`
+	Currency            string          `json:"currency"`
+	IntrinsicValue      *float64        `json:"intrinsicValue"`
+	FairValueRange      string          `json:"fairValueRange"`
+	TargetBuyPrice      *float64        `json:"targetBuyPrice"`
+	PriceLevels         *PriceLevels    `json:"priceLevels,omitempty"`
+	ValuationConfidence string          `json:"valuationConfidence,omitempty"`
+	BusinessModel       *float64        `json:"businessModel"`
+	Moat                *float64        `json:"moat"`
+	Governance          *float64        `json:"governance"`
+	FinancialQuality    *float64        `json:"financialQuality"`
+	UpdatedAt           string          `json:"updatedAt"`
+	Notes               string          `json:"notes"`
+	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
+	Reports             []Report        `json:"reports,omitempty"`
+	Dividend            *Dividend       `json:"dividend,omitempty"`
+}
+
+type PriceLevels struct {
+	WatchPrice         *float64 `json:"watchPrice,omitempty"`
+	InitialBuyPrice    *float64 `json:"initialBuyPrice,omitempty"`
+	AggressiveBuyPrice *float64 `json:"aggressiveBuyPrice,omitempty"`
+}
+
+type Dividend struct {
+	FiscalYear           string   `json:"fiscalYear,omitempty"`
+	DividendPerShare     *float64 `json:"dividendPerShare,omitempty"`
+	DividendCurrency     string   `json:"dividendCurrency,omitempty"`
+	CashDividendTotal    *float64 `json:"cashDividendTotal,omitempty"`
+	CashDividendCurrency string   `json:"cashDividendCurrency,omitempty"`
+	BuybackAmount        *float64 `json:"buybackAmount,omitempty"`
+	BuybackCurrency      string   `json:"buybackCurrency,omitempty"`
+	DividendYield        *float64 `json:"dividendYield,omitempty"`
+	PayoutRatio          *float64 `json:"payoutRatio,omitempty"`
+	EstimatedAnnualCash  *float64 `json:"estimatedAnnualCash,omitempty"`
+	Reliability          string   `json:"reliability,omitempty"`
 }
 
 type Report struct {
@@ -100,29 +126,35 @@ type PlanItem struct {
 }
 
 type Candidate struct {
-	Symbol            string   `json:"symbol"`
-	Name              string   `json:"name"`
-	Status            string   `json:"status"`
-	Action            string   `json:"action"`
-	CurrentPrice      float64  `json:"currentPrice"`
-	PreviousClose     float64  `json:"previousClose"`
-	CurrentPriceDate  string   `json:"currentPriceDate"`
-	PreviousCloseDate string   `json:"previousCloseDate"`
-	MarginOfSafety    *float64 `json:"marginOfSafety"`
-	QualityScore      *float64 `json:"qualityScore"`
-	Risk              string   `json:"risk"`
-	Industry          string   `json:"industry"`
-	Currency          string   `json:"currency"`
-	IntrinsicValue    *float64 `json:"intrinsicValue"`
-	FairValueRange    string   `json:"fairValueRange"`
-	TargetBuyPrice    *float64 `json:"targetBuyPrice"`
-	BusinessModel     *float64 `json:"businessModel"`
-	Moat              *float64 `json:"moat"`
-	Governance        *float64 `json:"governance"`
-	FinancialQuality  *float64 `json:"financialQuality"`
-	UpdatedAt         string   `json:"updatedAt"`
-	Notes             string   `json:"notes"`
-	Reports           []Report `json:"reports,omitempty"`
+	Symbol              string          `json:"symbol"`
+	Name                string          `json:"name"`
+	Status              string          `json:"status"`
+	Action              string          `json:"action"`
+	CurrentPrice        float64         `json:"currentPrice"`
+	PreviousClose       float64         `json:"previousClose"`
+	MarketCap           *float64        `json:"marketCap,omitempty"`
+	MarketCapCurrency   string          `json:"marketCapCurrency,omitempty"`
+	CurrentPriceDate    string          `json:"currentPriceDate"`
+	PreviousCloseDate   string          `json:"previousCloseDate"`
+	MarginOfSafety      *float64        `json:"marginOfSafety"`
+	QualityScore        *float64        `json:"qualityScore"`
+	Risk                string          `json:"risk"`
+	Industry            string          `json:"industry"`
+	Currency            string          `json:"currency"`
+	IntrinsicValue      *float64        `json:"intrinsicValue"`
+	FairValueRange      string          `json:"fairValueRange"`
+	TargetBuyPrice      *float64        `json:"targetBuyPrice"`
+	PriceLevels         *PriceLevels    `json:"priceLevels,omitempty"`
+	ValuationConfidence string          `json:"valuationConfidence,omitempty"`
+	BusinessModel       *float64        `json:"businessModel"`
+	Moat                *float64        `json:"moat"`
+	Governance          *float64        `json:"governance"`
+	FinancialQuality    *float64        `json:"financialQuality"`
+	UpdatedAt           string          `json:"updatedAt"`
+	Notes               string          `json:"notes"`
+	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
+	Reports             []Report        `json:"reports,omitempty"`
+	Dividend            *Dividend       `json:"dividend,omitempty"`
 }
 
 type Rule struct {

@@ -47,12 +47,13 @@ JSON schema:
   "currency": "HKD",
   "industry": "互联网平台/游戏/广告/金融科技",
   "status": "未达标（安全边际<15%）",
-  "action": "继续持有；新资金暂不追买，等待目标价附近再分批",
+  "action": "继续持有；新资金暂不追买，等待安全边际达标后再分批",
   "risk": "政策、地缘、AI投入回报周期和广告/游戏周期波动需折价",
+  "valuationConfidence": "high",
   "valuation": {
     "intrinsicValue": 508,
     "fairValueRange": "HK$480-560",
-    "targetBuyPrice": 432,
+    "targetBuyPrice": null,
     "marginOfSafety": 0.09
   },
   "quality": {
@@ -65,9 +66,13 @@ JSON schema:
   "plan": {
     "rank": 1,
     "priority": "观察/低优先级",
-    "advice": "等待≤HK$432，HK$400-430可分批",
+    "advice": "等待安全边际达标后再分批，未达标不追买",
     "discipline": "优秀资产要求≥15%安全边际；未达标不追买"
   },
+  "killCriteria": [
+    "若核心业务增长和自由现金流连续两个季度明显恶化，应重新评估内在价值",
+    "若监管、治理或财报可信度出现重大风险，应暂停新增资金"
+  ],
   "notes": "Summarize the key financial facts, assumptions, and source period here."
 }
 ```
@@ -80,6 +85,11 @@ JSON schema:
 - `plan` is upserted by the top-level `symbol` when possible, then by stock name for old data.
 - Do not include `symbol` inside `plan`; the importer derives Plan identity from the top-level `symbol`.
 - `plan.rank` may be approximate. The importer normalizes Plan ranks into a unique sequence after import.
+- `valuation.intrinsicValue` is the core estimate from ChatGPT. `targetBuyPrice`, `priceLevels`, `dividend`, `dividendYield`, and `estimatedAnnualCash` do not need to be provided.
+- `valuationConfidence` and `killCriteria` are optional. If omitted, the website derives valuation confidence from quality score and risk text, and derives the detail-page bear case from existing risk/status fields.
+- The site computes the first-buy price as `intrinsicValue * 75%`, watch price as `firstBuyPrice * 105%`, and aggressive buy price as `firstBuyPrice * 90%`.
+- Dividend data is fetched by the quote update flow when the data source provides it. Dividend yield is calculated as latest full fiscal-year cash dividend total divided by company market capitalization; comprehensive shareholder return is calculated as cash dividends plus buybacks divided by market capitalization.
+- `dividend.reliability` is optional. If omitted, the website derives `stable/review/risk` from dividend data completeness, valuation confidence, and major risk text.
 - The website preview validates the JSON before writing. Confirmed imports update `data/portfolio.json` and first create a backup under `data/backups/`.
 - Holding safety margin is calculated as `(intrinsicValue - currentPrice) / intrinsicValue`. Candidate-pool stocks use the same formula after the overview `更新行情` button has fetched quote data; otherwise they continue to use the imported `valuation.marginOfSafety`.
 - Quote fields such as `currentPrice`, `previousClose`, and close dates are owned by the overview `更新行情` button or `cmd/update-quotes`, not this import.
