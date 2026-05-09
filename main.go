@@ -179,6 +179,7 @@ func main() {
 	mux.HandleFunc("GET /api/state", server.handleGetState)
 	mux.HandleFunc("POST /api/reset", server.handleReset)
 	mux.HandleFunc("POST /api/trades", server.handleCreateTrade)
+	mux.HandleFunc("POST /api/decision-logs/clear", server.handleClearDecisionLogs)
 	mux.HandleFunc("PUT /api/holdings/", server.handleUpdateHolding)
 	mux.HandleFunc("POST /api/research/preview", server.handlePreviewResearch)
 	mux.HandleFunc("POST /api/research/import", server.handleImportResearch)
@@ -282,6 +283,26 @@ func (s *Server) handleCreateTrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, s.state)
+}
+
+func (s *Server) handleClearDecisionLogs(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	nextLogs := make([]DecisionLog, 0, len(s.state.DecisionLogs))
+	for _, log := range s.state.DecisionLogs {
+		if strings.EqualFold(strings.TrimSpace(log.Type), "trade") {
+			nextLogs = append(nextLogs, log)
+		}
+	}
+	s.state.DecisionLogs = nextLogs
+
+	if err := saveState(s.state); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save state")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, s.state)
 }
 
 func (s *Server) handleUpdateHolding(w http.ResponseWriter, r *http.Request) {

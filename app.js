@@ -204,6 +204,8 @@ let activeFilter = "all";
 let searchTerm = "";
 let pendingResearch = null;
 let candidateSort = "consensus";
+let candidateFilter = "all";
+let decisionLogFilter = "all";
 const pageTitles = {
   overview: "投资委员会",
   masters: "三大师视角",
@@ -219,19 +221,26 @@ const elements = {
   tradeList: document.querySelector("#tradeList"),
   allocationChart: document.querySelector("#allocationChart"),
   overviewPlanList: document.querySelector("#overviewPlanList"),
-  committeeCards: document.querySelector("#committeeCards"),
   committeeConsensus: document.querySelector("#committeeConsensus"),
   opportunityRadar: document.querySelector("#opportunityRadar"),
   disciplineDashboard: document.querySelector("#disciplineDashboard"),
   dataQualityList: document.querySelector("#dataQualityList"),
   dividendCashList: document.querySelector("#dividendCashList"),
   decisionLogList: document.querySelector("#decisionLogList"),
+  decisionLogPanel: document.querySelector("#decisionLogPanel"),
+  decisionLogToggle: document.querySelector("#decisionLogToggle"),
+  decisionLogFilters: document.querySelector("#decisionLogFilters"),
+  clearDecisionLogs: document.querySelector("#clearDecisionLogs"),
+  masterMatrix: document.querySelector("#masterMatrix"),
+  marksSummary: document.querySelector("#marksSummary"),
+  marksList: document.querySelector("#marksList"),
   grahamSummary: document.querySelector("#grahamSummary"),
   grahamList: document.querySelector("#grahamList"),
   buffettSummary: document.querySelector("#buffettSummary"),
   buffettList: document.querySelector("#buffettList"),
   candidateList: document.querySelector("#candidateList"),
   candidateSort: document.querySelector("#candidateSort"),
+  candidateFilters: document.querySelector("#candidateFilters"),
   stockDetail: document.querySelector("#stockDetail"),
   totalValue: document.querySelector("#totalValue"),
   totalPnl: document.querySelector("#totalPnl"),
@@ -250,6 +259,7 @@ const elements = {
   positionCount: document.querySelector("#positionCount"),
   recordCount: document.querySelector("#recordCount"),
   searchInput: document.querySelector("#searchInput"),
+  searchResults: document.querySelector("#searchResults"),
   updateQuotesButton: document.querySelector("#updateQuotesButton"),
   exportChatGPTButton: document.querySelector("#exportChatGPTContext"),
   quoteUpdateStatus: document.querySelector("#quoteUpdateStatus"),
@@ -312,6 +322,20 @@ async function loadBackendState() {
     console.warn("后端不可用，使用浏览器本地数据", error);
     return false;
   }
+}
+
+async function clearNonTradeDecisionLogs() {
+  const confirmed = window.confirm("将清理分析、行情等非交易决策日志，并保留新增交易日志。此操作会写回 portfolio.json，是否继续？");
+  if (!confirmed) return;
+
+  if (USE_BACKEND) {
+    state = await requestJSON("/api/decision-logs/clear", { method: "POST" });
+  } else {
+    state.decisionLogs = [...(state.decisionLogs ?? [])].filter((log) => String(log.type ?? "").toLowerCase() === "trade");
+    saveState();
+  }
+
+  render();
 }
 
 function fx(currencyCode) {
@@ -1022,10 +1046,14 @@ function renderMetrics(positions) {
   elements.totalPnl.className = totalPnl >= 0 ? "positive" : "negative";
   elements.totalPnlRate.textContent = percent(totalCost ? (totalPnl / totalCost) * 100 : 0);
   elements.totalPnlRate.className = totalPnl >= 0 ? "positive" : "negative";
-  elements.dayChange.textContent = currency(dayChange);
-  elements.dayChange.className = dayChange >= 0 ? "positive" : "negative";
-  elements.dayChangeRate.textContent = percent(totalValue ? (dayChange / totalValue) * 100 : 0);
-  elements.dayChangeRate.className = dayChange >= 0 ? "positive" : "negative";
+  if (elements.dayChange) {
+    elements.dayChange.textContent = currency(dayChange);
+    elements.dayChange.className = dayChange >= 0 ? "positive" : "negative";
+  }
+  if (elements.dayChangeRate) {
+    elements.dayChangeRate.textContent = percent(totalValue ? (dayChange / totalValue) * 100 : 0);
+    elements.dayChangeRate.className = dayChange >= 0 ? "positive" : "negative";
+  }
   elements.cashBalance.textContent = currency(state.cash);
   elements.annualDividend.textContent = currency(dividends.annualCashCny);
   elements.portfolioDividendYield.textContent = dividends.topContributor
@@ -1040,7 +1068,7 @@ function renderPositions(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
 
   if (!filtered.length) {
-    elements.positionsBody.innerHTML = `<tr><td colspan="14" class="empty-state">暂无符合条件的持仓</td></tr>`;
+    elements.positionsBody.innerHTML = `<tr><td colspan="7" class="empty-state">暂无符合条件的持仓</td></tr>`;
     return;
   }
 
@@ -1060,39 +1088,34 @@ function renderPositions(positions) {
               <span class="ticker">${position.symbol.slice(0, 4)}</span>
               <a class="stock-name stock-link" href="${stockHash(position.symbol)}">
                 <strong>${escapeHTML(position.name)}</strong>
-                <span>${escapeHTML(position.symbol)} · ${escapeHTML(position.industry || "未分类")}</span>
+                <span>${escapeHTML(position.symbol)} · ${position.shares} 股 · 成本 ${currency(position.cost, position.currency)}</span>
               </a>
             </div>
           </td>
-          <td>${position.shares}</td>
-          <td>${currency(position.cost, position.currency)}</td>
-          <td>
-            ${currency(position.currentPrice, position.currency)}
+          <td data-label="市值/现价">
+            <strong>${currency(position.marketValueCny)}</strong>
             <br />
-            <small class="quote-date">${position.currentPriceDate || "收盘日未知"}</small>
+            <small class="quote-date">${currency(position.currentPrice, position.currency)} · ${position.currentPriceDate || "收盘日未知"}</small>
           </td>
-          <td>${currency(position.marketValueCny)}</td>
-          <td class="${pnlClass}">
+          <td data-label="盈亏" class="${pnlClass}">
             ${currency(position.pnlCny)}
             <br />
             <small>${percent(position.pnlRate)}</small>
           </td>
-          <td>${marginText}</td>
-          <td>${qualityText}</td>
-          <td>
-            <div class="weight-bar" title="${weight.toFixed(2)}%">
-              <span style="width: ${Math.min(weight, 100)}%"></span>
-            </div>
-          </td>
-          <td>
+          <td data-label="安全边际">${marginText}</td>
+          <td data-label="健康">
             <span class="health-pill ${health.tone}" title="${escapeHTML(health.detail)}">${health.status}</span>
             <br />
-            <small class="health-score">${health.score} 分</small>
+            <small class="health-score">${health.score} 分 · 仓位 ${weight.toFixed(1)}% · 质量 ${qualityText}</small>
           </td>
-          <td>${compactMasterCell(votes.marks)}</td>
-          <td>${compactMasterCell(votes.graham)}</td>
-          <td>${compactMasterCell(votes.buffett)}</td>
-          <td>
+          <td data-label="委员会">
+            <div class="position-committee">
+              ${compactMasterCell(votes.marks)}
+              ${compactMasterCell(votes.graham)}
+              ${compactMasterCell(votes.buffett)}
+            </div>
+          </td>
+          <td data-label="操作">
             <button class="icon-button edit-holding" data-symbol="${position.symbol}" title="编辑 Excel 信息">✎</button>
           </td>
         </tr>
@@ -1179,8 +1202,9 @@ function sortedPlanItems() {
 
 function renderPlanAndCandidates() {
   const plans = sortedPlanItems();
-  elements.overviewPlanList.innerHTML = plans.length
-    ? plans.map(({ item, stock, margin }, index) => {
+  if (elements.overviewPlanList) {
+    elements.overviewPlanList.innerHTML = plans.length
+      ? plans.map(({ item, stock, margin }, index) => {
       const confidence = stock ? confidenceMeta(stock) : null;
       return `
       <a class="plan-card" href="${stockHash(stock?.symbol || findSymbolForPlan(item))}">
@@ -1192,12 +1216,14 @@ function renderPlanAndCandidates() {
         <p>${escapeHTML(item.advice)}</p>
       </a>
     `;
-    })
-    .join("")
-    : `<div class="empty-state compact-empty">暂无执行计划</div>`;
+      })
+      .join("")
+      : `<div class="empty-state compact-empty">暂无执行计划</div>`;
+  }
 
-  elements.candidateList.innerHTML = sortedCandidates()
-    .map((item) => {
+  const candidates = sortedCandidates();
+  elements.candidateList.innerHTML = candidates.length
+    ? candidates.map((item) => {
       const plan = findPlanForStock(item);
       const votes = masterVotes(item);
       return `
@@ -1227,7 +1253,8 @@ function renderPlanAndCandidates() {
         </a>
       `;
     })
-    .join("");
+    .join("")
+    : `<div class="empty-state compact-empty">当前筛选下暂无候选股</div>`;
 }
 
 function decisionUniverse(positions) {
@@ -1284,11 +1311,31 @@ function disciplineRankScore(stock) {
   return quality * 0.45 + clamp(margin, -0.2, 0.5) * 100 * 0.3 + confidenceScore(stock) * 20 + distanceScore * 5;
 }
 
+function candidateMatchesFilter(candidate, totalValue) {
+  if (candidateFilter === "consensus") return consensusCount(candidate, totalValue) >= 3;
+  if (candidateFilter === "margin") {
+    const margin = calculatedMarginOfSafety(candidate) ?? finiteNumber(candidate.marginOfSafety);
+    return Number.isFinite(margin) && margin >= 0.2;
+  }
+  if (candidateFilter === "quality") return (finiteNumber(candidate.qualityScore) ?? -Infinity) >= 85;
+  if (candidateFilter === "nearBuy") {
+    const distance = candidateBuyDistance(candidate);
+    return Number.isFinite(distance) && distance <= BUY_PROXIMITY;
+  }
+  if (candidateFilter === "dividend") {
+    const yieldValue = calculatedShareholderReturnYield(candidate) ?? calculatedDividendYield(candidate);
+    return Number.isFinite(yieldValue) && yieldValue >= 0.04;
+  }
+  if (candidateFilter === "lowConfidence") return valuationConfidence(candidate) === "low" || hasMajorRisk(candidate);
+  return true;
+}
+
 function sortedCandidates() {
   const holdingSymbols = new Set(state.holdings.filter((holding) => holding.shares > 0).map((holding) => normalizeSymbol(holding.symbol)));
   const totalValue = computePositions().reduce((sum, item) => sum + item.marketValueCny, 0);
   return state.candidates
     .filter((candidate) => !holdingSymbols.has(normalizeSymbol(candidate.symbol)))
+    .filter((candidate) => candidateMatchesFilter(candidate, totalValue))
     .sort((a, b) => {
       const byName = () => a.name.localeCompare(b.name, "zh-CN");
       if (candidateSort === "consensus") {
@@ -1489,7 +1536,7 @@ function buildActionConclusion(positions) {
 
 function renderActionConclusion(positions) {
   const conclusion = buildActionConclusion(positions);
-  elements.actionConclusion.className = `action-conclusion panel ${conclusion.tone}`;
+  elements.actionConclusion.className = `executive-hero panel ${conclusion.tone}`;
   elements.actionConclusionStatus.textContent = conclusion.status;
   elements.actionConclusionDetail.textContent = conclusion.detail;
   elements.actionConclusionReasons.innerHTML = conclusion.reasons.length
@@ -1525,89 +1572,96 @@ function committeePortfolioStatus(stats) {
   return "当前组合：继续等待";
 }
 
-function masterCard(view, support, against, action) {
+function executiveActionItems(stats, positions) {
+  const items = [];
+  const seen = new Set();
+  const push = (item) => {
+    const symbol = normalizeSymbol(item.symbol);
+    if (!symbol || seen.has(symbol) || items.length >= 5) return;
+    seen.add(symbol);
+    items.push(item);
+  };
+
+  stats.riskReview
+    .filter((item) => item.stock.sourceType === "holding")
+    .sort((a, b) => a.stock.name.localeCompare(b.stock.name, "zh-CN"))
+    .forEach((item) => push({
+      tone: "risk",
+      type: "风险复盘",
+      symbol: item.stock.symbol,
+      name: item.stock.name,
+      meta: `${displayMarginOfSafety(item.stock)} · ${confidenceMeta(item.stock).text}`,
+      detail: item.votes.marks.action
+    }));
+
+  buildOpportunitySignals(positions)
+    .filter((signal) => signal.tone === "buy" || signal.tone === "safe")
+    .forEach((signal) => push({
+      tone: signal.tone === "buy" ? "buy" : "safe",
+      type: signal.tone === "buy" ? "买入复核" : "安全边际",
+      symbol: signal.stock.symbol,
+      name: signal.stock.name,
+      meta: `${signal.reasons.slice(0, 2).join("、")} · ${displayMarginOfSafety(signal.stock)}`,
+      detail: displayText(signal.stock.action, signal.stock.status)
+    }));
+
+  stats.withVotes
+    .filter((item) => item.consensus >= 2)
+    .sort((a, b) => b.consensus - a.consensus || disciplineRankScore(b.stock) - disciplineRankScore(a.stock))
+    .forEach((item) => push({
+      tone: "watch",
+      type: consensusText(item.consensus),
+      symbol: item.stock.symbol,
+      name: item.stock.name,
+      meta: `${displayMarginOfSafety(item.stock)} · 质量 ${Number.isFinite(item.stock.qualityScore) ? item.stock.qualityScore : "-"}`,
+      detail: displayText(item.stock.action, item.stock.status)
+    }));
+
+  sortedPlanItems().forEach(({ item, stock, margin }) => {
+    const symbol = stock?.symbol || findSymbolForPlan(item);
+    push({
+      tone: "wait",
+      type: "执行计划",
+      symbol,
+      name: item.name,
+      meta: `${item.priority} · 安全边际 ${Number.isFinite(margin) ? percent(margin * 100, false) : "-"}`,
+      detail: item.advice
+    });
+  });
+
+  return items;
+}
+
+function renderExecutiveActionItem(item, index) {
   return `
-    <article class="committee-card ${view.key}">
-      <div class="committee-card-head">
-        <div>
-          <p class="eyebrow">${escapeHTML(view.name)}</p>
-          <h2>${escapeHTML(view.title)}</h2>
+    <a class="next-action-item ${item.tone}" href="${stockHash(item.symbol)}">
+      <span class="next-action-rank">${index + 1}</span>
+      <div>
+        <div class="next-action-head">
+          <strong>${escapeHTML(item.name)}</strong>
+          <em>${escapeHTML(item.type)}</em>
         </div>
-        <span class="master-score ${view.tone}">${view.score}</span>
+        <small>${escapeHTML(item.symbol)} · ${escapeHTML(item.meta)}</small>
+        <p>${escapeHTML(item.detail)}</p>
       </div>
-      <strong>${escapeHTML(view.status)}</strong>
-      <dl>
-        <div><dt>支持理由</dt><dd>${escapeHTML(support || "暂无明确支持项")}</dd></div>
-        <div><dt>反对理由</dt><dd>${escapeHTML(against || "暂无主要反对项")}</dd></div>
-        <div><dt>下一步动作</dt><dd>${escapeHTML(action)}</dd></div>
-      </dl>
-    </article>
+    </a>
   `;
 }
 
 function renderCommitteeOverview(positions) {
   const stats = committeeStats(positions);
-  const marksViewCard = {
-    key: "marks",
-    name: "霍华德·马克斯",
-    title: "风险与周期",
-    status: stats.riskReview.length ? `${stats.riskReview.length} 个标的需风险复盘` : "风险补偿仍需等待",
-    score: Math.round(100 - Math.min(stats.riskReview.length * 12, 48)),
-    tone: stats.riskReview.length ? "risk" : "watch"
-  };
-  const grahamViewCard = {
-    key: "graham",
-    name: "本杰明·格雷厄姆",
-    title: "便宜与防守",
-    status: stats.defensive.length ? `${stats.defensive.length} 个标的防御合格` : "缺少防御型便宜货",
-    score: Math.round(stats.universe.length ? (stats.defensive.length / stats.universe.length) * 100 : 0),
-    tone: stats.defensive.length ? "strong" : "watch"
-  };
-  const buffettViewCard = {
-    key: "buffett",
-    name: "沃伦·巴菲特",
-    title: "好生意与复利",
-    status: stats.compounders.length ? `${stats.compounders.length} 个长期复利候选` : "缺少明确长期核心",
-    score: Math.round(stats.holdingsValue ? (stats.longTermValue / stats.holdingsValue) * 100 : 0),
-    tone: stats.compounders.length ? "strong" : "watch"
-  };
-
   elements.actionConclusionStatus.textContent = committeePortfolioStatus(stats);
-  elements.actionConclusionDetail.textContent = "三位大师从风险、防守、复利三个角度给出约束";
+  elements.actionConclusionDetail.textContent = "先看风险补偿，再看防守折价，最后筛长期复利。";
   elements.actionConclusionReasons.innerHTML = [
     `风险复盘 ${stats.riskReview.length}`,
     `防御合格 ${stats.defensive.length}`,
     `复利候选 ${stats.compounders.length}`
   ].map((item) => `<span>${escapeHTML(item)}</span>`).join("");
 
-  elements.committeeCards.innerHTML = [
-    masterCard(
-      marksViewCard,
-      stats.riskReview[0] ? `${stats.riskReview[0].stock.name} 需复盘；低可信和高风险股息已被隔离` : "未发现需要立即降权的新增风险",
-      stats.riskReview.length ? "风险补偿不足会压制买入动作" : "仍需等待更高安全边际",
-      stats.riskReview.length ? "先复盘风险，再考虑买入" : "继续等待周期给出补偿"
-    ),
-    masterCard(
-      grahamViewCard,
-      stats.defensive.slice(0, 2).map((item) => item.stock.name).join("、") || "现金比例提供防守",
-      "多数标的未达到足够保守的防御折价",
-      "只把防御合格标的放入买入复核"
-    ),
-    masterCard(
-      buffettViewCard,
-      stats.compounders.slice(0, 2).map((item) => item.stock.name).join("、") || "高质量标的需要更好价格",
-      "好公司不等于当前可重仓",
-      "聚焦高质量高可信，等待合理价格"
-    )
-  ].join("");
-
-  const topConsensus = stats.withVotes
-    .filter((item) => item.consensus >= 2)
-    .sort((a, b) => b.consensus - a.consensus || disciplineRankScore(b.stock) - disciplineRankScore(a.stock))
-    .slice(0, 6);
-  elements.committeeConsensus.innerHTML = topConsensus.length
-    ? topConsensus.map((item) => renderConsensusItem(item.stock, item.votes, item.consensus)).join("")
-    : `<div class="empty-state compact-empty">暂无两位以上大师共同认可的标的</div>`;
+  const actions = executiveActionItems(stats, positions);
+  elements.committeeConsensus.innerHTML = actions.length
+    ? actions.map(renderExecutiveActionItem).join("")
+    : `<div class="empty-state compact-empty">暂无需要立即处理的动作</div>`;
 }
 
 function renderConsensusItem(stock, votes, consensus) {
@@ -1648,7 +1702,10 @@ function renderMasterVoteCard(vote) {
           <p class="eyebrow">${escapeHTML(vote.name)}</p>
           <h3>${escapeHTML(vote.title)}</h3>
         </div>
-        <span class="master-score ${vote.tone}">${vote.score}</span>
+        <span class="master-score ${vote.tone}" title="本地计算评分，满分100">
+          <strong>${vote.score}</strong>
+          <small>/100</small>
+        </span>
       </div>
       <strong>${escapeHTML(vote.status)}</strong>
       <p>${escapeHTML(vote.action)}</p>
@@ -1697,6 +1754,13 @@ function masterUniverseItems(positions, key) {
       };
     })
     .sort((a, b) => {
+      if (key === "marks") {
+        const riskOrder = { "风险复盘": 0, "等待补偿": 1, "仅观察": 2, "补偿足够": 3 };
+        return (riskOrder[a.vote.status] ?? 9) - (riskOrder[b.vote.status] ?? 9) ||
+          a.vote.score - b.vote.score ||
+          (b.stock.marketValueCny ?? 0) - (a.stock.marketValueCny ?? 0) ||
+          a.stock.name.localeCompare(b.stock.name, "zh-CN");
+      }
       if (key === "graham") {
         const marginA = Number.isFinite(a.margin) ? a.margin : -Infinity;
         const marginB = Number.isFinite(b.margin) ? b.margin : -Infinity;
@@ -1722,7 +1786,7 @@ function renderMasterSummary(items, key) {
     .slice(0, 2)
     .map(([status, count]) => `${status} ${count}`)
     .join(" · ");
-  const primaryLabel = key === "graham" ? "防御认可" : "复利认可";
+  const primaryLabel = key === "marks" ? "补偿/观察" : key === "graham" ? "防御认可" : "复利认可";
 
   return `
     <div class="master-summary-grid">
@@ -1778,13 +1842,54 @@ function renderMasterStockList(items) {
 }
 
 function renderMastersPage(positions) {
-  if (!elements.grahamSummary || !elements.grahamList || !elements.buffettSummary || !elements.buffettList) return;
+  if (!elements.marksSummary || !elements.marksList || !elements.grahamSummary || !elements.grahamList || !elements.buffettSummary || !elements.buffettList) return;
+  const marksItems = masterUniverseItems(positions, "marks");
   const grahamItems = masterUniverseItems(positions, "graham");
   const buffettItems = masterUniverseItems(positions, "buffett");
+  elements.marksSummary.innerHTML = renderMasterSummary(marksItems, "marks");
+  elements.marksList.innerHTML = renderMasterStockList(marksItems.slice(0, 8));
   elements.grahamSummary.innerHTML = renderMasterSummary(grahamItems, "graham");
   elements.grahamList.innerHTML = renderMasterStockList(grahamItems);
   elements.buffettSummary.innerHTML = renderMasterSummary(buffettItems, "buffett");
   elements.buffettList.innerHTML = renderMasterStockList(buffettItems);
+  renderMasterMatrix(positions);
+}
+
+function renderMasterMatrix(positions) {
+  if (!elements.masterMatrix) return;
+  const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const rows = committeeUniverse(positions)
+    .map((stock) => {
+      const votes = masterVotes(stock, totalValue);
+      const consensus = Object.values(votes).filter(masterApproval).length;
+      const disagreement = 3 - consensus;
+      return { stock, votes, consensus, disagreement, margin: marginValue(stock), quality: qualityValue(stock) };
+    })
+    .sort((a, b) => b.disagreement - a.disagreement || b.consensus - a.consensus || disciplineRankScore(b.stock) - disciplineRankScore(a.stock));
+
+  elements.masterMatrix.innerHTML = rows.length
+    ? `
+      <div class="master-matrix-head">
+        <span>标的</span>
+        <span>马克斯</span>
+        <span>格雷厄姆</span>
+        <span>巴菲特</span>
+        <span>共识</span>
+      </div>
+      ${rows.map(({ stock, votes, consensus, margin, quality }) => `
+        <a class="master-matrix-row" href="${stockHash(stock.symbol)}">
+          <div>
+            <strong>${escapeHTML(stock.name)}</strong>
+            <small>${escapeHTML(stock.symbol)} · 安全边际 ${Number.isFinite(margin) ? percent(margin * 100, false) : "-"} · 质量 ${Number.isFinite(quality) ? quality : "-"}</small>
+          </div>
+          ${compactMasterCell(votes.marks)}
+          ${compactMasterCell(votes.graham)}
+          ${compactMasterCell(votes.buffett)}
+          <em>${escapeHTML(consensusText(consensus))}</em>
+        </a>
+      `).join("")}
+    `
+    : `<div class="empty-state compact-empty">暂无可对照标的</div>`;
 }
 
 function firstIndustry(industry) {
@@ -1976,6 +2081,8 @@ function renderDataQuality(positions) {
   elements.dataQualityMetric.className = warningCount ? "negative" : "positive";
   elements.dataQualityDetail.textContent = warningCount ? `提醒 ${warningCount} · 备注 ${infoCount}` : infoCount ? `${infoCount} 项备注` : "关键数据完整";
 
+  if (!elements.dataQualityList) return;
+
   elements.dataQualityList.innerHTML = issues.length
     ? issues.slice(0, 14).map((issue) => {
       const tag = issue.sourceType === "holding" ? "持仓" : issue.sourceType === "candidate" ? "候选" : "Plan";
@@ -2095,7 +2202,10 @@ function renderDecisionLogItems(logs, emptyText) {
 }
 
 function renderDecisionLogs() {
-  elements.decisionLogList.innerHTML = renderDecisionLogItems(sortedDecisionLogs().slice(0, 10), "暂无决策日志");
+  const logs = sortedDecisionLogs()
+    .filter((log) => decisionLogFilter === "all" || log.type === decisionLogFilter)
+    .slice(0, 10);
+  elements.decisionLogList.innerHTML = renderDecisionLogItems(logs, "暂无符合筛选的决策日志");
 }
 
 function renderStockDecisionLogs(stock) {
@@ -2171,6 +2281,62 @@ function findStockRecord(symbol, positions) {
     },
     isHolding: false
   };
+}
+
+function searchableStocks() {
+  const positions = computePositions();
+  const seen = new Set();
+  const addSource = (items, sourceType) => items
+    .filter((stock) => {
+      const symbol = normalizeSymbol(stock.symbol);
+      if (!symbol || seen.has(symbol)) return false;
+      seen.add(symbol);
+      return true;
+    })
+    .map((stock) => ({ ...stock, sourceType }));
+
+  return [
+    ...addSource(positions, "持仓"),
+    ...addSource(state.candidates, "候选")
+  ];
+}
+
+function globalSearchMatches(term) {
+  const keyword = String(term ?? "").trim().toLowerCase();
+  if (!keyword) return [];
+  return searchableStocks()
+    .filter((stock) => {
+      const haystack = [stock.symbol, stock.name, stock.industry].join(" ").toLowerCase();
+      return haystack.includes(keyword);
+    })
+    .sort((a, b) => {
+      const exactA = normalizeSymbol(a.symbol).toLowerCase() === keyword || String(a.name).toLowerCase() === keyword;
+      const exactB = normalizeSymbol(b.symbol).toLowerCase() === keyword || String(b.name).toLowerCase() === keyword;
+      return Number(exactB) - Number(exactA) || a.name.localeCompare(b.name, "zh-CN");
+    })
+    .slice(0, 8);
+}
+
+function renderSearchResults() {
+  if (!elements.searchResults) return;
+  const matches = globalSearchMatches(elements.searchInput.value);
+  elements.searchResults.innerHTML = matches.length
+    ? matches.map((stock) => `
+      <button type="button" data-search-symbol="${escapeHTML(stock.symbol)}">
+        <strong>${escapeHTML(stock.name)}</strong>
+        <span>${escapeHTML(stock.symbol)} · ${escapeHTML(stock.sourceType)} · ${escapeHTML(displayText(stock.industry, "未分类"))}</span>
+      </button>
+    `).join("")
+    : `<div class="search-empty">暂无匹配标的</div>`;
+  elements.searchResults.classList.toggle("active", Boolean(elements.searchInput.value.trim()));
+}
+
+function openFirstSearchResult() {
+  const match = globalSearchMatches(elements.searchInput.value)[0];
+  if (!match) return false;
+  window.location.hash = stockHash(match.symbol);
+  elements.searchResults?.classList.remove("active");
+  return true;
 }
 
 function findPlanForStock(stock) {
@@ -2399,7 +2565,19 @@ function renderStockDetail(positions, symbol) {
 
     ${renderMasterVotesPanel(stock, totalValue)}
 
-    <section class="detail-grid">
+    <nav class="detail-section-nav" aria-label="详情分段导航">
+      <button type="button" data-detail-section="detailValuation">估值质量</button>
+      <button type="button" data-detail-section="detailIncome">股息现金流</button>
+      <button type="button" data-detail-section="detailRisk">风险反证</button>
+      <button type="button" data-detail-section="detailRecords">财报日志</button>
+    </nav>
+
+    <section class="detail-section" id="detailValuation">
+      <div class="detail-section-head">
+        <p class="eyebrow">Valuation</p>
+        <h2>估值质量</h2>
+      </div>
+      <section class="detail-grid">
       <section class="panel">
         <div class="panel-head compact">
           <div>
@@ -2446,12 +2624,24 @@ function renderStockDetail(positions, symbol) {
           </div>
         </div>
       </section>
+      </section>
     </section>
 
+    <section class="detail-section" id="detailIncome">
+      <div class="detail-section-head">
+        <p class="eyebrow">Income</p>
+        <h2>股息现金流</h2>
+      </div>
     ${renderDividendPanel(stock, isHolding)}
 
     ${renderDataSourcePanel(stock)}
+    </section>
 
+    <section class="detail-section" id="detailRisk">
+      <div class="detail-section-head">
+        <p class="eyebrow">Risk</p>
+        <h2>风险反证</h2>
+      </div>
     ${renderKillCriteriaPanel(stock)}
 
     <section class="panel">
@@ -2469,7 +2659,13 @@ function renderStockDetail(positions, symbol) {
         </div>
       </div>
     </section>
+    </section>
 
+    <section class="detail-section" id="detailRecords">
+      <div class="detail-section-head">
+        <p class="eyebrow">Records</p>
+        <h2>财报日志</h2>
+      </div>
     <section class="panel decision-log-panel detail-log-panel">
       <div class="panel-head compact">
         <div>
@@ -2492,6 +2688,7 @@ function renderStockDetail(positions, symbol) {
       <div class="detail-content">
         ${renderReportLibrary(stock)}
       </div>
+    </section>
     </section>
   `;
 }
@@ -2770,6 +2967,13 @@ document.querySelectorAll(".nav-item").forEach((button) => {
   });
 });
 
+document.querySelectorAll("[data-master-scroll]").forEach((button) => {
+  button.addEventListener("click", () => {
+    showPage("masters");
+    document.getElementById(button.dataset.masterScroll)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+});
+
 function showPage(view) {
   const isStockDetail = view.startsWith("stock=");
   const nextView = isStockDetail ? "stock-detail" : pageTitles[view] ? view : "overview";
@@ -2791,12 +2995,69 @@ window.addEventListener("hashchange", () => {
 
 elements.searchInput.addEventListener("input", (event) => {
   searchTerm = event.target.value.trim().toLowerCase();
+  renderSearchResults();
   render();
+});
+
+elements.searchInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  if (openFirstSearchResult()) {
+    event.preventDefault();
+  }
+});
+
+elements.searchResults?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-search-symbol]");
+  if (!button) return;
+  window.location.hash = stockHash(button.dataset.searchSymbol);
+  elements.searchResults.classList.remove("active");
+});
+
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".search-wrap")) return;
+  elements.searchResults?.classList.remove("active");
 });
 
 elements.candidateSort.addEventListener("change", (event) => {
   candidateSort = event.target.value;
   renderPlanAndCandidates();
+});
+
+elements.candidateFilters?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-candidate-filter]");
+  if (!button) return;
+  elements.candidateFilters.querySelector(".active")?.classList.remove("active");
+  button.classList.add("active");
+  candidateFilter = button.dataset.candidateFilter;
+  renderPlanAndCandidates();
+});
+
+elements.decisionLogFilters?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-log-filter]");
+  if (!button) return;
+  elements.decisionLogFilters.querySelector(".active")?.classList.remove("active");
+  button.classList.add("active");
+  decisionLogFilter = button.dataset.logFilter;
+  renderDecisionLogs();
+});
+
+elements.decisionLogToggle?.addEventListener("click", () => {
+  const collapsed = elements.decisionLogPanel.classList.toggle("collapsed");
+  elements.decisionLogToggle.textContent = collapsed ? "展开" : "收起";
+});
+
+elements.clearDecisionLogs?.addEventListener("click", async () => {
+  try {
+    await clearNonTradeDecisionLogs();
+  } catch (error) {
+    setQuoteUpdateStatus(error.message, "error");
+  }
+});
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-detail-section]");
+  if (!button) return;
+  document.getElementById(button.dataset.detailSection)?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.querySelector("#openTradePanelSecondary").addEventListener("click", () => {
