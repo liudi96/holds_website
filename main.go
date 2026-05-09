@@ -150,6 +150,7 @@ func main() {
 	mux.HandleFunc("PUT /api/holdings/", server.handleUpdateHolding)
 	mux.HandleFunc("POST /api/research/preview", server.handlePreviewResearch)
 	mux.HandleFunc("POST /api/research/import", server.handleImportResearch)
+	mux.HandleFunc("GET /api/chatgpt/export", server.handleExportChatGPTContext)
 	mux.HandleFunc("POST /api/quotes/update", server.handleUpdateQuotes)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})

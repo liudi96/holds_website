@@ -233,6 +233,7 @@ const elements = {
   recordCount: document.querySelector("#recordCount"),
   searchInput: document.querySelector("#searchInput"),
   updateQuotesButton: document.querySelector("#updateQuotesButton"),
+  exportChatGPTButton: document.querySelector("#exportChatGPTContext"),
   quoteUpdateStatus: document.querySelector("#quoteUpdateStatus"),
   tradeDialog: document.querySelector("#tradeDialog"),
   tradeForm: document.querySelector("#tradeForm"),
@@ -1461,6 +1462,52 @@ async function updateQuotes() {
   }
 }
 
+function filenameFromContentDisposition(header, fallback) {
+  const raw = header ?? "";
+  const utf8Match = raw.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match) return decodeURIComponent(utf8Match[1].replaceAll("\"", ""));
+
+  const asciiMatch = raw.match(/filename="?([^";]+)"?/i);
+  if (asciiMatch) return asciiMatch[1];
+
+  return fallback;
+}
+
+async function exportChatGPTContext() {
+  if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能导出档案");
+
+  elements.exportChatGPTButton.disabled = true;
+  elements.exportChatGPTButton.innerHTML = "<span>↓</span> 导出中";
+  setQuoteUpdateStatus("正在生成 ChatGPT 档案...");
+
+  try {
+    const response = await fetch("/api/chatgpt/export");
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: "导出档案失败" }));
+      throw new Error(error.error ?? "导出档案失败");
+    }
+
+    const blob = await response.blob();
+    const filename = filenameFromContentDisposition(
+      response.headers.get("Content-Disposition"),
+      "portfolio-context.zip"
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    setQuoteUpdateStatus("ChatGPT 档案已导出", "success");
+  } finally {
+    elements.exportChatGPTButton.disabled = false;
+    elements.exportChatGPTButton.innerHTML = "<span>↓</span> 导出档案";
+  }
+}
+
 function openHoldingEditor(symbol) {
   const holding = state.holdings.find((item) => item.symbol === symbol);
   if (!holding) return;
@@ -1572,6 +1619,14 @@ document.querySelector("#openResearchPanel").addEventListener("click", () => {
 elements.updateQuotesButton.addEventListener("click", async () => {
   try {
     await updateQuotes();
+  } catch (error) {
+    setQuoteUpdateStatus(error.message, "error");
+  }
+});
+
+elements.exportChatGPTButton.addEventListener("click", async () => {
+  try {
+    await exportChatGPTContext();
   } catch (error) {
     setQuoteUpdateStatus(error.message, "error");
   }
