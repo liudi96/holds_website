@@ -38,19 +38,28 @@ type yahooChartResponse struct {
 					Close []float64 `json:"close"`
 				} `json:"quote"`
 			} `json:"indicators"`
+			Events struct {
+				Dividends map[string]struct {
+					Amount float64 `json:"amount"`
+					Date   int64   `json:"date"`
+				} `json:"dividends"`
+			} `json:"events"`
 		} `json:"result"`
 		Error any `json:"error"`
 	} `json:"chart"`
 }
 
 type quote struct {
-	Price             float64
-	PreviousClose     float64
-	PriceDate         string
-	PreviousCloseDate string
-	Currency          string
-	SourceSymbol      string
-	SourceName        string
+	Price              float64
+	PreviousClose      float64
+	PriceDate          string
+	PreviousCloseDate  string
+	Currency           string
+	SourceSymbol       string
+	SourceName         string
+	DividendPerShare   *float64
+	DividendCurrency   string
+	DividendFiscalYear string
 }
 
 type dailyClose struct {
@@ -69,9 +78,11 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
-	updated, skipped := updateQuotes(&state, &http.Client{Timeout: 12 * time.Second}, now)
+	updated, skipped, quoteLogs := updateQuotes(&state, &http.Client{Timeout: 12 * time.Second}, now)
 	if updated > 0 {
-		appendQuoteDecisionLogs(&state, now)
+		for _, log := range quoteLogs {
+			appendDecisionLog(&state, log)
+		}
 		if err := saveState(state); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to save state")
 			return
@@ -86,9 +97,10 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []QuoteSkip) {
+func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []QuoteSkip, []DecisionLog) {
 	updated := 0
 	skipped := []QuoteSkip{}
+	quoteLogs := []DecisionLog{}
 	cache := make(map[string]quote)
 	fallbackCache, fallbackErr := fetchFallbackQuotes(client, quoteSymbols(state))
 	updateLabel := now.Format("2006-01-02 15:04:05")
@@ -105,7 +117,11 @@ func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []Q
 			continue
 		}
 
+		beforePrice := holding.CurrentPrice
 		applyHoldingQuote(holding, quote, updateLabel)
+		if log := quoteTriggerDecisionLog(state, holding.Symbol, holding.Name, holding.Currency, beforePrice, holding.CurrentPrice, holding.IntrinsicValue, holding.CurrentPriceDate, holding.PreviousCloseDate, now); log != nil {
+			quoteLogs = append(quoteLogs, *log)
+		}
 		updated++
 	}
 
@@ -121,11 +137,15 @@ func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []Q
 			continue
 		}
 
+		beforePrice := candidate.CurrentPrice
 		applyCandidateQuote(candidate, quote, updateLabel)
+		if log := quoteTriggerDecisionLog(state, candidate.Symbol, candidate.Name, candidate.Currency, beforePrice, candidate.CurrentPrice, candidate.IntrinsicValue, candidate.CurrentPriceDate, candidate.PreviousCloseDate, now); log != nil {
+			quoteLogs = append(quoteLogs, *log)
+		}
 		updated++
 	}
 
-	return updated, skipped
+	return updated, skipped, quoteLogs
 }
 
 func quoteSymbols(state *AppState) []string {
@@ -182,6 +202,7 @@ func applyHoldingQuote(holding *Holding, quote quote, updateLabel string) {
 	holding.CurrentPriceDate = quote.PriceDate
 	holding.PreviousCloseDate = quote.PreviousCloseDate
 	holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, holding.MarginOfSafety)
+	applyDividendQuote(&holding.Dividend, quote, holding.Currency)
 	if strings.TrimSpace(holding.Currency) == "" {
 		holding.Currency = strings.ToUpper(strings.TrimSpace(quote.Currency))
 	}
@@ -194,6 +215,7 @@ func applyCandidateQuote(candidate *Candidate, quote quote, updateLabel string) 
 	candidate.CurrentPriceDate = quote.PriceDate
 	candidate.PreviousCloseDate = quote.PreviousCloseDate
 	candidate.MarginOfSafety = marginOfSafetyFromPrice(candidate.IntrinsicValue, candidate.CurrentPrice, candidate.MarginOfSafety)
+	applyDividendQuote(&candidate.Dividend, quote, candidate.Currency)
 	if strings.TrimSpace(candidate.Currency) == "" {
 		candidate.Currency = strings.ToUpper(strings.TrimSpace(quote.Currency))
 	}
@@ -203,6 +225,96 @@ func applyCandidateQuote(candidate *Candidate, quote quote, updateLabel string) 
 func quoteUpdateLabel(updateLabel string, quote quote) string {
 	sourceName := firstNonEmpty(quote.SourceName, "Yahoo Finance 日线收盘价")
 	return fmt.Sprintf("%s；行情源 %s；代码 %s；币种 %s；日期 %s/%s", updateLabel, sourceName, quote.SourceSymbol, quote.Currency, quote.PreviousCloseDate, quote.PriceDate)
+}
+
+func quoteTriggerDecisionLog(state *AppState, symbol string, name string, currency string, beforePrice float64, currentPrice float64, intrinsicValue *float64, currentDate string, previousDate string, now time.Time) *DecisionLog {
+	trigger := quoteTriggerText(beforePrice, currentPrice, intrinsicValue)
+	if strings.TrimSpace(trigger) == "" {
+		return nil
+	}
+	_, _, _, decision, discipline := decisionLogContext(state, symbol)
+	return &DecisionLog{
+		Date:       now.Format("2006-01-02 15:04:05"),
+		Type:       "quote",
+		Symbol:     symbol,
+		Name:       name,
+		Price:      pricePointer(currentPrice),
+		Currency:   currency,
+		Decision:   firstNonEmpty(decision, "行情触发"),
+		Discipline: firstNonEmpty(discipline, "只在纪律区间变化时记录行情日志"),
+		Detail:     fmt.Sprintf("%s；现价 %s %.4f；前值 %.4f；今收 %s；昨收 %s", trigger, strings.ToUpper(currency), currentPrice, beforePrice, firstNonEmpty(currentDate, "未知"), firstNonEmpty(previousDate, "未知")),
+	}
+}
+
+func quoteTriggerText(beforePrice float64, currentPrice float64, intrinsicValue *float64) string {
+	beforeZone := quotePriceZone(beforePrice, intrinsicValue)
+	currentZone := quotePriceZone(currentPrice, intrinsicValue)
+	if beforeZone != "" && currentZone != "" && beforeZone != currentZone {
+		return fmt.Sprintf("进入/离开关键区间：%s -> %s", beforeZone, currentZone)
+	}
+	beforeMargin := quoteMarginZone(beforePrice, intrinsicValue)
+	currentMargin := quoteMarginZone(currentPrice, intrinsicValue)
+	if beforeMargin != "" && currentMargin != "" && beforeMargin != currentMargin && (currentMargin == "安全边际达标" || currentMargin == "高于内在价值") {
+		return fmt.Sprintf("安全边际跨区：%s -> %s", beforeMargin, currentMargin)
+	}
+	return ""
+}
+
+func quotePriceZone(price float64, intrinsicValue *float64) string {
+	if price <= 0 || intrinsicValue == nil || *intrinsicValue <= 0 {
+		return ""
+	}
+	initialBuyPrice := *intrinsicValue * (1 - defaultSafetyMarginTarget)
+	watchPrice := initialBuyPrice * 1.05
+	aggressiveBuyPrice := initialBuyPrice * 0.9
+	switch {
+	case price <= aggressiveBuyPrice:
+		return "重仓区"
+	case price <= initialBuyPrice:
+		return "首买区"
+	case price <= watchPrice:
+		return "观察区"
+	default:
+		return "等待区"
+	}
+}
+
+func quoteMarginZone(price float64, intrinsicValue *float64) string {
+	if price <= 0 || intrinsicValue == nil || *intrinsicValue <= 0 {
+		return ""
+	}
+	margin := (*intrinsicValue - price) / *intrinsicValue
+	switch {
+	case margin >= defaultSafetyMarginTarget:
+		return "安全边际达标"
+	case margin < 0:
+		return "高于内在价值"
+	default:
+		return "安全边际不足"
+	}
+}
+
+func applyDividendQuote(current **Dividend, quote quote, fallbackCurrency string) {
+	if quote.DividendPerShare == nil || *quote.DividendPerShare <= 0 {
+		return
+	}
+	if *current == nil {
+		*current = &Dividend{}
+	}
+	dividend := *current
+	if dividend.CashDividendTotal != nil && *dividend.CashDividendTotal > 0 {
+		if strings.TrimSpace(dividend.DividendCurrency) == "" {
+			dividend.DividendCurrency = strings.ToUpper(firstNonEmpty(quote.DividendCurrency, quote.Currency, fallbackCurrency))
+		}
+		dividend.DividendYield = nil
+		dividend.EstimatedAnnualCash = nil
+		return
+	}
+	dividend.FiscalYear = firstNonEmpty(quote.DividendFiscalYear, dividend.FiscalYear)
+	dividend.DividendPerShare = quote.DividendPerShare
+	dividend.DividendCurrency = strings.ToUpper(firstNonEmpty(quote.DividendCurrency, quote.Currency, fallbackCurrency))
+	dividend.DividendYield = nil
+	dividend.EstimatedAnnualCash = nil
 }
 
 func fetchQuote(client *http.Client, symbol string, fallbackCache map[string]quote, fallbackErr error) (quote, error) {
@@ -223,7 +335,7 @@ func fetchQuote(client *http.Client, symbol string, fallbackCache map[string]quo
 
 func fetchYahooQuote(client *http.Client, symbol string) (quote, error) {
 	sourceSymbol := yahooSymbol(symbol)
-	endpoint := "https://query1.finance.yahoo.com/v8/finance/chart/" + url.PathEscape(sourceSymbol) + "?range=5d&interval=1d"
+	endpoint := "https://query1.finance.yahoo.com/v8/finance/chart/" + url.PathEscape(sourceSymbol) + "?range=2y&interval=1d&events=div"
 
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -272,15 +384,56 @@ func fetchYahooQuote(client *http.Client, symbol string) (quote, error) {
 
 	priceClose := validCloses[len(validCloses)-1]
 	previousClose := validCloses[len(validCloses)-2]
+	dividendPerShare, dividendFiscalYear := trailingDividendFromEvents(result.Events.Dividends, priceClose.Date, location)
 	return quote{
-		Price:             priceClose.Price,
-		PreviousClose:     previousClose.Price,
-		PriceDate:         priceClose.Date,
-		PreviousCloseDate: previousClose.Date,
-		Currency:          result.Meta.Currency,
-		SourceSymbol:      sourceSymbol,
-		SourceName:        "Yahoo Finance 日线收盘价",
+		Price:              priceClose.Price,
+		PreviousClose:      previousClose.Price,
+		PriceDate:          priceClose.Date,
+		PreviousCloseDate:  previousClose.Date,
+		Currency:           result.Meta.Currency,
+		SourceSymbol:       sourceSymbol,
+		SourceName:         "Yahoo Finance 日线收盘价",
+		DividendPerShare:   dividendPerShare,
+		DividendCurrency:   result.Meta.Currency,
+		DividendFiscalYear: dividendFiscalYear,
 	}, nil
+}
+
+func trailingDividendFromEvents(events map[string]struct {
+	Amount float64 `json:"amount"`
+	Date   int64   `json:"date"`
+}, priceDate string, location *time.Location) (*float64, string) {
+	if len(events) == 0 {
+		return nil, ""
+	}
+	reference, err := time.ParseInLocation("2006-01-02", priceDate, location)
+	if err != nil {
+		reference = time.Now().In(location)
+	}
+	cutoff := reference.AddDate(-1, 0, 0)
+	total := 0.0
+	latest := time.Time{}
+	for _, event := range events {
+		if event.Amount <= 0 || event.Date <= 0 {
+			continue
+		}
+		eventDate := time.Unix(event.Date, 0).In(location)
+		if eventDate.Before(cutoff) || eventDate.After(reference.AddDate(0, 0, 1)) {
+			continue
+		}
+		total += event.Amount
+		if eventDate.After(latest) {
+			latest = eventDate
+		}
+	}
+	if total <= 0 {
+		return nil, ""
+	}
+	labelDate := reference
+	if !latest.IsZero() {
+		labelDate = latest
+	}
+	return &total, "TTM " + labelDate.Format("2006-01-02")
 }
 
 func fetchEastmoneyQuote(client *http.Client, symbol string) (quote, error) {

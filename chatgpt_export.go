@@ -12,7 +12,11 @@ import (
 	"time"
 )
 
-const chatGPTExportTimezone = "Asia/Shanghai"
+const (
+	chatGPTExportTimezone              = "Asia/Shanghai"
+	chatGPTExportBuyProximity          = 0.05
+	chatGPTExportAggressiveBuyDiscount = 0.10
+)
 
 type chatGPTStockRecord struct {
 	Symbol            string
@@ -26,9 +30,12 @@ type chatGPTStockRecord struct {
 	CurrentPriceDate  string
 	PreviousClose     float64
 	PreviousCloseDate string
+	MarketCap         *float64
+	MarketCapCurrency string
 	IntrinsicValue    *float64
 	FairValueRange    string
 	TargetBuyPrice    *float64
+	PriceLevels       *PriceLevels
 	MarginOfSafety    *float64
 	QualityScore      *float64
 	BusinessModel     *float64
@@ -40,6 +47,7 @@ type chatGPTStockRecord struct {
 	UpdatedAt         string
 	Notes             string
 	Reports           []Report
+	Dividend          *Dividend
 	Plan              *PlanItem
 	DecisionLogs      []DecisionLog
 	MarketValueCNY    float64
@@ -193,6 +201,7 @@ func chatGPTHoldingRecord(state AppState, holding Holding, totalAssets float64) 
 	if totalAssets > 0 {
 		weight = marketValue / totalAssets
 	}
+	targetBuyPrice := targetBuyPriceFromIntrinsicValue(holding.IntrinsicValue)
 	return chatGPTStockRecord{
 		Symbol:            holding.Symbol,
 		Name:              holding.Name,
@@ -205,9 +214,12 @@ func chatGPTHoldingRecord(state AppState, holding Holding, totalAssets float64) 
 		CurrentPriceDate:  holding.CurrentPriceDate,
 		PreviousClose:     holding.PreviousClose,
 		PreviousCloseDate: holding.PreviousCloseDate,
+		MarketCap:         holding.MarketCap,
+		MarketCapCurrency: holding.MarketCapCurrency,
 		IntrinsicValue:    holding.IntrinsicValue,
 		FairValueRange:    holding.FairValueRange,
-		TargetBuyPrice:    holding.TargetBuyPrice,
+		TargetBuyPrice:    targetBuyPrice,
+		PriceLevels:       priceLevelsFromTarget(targetBuyPrice),
 		MarginOfSafety:    marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, holding.MarginOfSafety),
 		QualityScore:      holding.QualityScore,
 		BusinessModel:     holding.BusinessModel,
@@ -219,6 +231,7 @@ func chatGPTHoldingRecord(state AppState, holding Holding, totalAssets float64) 
 		UpdatedAt:         holding.UpdatedAt,
 		Notes:             holding.Notes,
 		Reports:           holding.Reports,
+		Dividend:          holding.Dividend,
 		Plan:              findPlanForDecisionLog(&state, holding.Symbol, holding.Name),
 		DecisionLogs:      chatGPTLogsForStock(state.DecisionLogs, holding.Symbol),
 		MarketValueCNY:    marketValue,
@@ -230,6 +243,7 @@ func chatGPTHoldingRecord(state AppState, holding Holding, totalAssets float64) 
 }
 
 func chatGPTCandidateRecord(state AppState, candidate Candidate, totalAssets float64) chatGPTStockRecord {
+	targetBuyPrice := targetBuyPriceFromIntrinsicValue(candidate.IntrinsicValue)
 	return chatGPTStockRecord{
 		Symbol:            candidate.Symbol,
 		Name:              candidate.Name,
@@ -240,9 +254,12 @@ func chatGPTCandidateRecord(state AppState, candidate Candidate, totalAssets flo
 		CurrentPriceDate:  candidate.CurrentPriceDate,
 		PreviousClose:     candidate.PreviousClose,
 		PreviousCloseDate: candidate.PreviousCloseDate,
+		MarketCap:         candidate.MarketCap,
+		MarketCapCurrency: candidate.MarketCapCurrency,
 		IntrinsicValue:    candidate.IntrinsicValue,
 		FairValueRange:    candidate.FairValueRange,
-		TargetBuyPrice:    candidate.TargetBuyPrice,
+		TargetBuyPrice:    targetBuyPrice,
+		PriceLevels:       priceLevelsFromTarget(targetBuyPrice),
 		MarginOfSafety:    marginOfSafetyFromPrice(candidate.IntrinsicValue, candidate.CurrentPrice, candidate.MarginOfSafety),
 		QualityScore:      candidate.QualityScore,
 		BusinessModel:     candidate.BusinessModel,
@@ -254,6 +271,7 @@ func chatGPTCandidateRecord(state AppState, candidate Candidate, totalAssets flo
 		UpdatedAt:         candidate.UpdatedAt,
 		Notes:             candidate.Notes,
 		Reports:           candidate.Reports,
+		Dividend:          candidate.Dividend,
 		Plan:              findPlanForDecisionLog(&state, candidate.Symbol, candidate.Name),
 		DecisionLogs:      chatGPTLogsForStock(state.DecisionLogs, candidate.Symbol),
 	}
@@ -624,12 +642,12 @@ func renderImportSchema(meta string) string {
   "currency": "HKD",
   "industry": "互联网平台/游戏/广告/金融科技",
   "status": "未达标（安全边际<15%）",
-  "action": "继续持有；新资金暂不追买，等待目标价附近再分批",
+  "action": "继续持有；新资金暂不追买，等待安全边际达标后再分批",
   "risk": "政策、地缘、AI投入回报周期和广告/游戏周期波动需折价",
   "valuation": {
     "intrinsicValue": 508,
     "fairValueRange": "HK$480-560",
-    "targetBuyPrice": 432,
+    "targetBuyPrice": null,
     "marginOfSafety": 0.09
   },
   "quality": {
@@ -642,7 +660,7 @@ func renderImportSchema(meta string) string {
   "plan": {
     "rank": 1,
     "priority": "观察/低优先级",
-    "advice": "等待≤HK$432，HK$400-430可分批",
+    "advice": "等待安全边际达标后再分批，未达标不追买",
     "discipline": "优秀资产要求≥15%安全边际；未达标不追买"
   },
   "notes": "总结关键财务事实、估值假设、研究来源时点和需要跟踪的变化。"
@@ -653,7 +671,10 @@ func renderImportSchema(meta string) string {
 
 - symbol 必填，使用网站现有代码格式，例如 0700.HK、000333.SZ。
 - 金额字段使用该股票交易货币，不要换算成人民币，除非字段名明确写 CNY。
+- valuation.intrinsicValue 是核心估值输入；targetBuyPrice、priceLevels、dividend、dividendYield、estimatedAnnualCash 不需要提供，网站会自行计算或抓取。
 - marginOfSafety 使用小数，例如 0.25 表示 25%。
+- 首买价默认按 intrinsicValue × 75% 计算，观察价为首买价 × 105%，重仓价为首买价 × 90%。
+- 股息数据由“更新行情”尽量从行情源抓取；股息率按最新完整财年现金分红总额 ÷ 公司总市值计算，综合回报率按现金分红总额 + 回购金额 ÷ 公司总市值计算。
 - quality.totalScore 应等于 businessModel + moat + governance + financialQuality。
 - asOf 必须为 YYYY-MM-DD。
 - plan 不要写 symbol；网站会用顶层 symbol 关联执行计划。
@@ -688,7 +709,18 @@ func renderStockMarkdown(meta string, record chatGPTStockRecord) string {
 	builder.WriteString(fmt.Sprintf("| 内在价值 | %s |\n", formatFloatPtr(record.IntrinsicValue)))
 	builder.WriteString(fmt.Sprintf("| 公允区间 | %s |\n", mdCell(record.FairValueRange)))
 	builder.WriteString(fmt.Sprintf("| 目标买入价 | %s |\n", formatFloatPtr(record.TargetBuyPrice)))
+	builder.WriteString(fmt.Sprintf("| 观察价 | %s |\n", formatPriceLevel(record.PriceLevels, "watch")))
+	builder.WriteString(fmt.Sprintf("| 首买价 | %s |\n", formatPriceLevel(record.PriceLevels, "initial")))
+	builder.WriteString(fmt.Sprintf("| 重仓价 | %s |\n", formatPriceLevel(record.PriceLevels, "aggressive")))
 	builder.WriteString(fmt.Sprintf("| 安全边际 | %s |\n", formatPercentPtr(record.MarginOfSafety)))
+
+	builder.WriteString("\n## 股息与现金流\n\n")
+	builder.WriteString("| 项目 | 数值 |\n| --- | --- |\n")
+	builder.WriteString(fmt.Sprintf("| 财年 | %s |\n", mdCell(dividendFiscalYear(record.Dividend))))
+	builder.WriteString(fmt.Sprintf("| 每股分红 | %s |\n", formatDividendPerShare(record.Dividend)))
+	builder.WriteString(fmt.Sprintf("| 股息率 | %s |\n", formatStockDividendYield(record)))
+	builder.WriteString(fmt.Sprintf("| 综合回报率 | %s |\n", formatShareholderReturnYield(record)))
+	builder.WriteString(fmt.Sprintf("| 预估年度现金 | %s |\n", formatStockEstimatedAnnualCash(record)))
 
 	builder.WriteString("\n## 质量\n\n")
 	builder.WriteString("| 维度 | 分数 |\n| --- | ---: |\n")
@@ -882,6 +914,137 @@ func formatFloatPtr(value *float64) string {
 		return "-"
 	}
 	return strconv.FormatFloat(*value, 'f', 2, 64)
+}
+
+func priceLevelsFromTarget(targetBuyPrice *float64) *PriceLevels {
+	if targetBuyPrice == nil || *targetBuyPrice <= 0 {
+		return nil
+	}
+	watchPrice := *targetBuyPrice * (1 + chatGPTExportBuyProximity)
+	initialBuyPrice := *targetBuyPrice
+	aggressiveBuyPrice := *targetBuyPrice * (1 - chatGPTExportAggressiveBuyDiscount)
+	return &PriceLevels{
+		WatchPrice:         &watchPrice,
+		InitialBuyPrice:    &initialBuyPrice,
+		AggressiveBuyPrice: &aggressiveBuyPrice,
+	}
+}
+
+func formatPriceLevel(levels *PriceLevels, level string) string {
+	if levels == nil {
+		return "-"
+	}
+	switch level {
+	case "watch":
+		return formatFloatPtr(levels.WatchPrice)
+	case "initial":
+		return formatFloatPtr(levels.InitialBuyPrice)
+	case "aggressive":
+		return formatFloatPtr(levels.AggressiveBuyPrice)
+	default:
+		return "-"
+	}
+}
+
+func dividendFiscalYear(dividend *Dividend) string {
+	if dividend == nil || strings.TrimSpace(dividend.FiscalYear) == "" {
+		return "-"
+	}
+	return strings.TrimSpace(dividend.FiscalYear)
+}
+
+func dividendCurrencyCode(dividend *Dividend) string {
+	if dividend == nil || strings.TrimSpace(dividend.DividendCurrency) == "" {
+		return ""
+	}
+	return strings.ToUpper(strings.TrimSpace(dividend.DividendCurrency))
+}
+
+func cashDividendCurrencyCode(dividend *Dividend) string {
+	if dividend == nil || strings.TrimSpace(dividend.CashDividendCurrency) == "" {
+		return dividendCurrencyCode(dividend)
+	}
+	return strings.ToUpper(strings.TrimSpace(dividend.CashDividendCurrency))
+}
+
+func formatDividendPerShare(dividend *Dividend) string {
+	if dividend == nil || dividend.DividendPerShare == nil {
+		return "-"
+	}
+	currency := dividendCurrencyCode(dividend)
+	if currency == "" {
+		return formatFloatPtr(dividend.DividendPerShare)
+	}
+	return formatCurrency(*dividend.DividendPerShare, currency)
+}
+
+func formatStockDividendYield(record chatGPTStockRecord) string {
+	if record.Dividend == nil {
+		return "-"
+	}
+	if record.Dividend.CashDividendTotal != nil && record.MarketCap != nil && *record.Dividend.CashDividendTotal > 0 && *record.MarketCap > 0 {
+		dividendCurrency := cashDividendCurrencyCode(record.Dividend)
+		marketCapCurrency := firstNonEmpty(record.MarketCapCurrency, record.Currency)
+		if dividendCurrency != "" && marketCapCurrency != "" && !strings.EqualFold(dividendCurrency, marketCapCurrency) {
+			return "-"
+		}
+		value := *record.Dividend.CashDividendTotal / *record.MarketCap
+		return formatPercentPtr(&value)
+	}
+	if record.Dividend.DividendPerShare == nil || record.CurrentPrice <= 0 {
+		return "-"
+	}
+	dividendCurrency := dividendCurrencyCode(record.Dividend)
+	if dividendCurrency != "" && record.Currency != "" && !strings.EqualFold(dividendCurrency, record.Currency) {
+		return "-"
+	}
+	value := *record.Dividend.DividendPerShare / record.CurrentPrice
+	return formatPercentPtr(&value)
+}
+
+func formatShareholderReturnYield(record chatGPTStockRecord) string {
+	if record.Dividend == nil {
+		return "-"
+	}
+	if record.Dividend.CashDividendTotal != nil && record.MarketCap != nil && *record.Dividend.CashDividendTotal > 0 && *record.MarketCap > 0 {
+		dividendCurrency := cashDividendCurrencyCode(record.Dividend)
+		marketCapCurrency := firstNonEmpty(record.MarketCapCurrency, record.Currency)
+		if dividendCurrency != "" && marketCapCurrency != "" && !strings.EqualFold(dividendCurrency, marketCapCurrency) {
+			return "-"
+		}
+		buyback := 0.0
+		if record.Dividend.BuybackAmount != nil && *record.Dividend.BuybackAmount > 0 {
+			buybackCurrency := firstNonEmpty(record.Dividend.BuybackCurrency, record.Currency)
+			if buybackCurrency != "" && marketCapCurrency != "" && !strings.EqualFold(buybackCurrency, marketCapCurrency) {
+				return "-"
+			}
+			buyback = *record.Dividend.BuybackAmount
+		}
+		value := (*record.Dividend.CashDividendTotal + buyback) / *record.MarketCap
+		return formatPercentPtr(&value)
+	}
+	return formatStockDividendYield(record)
+}
+
+func formatStockEstimatedAnnualCash(record chatGPTStockRecord) string {
+	if record.Dividend == nil {
+		return "-"
+	}
+	currency := dividendCurrencyCode(record.Dividend)
+	if record.Dividend.DividendPerShare != nil && record.Shares > 0 {
+		value := *record.Dividend.DividendPerShare * record.Shares
+		if currency == "" {
+			return formatNumber(value)
+		}
+		return formatCurrency(value, currency)
+	}
+	if record.Dividend.EstimatedAnnualCash == nil {
+		return "-"
+	}
+	if currency == "" {
+		return formatFloatPtr(record.Dividend.EstimatedAnnualCash)
+	}
+	return formatCurrency(*record.Dividend.EstimatedAnnualCash, currency)
 }
 
 func formatScorePtr(value *float64) string {

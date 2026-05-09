@@ -7,416 +7,7 @@
     "USD": 7.1
   },
   "trades": [],
-  "decisionLogs": [
-    {
-      "id": 1778232911162234000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "0700.HK",
-      "name": "腾讯控股",
-      "price": 471.3999938964844,
-      "currency": "HKD",
-      "decision": "继续持有；新资金暂不追买，等待HK$400-430再分批加仓",
-      "discipline": "优秀资产要求\u003e20%安全边际；当前仅约12%，持有合格但买入不达标",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163604000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "000333.SZ",
-      "name": "美的集团",
-      "price": 80.4000015258789,
-      "currency": "CNY",
-      "decision": "继续持有；新资金暂不追买，等待≤75元再分批",
-      "discipline": "优秀资产要求≥20%安全边际；当前约80.5元安全边际不足，不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163611000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "002415.SZ",
-      "name": "海康威视",
-      "price": 35.54999923706055,
-      "currency": "CNY",
-      "decision": "重点预期差候选/核心替补边缘；可小仓验证，不宜重仓；Q2验证后再升级",
-      "discipline": "质量分84，合格候选要求≥25%安全边际",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163617000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "600887.SH",
-      "name": "伊利股份",
-      "price": 27.520000457763672,
-      "currency": "CNY",
-      "decision": "放入核心替补；新资金暂不买入，等待22-24元区间再复盘",
-      "discipline": "合格核心候选要求≥25%安全边际；当前价接近中性内在价值，不满足买入纪律",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163620000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "600036.SH",
-      "name": "招商银行",
-      "price": 37.939998626708984,
-      "currency": "CNY",
-      "decision": "已有持仓继续持有；新资金暂不追买，等待34-36元再复核分批",
-      "discipline": "优秀资产要求≥20%安全边际；当前约15.7%，未达标不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163626000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "0696.HK",
-      "name": "中国民航信息网络",
-      "price": 10,
-      "currency": "HKD",
-      "decision": "放入核心替补；暂不追买；已有仓位继续持有",
-      "discipline": "75-84分资产要求≥25%安全边际；当前未达标不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163629000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "0506.HK",
-      "name": "中国食品",
-      "price": 3.680000066757202,
-      "currency": "HKD",
-      "decision": "继续持有；暂不加仓，等待HK$3.50-3.55以下且基本面未恶化再考虑补仓",
-      "discipline": "质量分82要求≥25%安全边际；当前约21%，持有收息但不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163633000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "2669.HK",
-      "name": "中海物业",
-      "price": 4.159999847412109,
-      "currency": "HKD",
-      "decision": "减仓/降为观察仓；不加仓，反弹分批降权",
-      "discipline": "75-84分合格候选通常要求≥25%安全边际；当前约13%，不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163636000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "6049.HK",
-      "name": "保利物业",
-      "price": 32.34000015258789,
-      "currency": "HKD",
-      "decision": "放入核心替补观察；暂不主动买入；已有仓位控制在物业卫星仓范围内",
-      "discipline": "合格核心候选要求约25%安全边际；未达标不追买，优先等待更低买点或基本面改善",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163651000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "0883.HK",
-      "name": "中国海洋石油",
-      "price": 26.440000534057617,
-      "currency": "HKD",
-      "decision": "继续持有；新资金暂不加仓，等待HK$22-24以下再重新评估分批买入",
-      "discipline": "合格核心候选要求≥25%安全边际；未达标不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163655000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "1448.HK",
-      "name": "福寿园",
-      "price": 2.640000104904175,
-      "currency": "HKD",
-      "decision": "暂不行动；不买入；不纳入核心替补，等待2025年报、审计意见、法证调查结论和复牌后再重估",
-      "discipline": "未达标（停牌、年报延迟、治理与财务可靠性风险未解除）",
-      "detail": "今收 2026-05-07；昨收 2026-05-06"
-    },
-    {
-      "id": 1778232911163659000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "7489.HK",
-      "name": "岚图汽车",
-      "price": 6.079999923706055,
-      "currency": "HKD",
-      "decision": "放入普通候选池观察；当前不买入，等待扣非利润和自由现金流验证",
-      "discipline": "质量分低于75原则上不进入核心资产池；安全边际不足时不试仓",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163664000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "600690.SH",
-      "name": "海尔智家A",
-      "price": 21.389999389648438,
-      "currency": "CNY",
-      "decision": "放入普通候选池观察；A股暂不追，H股赔率更优",
-      "discipline": "候选池",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163669000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "600519.SH",
-      "name": "贵州茅台",
-      "price": 1372.989990234375,
-      "currency": "CNY",
-      "decision": "放入核心替补候选池；当前不买入，等待≤¥1100或批价、动销、利润增速重新确认后再评估",
-      "discipline": "优秀核心资产要求≥20%安全边际；白酒需求未确认修复前，不因品牌稀缺性放松估值纪律",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163673000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "3613.HK",
-      "name": "同仁堂国药",
-      "price": 7.440000057220459,
-      "currency": "HKD",
-      "decision": "放入普通候选池观察；当前暂不买入，等待HK$6.2-6.5以下或2026业绩恢复确认",
-      "discipline": "质量分84，要求约25%安全边际；当前约10%安全边际不足，不轻易试仓",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163676000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "0883.HK",
-      "name": "中国海洋石油",
-      "price": 26.440000534057617,
-      "currency": "HKD",
-      "decision": "已有低成本仓继续持有；新资金暂不追买，等待≤HK$22再分批",
-      "discipline": "合格核心候选要求≥25%安全边际；未达标不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163679000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "6049.HK",
-      "name": "保利物业",
-      "price": 32.34000015258789,
-      "currency": "HKD",
-      "decision": "放入核心替补；已有持仓继续持有；无持仓暂不行动，等待HK$28-30再评估",
-      "discipline": "合格核心候选要求约25%安全边际；未达标不追买，优先等待更低买点或基本面改善",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778232911163683000,
-      "date": "2026-05-08 17:35:05",
-      "type": "quote",
-      "symbol": "2669.HK",
-      "name": "中海物业",
-      "price": 4.159999847412109,
-      "currency": "HKD",
-      "decision": "放入普通候选池观察；暂不新买；已持有可继续持有但不加仓",
-      "discipline": "75-84分合格候选通常要求≥25%安全边际；当前约13%，不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234549929525000,
-      "date": "2026-05-08 18:02:29",
-      "type": "research",
-      "symbol": "600519.SH",
-      "name": "贵州茅台",
-      "price": 1372.989990234375,
-      "currency": "CNY",
-      "decision": "已有仓位继续持有；新资金暂不买入；放入核心替补，等待纪律买入区间",
-      "discipline": "优秀核心资产要求≥20%安全边际；当前仅约1.9%，未达标不买入",
-      "detail": "candidate；updated candidate 600519.SH (贵州茅台)"
-    },
-    {
-      "id": 1778234567352783000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "0700.HK",
-      "name": "腾讯控股",
-      "price": 471.3999938964844,
-      "currency": "HKD",
-      "decision": "继续持有；新资金暂不追买，等待HK$400-430再分批加仓",
-      "discipline": "优秀资产要求\u003e20%安全边际；当前仅约12%，持有合格但买入不达标",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352789000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "000333.SZ",
-      "name": "美的集团",
-      "price": 80.4000015258789,
-      "currency": "CNY",
-      "decision": "继续持有；新资金暂不追买，等待≤75元再分批",
-      "discipline": "优秀资产要求≥20%安全边际；当前约80.5元安全边际不足，不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352794000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "002415.SZ",
-      "name": "海康威视",
-      "price": 35.54999923706055,
-      "currency": "CNY",
-      "decision": "重点预期差候选/核心替补边缘；可小仓验证，不宜重仓；Q2验证后再升级",
-      "discipline": "质量分84，合格候选要求≥25%安全边际",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352798000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "600887.SH",
-      "name": "伊利股份",
-      "price": 27.520000457763672,
-      "currency": "CNY",
-      "decision": "放入核心替补；新资金暂不买入，等待22-24元区间再复盘",
-      "discipline": "合格核心候选要求≥25%安全边际；当前价接近中性内在价值，不满足买入纪律",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352800000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "600036.SH",
-      "name": "招商银行",
-      "price": 37.939998626708984,
-      "currency": "CNY",
-      "decision": "已有持仓继续持有；新资金暂不追买，等待34-36元再复核分批",
-      "discipline": "优秀资产要求≥20%安全边际；当前约15.7%，未达标不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352806000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "0696.HK",
-      "name": "中国民航信息网络",
-      "price": 10,
-      "currency": "HKD",
-      "decision": "放入核心替补；暂不追买；已有仓位继续持有",
-      "discipline": "75-84分资产要求≥25%安全边际；当前未达标不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352811000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "0506.HK",
-      "name": "中国食品",
-      "price": 3.680000066757202,
-      "currency": "HKD",
-      "decision": "继续持有；暂不加仓，等待HK$3.50-3.55以下且基本面未恶化再考虑补仓",
-      "discipline": "质量分82要求≥25%安全边际；当前约21%，持有收息但不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352815000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "2669.HK",
-      "name": "中海物业",
-      "price": 4.159999847412109,
-      "currency": "HKD",
-      "decision": "放入普通候选池观察；暂不新买；已持有可继续持有但不加仓",
-      "discipline": "75-84分合格候选通常要求≥25%安全边际；当前约13%，不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352822000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "6049.HK",
-      "name": "保利物业",
-      "price": 32.34000015258789,
-      "currency": "HKD",
-      "decision": "放入核心替补；已有持仓继续持有；无持仓暂不行动，等待HK$28-30再评估",
-      "discipline": "合格核心候选要求约25%安全边际；未达标不追买，优先等待更低买点或基本面改善",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352826000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "0883.HK",
-      "name": "中国海洋石油",
-      "price": 26.440000534057617,
-      "currency": "HKD",
-      "decision": "已有低成本仓继续持有；新资金暂不追买，等待≤HK$22再分批",
-      "discipline": "合格核心候选要求≥25%安全边际；未达标不追买",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352832000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "1448.HK",
-      "name": "福寿园",
-      "price": 2.640000104904175,
-      "currency": "HKD",
-      "decision": "暂不行动；不买入；不纳入核心替补，等待2025年报、审计意见、法证调查结论和复牌后再重估",
-      "discipline": "未达标（停牌、年报延迟、治理与财务可靠性风险未解除）",
-      "detail": "今收 2026-05-07；昨收 2026-05-06"
-    },
-    {
-      "id": 1778234567352839000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "07489.HK",
-      "name": "岚图汽车",
-      "price": 6.079999923706055,
-      "currency": "HKD",
-      "decision": "放入普通候选池观察；当前不买入，等待扣非利润和自由现金流验证",
-      "discipline": "质量分低于75原则上不进入核心资产池；安全边际不足时不试仓",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352849000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "600690.SH",
-      "name": "海尔智家A",
-      "price": 21.389999389648438,
-      "currency": "CNY",
-      "decision": "放入普通候选池观察；A股暂不追，H股赔率更优",
-      "discipline": "候选池",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352853000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "600519.SH",
-      "name": "贵州茅台",
-      "price": 1372.989990234375,
-      "currency": "CNY",
-      "decision": "已有仓位继续持有；新资金暂不买入；放入核心替补，等待纪律买入区间",
-      "discipline": "优秀核心资产要求≥20%安全边际；当前仅约1.9%，未达标不买入",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    },
-    {
-      "id": 1778234567352860000,
-      "date": "2026-05-08 18:02:41",
-      "type": "quote",
-      "symbol": "03613.HK",
-      "name": "同仁堂国药",
-      "price": 7.440000057220459,
-      "currency": "HKD",
-      "decision": "放入普通候选池观察；当前暂不买入，等待HK$6.2-6.5以下或2026业绩恢复确认",
-      "discipline": "质量分84，要求约25%安全边际；当前约10%安全边际不足，不轻易试仓",
-      "detail": "今收 2026-05-08；昨收 2026-05-07"
-    }
-  ],
+  "decisionLogs": [],
   "holdings": [
     {
       "symbol": "0700.HK",
@@ -425,6 +16,8 @@
       "cost": 480.43,
       "currentPrice": 471.3999938964844,
       "previousClose": 477.3999938964844,
+      "marketCap": 4298225144348.1445,
+      "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "action": "继续持有；新资金暂不追买，等待HK$400-430再分批加仓",
@@ -441,7 +34,7 @@
       "moat": 23,
       "governance": 17,
       "financialQuality": 21,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 0700.HK；币种 HKD；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 0700.HK；币种 HKD；日期 2026-05-07/2026-05-08",
       "notes": "市场价格口径：2026-05-08约HK$470。财务口径：腾讯FY2025，收入RMB7517.66亿，同比+14%；Non-IFRS归母净利RMB2596.26亿；自由现金流RMB1826亿；净现金RMB1071亿；2026-04-30股本约91.18亿股。估值采用Non-IFRS PE、P/FCF、DCF/SOTP交叉验证，1 RMB≈HK$1.15；2026Q1尚未披露，AI capex投入回报是主要复盘变量。",
       "reports": [
         {
@@ -500,7 +93,16 @@
           "source": "HKEXnews",
           "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0827/2024082701154.pdf"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 5.3,
+        "dividendCurrency": "HKD",
+        "cashDividendTotal": 48000000000,
+        "cashDividendCurrency": "HKD",
+        "buybackAmount": 80000000000,
+        "buybackCurrency": "HKD"
+      }
     },
     {
       "symbol": "000333.SZ",
@@ -509,6 +111,8 @@
       "cost": 79.638,
       "currentPrice": 80.4000015258789,
       "previousClose": 79.80999755859375,
+      "marketCap": 611602811607.3608,
+      "marketCapCurrency": "CNY",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "action": "继续持有；新资金暂不追买，等待≤75元再分批",
@@ -525,7 +129,7 @@
       "moat": 22,
       "governance": 17,
       "financialQuality": 23,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 000333.SZ；币种 CNY；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 000333.SZ；币种 CNY；日期 2026-05-07/2026-05-08",
       "notes": "基于2026-05-08 A股收盘约80.51元、2025年报和2026Q1财报。2025收入4564.5亿元、归母净利439.45亿元、经营现金流533.46亿元、FCF约422亿元、EPS5.80元、ROE19.70%。2026Q1收入1311.0亿元、归母净利126.75亿元、扣非净利109.62亿元且同比下滑14.02%。综合价值区间CNY78-102，中枢约94；当前仅约14%安全边际，未达到优秀资产≥20%买入纪律。导入格式遵循Research Bridge schema。",
       "reports": [
         {
@@ -592,7 +196,16 @@
           "source": "巨潮资讯",
           "url": "https://static.cninfo.com.cn/finalpage/2024-08-20/1220909926.PDF"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 4.3,
+        "dividendCurrency": "CNY",
+        "cashDividendTotal": 32360630265,
+        "cashDividendCurrency": "CNY",
+        "buybackAmount": 11605319584,
+        "buybackCurrency": "CNY"
+      }
     },
     {
       "symbol": "002415.SZ",
@@ -601,6 +214,8 @@
       "cost": 34.54,
       "currentPrice": 35.54999923706055,
       "previousClose": 35.959999084472656,
+      "marketCap": 325811176610.2579,
+      "marketCapCurrency": "CNY",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "action": "重点预期差候选/核心替补边缘；可小仓验证，不宜重仓；Q2验证后再升级",
@@ -617,7 +232,7 @@
       "moat": 23,
       "governance": 16,
       "financialQuality": 20,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 002415.SZ；币种 CNY；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 002415.SZ；币种 CNY；日期 2026-05-07/2026-05-08",
       "notes": "FY2025：营收约RMB925.08亿、归母净利约RMB141.95亿；2026Q1归母净利同比+36.42%。",
       "reports": [
         {
@@ -684,7 +299,16 @@
           "source": "巨潮资讯",
           "url": "https://static.cninfo.com.cn/finalpage/2024-08-17/1220894375.PDF"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 1.15,
+        "dividendCurrency": "CNY",
+        "cashDividendTotal": 10539602282.5,
+        "cashDividendCurrency": "CNY",
+        "buybackAmount": 2028000000,
+        "buybackCurrency": "CNY"
+      }
     },
     {
       "symbol": "600887.SH",
@@ -693,6 +317,8 @@
       "cost": 26.469,
       "currentPrice": 27.520000457763672,
       "previousClose": 27.530000686645508,
+      "marketCap": 174073928451.3603,
+      "marketCapCurrency": "CNY",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "action": "放入核心替补；新资金暂不买入，等待22-24元区间再复盘",
@@ -709,7 +335,7 @@
       "moat": 21,
       "governance": 16,
       "financialQuality": 21,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 600887.SS；币种 CNY；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 600887.SS；币种 CNY；日期 2026-05-07/2026-05-08",
       "notes": "基于2025年报、2026年一季报及2026-05-08附近市场价格约27.52元。2025年收入1156.36亿元、归母净利润115.65亿元、EPS 1.83元、ROE 20.87%、经营现金流143.44亿元；2026Q1收入347.41亿元、归母净利润53.95亿元、EPS 0.85元、经营现金流37.35亿元。估值假设采用低个位数收入增长、约10%净利率、成熟消费龙头14-16倍PE及高分红支撑；综合内在价值区间26-32元，中枢约29.5元。",
       "reports": [
         {
@@ -776,7 +402,16 @@
           "source": "巨潮资讯",
           "url": "https://static.cninfo.com.cn/finalpage/2024-08-30/1221051333.PDF"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 1.38,
+        "dividendCurrency": "CNY",
+        "cashDividendTotal": 8728997720.46,
+        "cashDividendCurrency": "CNY",
+        "buybackAmount": 249240096.02,
+        "buybackCurrency": "CNY"
+      }
     },
     {
       "symbol": "600036.SH",
@@ -785,6 +420,8 @@
       "cost": 39.18,
       "currentPrice": 37.939998626708984,
       "previousClose": 37.95000076293945,
+      "marketCap": 956840907467.7526,
+      "marketCapCurrency": "CNY",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "action": "已有持仓继续持有；新资金暂不追买，等待34-36元再复核分批",
@@ -801,7 +438,7 @@
       "moat": 23,
       "governance": 17,
       "financialQuality": 21,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 600036.SS；币种 CNY；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 600036.SS；币种 CNY；日期 2026-05-07/2026-05-08",
       "notes": "截至2026-05-08，A股价格37.94元，约6.64x TTM PE、约0.85-0.87x PB，2025年度股息2.016元。2026Q1营收869.40亿元，同比+3.81%；归母净利润378.52亿元，同比+1.52%；年化ROAE 13.48%；不良率0.94%，拨备覆盖率387.76%。估值假设为ROAE中枢12.5%-13.5%、合理PB约0.95-1.10x，综合内在价值区间40-50元，中性值45元。",
       "reports": [
         {
@@ -868,7 +505,14 @@
           "source": "巨潮资讯",
           "url": "https://static.cninfo.com.cn/finalpage/2024-08-30/1221051750.PDF"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 2.016,
+        "dividendCurrency": "CNY",
+        "cashDividendTotal": 50843000000,
+        "cashDividendCurrency": "CNY"
+      }
     },
     {
       "symbol": "0696.HK",
@@ -877,6 +521,8 @@
       "cost": 10.648,
       "currentPrice": 10,
       "previousClose": 10.109999656677246,
+      "marketCap": 29260000000,
+      "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "action": "放入核心替补；暂不追买；已有仓位继续持有",
@@ -893,7 +539,7 @@
       "moat": 22,
       "governance": 16,
       "financialQuality": 19,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 0696.HK；币种 HKD；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 0696.HK；币种 HKD；日期 2026-05-07/2026-05-08",
       "notes": "基于2025年报和2026-05-08约HK$10.06价格测算：2025收入RMB87.66亿、归母净利RMB23.42亿、EPS RMB0.80、经营现金流RMB29.24亿、资本开支RMB9.01亿；综合内在价值区间HK$11.5-13.5。",
       "reports": [
         {
@@ -928,7 +574,14 @@
           "source": "HKEXnews",
           "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0920/2024092000452.pdf"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 0.276,
+        "dividendCurrency": "CNY",
+        "cashDividendTotal": 807576000,
+        "cashDividendCurrency": "CNY"
+      }
     },
     {
       "symbol": "0506.HK",
@@ -937,6 +590,8 @@
       "cost": 4.041,
       "currentPrice": 3.680000066757202,
       "previousClose": 3.7100000381469727,
+      "marketCap": 10292960186.7199,
+      "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "action": "继续持有；暂不加仓，等待HK$3.50-3.55以下且基本面未恶化再考虑补仓",
@@ -953,7 +608,7 @@
       "moat": 21,
       "governance": 15,
       "financialQuality": 22,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 0506.HK；币种 HKD；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 0506.HK；币种 HKD；日期 2026-05-07/2026-05-08",
       "notes": "2026-05-08股价约HK$3.69，市值约HK$10.32bn；FY2025收入RMB220.70亿，归母净利RMB8.62亿，EPS RMB0.3082，拟派末期股息RMB0.154/股；公司净现金约RMB45.49亿，无计息借款，经营现金流RMB32.29亿，简算自由现金流约RMB21.69亿，但扣少数股东股息后普通股东现金流约RMB10.19亿。估值以成熟低增长装瓶商为前提，综合内在价值区间HK$4.20-5.20，中枢HK$4.70。",
       "reports": [
         {
@@ -988,7 +643,14 @@
           "source": "HKEXnews",
           "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0912/2024091200473.pdf"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 0.154,
+        "dividendCurrency": "CNY",
+        "cashDividendTotal": 430738000,
+        "cashDividendCurrency": "CNY"
+      }
     },
     {
       "symbol": "2669.HK",
@@ -997,6 +659,8 @@
       "cost": 4.468,
       "currentPrice": 4.159999847412109,
       "previousClose": 4.039999961853027,
+      "marketCap": 13673339012.0649,
+      "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "action": "放入普通候选池观察；暂不新买；已持有可继续持有但不加仓",
@@ -1013,7 +677,7 @@
       "moat": 18,
       "governance": 16,
       "financialQuality": 20,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 2669.HK；币种 HKD；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 2669.HK；币种 HKD；日期 2026-05-07/2026-05-08",
       "notes": "基于2025年年报和2026-05-08附近市场价格约HK$4.16估算。2025年收入约RMB149.60亿，同比+6.0%；归母净利润约RMB13.67亿，同比-9.7%；EPS约RMB0.4162；现金及银行结余约RMB62.71亿，银行借款约RMB0.50亿；全年股息约HK$0.20，股息率约4.8%。主要折价来自利润率下行、应收账款净额升至约RMB28.77亿、合同资产升至约RMB4.77亿，以及地产链需求疲弱。",
       "reports": [
         {
@@ -1048,7 +712,14 @@
           "source": "HKEXnews",
           "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0923/2024092300291.pdf"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 0.2,
+        "dividendCurrency": "HKD",
+        "cashDividendTotal": 657372092,
+        "cashDividendCurrency": "HKD"
+      }
     },
     {
       "symbol": "6049.HK",
@@ -1057,6 +728,8 @@
       "cost": 32.663,
       "currentPrice": 32.34000015258789,
       "previousClose": 31.799999237060547,
+      "marketCap": 17894802240.432,
+      "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "action": "放入核心替补；已有持仓继续持有；无持仓暂不行动，等待HK$28-30再评估",
@@ -1073,7 +746,7 @@
       "moat": 20,
       "governance": 16,
       "financialQuality": 21,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 6049.HK；币种 HKD；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 6049.HK；币种 HKD；日期 2026-05-07/2026-05-08",
       "notes": "2026-05-08收盘价约HK$32.34；2025年收入RMB171.26亿、归母净利RMB15.49亿、EPS RMB2.81、经营现金流RMB18.27亿、年度股息RMB1.401/股、无银行借款。估值以2025年业绩、CNY/HKD约1.1507、约10倍PE和5%股息率为基础；综合内在价值区间HK$31-40，中枢约HK$36.5，当前安全边际约11%，不足以新建核心仓。",
       "reports": [
         {
@@ -1108,7 +781,14 @@
           "source": "HKEXnews",
           "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0926/2024092600509.pdf"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 1.401,
+        "dividendCurrency": "CNY",
+        "cashDividendTotal": 775220093.4,
+        "cashDividendCurrency": "CNY"
+      }
     },
     {
       "symbol": "0883.HK",
@@ -1117,6 +797,8 @@
       "cost": 29.326,
       "currentPrice": 26.440000534057617,
       "previousClose": 26.420000076293945,
+      "marketCap": 1256692008720.6938,
+      "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "action": "已有低成本仓继续持有；新资金暂不追买，等待≤HK$22再分批",
@@ -1133,7 +815,7 @@
       "moat": 20,
       "governance": 15,
       "financialQuality": 23,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 0883.HK；币种 HKD；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 0883.HK；币种 HKD；日期 2026-05-07/2026-05-08",
       "notes": "按H股00883.HK导入；当前价约HK$26.44，2025净利润RMB1220.8亿、EPS RMB2.57、自由现金流约RMB974亿、全年股息HK$1.28，2026Q1归母净利润RMB391.4亿。估值采用中周期油价，不把高油价永久资本化；A股600938.SH因A/H溢价较高暂不作为优先买入标的。",
       "reports": [
         {
@@ -1200,7 +882,14 @@
           "source": "HKEXnews",
           "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0910/2024091000483.pdf"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 1.28,
+        "dividendCurrency": "HKD",
+        "cashDividendTotal": 60838000000,
+        "cashDividendCurrency": "HKD"
+      }
     },
     {
       "symbol": "1448.HK",
@@ -1209,8 +898,10 @@
       "cost": 2.521,
       "currentPrice": 2.640000104904175,
       "previousClose": 2.640000104904175,
-      "currentPriceDate": "2026-05-07",
-      "previousCloseDate": "2026-05-06",
+      "marketCap": 5995440238.2374,
+      "marketCapCurrency": "HKD",
+      "currentPriceDate": "2026-05-08",
+      "previousCloseDate": "2026-05-07",
       "action": "暂不行动；不买入；不纳入核心替补，等待2025年报、审计意见、法证调查结论和复牌后再重估",
       "status": "未达标（停牌、年报延迟、治理与财务可靠性风险未解除）",
       "marginOfSafety": 0.0037735453191792855,
@@ -1225,7 +916,7 @@
       "moat": 16,
       "governance": 5,
       "financialQuality": 19,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 1448.HK；币种 HKD；收盘日 2026-05-06/2026-05-07",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 1448.HK；币种 HKD；日期 2026-05-07/2026-05-08",
       "notes": "计划：剔除/仅风险观察。复牌前不行动；复牌后若审计无保留、调查无重大重述且价格≤HK$2.0-2.2，才重新评估普通候选价值。纪律：质量分低于75且有重大风险否决项；不因低估值或净现金买入，先等风险解除。最新市场状态：股份自2026-03-20起停牌，停牌前最后价约HK$2.64。最新可用财务口径：2024收入约RMB20.77亿，归母净利约RMB3.73亿，EPS约RMB0.164；2025H1收入约RMB6.11亿，归母亏损约RMB2.61亿，EPS约-RMB0.115。核心判断：福寿园当前不是单纯估值杀，而是业绩杀、治理杀和财报可信度风险叠加；内在价值区间仅为压力测试，不作为可执行买入依据。",
       "reports": [
         {
@@ -1252,7 +943,14 @@
           "source": "HKEXnews",
           "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0917/2024091700428.pdf"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2024 ordinary; FY2025 annual delayed",
+        "dividendPerShare": 0.1592,
+        "dividendCurrency": "HKD",
+        "cashDividendTotal": 361543200,
+        "cashDividendCurrency": "HKD"
+      }
     },
     {
       "symbol": "07489.HK",
@@ -1277,7 +975,7 @@
       "moat": 16,
       "governance": 16,
       "financialQuality": 19,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 7489.HK；币种 HKD；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 7489.HK；币种 HKD；日期 2026-05-07/2026-05-08",
       "notes": "2025年收入约人民币348.65亿元，毛利率约20.9%，净利润约人民币10.17亿元，首次年度盈利；2025年交付约150169辆，2026年1-4月交付约49038辆。估值基于HK$5.89附近股价、市值约HK$216.8亿、PE约16.9倍、PB约1.78倍。核心假设是2026年需验证扣非利润、经营现金流和自由现金流质量。",
       "reports": [
         {
@@ -1342,6 +1040,7 @@
     },
     {
       "rank": 6,
+      "symbol": "002415.SZ",
       "name": "海康威视",
       "priority": "重点预期差候选/中优先级",
       "advice": "不重仓；¥35-37仅适合小仓验证，¥30-32更从容；Q2验证后可升核心替补",
@@ -1349,6 +1048,14 @@
     },
     {
       "rank": 7,
+      "symbol": "600690.SH",
+      "name": "海尔智家A",
+      "priority": "核心替补观察；H股优先",
+      "advice": "A股等待≤¥19.5；H股约HK$21-22.5可小仓复核，HK$19-20.5更有吸引力",
+      "discipline": "质量分83要求约25%安全边际；A股未达标不追买，H股仅限小仓验证"
+    },
+    {
+      "rank": 8,
       "symbol": "6049.HK",
       "name": "保利物业",
       "priority": "核心替补/中优先级观察",
@@ -1356,7 +1063,7 @@
       "discipline": "合格核心候选要求约25%安全边际；未达标不追买，优先等待更低买点或基本面改善"
     },
     {
-      "rank": 8,
+      "rank": 9,
       "symbol": "600887.SH",
       "name": "伊利股份",
       "priority": "核心替补/中优先级观察",
@@ -1364,7 +1071,7 @@
       "discipline": "合格核心候选要求≥25%安全边际；当前价接近中性内在价值，不满足买入纪律"
     },
     {
-      "rank": 9,
+      "rank": 10,
       "symbol": "0696.HK",
       "name": "中国民航信息网络",
       "priority": "核心替补/中等优先级",
@@ -1372,7 +1079,7 @@
       "discipline": "75-84分资产要求≥25%安全边际；当前未达标不追买"
     },
     {
-      "rank": 10,
+      "rank": 11,
       "symbol": "2669.HK",
       "name": "中海物业",
       "priority": "普通候选池观察",
@@ -1380,7 +1087,7 @@
       "discipline": "75-84分合格候选通常要求≥25%安全边际；当前约13%，不追买"
     },
     {
-      "rank": 11,
+      "rank": 12,
       "symbol": "0506.HK",
       "name": "中国食品",
       "priority": "核心替补/中等优先级",
@@ -1388,14 +1095,15 @@
       "discipline": "质量分82要求≥25%安全边际；当前约21%，持有收息但不追买"
     },
     {
-      "rank": 12,
+      "rank": 13,
+      "symbol": "07489.HK",
       "name": "岚图汽车",
       "priority": "普通候选池/低优先级",
       "advice": "HK$4.2-4.8才接近可观察买入区；若2026H1扣非利润和自由现金流转正，可重新上修估值",
       "discipline": "质量分低于75原则上不进入核心资产池；安全边际不足时不试仓"
     },
     {
-      "rank": 13,
+      "rank": 14,
       "symbol": "3613.HK",
       "name": "同仁堂国药",
       "priority": "普通候选池/低优先级",
@@ -1407,26 +1115,28 @@
     {
       "symbol": "600690.SH",
       "name": "海尔智家A",
-      "status": "候选池",
-      "action": "放入普通候选池观察；A股暂不追，H股赔率更优",
+      "status": "A股未达标（安全边际约18%\u003c25%）；H股赔率更优",
+      "action": "A股暂不追买；H股可进入第一档小仓复核，但不重仓替代美的",
       "currentPrice": 21.389999389648438,
       "previousClose": 21.440000534057617,
+      "marketCap": 200595414276.123,
+      "marketCapCurrency": "CNY",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "marginOfSafety": 0.1773077157827524,
       "qualityScore": 83,
-      "risk": "",
+      "risk": "2026Q1收入和利润下滑、北美关税与需求、汇率、库存周转、并购整合和白电竞争需折价",
       "industry": "家电/全球化白电/智慧家庭",
       "currency": "CNY",
       "intrinsicValue": 26,
-      "fairValueRange": "¥24-28",
+      "fairValueRange": "CNY 24-28",
       "targetBuyPrice": 19.5,
-      "businessModel": null,
-      "moat": null,
-      "governance": null,
-      "financialQuality": null,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 600690.SS；币种 CNY；收盘日 2026-05-07/2026-05-08",
-      "notes": "",
+      "businessModel": 26,
+      "moat": 22,
+      "governance": 16,
+      "financialQuality": 19,
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 600690.SS；币种 CNY；日期 2026-05-07/2026-05-08",
+      "notes": "市场价格口径：2026-05-08，A股约¥21.39，H股约HK$21.64；HKD/CNY约0.869。FY2025收入RMB3023.5亿、归母净利RMB195.5亿、EPS RMB2.12、经营现金流RMB260亿、分红比例55%。2026Q1收入RMB736.87亿、归母净利RMB46.52亿，同比承压。估值维持A股内在价值区间CNY24-28，中枢CNY26；H股折算中枢约HK$29.9，赔率优于A股。",
       "reports": [
         {
           "period": "2026 Q1",
@@ -1492,7 +1202,16 @@
           "source": "巨潮资讯",
           "url": "https://static.cninfo.com.cn/finalpage/2024-08-28/1221002377.PDF"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 1.1559,
+        "dividendCurrency": "CNY",
+        "cashDividendTotal": 10773000000,
+        "cashDividendCurrency": "CNY",
+        "buybackAmount": 1287160000,
+        "buybackCurrency": "CNY"
+      }
     },
     {
       "symbol": "600519.SH",
@@ -1501,6 +1220,8 @@
       "action": "已有仓位继续持有；新资金暂不买入；放入核心替补，等待纪律买入区间",
       "currentPrice": 1372.989990234375,
       "previousClose": 1371.050048828125,
+      "marketCap": 1719354470263.6487,
+      "marketCapCurrency": "CNY",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "marginOfSafety": 0.01929286411830357,
@@ -1515,7 +1236,7 @@
       "moat": 24,
       "governance": 17,
       "financialQuality": 22,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 600519.SS；币种 CNY；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 600519.SS；币种 CNY；日期 2026-05-07/2026-05-08",
       "notes": "最新市场价约¥1372.99；2025年营收1688.38亿元、归母净利823.20亿元、EPS约65.66元；2026Q1营收539.09亿元、归母净利272.43亿元、EPS约21.76元。估值采用2025年报、2026Q1财报和2026-05-08行情，综合内在价值区间¥1200-1580，中枢¥1400。",
       "reports": [
         {
@@ -1582,7 +1303,16 @@
           "source": "巨潮资讯",
           "url": "https://static.cninfo.com.cn/finalpage/2024-08-09/1220825189.PDF"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 51.95,
+        "dividendCurrency": "CNY",
+        "cashDividendTotal": 65033000000,
+        "cashDividendCurrency": "CNY",
+        "buybackAmount": 6000000000,
+        "buybackCurrency": "CNY"
+      }
     },
     {
       "symbol": "03613.HK",
@@ -1591,6 +1321,8 @@
       "action": "放入普通候选池观察；当前暂不买入，等待HK$6.2-6.5以下或2026业绩恢复确认",
       "currentPrice": 7.440000057220459,
       "previousClose": 7.380000114440918,
+      "marketCap": 6228024047.8992,
+      "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-05-08",
       "previousCloseDate": "2026-05-07",
       "marginOfSafety": 0.09268291985116346,
@@ -1605,7 +1337,7 @@
       "moat": 22,
       "governance": 16,
       "financialQuality": 20,
-      "updatedAt": "2026-05-08 18:02:41；行情源 Yahoo Finance 日线收盘价；代码 3613.HK；币种 HKD；收盘日 2026-05-07/2026-05-08",
+      "updatedAt": "2026-05-10 00:42:02；行情源 Yahoo Finance 日线收盘价；代码 3613.HK；币种 HKD；日期 2026-05-07/2026-05-08",
       "notes": "2025收入HK$15.13亿，同比-6.1%；归母利润HK$3.97亿，同比-20.6%；EPS约HK$0.47；现金及银行结余HK$22.79亿，负债率约2.9%，流动性强。当前约HK$7.40，对应约15.6x 2025 PE、约5.4%股息率。内在价值中枢按正常化EPS、PE、股息和净现金保护综合估算为HK$8.2，安全边际不足。",
       "reports": [
         {
@@ -1672,7 +1404,14 @@
           "source": "HKEXnews",
           "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0912/2024091200597.pdf"
         }
-      ]
+      ],
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendPerShare": 0.4,
+        "dividendCurrency": "HKD",
+        "cashDividendTotal": 334840000,
+        "cashDividendCurrency": "HKD"
+      }
     }
   ],
   "rules": [

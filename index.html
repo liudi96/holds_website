@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>纸牌屋</title>
-    <link rel="stylesheet" href="./styles.css?v=decision-area-1" />
+    <link rel="stylesheet" href="./styles.css?v=site-optimizations-3" />
   </head>
   <body>
     <aside class="sidebar">
@@ -17,9 +17,13 @@
       </div>
 
       <nav class="nav">
-        <button class="nav-item active" data-view="overview" title="总览">
+        <button class="nav-item active" data-view="overview" title="投资委员会">
           <span class="nav-icon">⌂</span>
-          总览
+          投资委员会
+        </button>
+        <button class="nav-item" data-view="masters" title="三大师视角">
+          <span class="nav-icon">◇</span>
+          三大师视角
         </button>
         <button class="nav-item" data-view="positions" title="持仓">
           <span class="nav-icon">▦</span>
@@ -51,18 +55,22 @@
           <div class="search-wrap">
             <span>⌕</span>
             <input id="searchInput" type="search" placeholder="搜索代码或名称" />
+            <div class="search-results" id="searchResults"></div>
           </div>
         </div>
       </header>
 
       <section class="page active" data-page="overview">
-        <div class="overview-toolbar">
-          <div class="overview-toolbar-copy">
-            <p class="eyebrow">Dashboard</p>
-            <strong>总览操作</strong>
-            <span id="quoteUpdateStatus">行情待更新</span>
+        <section class="executive-hero panel" id="actionConclusion" aria-label="当前组合结论">
+          <div class="executive-hero-main">
+            <p class="eyebrow">Investment Committee</p>
+            <strong id="actionConclusionStatus">继续等待</strong>
+            <span id="actionConclusionDetail">等待行情和安全边际信号</span>
+            <div class="action-conclusion-reasons" id="actionConclusionReasons"></div>
           </div>
-          <div class="overview-actions">
+          <div class="executive-hero-side">
+            <span id="quoteUpdateStatus">行情待更新</span>
+            <div class="overview-actions">
             <button class="ghost-button" id="openResearchPanel" type="button">
               <span>⇪</span>
               导入分析
@@ -75,95 +83,120 @@
               <span>↻</span>
               更新行情
             </button>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <section class="metrics-grid" aria-label="资产概览">
-          <article class="metric">
+        <section class="metrics-grid executive-metrics" aria-label="核心指标">
+          <article class="metric executive-metric">
             <span>总市值</span>
             <strong id="totalValue">¥0.00</strong>
             <small id="positionCount">0 只股票</small>
           </article>
-          <article class="metric">
+          <article class="metric executive-metric">
             <span>浮动盈亏</span>
             <strong id="totalPnl">¥0.00</strong>
             <small id="totalPnlRate">0.00%</small>
           </article>
-          <article class="metric">
-            <span>今日变动</span>
-            <strong id="dayChange">¥0.00</strong>
-            <small id="dayChangeRate">0.00%</small>
-          </article>
-          <article class="metric">
+          <article class="metric executive-metric">
             <span>现金余额</span>
             <strong id="cashBalance">¥0.00</strong>
             <small>可用于新交易</small>
           </article>
+          <article class="metric executive-metric">
+            <span>预计年股息</span>
+            <strong id="annualDividend">¥0.00</strong>
+            <small id="portfolioDividendYield">组合股息率 0.00%</small>
+          </article>
+          <article class="metric executive-metric">
+            <span>数据体检</span>
+            <strong id="dataQualityMetric">0 项</strong>
+            <small id="dataQualityDetail">关键数据完整</small>
+          </article>
         </section>
 
-        <section class="decision-grid" aria-label="投资决策区">
-          <section class="panel">
-            <div class="panel-head compact">
-              <div>
-                <p class="eyebrow">Radar</p>
-                <h2>机会雷达</h2>
-              </div>
-            </div>
-            <div class="decision-list" id="opportunityRadar"></div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head compact">
-              <div>
-                <p class="eyebrow">Discipline</p>
-                <h2>组合纪律</h2>
-              </div>
-            </div>
-            <div class="discipline-grid" id="disciplineDashboard"></div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head compact">
-              <div>
-                <p class="eyebrow">Triggers</p>
-                <h2>行情触发</h2>
-              </div>
-            </div>
-            <div class="trigger-list" id="triggerAlerts"></div>
-          </section>
-        </section>
-
-        <section class="overview-grid">
-          <section class="panel">
-            <div class="panel-head compact">
-              <div>
-                <p class="eyebrow">Allocation</p>
-                <h2>资产分布</h2>
-              </div>
-            </div>
-            <div class="allocation-chart" id="allocationChart"></div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head compact">
-              <div>
-                <p class="eyebrow">Plan</p>
-                <h2>执行优先级</h2>
-              </div>
-            </div>
-            <div class="plan-list" id="overviewPlanList"></div>
-          </section>
-        </section>
-
-        <section class="panel decision-log-panel">
+        <section class="panel next-actions-panel">
           <div class="panel-head compact">
             <div>
-              <p class="eyebrow">Timeline</p>
-              <h2>决策日志</h2>
+              <p class="eyebrow">Next Actions</p>
+              <h2>下一步动作</h2>
+            </div>
+            <a class="ghost-button compact-link" href="#masters">查看完整视角</a>
+          </div>
+          <div class="next-actions-list" id="committeeConsensus"></div>
+        </section>
+      </section>
+
+      <section class="page" data-page="masters">
+        <section class="masters-hero panel">
+          <div class="masters-hero-copy">
+            <p class="masters-hero-line">
+              <span class="eyebrow">Three Lenses</span>
+              <strong>三大师视角</strong>
+              <span>同一份组合数据，用风险与周期、防守与便宜、好生意与复利三种滤镜审查。</span>
+            </p>
+          </div>
+          <div class="masters-hero-links" aria-label="视角跳转">
+            <button type="button" data-master-scroll="marksLens">马克斯</button>
+            <button type="button" data-master-scroll="grahamLens">格雷厄姆</button>
+            <button type="button" data-master-scroll="buffettLens">巴菲特</button>
+          </div>
+        </section>
+
+        <section class="panel master-matrix-panel">
+          <div class="panel-head compact">
+            <div>
+              <p class="eyebrow">Compare</p>
+              <h2>三大师分歧表</h2>
             </div>
           </div>
-          <div class="decision-log-list" id="decisionLogList"></div>
+          <div class="master-matrix" id="masterMatrix"></div>
         </section>
+
+        <section class="masters-layout" aria-label="三大师视角">
+          <section class="master-section marks" id="marksLens">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Howard Marks</p>
+                <h2>马克斯：风险与周期</h2>
+              </div>
+            </div>
+            <div class="master-summary" id="marksSummary"></div>
+            <div class="master-stock-list" id="marksList"></div>
+            <section class="marks-discipline">
+              <div class="panel-head compact">
+                <div>
+                  <p class="eyebrow">Risk Discipline</p>
+                  <h2>风险纪律</h2>
+                </div>
+              </div>
+              <div class="discipline-grid marks-discipline-grid" id="disciplineDashboard"></div>
+            </section>
+          </section>
+
+          <section class="master-section graham" id="grahamLens">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Benjamin Graham</p>
+                <h2>格雷厄姆：便宜与防守</h2>
+              </div>
+            </div>
+            <div class="master-summary" id="grahamSummary"></div>
+            <div class="master-stock-list" id="grahamList"></div>
+          </section>
+
+          <section class="master-section buffett" id="buffettLens">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Warren Buffett</p>
+                <h2>巴菲特：好生意与复利</h2>
+              </div>
+            </div>
+            <div class="master-summary" id="buffettSummary"></div>
+            <div class="master-stock-list" id="buffettList"></div>
+          </section>
+        </section>
+
       </section>
 
       <section class="page" data-page="positions">
@@ -185,15 +218,11 @@
               <thead>
                 <tr>
                   <th>股票</th>
-                  <th>数量</th>
-                  <th>成本</th>
-                  <th>最新价</th>
-                  <th>市值</th>
+                  <th>市值/现价</th>
                   <th>盈亏</th>
                   <th>安全边际</th>
-                  <th>质量</th>
-                  <th>仓位</th>
                   <th>健康</th>
+                  <th>委员会</th>
                   <th></th>
                 </tr>
               </thead>
@@ -201,6 +230,28 @@
             </table>
           </div>
         </div>
+
+        <section class="positions-tool-grid" aria-label="机会与现金流">
+          <section class="panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Radar</p>
+                <h2>机会雷达</h2>
+              </div>
+            </div>
+            <div class="decision-list" id="opportunityRadar"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Dividends</p>
+                <h2>股息现金流</h2>
+              </div>
+            </div>
+            <div class="dividend-cash-list" id="dividendCashList"></div>
+          </section>
+        </section>
       </section>
 
       <section class="page" data-page="trades">
@@ -217,6 +268,26 @@
           </div>
           <div class="trade-list trade-list-page" id="tradeList"></div>
         </section>
+
+        <section class="panel decision-log-panel collapsed" id="decisionLogPanel">
+          <div class="panel-head compact">
+            <div>
+              <p class="eyebrow">Timeline</p>
+              <h2>决策日志</h2>
+            </div>
+            <div class="decision-log-controls">
+              <button class="ghost-button compact-link danger" id="clearDecisionLogs" type="button">清理日志</button>
+              <button class="ghost-button compact-link" id="decisionLogToggle" type="button">展开</button>
+              <div class="log-filter-tabs" id="decisionLogFilters" aria-label="决策日志筛选">
+                <button class="active" type="button" data-log-filter="all">全部</button>
+                <button type="button" data-log-filter="research">分析</button>
+                <button type="button" data-log-filter="quote">行情</button>
+                <button type="button" data-log-filter="trade">交易</button>
+              </div>
+            </div>
+          </div>
+          <div class="decision-log-list" id="decisionLogList"></div>
+        </section>
       </section>
 
       <section class="page" data-page="candidates">
@@ -229,6 +300,8 @@
             <div class="candidate-sort">
               <label for="candidateSort">排序</label>
               <select id="candidateSort">
+                <option value="consensus">综合共识</option>
+                <option value="discipline">纪律优先</option>
                 <option value="priority">执行优先级</option>
                 <option value="margin">安全边际</option>
                 <option value="quality">质量分</option>
@@ -236,6 +309,15 @@
                 <option value="industry">行业</option>
               </select>
             </div>
+          </div>
+          <div class="candidate-filter-tabs" id="candidateFilters" aria-label="候选池筛选">
+            <button class="active" type="button" data-candidate-filter="all">全部</button>
+            <button type="button" data-candidate-filter="consensus">三方共识</button>
+            <button type="button" data-candidate-filter="margin">安全边际&gt;20%</button>
+            <button type="button" data-candidate-filter="quality">高质量&gt;85</button>
+            <button type="button" data-candidate-filter="nearBuy">接近买点</button>
+            <button type="button" data-candidate-filter="dividend">高股息</button>
+            <button type="button" data-candidate-filter="lowConfidence">低可信</button>
           </div>
           <div class="candidate-list candidate-page" id="candidateList"></div>
         </section>
@@ -376,6 +458,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=decision-area-1"></script>
+    <script src="./app.js?v=site-optimizations-3"></script>
   </body>
 </html>

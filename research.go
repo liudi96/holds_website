@@ -14,26 +14,32 @@ import (
 	"time"
 )
 
+const defaultSafetyMarginTarget = 0.25
+
 type ResearchImport struct {
-	Symbol    string    `json:"symbol"`
-	Name      string    `json:"name"`
-	AsOf      string    `json:"asOf"`
-	Currency  string    `json:"currency"`
-	Industry  string    `json:"industry"`
-	Status    string    `json:"status"`
-	Action    string    `json:"action"`
-	Risk      string    `json:"risk"`
-	Valuation Valuation `json:"valuation"`
-	Quality   Quality   `json:"quality"`
-	Plan      PlanInput `json:"plan"`
-	Notes     string    `json:"notes"`
+	Symbol              string          `json:"symbol"`
+	Name                string          `json:"name"`
+	AsOf                string          `json:"asOf"`
+	Currency            string          `json:"currency"`
+	Industry            string          `json:"industry"`
+	Status              string          `json:"status"`
+	Action              string          `json:"action"`
+	Risk                string          `json:"risk"`
+	Valuation           Valuation       `json:"valuation"`
+	Quality             Quality         `json:"quality"`
+	Plan                PlanInput       `json:"plan"`
+	Dividend            *Dividend       `json:"dividend,omitempty"`
+	ValuationConfidence string          `json:"valuationConfidence,omitempty"`
+	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
+	Notes               string          `json:"notes"`
 }
 
 type Valuation struct {
-	IntrinsicValue *float64 `json:"intrinsicValue"`
-	FairValueRange string   `json:"fairValueRange"`
-	TargetBuyPrice *float64 `json:"targetBuyPrice"`
-	MarginOfSafety *float64 `json:"marginOfSafety"`
+	IntrinsicValue *float64     `json:"intrinsicValue"`
+	FairValueRange string       `json:"fairValueRange"`
+	TargetBuyPrice *float64     `json:"targetBuyPrice"`
+	MarginOfSafety *float64     `json:"marginOfSafety"`
+	PriceLevels    *PriceLevels `json:"priceLevels,omitempty"`
 }
 
 type Quality struct {
@@ -175,6 +181,9 @@ func validateResearch(research ResearchImport) ([]string, error) {
 	if err := validatePercent("valuation.marginOfSafety", research.Valuation.MarginOfSafety); err != nil {
 		return nil, err
 	}
+	if err := validateDividend(research.Dividend); err != nil {
+		return nil, err
+	}
 	if err := validateScore("quality.totalScore", research.Quality.TotalScore, 100); err != nil {
 		return nil, err
 	}
@@ -261,12 +270,14 @@ func applyHoldingResearch(holding *Holding, research ResearchImport, updateLabel
 	holding.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
 	holding.TargetBuyPrice = research.Valuation.TargetBuyPrice
 	holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, research.Valuation.MarginOfSafety)
+	holding.ValuationConfidence = strings.TrimSpace(research.ValuationConfidence)
 	holding.BusinessModel = research.Quality.BusinessModel
 	holding.Moat = research.Quality.Moat
 	holding.Governance = research.Quality.Governance
 	holding.FinancialQuality = research.Quality.FinancialQuality
 	holding.UpdatedAt = updateLabel
 	holding.Notes = strings.TrimSpace(research.Notes)
+	holding.KillCriteria = cloneRawMessage(research.KillCriteria)
 }
 
 func applyCandidateResearch(candidate *Candidate, research ResearchImport, updateLabel string) {
@@ -282,12 +293,14 @@ func applyCandidateResearch(candidate *Candidate, research ResearchImport, updat
 	candidate.IntrinsicValue = research.Valuation.IntrinsicValue
 	candidate.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
 	candidate.TargetBuyPrice = research.Valuation.TargetBuyPrice
+	candidate.ValuationConfidence = strings.TrimSpace(research.ValuationConfidence)
 	candidate.BusinessModel = research.Quality.BusinessModel
 	candidate.Moat = research.Quality.Moat
 	candidate.Governance = research.Quality.Governance
 	candidate.FinancialQuality = research.Quality.FinancialQuality
 	candidate.UpdatedAt = updateLabel
 	candidate.Notes = strings.TrimSpace(research.Notes)
+	candidate.KillCriteria = cloneRawMessage(research.KillCriteria)
 }
 
 func upsertPlan(state *AppState, research ResearchImport) {
@@ -385,11 +398,32 @@ func normalizeResearch(research ResearchImport) ResearchImport {
 	research.Action = strings.TrimSpace(research.Action)
 	research.Risk = strings.TrimSpace(research.Risk)
 	research.Valuation.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
+	research.Valuation.TargetBuyPrice = targetBuyPriceFromIntrinsicValue(research.Valuation.IntrinsicValue)
+	research.Valuation.PriceLevels = nil
 	research.Plan.Priority = strings.TrimSpace(research.Plan.Priority)
 	research.Plan.Advice = strings.TrimSpace(research.Plan.Advice)
 	research.Plan.Discipline = strings.TrimSpace(research.Plan.Discipline)
+	research.ValuationConfidence = strings.TrimSpace(research.ValuationConfidence)
+	research.KillCriteria = normalizeRawMessage(research.KillCriteria)
+	research.Dividend = normalizeDividend(research.Dividend, research.Currency)
 	research.Notes = strings.TrimSpace(research.Notes)
 	return research
+}
+
+func normalizeRawMessage(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 || strings.TrimSpace(string(raw)) == "" || string(raw) == "null" {
+		return nil
+	}
+	return cloneRawMessage(raw)
+}
+
+func cloneRawMessage(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		return nil
+	}
+	next := make(json.RawMessage, len(raw))
+	copy(next, raw)
+	return next
 }
 
 func hasAllQualityScores(quality Quality) bool {
@@ -410,6 +444,59 @@ func validatePercent(field string, value *float64) error {
 	return nil
 }
 
+func validatePriceLevels(levels *PriceLevels) error {
+	if levels == nil {
+		return nil
+	}
+	if err := validatePositiveAmount("valuation.priceLevels.watchPrice", levels.WatchPrice); err != nil {
+		return err
+	}
+	if err := validatePositiveAmount("valuation.priceLevels.initialBuyPrice", levels.InitialBuyPrice); err != nil {
+		return err
+	}
+	return validatePositiveAmount("valuation.priceLevels.aggressiveBuyPrice", levels.AggressiveBuyPrice)
+}
+
+func validateDividend(dividend *Dividend) error {
+	if dividend == nil {
+		return nil
+	}
+	if err := validatePositiveAmount("dividend.dividendPerShare", dividend.DividendPerShare); err != nil {
+		return err
+	}
+	return validateRatio("dividend.payoutRatio", dividend.PayoutRatio, 5)
+}
+
+func validatePositiveAmount(field string, value *float64) error {
+	if value == nil {
+		return nil
+	}
+	if *value <= 0 {
+		return fmt.Errorf("%s must be positive", field)
+	}
+	return nil
+}
+
+func validateNonNegativeAmount(field string, value *float64) error {
+	if value == nil {
+		return nil
+	}
+	if *value < 0 {
+		return fmt.Errorf("%s must be non-negative", field)
+	}
+	return nil
+}
+
+func validateRatio(field string, value *float64, max float64) error {
+	if value == nil {
+		return nil
+	}
+	if *value < 0 || *value > max {
+		return fmt.Errorf("%s must be a decimal ratio between 0 and %.0f", field, max)
+	}
+	return nil
+}
+
 func validateScore(field string, value *float64, max float64) error {
 	if value == nil {
 		return nil
@@ -418,6 +505,57 @@ func validateScore(field string, value *float64, max float64) error {
 		return fmt.Errorf("%s must be between 0 and %.0f", field, max)
 	}
 	return nil
+}
+
+func targetBuyPriceFromIntrinsicValue(intrinsicValue *float64) *float64 {
+	if intrinsicValue == nil || *intrinsicValue <= 0 {
+		return nil
+	}
+	value := *intrinsicValue * (1 - defaultSafetyMarginTarget)
+	return &value
+}
+
+func normalizeDividend(dividend *Dividend, fallbackCurrency string) *Dividend {
+	if dividend == nil {
+		return nil
+	}
+	next := &Dividend{
+		FiscalYear:           strings.TrimSpace(dividend.FiscalYear),
+		DividendPerShare:     cloneFloat(dividend.DividendPerShare),
+		DividendCurrency:     strings.ToUpper(strings.TrimSpace(dividend.DividendCurrency)),
+		CashDividendTotal:    nil,
+		CashDividendCurrency: "",
+		BuybackAmount:        nil,
+		BuybackCurrency:      "",
+		DividendYield:        nil,
+		PayoutRatio:          cloneFloat(dividend.PayoutRatio),
+		EstimatedAnnualCash:  nil,
+		Reliability:          strings.TrimSpace(dividend.Reliability),
+	}
+	if next.DividendCurrency == "" {
+		next.DividendCurrency = strings.ToUpper(strings.TrimSpace(fallbackCurrency))
+	}
+	if next.FiscalYear == "" &&
+		next.DividendPerShare == nil &&
+		next.DividendCurrency == "" &&
+		next.CashDividendTotal == nil &&
+		next.CashDividendCurrency == "" &&
+		next.BuybackAmount == nil &&
+		next.BuybackCurrency == "" &&
+		next.DividendYield == nil &&
+		next.PayoutRatio == nil &&
+		next.EstimatedAnnualCash == nil {
+		return nil
+	}
+	return next
+}
+
+func cloneFloat(value *float64) *float64 {
+	if value == nil {
+		return nil
+	}
+	next := *value
+	return &next
 }
 
 func expectedCurrency(symbol string) string {

@@ -13,7 +13,10 @@ import (
 	"time"
 )
 
-const decisionLogLimit = 500
+const (
+	decisionLogLimit          = 500
+	defaultSafetyMarginTarget = 0.25
+)
 
 type AppState struct {
 	TotalCapital float64            `json:"totalCapital"`
@@ -53,31 +56,57 @@ type DecisionLog struct {
 }
 
 type Holding struct {
-	Symbol            string   `json:"symbol"`
-	Name              string   `json:"name"`
-	Shares            float64  `json:"shares"`
-	Cost              float64  `json:"cost"`
-	CurrentPrice      float64  `json:"currentPrice"`
-	PreviousClose     float64  `json:"previousClose"`
-	CurrentPriceDate  string   `json:"currentPriceDate"`
-	PreviousCloseDate string   `json:"previousCloseDate"`
-	Action            string   `json:"action"`
-	Status            string   `json:"status"`
-	MarginOfSafety    *float64 `json:"marginOfSafety"`
-	QualityScore      *float64 `json:"qualityScore"`
-	Risk              string   `json:"risk"`
-	Industry          string   `json:"industry"`
-	Currency          string   `json:"currency"`
-	IntrinsicValue    *float64 `json:"intrinsicValue"`
-	FairValueRange    string   `json:"fairValueRange"`
-	TargetBuyPrice    *float64 `json:"targetBuyPrice"`
-	BusinessModel     *float64 `json:"businessModel"`
-	Moat              *float64 `json:"moat"`
-	Governance        *float64 `json:"governance"`
-	FinancialQuality  *float64 `json:"financialQuality"`
-	UpdatedAt         string   `json:"updatedAt"`
-	Notes             string   `json:"notes"`
-	Reports           []Report `json:"reports,omitempty"`
+	Symbol              string          `json:"symbol"`
+	Name                string          `json:"name"`
+	Shares              float64         `json:"shares"`
+	Cost                float64         `json:"cost"`
+	CurrentPrice        float64         `json:"currentPrice"`
+	PreviousClose       float64         `json:"previousClose"`
+	MarketCap           *float64        `json:"marketCap,omitempty"`
+	MarketCapCurrency   string          `json:"marketCapCurrency,omitempty"`
+	CurrentPriceDate    string          `json:"currentPriceDate"`
+	PreviousCloseDate   string          `json:"previousCloseDate"`
+	Action              string          `json:"action"`
+	Status              string          `json:"status"`
+	MarginOfSafety      *float64        `json:"marginOfSafety"`
+	QualityScore        *float64        `json:"qualityScore"`
+	Risk                string          `json:"risk"`
+	Industry            string          `json:"industry"`
+	Currency            string          `json:"currency"`
+	IntrinsicValue      *float64        `json:"intrinsicValue"`
+	FairValueRange      string          `json:"fairValueRange"`
+	TargetBuyPrice      *float64        `json:"targetBuyPrice"`
+	PriceLevels         *PriceLevels    `json:"priceLevels,omitempty"`
+	ValuationConfidence string          `json:"valuationConfidence,omitempty"`
+	BusinessModel       *float64        `json:"businessModel"`
+	Moat                *float64        `json:"moat"`
+	Governance          *float64        `json:"governance"`
+	FinancialQuality    *float64        `json:"financialQuality"`
+	UpdatedAt           string          `json:"updatedAt"`
+	Notes               string          `json:"notes"`
+	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
+	Reports             []Report        `json:"reports,omitempty"`
+	Dividend            *Dividend       `json:"dividend,omitempty"`
+}
+
+type PriceLevels struct {
+	WatchPrice         *float64 `json:"watchPrice,omitempty"`
+	InitialBuyPrice    *float64 `json:"initialBuyPrice,omitempty"`
+	AggressiveBuyPrice *float64 `json:"aggressiveBuyPrice,omitempty"`
+}
+
+type Dividend struct {
+	FiscalYear           string   `json:"fiscalYear,omitempty"`
+	DividendPerShare     *float64 `json:"dividendPerShare,omitempty"`
+	DividendCurrency     string   `json:"dividendCurrency,omitempty"`
+	CashDividendTotal    *float64 `json:"cashDividendTotal,omitempty"`
+	CashDividendCurrency string   `json:"cashDividendCurrency,omitempty"`
+	BuybackAmount        *float64 `json:"buybackAmount,omitempty"`
+	BuybackCurrency      string   `json:"buybackCurrency,omitempty"`
+	DividendYield        *float64 `json:"dividendYield,omitempty"`
+	PayoutRatio          *float64 `json:"payoutRatio,omitempty"`
+	EstimatedAnnualCash  *float64 `json:"estimatedAnnualCash,omitempty"`
+	Reliability          string   `json:"reliability,omitempty"`
 }
 
 type Report struct {
@@ -99,29 +128,35 @@ type PlanItem struct {
 }
 
 type Candidate struct {
-	Symbol            string   `json:"symbol"`
-	Name              string   `json:"name"`
-	Status            string   `json:"status"`
-	Action            string   `json:"action"`
-	CurrentPrice      float64  `json:"currentPrice"`
-	PreviousClose     float64  `json:"previousClose"`
-	CurrentPriceDate  string   `json:"currentPriceDate"`
-	PreviousCloseDate string   `json:"previousCloseDate"`
-	MarginOfSafety    *float64 `json:"marginOfSafety"`
-	QualityScore      *float64 `json:"qualityScore"`
-	Risk              string   `json:"risk"`
-	Industry          string   `json:"industry"`
-	Currency          string   `json:"currency"`
-	IntrinsicValue    *float64 `json:"intrinsicValue"`
-	FairValueRange    string   `json:"fairValueRange"`
-	TargetBuyPrice    *float64 `json:"targetBuyPrice"`
-	BusinessModel     *float64 `json:"businessModel"`
-	Moat              *float64 `json:"moat"`
-	Governance        *float64 `json:"governance"`
-	FinancialQuality  *float64 `json:"financialQuality"`
-	UpdatedAt         string   `json:"updatedAt"`
-	Notes             string   `json:"notes"`
-	Reports           []Report `json:"reports,omitempty"`
+	Symbol              string          `json:"symbol"`
+	Name                string          `json:"name"`
+	Status              string          `json:"status"`
+	Action              string          `json:"action"`
+	CurrentPrice        float64         `json:"currentPrice"`
+	PreviousClose       float64         `json:"previousClose"`
+	MarketCap           *float64        `json:"marketCap,omitempty"`
+	MarketCapCurrency   string          `json:"marketCapCurrency,omitempty"`
+	CurrentPriceDate    string          `json:"currentPriceDate"`
+	PreviousCloseDate   string          `json:"previousCloseDate"`
+	MarginOfSafety      *float64        `json:"marginOfSafety"`
+	QualityScore        *float64        `json:"qualityScore"`
+	Risk                string          `json:"risk"`
+	Industry            string          `json:"industry"`
+	Currency            string          `json:"currency"`
+	IntrinsicValue      *float64        `json:"intrinsicValue"`
+	FairValueRange      string          `json:"fairValueRange"`
+	TargetBuyPrice      *float64        `json:"targetBuyPrice"`
+	PriceLevels         *PriceLevels    `json:"priceLevels,omitempty"`
+	ValuationConfidence string          `json:"valuationConfidence,omitempty"`
+	BusinessModel       *float64        `json:"businessModel"`
+	Moat                *float64        `json:"moat"`
+	Governance          *float64        `json:"governance"`
+	FinancialQuality    *float64        `json:"financialQuality"`
+	UpdatedAt           string          `json:"updatedAt"`
+	Notes               string          `json:"notes"`
+	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
+	Reports             []Report        `json:"reports,omitempty"`
+	Dividend            *Dividend       `json:"dividend,omitempty"`
 }
 
 type Rule struct {
@@ -131,25 +166,29 @@ type Rule struct {
 }
 
 type ResearchImport struct {
-	Symbol    string    `json:"symbol"`
-	Name      string    `json:"name"`
-	AsOf      string    `json:"asOf"`
-	Currency  string    `json:"currency"`
-	Industry  string    `json:"industry"`
-	Status    string    `json:"status"`
-	Action    string    `json:"action"`
-	Risk      string    `json:"risk"`
-	Valuation Valuation `json:"valuation"`
-	Quality   Quality   `json:"quality"`
-	Plan      PlanInput `json:"plan"`
-	Notes     string    `json:"notes"`
+	Symbol              string          `json:"symbol"`
+	Name                string          `json:"name"`
+	AsOf                string          `json:"asOf"`
+	Currency            string          `json:"currency"`
+	Industry            string          `json:"industry"`
+	Status              string          `json:"status"`
+	Action              string          `json:"action"`
+	Risk                string          `json:"risk"`
+	Valuation           Valuation       `json:"valuation"`
+	Quality             Quality         `json:"quality"`
+	Plan                PlanInput       `json:"plan"`
+	Dividend            *Dividend       `json:"dividend,omitempty"`
+	ValuationConfidence string          `json:"valuationConfidence,omitempty"`
+	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
+	Notes               string          `json:"notes"`
 }
 
 type Valuation struct {
-	IntrinsicValue *float64 `json:"intrinsicValue"`
-	FairValueRange string   `json:"fairValueRange"`
-	TargetBuyPrice *float64 `json:"targetBuyPrice"`
-	MarginOfSafety *float64 `json:"marginOfSafety"`
+	IntrinsicValue *float64     `json:"intrinsicValue"`
+	FairValueRange string       `json:"fairValueRange"`
+	TargetBuyPrice *float64     `json:"targetBuyPrice"`
+	MarginOfSafety *float64     `json:"marginOfSafety"`
+	PriceLevels    *PriceLevels `json:"priceLevels,omitempty"`
 }
 
 type Quality struct {
@@ -232,6 +271,9 @@ func validateResearch(research ResearchImport) error {
 	if err := validatePercent("valuation.marginOfSafety", research.Valuation.MarginOfSafety); err != nil {
 		return err
 	}
+	if err := validateDividend(research.Dividend); err != nil {
+		return err
+	}
 	if err := validateScore("quality.totalScore", research.Quality.TotalScore, 100); err != nil {
 		return err
 	}
@@ -257,6 +299,59 @@ func validatePercent(field string, value *float64) error {
 	return nil
 }
 
+func validatePriceLevels(levels *PriceLevels) error {
+	if levels == nil {
+		return nil
+	}
+	if err := validatePositiveAmount("valuation.priceLevels.watchPrice", levels.WatchPrice); err != nil {
+		return err
+	}
+	if err := validatePositiveAmount("valuation.priceLevels.initialBuyPrice", levels.InitialBuyPrice); err != nil {
+		return err
+	}
+	return validatePositiveAmount("valuation.priceLevels.aggressiveBuyPrice", levels.AggressiveBuyPrice)
+}
+
+func validateDividend(dividend *Dividend) error {
+	if dividend == nil {
+		return nil
+	}
+	if err := validatePositiveAmount("dividend.dividendPerShare", dividend.DividendPerShare); err != nil {
+		return err
+	}
+	return validateRatio("dividend.payoutRatio", dividend.PayoutRatio, 5)
+}
+
+func validatePositiveAmount(field string, value *float64) error {
+	if value == nil {
+		return nil
+	}
+	if *value <= 0 {
+		return fmt.Errorf("%s must be positive", field)
+	}
+	return nil
+}
+
+func validateNonNegativeAmount(field string, value *float64) error {
+	if value == nil {
+		return nil
+	}
+	if *value < 0 {
+		return fmt.Errorf("%s must be non-negative", field)
+	}
+	return nil
+}
+
+func validateRatio(field string, value *float64, max float64) error {
+	if value == nil {
+		return nil
+	}
+	if *value < 0 || *value > max {
+		return fmt.Errorf("%s must be a decimal ratio between 0 and %.0f", field, max)
+	}
+	return nil
+}
+
 func validateScore(field string, value *float64, max float64) error {
 	if value == nil {
 		return nil
@@ -268,6 +363,7 @@ func validateScore(field string, value *float64, max float64) error {
 }
 
 func applyResearch(state *AppState, research ResearchImport) string {
+	research = normalizeResearch(research)
 	symbol := normalizeSymbol(research.Symbol)
 	now := time.Now().Format("2006-01-02 15:04:05")
 	updateLabel := fmt.Sprintf("%s；ChatGPT分析导入；分析日 %s", now, research.AsOf)
@@ -307,12 +403,14 @@ func applyHoldingResearch(holding *Holding, research ResearchImport, updateLabel
 	holding.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
 	holding.TargetBuyPrice = research.Valuation.TargetBuyPrice
 	holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, research.Valuation.MarginOfSafety)
+	holding.ValuationConfidence = strings.TrimSpace(research.ValuationConfidence)
 	holding.BusinessModel = research.Quality.BusinessModel
 	holding.Moat = research.Quality.Moat
 	holding.Governance = research.Quality.Governance
 	holding.FinancialQuality = research.Quality.FinancialQuality
 	holding.UpdatedAt = updateLabel
 	holding.Notes = strings.TrimSpace(research.Notes)
+	holding.KillCriteria = cloneRawMessage(research.KillCriteria)
 }
 
 func applyCandidateResearch(candidate *Candidate, research ResearchImport, updateLabel string) {
@@ -328,12 +426,14 @@ func applyCandidateResearch(candidate *Candidate, research ResearchImport, updat
 	candidate.IntrinsicValue = research.Valuation.IntrinsicValue
 	candidate.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
 	candidate.TargetBuyPrice = research.Valuation.TargetBuyPrice
+	candidate.ValuationConfidence = strings.TrimSpace(research.ValuationConfidence)
 	candidate.BusinessModel = research.Quality.BusinessModel
 	candidate.Moat = research.Quality.Moat
 	candidate.Governance = research.Quality.Governance
 	candidate.FinancialQuality = research.Quality.FinancialQuality
 	candidate.UpdatedAt = updateLabel
 	candidate.Notes = strings.TrimSpace(research.Notes)
+	candidate.KillCriteria = cloneRawMessage(research.KillCriteria)
 }
 
 func upsertPlan(state *AppState, research ResearchImport) {
@@ -407,6 +507,95 @@ func prefer(current, next string) string {
 		return strings.ToUpper(strings.TrimSpace(next))
 	}
 	return strings.ToUpper(strings.TrimSpace(current))
+}
+
+func normalizeResearch(research ResearchImport) ResearchImport {
+	research.Symbol = normalizeDisplaySymbol(research.Symbol)
+	research.Name = strings.TrimSpace(research.Name)
+	research.AsOf = strings.TrimSpace(research.AsOf)
+	research.Currency = strings.ToUpper(strings.TrimSpace(research.Currency))
+	research.Industry = strings.TrimSpace(research.Industry)
+	research.Status = strings.TrimSpace(research.Status)
+	research.Action = strings.TrimSpace(research.Action)
+	research.Risk = strings.TrimSpace(research.Risk)
+	research.Valuation.FairValueRange = strings.TrimSpace(research.Valuation.FairValueRange)
+	research.Valuation.TargetBuyPrice = targetBuyPriceFromIntrinsicValue(research.Valuation.IntrinsicValue)
+	research.Valuation.PriceLevels = nil
+	research.Plan.Priority = strings.TrimSpace(research.Plan.Priority)
+	research.Plan.Advice = strings.TrimSpace(research.Plan.Advice)
+	research.Plan.Discipline = strings.TrimSpace(research.Plan.Discipline)
+	research.ValuationConfidence = strings.TrimSpace(research.ValuationConfidence)
+	research.KillCriteria = normalizeRawMessage(research.KillCriteria)
+	research.Dividend = normalizeDividend(research.Dividend, research.Currency)
+	research.Notes = strings.TrimSpace(research.Notes)
+	return research
+}
+
+func normalizeRawMessage(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 || strings.TrimSpace(string(raw)) == "" || string(raw) == "null" {
+		return nil
+	}
+	return cloneRawMessage(raw)
+}
+
+func cloneRawMessage(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		return nil
+	}
+	next := make(json.RawMessage, len(raw))
+	copy(next, raw)
+	return next
+}
+
+func targetBuyPriceFromIntrinsicValue(intrinsicValue *float64) *float64 {
+	if intrinsicValue == nil || *intrinsicValue <= 0 {
+		return nil
+	}
+	value := *intrinsicValue * (1 - defaultSafetyMarginTarget)
+	return &value
+}
+
+func normalizeDividend(dividend *Dividend, fallbackCurrency string) *Dividend {
+	if dividend == nil {
+		return nil
+	}
+	next := &Dividend{
+		FiscalYear:           strings.TrimSpace(dividend.FiscalYear),
+		DividendPerShare:     cloneFloat(dividend.DividendPerShare),
+		DividendCurrency:     strings.ToUpper(strings.TrimSpace(dividend.DividendCurrency)),
+		CashDividendTotal:    nil,
+		CashDividendCurrency: "",
+		BuybackAmount:        nil,
+		BuybackCurrency:      "",
+		DividendYield:        nil,
+		PayoutRatio:          cloneFloat(dividend.PayoutRatio),
+		EstimatedAnnualCash:  nil,
+		Reliability:          strings.TrimSpace(dividend.Reliability),
+	}
+	if next.DividendCurrency == "" {
+		next.DividendCurrency = strings.ToUpper(strings.TrimSpace(fallbackCurrency))
+	}
+	if next.FiscalYear == "" &&
+		next.DividendPerShare == nil &&
+		next.DividendCurrency == "" &&
+		next.CashDividendTotal == nil &&
+		next.CashDividendCurrency == "" &&
+		next.BuybackAmount == nil &&
+		next.BuybackCurrency == "" &&
+		next.DividendYield == nil &&
+		next.PayoutRatio == nil &&
+		next.EstimatedAnnualCash == nil {
+		return nil
+	}
+	return next
+}
+
+func cloneFloat(value *float64) *float64 {
+	if value == nil {
+		return nil
+	}
+	next := *value
+	return &next
 }
 
 func normalizeSymbol(symbol string) string {

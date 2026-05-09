@@ -54,31 +54,57 @@ type DecisionLog struct {
 }
 
 type Holding struct {
-	Symbol            string   `json:"symbol"`
-	Name              string   `json:"name"`
-	Shares            float64  `json:"shares"`
-	Cost              float64  `json:"cost"`
-	CurrentPrice      float64  `json:"currentPrice"`
-	PreviousClose     float64  `json:"previousClose"`
-	CurrentPriceDate  string   `json:"currentPriceDate"`
-	PreviousCloseDate string   `json:"previousCloseDate"`
-	Action            string   `json:"action"`
-	Status            string   `json:"status"`
-	MarginOfSafety    *float64 `json:"marginOfSafety"`
-	QualityScore      *float64 `json:"qualityScore"`
-	Risk              string   `json:"risk"`
-	Industry          string   `json:"industry"`
-	Currency          string   `json:"currency"`
-	IntrinsicValue    *float64 `json:"intrinsicValue"`
-	FairValueRange    string   `json:"fairValueRange"`
-	TargetBuyPrice    *float64 `json:"targetBuyPrice"`
-	BusinessModel     *float64 `json:"businessModel"`
-	Moat              *float64 `json:"moat"`
-	Governance        *float64 `json:"governance"`
-	FinancialQuality  *float64 `json:"financialQuality"`
-	UpdatedAt         string   `json:"updatedAt"`
-	Notes             string   `json:"notes"`
-	Reports           []Report `json:"reports,omitempty"`
+	Symbol              string          `json:"symbol"`
+	Name                string          `json:"name"`
+	Shares              float64         `json:"shares"`
+	Cost                float64         `json:"cost"`
+	CurrentPrice        float64         `json:"currentPrice"`
+	PreviousClose       float64         `json:"previousClose"`
+	MarketCap           *float64        `json:"marketCap,omitempty"`
+	MarketCapCurrency   string          `json:"marketCapCurrency,omitempty"`
+	CurrentPriceDate    string          `json:"currentPriceDate"`
+	PreviousCloseDate   string          `json:"previousCloseDate"`
+	Action              string          `json:"action"`
+	Status              string          `json:"status"`
+	MarginOfSafety      *float64        `json:"marginOfSafety"`
+	QualityScore        *float64        `json:"qualityScore"`
+	Risk                string          `json:"risk"`
+	Industry            string          `json:"industry"`
+	Currency            string          `json:"currency"`
+	IntrinsicValue      *float64        `json:"intrinsicValue"`
+	FairValueRange      string          `json:"fairValueRange"`
+	TargetBuyPrice      *float64        `json:"targetBuyPrice"`
+	PriceLevels         *PriceLevels    `json:"priceLevels,omitempty"`
+	ValuationConfidence string          `json:"valuationConfidence,omitempty"`
+	BusinessModel       *float64        `json:"businessModel"`
+	Moat                *float64        `json:"moat"`
+	Governance          *float64        `json:"governance"`
+	FinancialQuality    *float64        `json:"financialQuality"`
+	UpdatedAt           string          `json:"updatedAt"`
+	Notes               string          `json:"notes"`
+	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
+	Reports             []Report        `json:"reports,omitempty"`
+	Dividend            *Dividend       `json:"dividend,omitempty"`
+}
+
+type PriceLevels struct {
+	WatchPrice         *float64 `json:"watchPrice,omitempty"`
+	InitialBuyPrice    *float64 `json:"initialBuyPrice,omitempty"`
+	AggressiveBuyPrice *float64 `json:"aggressiveBuyPrice,omitempty"`
+}
+
+type Dividend struct {
+	FiscalYear           string   `json:"fiscalYear,omitempty"`
+	DividendPerShare     *float64 `json:"dividendPerShare,omitempty"`
+	DividendCurrency     string   `json:"dividendCurrency,omitempty"`
+	CashDividendTotal    *float64 `json:"cashDividendTotal,omitempty"`
+	CashDividendCurrency string   `json:"cashDividendCurrency,omitempty"`
+	BuybackAmount        *float64 `json:"buybackAmount,omitempty"`
+	BuybackCurrency      string   `json:"buybackCurrency,omitempty"`
+	DividendYield        *float64 `json:"dividendYield,omitempty"`
+	PayoutRatio          *float64 `json:"payoutRatio,omitempty"`
+	EstimatedAnnualCash  *float64 `json:"estimatedAnnualCash,omitempty"`
+	Reliability          string   `json:"reliability,omitempty"`
 }
 
 type Report struct {
@@ -100,29 +126,35 @@ type PlanItem struct {
 }
 
 type Candidate struct {
-	Symbol            string   `json:"symbol"`
-	Name              string   `json:"name"`
-	Status            string   `json:"status"`
-	Action            string   `json:"action"`
-	CurrentPrice      float64  `json:"currentPrice"`
-	PreviousClose     float64  `json:"previousClose"`
-	CurrentPriceDate  string   `json:"currentPriceDate"`
-	PreviousCloseDate string   `json:"previousCloseDate"`
-	MarginOfSafety    *float64 `json:"marginOfSafety"`
-	QualityScore      *float64 `json:"qualityScore"`
-	Risk              string   `json:"risk"`
-	Industry          string   `json:"industry"`
-	Currency          string   `json:"currency"`
-	IntrinsicValue    *float64 `json:"intrinsicValue"`
-	FairValueRange    string   `json:"fairValueRange"`
-	TargetBuyPrice    *float64 `json:"targetBuyPrice"`
-	BusinessModel     *float64 `json:"businessModel"`
-	Moat              *float64 `json:"moat"`
-	Governance        *float64 `json:"governance"`
-	FinancialQuality  *float64 `json:"financialQuality"`
-	UpdatedAt         string   `json:"updatedAt"`
-	Notes             string   `json:"notes"`
-	Reports           []Report `json:"reports,omitempty"`
+	Symbol              string          `json:"symbol"`
+	Name                string          `json:"name"`
+	Status              string          `json:"status"`
+	Action              string          `json:"action"`
+	CurrentPrice        float64         `json:"currentPrice"`
+	PreviousClose       float64         `json:"previousClose"`
+	MarketCap           *float64        `json:"marketCap,omitempty"`
+	MarketCapCurrency   string          `json:"marketCapCurrency,omitempty"`
+	CurrentPriceDate    string          `json:"currentPriceDate"`
+	PreviousCloseDate   string          `json:"previousCloseDate"`
+	MarginOfSafety      *float64        `json:"marginOfSafety"`
+	QualityScore        *float64        `json:"qualityScore"`
+	Risk                string          `json:"risk"`
+	Industry            string          `json:"industry"`
+	Currency            string          `json:"currency"`
+	IntrinsicValue      *float64        `json:"intrinsicValue"`
+	FairValueRange      string          `json:"fairValueRange"`
+	TargetBuyPrice      *float64        `json:"targetBuyPrice"`
+	PriceLevels         *PriceLevels    `json:"priceLevels,omitempty"`
+	ValuationConfidence string          `json:"valuationConfidence,omitempty"`
+	BusinessModel       *float64        `json:"businessModel"`
+	Moat                *float64        `json:"moat"`
+	Governance          *float64        `json:"governance"`
+	FinancialQuality    *float64        `json:"financialQuality"`
+	UpdatedAt           string          `json:"updatedAt"`
+	Notes               string          `json:"notes"`
+	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
+	Reports             []Report        `json:"reports,omitempty"`
+	Dividend            *Dividend       `json:"dividend,omitempty"`
 }
 
 type Rule struct {
@@ -147,6 +179,7 @@ func main() {
 	mux.HandleFunc("GET /api/state", server.handleGetState)
 	mux.HandleFunc("POST /api/reset", server.handleReset)
 	mux.HandleFunc("POST /api/trades", server.handleCreateTrade)
+	mux.HandleFunc("POST /api/decision-logs/clear", server.handleClearDecisionLogs)
 	mux.HandleFunc("PUT /api/holdings/", server.handleUpdateHolding)
 	mux.HandleFunc("POST /api/research/preview", server.handlePreviewResearch)
 	mux.HandleFunc("POST /api/research/import", server.handleImportResearch)
@@ -155,11 +188,18 @@ func main() {
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
-	mux.Handle("/", http.FileServer(http.Dir(".")))
+	mux.Handle("/", noCache(http.FileServer(http.Dir("."))))
 
 	addr := "0.0.0.0:8080"
 	log.Printf("portfolio desk listening on http://%s", addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
+}
+
+func noCache(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleGetState(w http.ResponseWriter, r *http.Request) {
@@ -243,6 +283,26 @@ func (s *Server) handleCreateTrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, s.state)
+}
+
+func (s *Server) handleClearDecisionLogs(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	nextLogs := make([]DecisionLog, 0, len(s.state.DecisionLogs))
+	for _, log := range s.state.DecisionLogs {
+		if strings.EqualFold(strings.TrimSpace(log.Type), "trade") {
+			nextLogs = append(nextLogs, log)
+		}
+	}
+	s.state.DecisionLogs = nextLogs
+
+	if err := saveState(s.state); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save state")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, s.state)
 }
 
 func (s *Server) handleUpdateHolding(w http.ResponseWriter, r *http.Request) {
