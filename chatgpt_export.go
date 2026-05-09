@@ -98,6 +98,7 @@ func buildChatGPTContextZip(state AppState, generatedAt time.Time) ([]byte, erro
 		content string
 	}{
 		{"00_project_instructions.md", renderProjectInstructions(meta)},
+		{"00_reference_tables.md", renderReferenceTables(meta, state, records, totalPositions, totalAssets)},
 		{"01_portfolio_snapshot.md", renderPortfolioSnapshot(meta, state, records, totalPositions, totalAssets)},
 		{"02_decision_rules.md", renderDecisionRules(meta, state)},
 		{"03_watchlist_and_triggers.md", renderWatchlistAndTriggers(meta, records)},
@@ -276,7 +277,7 @@ func renderProjectInstructions(meta string) string {
 
 ## 使用原则
 
-- 优先读取 ` + "`01_portfolio_snapshot.md`" + ` 理解当前现金、仓位、汇率、持仓和候选池。
+- 优先读取 ` + "`00_reference_tables.md`" + ` 建立横向比较视图，再读取 ` + "`01_portfolio_snapshot.md`" + ` 理解当前现金、仓位、汇率、持仓和候选池。
 - 深度研究单只股票前，先读取 ` + "`stocks/`" + ` 下对应股票档案，避免重复询问已经存在的成本、目标价、风险和历史决策。
 - 所有建议必须同时考虑估值、安全边际、质量评分、仓位和既有投资纪律。
 - 如果研究结论需要回写网站，请输出符合 ` + "`import_schema.md`" + ` 的 JSON；不要输出散乱字段。
@@ -289,6 +290,147 @@ func renderProjectInstructions(meta string) string {
 - 组合复盘：先看仓位和风险集中度，再看候选池是否有更优风险收益比。
 - 导入网站：只输出一个 JSON 对象，字段遵循 ` + "`import_schema.md`" + `。
 `
+}
+
+func renderReferenceTables(meta string, state AppState, records []chatGPTStockRecord, totalPositions float64, totalAssets float64) string {
+	var builder strings.Builder
+	builder.WriteString(meta)
+	builder.WriteString("# 参考表格\n\n")
+	builder.WriteString("这份文件是给 ChatGPT 快速建立组合全局认知的索引层。先用表格做横向比较，再进入 `stocks/` 里的单股档案查证据和细节。\n\n")
+
+	builder.WriteString("## 组合总览表\n\n")
+	builder.WriteString("| 项目 | 数值 |\n| --- | --- |\n")
+	builder.WriteString(fmt.Sprintf("| 现金 | %s |\n", mdCell(formatCurrency(state.Cash, "CNY"))))
+	builder.WriteString(fmt.Sprintf("| 持仓市值 | %s |\n", mdCell(formatCurrency(totalPositions, "CNY"))))
+	builder.WriteString(fmt.Sprintf("| 总资产 | %s |\n", mdCell(formatCurrency(totalAssets, "CNY"))))
+	builder.WriteString(fmt.Sprintf("| 现金占比 | %s |\n", formatPercent(ratioOrZero(state.Cash, totalAssets))))
+	builder.WriteString(fmt.Sprintf("| 持仓占比 | %s |\n", formatPercent(ratioOrZero(totalPositions, totalAssets))))
+	builder.WriteString(fmt.Sprintf("| 持仓数量 | %d |\n", len(state.Holdings)))
+	builder.WriteString(fmt.Sprintf("| 候选数量 | %d |\n", len(state.Candidates)))
+	builder.WriteString(fmt.Sprintf("| 决策日志数量 | %d |\n", len(state.DecisionLogs)))
+
+	builder.WriteString("\n## 持仓参考表\n\n")
+	builder.WriteString("| 档案 | 状态 | 货币 | 股数 | 成本 | 最新价 | 市值(CNY) | 盈亏(CNY) | 盈亏率 | 仓位 | 安全边际 | 质量分 | 当前动作 |\n")
+	builder.WriteString("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |\n")
+	for _, record := range records {
+		if record.Status != "持仓" {
+			continue
+		}
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			mdCell(chatGPTStockLink(record)),
+			mdCell(record.Status),
+			mdCell(record.Currency),
+			formatNumber(record.Shares),
+			formatNumber(record.Cost),
+			formatNumber(record.CurrentPrice),
+			formatNumber(record.MarketValueCNY),
+			formatNumber(record.ProfitLossCNY),
+			formatPercentPtr(record.ProfitLossRate),
+			formatPercent(record.Weight),
+			formatPercentPtr(record.MarginOfSafety),
+			formatScorePtr(record.QualityScore),
+			mdCell(record.Action),
+		))
+	}
+
+	builder.WriteString("\n## 候选池参考表\n\n")
+	builder.WriteString("| 档案 | 行业 | 货币 | 最新价 | 内在价值 | 目标买入价 | 安全边际 | 距离目标买入价 | 质量分 | 当前动作 |\n")
+	builder.WriteString("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |\n")
+	for _, record := range records {
+		if record.Status != "候选" {
+			continue
+		}
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			mdCell(chatGPTStockLink(record)),
+			mdCell(record.Industry),
+			mdCell(record.Currency),
+			formatNumber(record.CurrentPrice),
+			formatFloatPtr(record.IntrinsicValue),
+			formatFloatPtr(record.TargetBuyPrice),
+			formatPercentPtr(record.MarginOfSafety),
+			formatTargetDistance(record.CurrentPrice, record.TargetBuyPrice),
+			formatScorePtr(record.QualityScore),
+			mdCell(record.Action),
+		))
+	}
+
+	builder.WriteString("\n## 估值与安全边际表\n\n")
+	builder.WriteString("| 状态 | 档案 | 最新价 | 内在价值 | 公允区间 | 目标买入价 | 安全边际 | 距离目标买入价 | 质量分 |\n")
+	builder.WriteString("| --- | --- | ---: | ---: | --- | ---: | ---: | ---: | ---: |\n")
+	for _, record := range records {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			mdCell(record.Status),
+			mdCell(chatGPTStockLink(record)),
+			formatNumber(record.CurrentPrice),
+			formatFloatPtr(record.IntrinsicValue),
+			mdCell(record.FairValueRange),
+			formatFloatPtr(record.TargetBuyPrice),
+			formatPercentPtr(record.MarginOfSafety),
+			formatTargetDistance(record.CurrentPrice, record.TargetBuyPrice),
+			formatScorePtr(record.QualityScore),
+		))
+	}
+
+	builder.WriteString("\n## 执行计划表\n\n")
+	builder.WriteString("| 排名 | 标的 | 名称 | 状态 | 优先级 | 建议 | 纪律 |\n")
+	builder.WriteString("| ---: | --- | --- | --- | --- | --- | --- |\n")
+	plans := sortedPlanItems(state.Plan)
+	for _, plan := range plans {
+		record := recordForPlan(records, plan)
+		status := "-"
+		if record != nil {
+			status = record.Status
+		}
+		builder.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s | %s | %s |\n",
+			plan.Rank,
+			mdCell(plan.Symbol),
+			mdCell(plan.Name),
+			mdCell(status),
+			mdCell(plan.Priority),
+			mdCell(plan.Advice),
+			mdCell(plan.Discipline),
+		))
+	}
+	if len(plans) == 0 {
+		builder.WriteString("| - | - | - | - | - | - | - |\n")
+	}
+
+	builder.WriteString("\n## 风险与否决项表\n\n")
+	builder.WriteString("| 状态 | 档案 | 行业 | 质量分 | 安全边际 | 主要风险 |\n")
+	builder.WriteString("| --- | --- | --- | ---: | ---: | --- |\n")
+	for _, record := range records {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s |\n",
+			mdCell(record.Status),
+			mdCell(chatGPTStockLink(record)),
+			mdCell(record.Industry),
+			formatScorePtr(record.QualityScore),
+			formatPercentPtr(record.MarginOfSafety),
+			mdCell(record.Risk),
+		))
+	}
+
+	builder.WriteString("\n## 最近决策日志索引\n\n")
+	builder.WriteString("| 日期 | 类型 | 标的 | 名称 | 决策 | 纪律 |\n")
+	builder.WriteString("| --- | --- | --- | --- | --- | --- |\n")
+	logs := sortedDecisionLogs(state.DecisionLogs)
+	if len(logs) > 30 {
+		logs = logs[:30]
+	}
+	for _, logItem := range logs {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s |\n",
+			mdCell(logItem.Date),
+			mdCell(logItem.Type),
+			mdCell(logItem.Symbol),
+			mdCell(logItem.Name),
+			mdCell(logItem.Decision),
+			mdCell(logItem.Discipline),
+		))
+	}
+	if len(logs) == 0 {
+		builder.WriteString("| - | - | - | - | - | - |\n")
+	}
+
+	return builder.String()
 }
 
 func renderPortfolioSnapshot(meta string, state AppState, records []chatGPTStockRecord, totalPositions float64, totalAssets float64) string {
@@ -630,6 +772,52 @@ func sortedDecisionLogs(logs []DecisionLog) []DecisionLog {
 	return sorted
 }
 
+func sortedPlanItems(plan []PlanItem) []PlanItem {
+	sorted := append([]PlanItem(nil), plan...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		leftRank := sorted[i].Rank
+		rightRank := sorted[j].Rank
+		if leftRank == 0 {
+			leftRank = 999
+		}
+		if rightRank == 0 {
+			rightRank = 999
+		}
+		if leftRank == rightRank {
+			return sorted[i].Name < sorted[j].Name
+		}
+		return leftRank < rightRank
+	})
+	return sorted
+}
+
+func recordForPlan(records []chatGPTStockRecord, plan PlanItem) *chatGPTStockRecord {
+	normalizedSymbol := normalizeSymbol(plan.Symbol)
+	for i := range records {
+		if normalizedSymbol != "" && normalizeSymbol(records[i].Symbol) == normalizedSymbol {
+			return &records[i]
+		}
+	}
+
+	planName := strings.TrimSpace(plan.Name)
+	for i := range records {
+		recordName := strings.TrimSpace(records[i].Name)
+		if planName != "" && recordName != "" && (strings.EqualFold(planName, recordName) || strings.Contains(planName, recordName) || strings.Contains(recordName, planName)) {
+			return &records[i]
+		}
+	}
+	return nil
+}
+
+func chatGPTStockLink(record chatGPTStockRecord) string {
+	label := strings.TrimSpace(record.Symbol + " " + record.Name)
+	if label == "" {
+		label = "股票档案"
+	}
+	path := "stocks/" + sanitizeZipFileName(record.Symbol+"_"+record.Name) + ".md"
+	return fmt.Sprintf("[%s](%s)", label, path)
+}
+
 func uniqueZipPath(used map[string]int, path string) string {
 	if _, ok := used[path]; !ok {
 		used[path] = 1
@@ -673,6 +861,13 @@ func sanitizeZipFileName(name string) string {
 
 func formatCurrency(value float64, currency string) string {
 	return fmt.Sprintf("%s %.2f", currency, value)
+}
+
+func ratioOrZero(value float64, total float64) float64 {
+	if total <= 0 {
+		return 0
+	}
+	return value / total
 }
 
 func formatNumber(value float64) string {
