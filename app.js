@@ -203,9 +203,10 @@ let state = loadState();
 let activeFilter = "all";
 let searchTerm = "";
 let pendingResearch = null;
-let candidateSort = "discipline";
+let candidateSort = "consensus";
 const pageTitles = {
-  overview: "纸牌屋",
+  overview: "投资委员会",
+  masters: "三大师视角",
   positions: "当前持仓",
   trades: "交易流水",
   candidates: "候选池",
@@ -218,11 +219,17 @@ const elements = {
   tradeList: document.querySelector("#tradeList"),
   allocationChart: document.querySelector("#allocationChart"),
   overviewPlanList: document.querySelector("#overviewPlanList"),
+  committeeCards: document.querySelector("#committeeCards"),
+  committeeConsensus: document.querySelector("#committeeConsensus"),
   opportunityRadar: document.querySelector("#opportunityRadar"),
   disciplineDashboard: document.querySelector("#disciplineDashboard"),
   dataQualityList: document.querySelector("#dataQualityList"),
   dividendCashList: document.querySelector("#dividendCashList"),
   decisionLogList: document.querySelector("#decisionLogList"),
+  grahamSummary: document.querySelector("#grahamSummary"),
+  grahamList: document.querySelector("#grahamList"),
+  buffettSummary: document.querySelector("#buffettSummary"),
+  buffettList: document.querySelector("#buffettList"),
   candidateList: document.querySelector("#candidateList"),
   candidateSort: document.querySelector("#candidateSort"),
   stockDetail: document.querySelector("#stockDetail"),
@@ -818,6 +825,190 @@ function holdingHealth(position, totalValue) {
   };
 }
 
+function marginValue(stock) {
+  return calculatedMarginOfSafety(stock) ?? finiteNumber(stock?.marginOfSafety);
+}
+
+function qualityValue(stock) {
+  return finiteNumber(stock?.qualityScore);
+}
+
+function masterTone(status) {
+  if (/复盘|不合格|能力圈外|投机|低可信|降权/.test(status)) return "risk";
+  if (/合格|核心|足够|认可/.test(status)) return "strong";
+  return "watch";
+}
+
+function marksView(stock, totalValue = 0) {
+  const margin = marginValue(stock);
+  const confidence = valuationConfidence(stock);
+  const weight = totalValue && stock.marketValueCny ? stock.marketValueCny / totalValue : 0;
+  const dividendRisk = dividendReliability(stock).value === "risk";
+  const highRisk = hasMajorRisk(stock) || confidence === "low";
+  const lowMargin = !Number.isFinite(margin) || margin < SAFETY_MARGIN_TARGET;
+  let score = 72;
+
+  if (Number.isFinite(margin)) score += clamp(margin * 100, -20, 35) * 0.65;
+  if (confidence === "high") score += 8;
+  if (confidence === "low") score -= 24;
+  if (highRisk) score -= 22;
+  if (dividendRisk) score -= 10;
+  if (weight > 0.15) score -= 8;
+  score = Math.round(clamp(score, 0, 100));
+
+  let status = "等待补偿";
+  if (highRisk || dividendRisk) status = "风险复盘";
+  else if (!lowMargin && confidence !== "low") status = "补偿足够";
+  else if (Number.isFinite(margin) && margin >= 0.15) status = "仅观察";
+
+  const support = [
+    Number.isFinite(margin) ? `安全边际 ${percent(margin * 100, false)}` : "安全边际待补充",
+    `${confidenceMeta(stock).text}`,
+    weight ? `仓位 ${percent(weight * 100, false)}` : ""
+  ].filter(Boolean);
+  const against = [
+    lowMargin ? "风险补偿不足" : "",
+    highRisk ? "存在重大风险或低可信" : "",
+    dividendRisk ? "股息质量需复盘" : ""
+  ].filter(Boolean);
+
+  return {
+    key: "marks",
+    name: "马克斯",
+    title: "风险与周期",
+    status,
+    score,
+    tone: masterTone(status),
+    support,
+    against,
+    action: status === "补偿足够" ? "可进入买入复核" : status === "风险复盘" ? "优先复盘或降权" : "等待更高风险补偿"
+  };
+}
+
+function grahamView(stock) {
+  const margin = marginValue(stock);
+  const financial = finiteNumber(stock?.financialQuality);
+  const dividend = dividendReliability(stock);
+  const confidence = valuationConfidence(stock);
+  const highRisk = hasMajorRisk(stock) || confidence === "low";
+  const defensiveMargin = Number.isFinite(margin) && margin >= (confidence === "high" ? SAFETY_MARGIN_TARGET : 0.33);
+  let score = 45;
+
+  if (Number.isFinite(margin)) score += clamp(margin, -0.2, 0.5) * 90;
+  if (Number.isFinite(financial)) score += (financial / 25) * 24;
+  if (dividend.value === "stable") score += 12;
+  if (dividend.value === "risk") score -= 18;
+  if (confidence === "high") score += 7;
+  if (highRisk) score -= 28;
+  score = Math.round(clamp(score, 0, 100));
+
+  let status = "不合格";
+  if (!highRisk && defensiveMargin && score >= 72) status = "防御合格";
+  else if (!highRisk && score >= 55) status = "勉强";
+
+  const support = [
+    Number.isFinite(margin) ? `安全边际 ${percent(margin * 100, false)}` : "安全边际待补充",
+    Number.isFinite(financial) ? `财务质量 ${financial}/25` : "财务质量待补充",
+    `股息${dividend.text}`
+  ];
+  const against = [
+    defensiveMargin ? "" : "防御型折价不足",
+    highRisk ? "财报/治理/低可信风险" : "",
+    dividend.value === "risk" ? "分红可靠性不足" : ""
+  ].filter(Boolean);
+
+  return {
+    key: "graham",
+    name: "格雷厄姆",
+    title: "便宜与防守",
+    status,
+    score,
+    tone: masterTone(status),
+    support,
+    against,
+    action: status === "防御合格" ? "可列入防御型复核" : status === "勉强" ? "继续等待更低价格" : "不满足防守买入"
+  };
+}
+
+function buffettView(stock) {
+  const quality = qualityValue(stock);
+  const business = finiteNumber(stock?.businessModel);
+  const moat = finiteNumber(stock?.moat);
+  const governance = finiteNumber(stock?.governance);
+  const financial = finiteNumber(stock?.financialQuality);
+  const margin = marginValue(stock);
+  const confidence = valuationConfidence(stock);
+  const highRisk = hasMajorRisk(stock) || confidence === "low";
+  const qualityBase = (Number.isFinite(quality) ? quality : 60) * 0.35 +
+    (Number.isFinite(business) ? (business / 30) * 100 : 60) * 0.18 +
+    (Number.isFinite(moat) ? (moat / 25) * 100 : 60) * 0.2 +
+    (Number.isFinite(governance) ? (governance / 20) * 100 : 60) * 0.12 +
+    (Number.isFinite(financial) ? (financial / 25) * 100 : 60) * 0.15;
+  let score = qualityBase;
+  if (confidence === "high") score += 8;
+  if (confidence === "low") score -= 24;
+  if (Number.isFinite(margin) && margin >= 0.1) score += 5;
+  if (highRisk) score -= 22;
+  score = Math.round(clamp(score, 0, 100));
+
+  let status = "普通机会";
+  if (highRisk || (Number.isFinite(quality) && quality < 75)) status = "能力圈外";
+  else if (score >= 84 && Number.isFinite(margin) && margin >= 0.15) status = "长期核心";
+  else if (score >= 78) status = "好生意等价格";
+
+  const support = [
+    Number.isFinite(quality) ? `质量 ${quality}` : "质量待补充",
+    Number.isFinite(moat) ? `护城河 ${moat}/25` : "护城河待补充",
+    confidenceMeta(stock).text
+  ];
+  const against = [
+    Number.isFinite(margin) && margin < 0.2 ? "价格仍不够舒服" : "",
+    highRisk ? "低可信或重大风险" : "",
+    Number.isFinite(financial) && financial < 20 ? "现金流/财务质量不够强" : ""
+  ].filter(Boolean);
+
+  return {
+    key: "buffett",
+    name: "巴菲特",
+    title: "好生意与复利",
+    status,
+    score,
+    tone: masterTone(status),
+    support,
+    against,
+    action: status === "长期核心" ? "可等待合理价长期加仓" : status === "好生意等价格" ? "留在核心观察，等价格" : status === "能力圈外" ? "隔离为特殊观察" : "普通候选，不消耗太多注意力"
+  };
+}
+
+function masterVotes(stock, totalValue = 0) {
+  return {
+    marks: marksView(stock, totalValue),
+    graham: grahamView(stock),
+    buffett: buffettView(stock)
+  };
+}
+
+function masterApproval(vote) {
+  if (vote.key === "marks") return vote.status === "补偿足够" || vote.status === "仅观察";
+  if (vote.key === "graham") return vote.status === "防御合格" || vote.status === "勉强";
+  return vote.status === "长期核心" || vote.status === "好生意等价格";
+}
+
+function consensusCount(stock, totalValue = 0) {
+  return Object.values(masterVotes(stock, totalValue)).filter(masterApproval).length;
+}
+
+function consensusText(count) {
+  if (count >= 3) return "三方共识";
+  if (count === 2) return "两方认可";
+  if (count === 1) return "单方认可";
+  return "无共识";
+}
+
+function consensusLabel(stock, totalValue = 0) {
+  return consensusText(consensusCount(stock, totalValue));
+}
+
 function renderMetrics(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   const totalCost = positions.reduce((sum, item) => sum + item.costValueCny, 0);
@@ -849,7 +1040,7 @@ function renderPositions(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
 
   if (!filtered.length) {
-    elements.positionsBody.innerHTML = `<tr><td colspan="11" class="empty-state">暂无符合条件的持仓</td></tr>`;
+    elements.positionsBody.innerHTML = `<tr><td colspan="14" class="empty-state">暂无符合条件的持仓</td></tr>`;
     return;
   }
 
@@ -860,6 +1051,7 @@ function renderPositions(positions) {
       const marginText = displayMarginOfSafety(position);
       const qualityText = Number.isFinite(position.qualityScore) ? position.qualityScore : "-";
       const health = holdingHealth(position, totalValue);
+      const votes = masterVotes(position, totalValue);
 
       return `
         <tr>
@@ -897,6 +1089,9 @@ function renderPositions(positions) {
             <br />
             <small class="health-score">${health.score} 分</small>
           </td>
+          <td>${compactMasterCell(votes.marks)}</td>
+          <td>${compactMasterCell(votes.graham)}</td>
+          <td>${compactMasterCell(votes.buffett)}</td>
           <td>
             <button class="icon-button edit-holding" data-symbol="${position.symbol}" title="编辑 Excel 信息">✎</button>
           </td>
@@ -907,6 +1102,7 @@ function renderPositions(positions) {
 }
 
 function renderAllocation(positions) {
+  if (!elements.allocationChart) return;
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
 
   elements.allocationChart.innerHTML = positions
@@ -1003,6 +1199,7 @@ function renderPlanAndCandidates() {
   elements.candidateList.innerHTML = sortedCandidates()
     .map((item) => {
       const plan = findPlanForStock(item);
+      const votes = masterVotes(item);
       return `
         <a class="candidate-card" href="${stockHash(item.symbol)}">
           <div class="candidate-head">
@@ -1013,12 +1210,18 @@ function renderPlanAndCandidates() {
             <em>${escapeHTML(plan ? `#${plan.rank} ${plan.priority}` : item.status)}</em>
           </div>
           <div class="candidate-metrics">
+            <span>共识 <strong>${escapeHTML(consensusLabel(item))}</strong></span>
             <span>质量 <strong>${Number.isFinite(item.qualityScore) ? item.qualityScore : "-"}</strong></span>
             <span>可信度 <strong>${escapeHTML(confidenceMeta(item).text)}</strong></span>
             <span>最新价 <strong>${Number.isFinite(item.currentPrice) && item.currentPrice > 0 ? currency(item.currentPrice, item.currency) : "-"}</strong></span>
             <span>安全边际 <strong>${displayMarginOfSafety(item)}</strong></span>
             <span>首买价 <strong>${displayPriceLevel(item, "initialBuyPrice")}</strong></span>
             <span>距买点 <strong>${displayBuyDistance(item)}</strong></span>
+          </div>
+          <div class="master-tags candidate-master-tags">
+            ${masterTag(votes.marks)}
+            ${masterTag(votes.graham)}
+            ${masterTag(votes.buffett)}
           </div>
           <p>${escapeHTML(item.action)}</p>
         </a>
@@ -1083,10 +1286,14 @@ function disciplineRankScore(stock) {
 
 function sortedCandidates() {
   const holdingSymbols = new Set(state.holdings.filter((holding) => holding.shares > 0).map((holding) => normalizeSymbol(holding.symbol)));
+  const totalValue = computePositions().reduce((sum, item) => sum + item.marketValueCny, 0);
   return state.candidates
     .filter((candidate) => !holdingSymbols.has(normalizeSymbol(candidate.symbol)))
     .sort((a, b) => {
       const byName = () => a.name.localeCompare(b.name, "zh-CN");
+      if (candidateSort === "consensus") {
+        return consensusCount(b, totalValue) - consensusCount(a, totalValue) || disciplineRankScore(b) - disciplineRankScore(a) || byName();
+      }
       if (candidateSort === "discipline") {
         return disciplineRankScore(b) - disciplineRankScore(a) || planRank(a) - planRank(b) || byName();
       }
@@ -1288,6 +1495,296 @@ function renderActionConclusion(positions) {
   elements.actionConclusionReasons.innerHTML = conclusion.reasons.length
     ? conclusion.reasons.map((reason) => `<span>${escapeHTML(reason)}</span>`).join("")
     : `<span>纪律优先，等待价格给出更好补偿</span>`;
+}
+
+function committeeUniverse(positions) {
+  return decisionUniverse(positions);
+}
+
+function committeeStats(positions) {
+  const universe = committeeUniverse(positions);
+  const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const withVotes = universe.map((stock) => ({ stock, votes: masterVotes(stock, totalValue), consensus: consensusCount(stock, totalValue) }));
+  const holdingsValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const longTermValue = positions
+    .filter((stock) => buffettView(stock).status === "长期核心" || buffettView(stock).status === "好生意等价格")
+    .reduce((sum, item) => sum + item.marketValueCny, 0);
+  const riskReview = withVotes.filter((item) => item.votes.marks.status === "风险复盘");
+  const defensive = withVotes.filter((item) => item.votes.graham.status === "防御合格");
+  const compounders = withVotes.filter((item) => item.votes.buffett.status === "长期核心" || item.votes.buffett.status === "好生意等价格");
+  return { universe, withVotes, totalValue, holdingsValue, longTermValue, riskReview, defensive, compounders };
+}
+
+function committeePortfolioStatus(stats) {
+  const riskCount = stats.riskReview.filter((item) => item.stock.sourceType === "holding").length;
+  const highConsensus = stats.withVotes.filter((item) => item.consensus >= 2).length;
+  const buyable = stats.withVotes.some((item) => item.consensus >= 2 && item.votes.marks.status === "补偿足够");
+  if (riskCount > 0) return "当前组合：风险复盘";
+  if (buyable) return "当前组合：可小额加仓";
+  if (highConsensus >= 3) return "当前组合：防守等待";
+  return "当前组合：继续等待";
+}
+
+function masterCard(view, support, against, action) {
+  return `
+    <article class="committee-card ${view.key}">
+      <div class="committee-card-head">
+        <div>
+          <p class="eyebrow">${escapeHTML(view.name)}</p>
+          <h2>${escapeHTML(view.title)}</h2>
+        </div>
+        <span class="master-score ${view.tone}">${view.score}</span>
+      </div>
+      <strong>${escapeHTML(view.status)}</strong>
+      <dl>
+        <div><dt>支持理由</dt><dd>${escapeHTML(support || "暂无明确支持项")}</dd></div>
+        <div><dt>反对理由</dt><dd>${escapeHTML(against || "暂无主要反对项")}</dd></div>
+        <div><dt>下一步动作</dt><dd>${escapeHTML(action)}</dd></div>
+      </dl>
+    </article>
+  `;
+}
+
+function renderCommitteeOverview(positions) {
+  const stats = committeeStats(positions);
+  const marksViewCard = {
+    key: "marks",
+    name: "霍华德·马克斯",
+    title: "风险与周期",
+    status: stats.riskReview.length ? `${stats.riskReview.length} 个标的需风险复盘` : "风险补偿仍需等待",
+    score: Math.round(100 - Math.min(stats.riskReview.length * 12, 48)),
+    tone: stats.riskReview.length ? "risk" : "watch"
+  };
+  const grahamViewCard = {
+    key: "graham",
+    name: "本杰明·格雷厄姆",
+    title: "便宜与防守",
+    status: stats.defensive.length ? `${stats.defensive.length} 个标的防御合格` : "缺少防御型便宜货",
+    score: Math.round(stats.universe.length ? (stats.defensive.length / stats.universe.length) * 100 : 0),
+    tone: stats.defensive.length ? "strong" : "watch"
+  };
+  const buffettViewCard = {
+    key: "buffett",
+    name: "沃伦·巴菲特",
+    title: "好生意与复利",
+    status: stats.compounders.length ? `${stats.compounders.length} 个长期复利候选` : "缺少明确长期核心",
+    score: Math.round(stats.holdingsValue ? (stats.longTermValue / stats.holdingsValue) * 100 : 0),
+    tone: stats.compounders.length ? "strong" : "watch"
+  };
+
+  elements.actionConclusionStatus.textContent = committeePortfolioStatus(stats);
+  elements.actionConclusionDetail.textContent = "三位大师从风险、防守、复利三个角度给出约束";
+  elements.actionConclusionReasons.innerHTML = [
+    `风险复盘 ${stats.riskReview.length}`,
+    `防御合格 ${stats.defensive.length}`,
+    `复利候选 ${stats.compounders.length}`
+  ].map((item) => `<span>${escapeHTML(item)}</span>`).join("");
+
+  elements.committeeCards.innerHTML = [
+    masterCard(
+      marksViewCard,
+      stats.riskReview[0] ? `${stats.riskReview[0].stock.name} 需复盘；低可信和高风险股息已被隔离` : "未发现需要立即降权的新增风险",
+      stats.riskReview.length ? "风险补偿不足会压制买入动作" : "仍需等待更高安全边际",
+      stats.riskReview.length ? "先复盘风险，再考虑买入" : "继续等待周期给出补偿"
+    ),
+    masterCard(
+      grahamViewCard,
+      stats.defensive.slice(0, 2).map((item) => item.stock.name).join("、") || "现金比例提供防守",
+      "多数标的未达到足够保守的防御折价",
+      "只把防御合格标的放入买入复核"
+    ),
+    masterCard(
+      buffettViewCard,
+      stats.compounders.slice(0, 2).map((item) => item.stock.name).join("、") || "高质量标的需要更好价格",
+      "好公司不等于当前可重仓",
+      "聚焦高质量高可信，等待合理价格"
+    )
+  ].join("");
+
+  const topConsensus = stats.withVotes
+    .filter((item) => item.consensus >= 2)
+    .sort((a, b) => b.consensus - a.consensus || disciplineRankScore(b.stock) - disciplineRankScore(a.stock))
+    .slice(0, 6);
+  elements.committeeConsensus.innerHTML = topConsensus.length
+    ? topConsensus.map((item) => renderConsensusItem(item.stock, item.votes, item.consensus)).join("")
+    : `<div class="empty-state compact-empty">暂无两位以上大师共同认可的标的</div>`;
+}
+
+function renderConsensusItem(stock, votes, consensus) {
+  return `
+    <a class="consensus-item" href="${stockHash(stock.symbol)}">
+      <div>
+        <strong>${escapeHTML(stock.name)}</strong>
+        <span>${escapeHTML(stock.symbol)} · ${escapeHTML(consensusText(consensus))}</span>
+      </div>
+      <div class="master-tags">
+        ${masterTag(votes.marks)}
+        ${masterTag(votes.graham)}
+        ${masterTag(votes.buffett)}
+      </div>
+      <small>${escapeHTML(displayText(stock.action, stock.status))}</small>
+    </a>
+  `;
+}
+
+function masterTag(vote) {
+  return `<span class="master-tag ${vote.key} ${vote.tone}" title="${escapeHTML(vote.action)}">${escapeHTML(vote.name)}：${escapeHTML(vote.status)}</span>`;
+}
+
+function compactMasterCell(vote) {
+  return `<span class="master-mini ${vote.key} ${vote.tone}" title="${escapeHTML(vote.action)}">${escapeHTML(vote.status)}</span>`;
+}
+
+function shortReasonText(items, emptyText) {
+  const cleanItems = (items ?? []).map((item) => String(item ?? "").trim()).filter(Boolean);
+  return cleanItems.length ? cleanItems.slice(0, 3).join("；") : emptyText;
+}
+
+function renderMasterVoteCard(vote) {
+  return `
+    <article class="master-vote-card ${vote.key} ${vote.tone}">
+      <div class="master-vote-head">
+        <div>
+          <p class="eyebrow">${escapeHTML(vote.name)}</p>
+          <h3>${escapeHTML(vote.title)}</h3>
+        </div>
+        <span class="master-score ${vote.tone}">${vote.score}</span>
+      </div>
+      <strong>${escapeHTML(vote.status)}</strong>
+      <p>${escapeHTML(vote.action)}</p>
+      <dl>
+        <div><dt>支持</dt><dd>${escapeHTML(shortReasonText(vote.support, "暂无明确支持项"))}</dd></div>
+        <div><dt>反对</dt><dd>${escapeHTML(shortReasonText(vote.against, "暂无主要反对项"))}</dd></div>
+      </dl>
+    </article>
+  `;
+}
+
+function renderMasterVotesPanel(stock, totalValue) {
+  const votes = masterVotes(stock, totalValue);
+  return `
+    <section class="panel master-votes-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">Committee Vote</p>
+          <h2>三大师投票</h2>
+        </div>
+      </div>
+      <div class="master-vote-grid">
+        ${renderMasterVoteCard(votes.marks)}
+        ${renderMasterVoteCard(votes.graham)}
+        ${renderMasterVoteCard(votes.buffett)}
+      </div>
+    </section>
+  `;
+}
+
+function masterUniverseItems(positions, key) {
+  const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  return committeeUniverse(positions)
+    .map((stock) => {
+      const votes = masterVotes(stock, totalValue);
+      const vote = votes[key];
+      const margin = calculatedMarginOfSafety(stock) ?? finiteNumber(stock.marginOfSafety);
+      return {
+        stock,
+        votes,
+        vote,
+        consensus: Object.values(votes).filter(masterApproval).length,
+        margin,
+        quality: finiteNumber(stock.qualityScore),
+        confidence: confidenceScore(stock)
+      };
+    })
+    .sort((a, b) => {
+      if (key === "graham") {
+        const marginA = Number.isFinite(a.margin) ? a.margin : -Infinity;
+        const marginB = Number.isFinite(b.margin) ? b.margin : -Infinity;
+        return b.vote.score - a.vote.score || marginB - marginA || b.confidence - a.confidence || a.stock.name.localeCompare(b.stock.name, "zh-CN");
+      }
+      if (key === "buffett") {
+        return b.vote.score - a.vote.score || (b.quality ?? -Infinity) - (a.quality ?? -Infinity) || b.confidence - a.confidence || a.stock.name.localeCompare(b.stock.name, "zh-CN");
+      }
+      return b.vote.score - a.vote.score || b.consensus - a.consensus || a.stock.name.localeCompare(b.stock.name, "zh-CN");
+    });
+}
+
+function renderMasterSummary(items, key) {
+  const approved = items.filter((item) => masterApproval(item.vote)).length;
+  const holdings = items.filter((item) => item.stock.sourceType === "holding").length;
+  const top = items[0];
+  const statusCounts = items.reduce((counts, item) => {
+    counts.set(item.vote.status, (counts.get(item.vote.status) ?? 0) + 1);
+    return counts;
+  }, new Map());
+  const focusText = [...statusCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([status, count]) => `${status} ${count}`)
+    .join(" · ");
+  const primaryLabel = key === "graham" ? "防御认可" : "复利认可";
+
+  return `
+    <div class="master-summary-grid">
+      <div>
+        <span>${primaryLabel}</span>
+        <strong>${approved}/${items.length}</strong>
+      </div>
+      <div>
+        <span>覆盖持仓</span>
+        <strong>${holdings} 只</strong>
+      </div>
+      <div>
+        <span>当前重点</span>
+        <strong>${top ? escapeHTML(top.stock.name) : "-"}</strong>
+      </div>
+      <div>
+        <span>结论分布</span>
+        <strong>${escapeHTML(focusText || "待补充")}</strong>
+      </div>
+    </div>
+  `;
+}
+
+function renderMasterStockCard(item) {
+  const { stock, vote, margin, quality, consensus } = item;
+  const sourceText = stock.sourceType === "holding" ? "持仓" : "候选";
+  return `
+    <a class="master-stock-card ${vote.key} ${vote.tone}" href="${stockHash(stock.symbol)}">
+      <div class="master-stock-head">
+        <div>
+          <strong>${escapeHTML(stock.name)}</strong>
+          <span>${escapeHTML(stock.symbol)} · ${escapeHTML(sourceText)} · ${escapeHTML(consensusText(consensus))}</span>
+        </div>
+        <em>${escapeHTML(vote.status)}</em>
+      </div>
+      <div class="master-stock-metrics">
+        <span>评分 <strong>${vote.score}</strong></span>
+        <span>安全边际 <strong>${Number.isFinite(margin) ? percent(margin * 100, false) : "-"}</strong></span>
+        <span>质量 <strong>${Number.isFinite(quality) ? quality : "-"}</strong></span>
+        <span>共识 <strong>${consensus}/3</strong></span>
+      </div>
+      <p>${escapeHTML(vote.action)}</p>
+      <small>${escapeHTML(shortReasonText(vote.support, "支持项待补充"))}</small>
+    </a>
+  `;
+}
+
+function renderMasterStockList(items) {
+  if (!items.length) {
+    return `<div class="empty-state compact-empty">暂无可评估标的</div>`;
+  }
+  return items.map(renderMasterStockCard).join("");
+}
+
+function renderMastersPage(positions) {
+  if (!elements.grahamSummary || !elements.grahamList || !elements.buffettSummary || !elements.buffettList) return;
+  const grahamItems = masterUniverseItems(positions, "graham");
+  const buffettItems = masterUniverseItems(positions, "buffett");
+  elements.grahamSummary.innerHTML = renderMasterSummary(grahamItems, "graham");
+  elements.grahamList.innerHTML = renderMasterStockList(grahamItems);
+  elements.buffettSummary.innerHTML = renderMasterSummary(buffettItems, "buffett");
+  elements.buffettList.innerHTML = renderMasterStockList(buffettItems);
 }
 
 function firstIndustry(industry) {
@@ -1900,6 +2397,8 @@ function renderStockDetail(positions, symbol) {
       )}
     </section>
 
+    ${renderMasterVotesPanel(stock, totalValue)}
+
     <section class="detail-grid">
       <section class="panel">
         <div class="panel-head compact">
@@ -2002,6 +2501,8 @@ function render() {
   renderMetrics(positions);
   renderPositions(positions);
   renderDecisionArea(positions);
+  renderCommitteeOverview(positions);
+  renderMastersPage(positions);
   renderDecisionLogs();
   renderAllocation(positions);
   renderTrades();

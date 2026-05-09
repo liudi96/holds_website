@@ -388,6 +388,209 @@ h2 {
   color: var(--red);
 }
 
+.committee-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.committee-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-top: 4px solid #94a3b8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.committee-card.marks {
+  border-top-color: #64748b;
+}
+
+.committee-card.graham {
+  border-top-color: var(--green);
+}
+
+.committee-card.buffett {
+  border-top-color: #a16207;
+}
+
+.committee-card-head,
+.master-vote-head,
+.master-stock-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.committee-card h2,
+.master-vote-head h3 {
+  margin: 2px 0 0;
+  font-size: 16px;
+}
+
+.committee-card > strong {
+  font-size: 17px;
+}
+
+.committee-card dl,
+.master-vote-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.committee-card dl div,
+.master-vote-card dl div {
+  display: grid;
+  gap: 3px;
+}
+
+.committee-card dt,
+.master-vote-card dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.committee-card dd,
+.master-vote-card dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.master-score {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #eef2f0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.master-score.strong,
+.master-score.buy,
+.master-score.safe {
+  background: #e6f4ef;
+  color: var(--green);
+}
+
+.master-score.watch,
+.master-score.wait {
+  background: #eef4fb;
+  color: var(--blue);
+}
+
+.master-score.reduce {
+  background: #fff7ed;
+  color: #a16207;
+}
+
+.master-score.risk {
+  background: #fff1f2;
+  color: var(--red);
+}
+
+.committee-consensus {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+
+.consensus-item {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+  background: #ffffff;
+}
+
+.consensus-item:hover {
+  border-color: rgba(8, 127, 91, 0.34);
+  background: #fbfefd;
+}
+
+.consensus-item > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.consensus-item span,
+.consensus-item small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.master-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.master-tag,
+.master-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.master-tag.marks,
+.master-mini.marks {
+  background: #eef2f7;
+  color: #475569;
+}
+
+.master-tag.graham,
+.master-mini.graham {
+  background: #e6f4ef;
+  color: var(--green);
+}
+
+.master-tag.buffett,
+.master-mini.buffett {
+  background: #fff7ed;
+  color: #a16207;
+}
+
+.master-tag.risk,
+.master-mini.risk {
+  background: #fff1f2;
+  color: var(--red);
+}
+
+.master-tag.reduce,
+.master-mini.reduce {
+  background: #fff7ed;
+  color: #a16207;
+}
+
+.master-mini {
+  min-width: 62px;
+}
+
 .overview-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
@@ -413,6 +616,8 @@ h2 {
 .discipline-grid,
 .data-quality-list,
 .dividend-cash-list,
+.committee-consensus,
+.master-stock-list,
 .allocation-chart,
 .plan-list,
 .page[data-page="overview"] .decision-log-list {
@@ -431,6 +636,8 @@ h2 {
 .discipline-grid::-webkit-scrollbar,
 .data-quality-list::-webkit-scrollbar,
 .dividend-cash-list::-webkit-scrollbar,
+.committee-consensus::-webkit-scrollbar,
+.master-stock-list::-webkit-scrollbar,
 .allocation-chart::-webkit-scrollbar,
 .plan-list::-webkit-scrollbar,
 .page[data-page="overview"] .decision-log-list::-webkit-scrollbar {
@@ -441,6 +648,8 @@ h2 {
 .discipline-grid::-webkit-scrollbar-thumb,
 .data-quality-list::-webkit-scrollbar-thumb,
 .dividend-cash-list::-webkit-scrollbar-thumb,
+.committee-consensus::-webkit-scrollbar-thumb,
+.master-stock-list::-webkit-scrollbar-thumb,
 .allocation-chart::-webkit-scrollbar-thumb,
 .plan-list::-webkit-scrollbar-thumb,
 .page[data-page="overview"] .decision-log-list::-webkit-scrollbar-thumb {
@@ -784,6 +993,185 @@ h2 {
   line-height: 1.55;
 }
 
+.masters-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  padding: 18px;
+}
+
+.masters-hero h2 {
+  margin: 2px 0 0;
+  font-size: 24px;
+}
+
+.masters-hero p:last-child {
+  max-width: 620px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: right;
+}
+
+.masters-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.master-section {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-top: 4px solid #94a3b8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.master-section.marks {
+  border-top-color: #64748b;
+}
+
+.master-section.graham {
+  border-top-color: var(--green);
+}
+
+.master-section.buffett {
+  border-top-color: #a16207;
+}
+
+.compact-decision-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding: 0 14px 14px;
+}
+
+.master-summary {
+  padding: 0 16px 12px;
+}
+
+.master-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.master-summary-grid div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faf9;
+}
+
+.master-summary-grid span,
+.master-stock-card small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.master-summary-grid strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.master-stock-list {
+  display: grid;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.master-stock-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #94a3b8;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+  background: #ffffff;
+}
+
+.master-stock-card.graham {
+  border-left-color: var(--green);
+}
+
+.master-stock-card.buffett {
+  border-left-color: #a16207;
+}
+
+.master-stock-card.risk {
+  border-left-color: var(--red);
+}
+
+.master-stock-card:hover {
+  border-color: rgba(8, 127, 91, 0.34);
+  background: #fbfefd;
+}
+
+.master-stock-head div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.master-stock-head strong {
+  font-size: 14px;
+}
+
+.master-stock-head span,
+.master-stock-card p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.master-stock-head em {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef2f0;
+  color: var(--ink);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.master-stock-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.master-stock-metrics span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: #f8faf9;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.master-stock-metrics strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.master-stock-card p {
+  margin: 0;
+}
+
 .main-panel,
 .panel {
   min-width: 0;
@@ -830,7 +1218,7 @@ h2 {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1240px;
+  min-width: 1480px;
 }
 
 th,
@@ -1229,6 +1617,55 @@ tbody tr:hover {
 .detail-metrics {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: 18px;
+}
+
+.master-votes-panel {
+  margin-bottom: 18px;
+}
+
+.master-vote-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 18px 18px;
+}
+
+.master-vote-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-top: 4px solid #94a3b8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.master-vote-card.marks {
+  border-top-color: #64748b;
+}
+
+.master-vote-card.graham {
+  border-top-color: var(--green);
+}
+
+.master-vote-card.buffett {
+  border-top-color: #a16207;
+}
+
+.master-vote-card.risk {
+  border-top-color: var(--red);
+}
+
+.master-vote-card > strong {
+  font-size: 16px;
+}
+
+.master-vote-card p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .detail-grid {
@@ -1675,7 +2112,9 @@ label textarea {
     grid-template-columns: 1fr;
   }
 
-  .decision-grid {
+  .committee-grid,
+  .decision-grid,
+  .master-vote-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1723,6 +2162,7 @@ label textarea {
   .sidebar,
   .panel-head,
   .action-conclusion,
+  .masters-hero,
   .overview-toolbar {
     align-items: stretch;
     flex-direction: column;
@@ -1756,9 +2196,13 @@ label textarea {
   }
 
   .metrics-grid,
+  .committee-grid,
   .decision-grid,
   .decision-metrics,
   .dividend-cash-metrics,
+  .master-summary-grid,
+  .master-stock-metrics,
+  .master-vote-grid,
   .report-list,
   .form-grid,
   .valuation-grid,
@@ -1771,10 +2215,17 @@ label textarea {
     grid-template-columns: 1fr;
   }
 
+  .masters-hero p:last-child {
+    max-width: none;
+    text-align: left;
+  }
+
   .decision-list,
   .discipline-grid,
   .data-quality-list,
   .dividend-cash-list,
+  .committee-consensus,
+  .master-stock-list,
   .allocation-chart,
   .plan-list,
   .page[data-page="overview"] .decision-log-list {

@@ -90,6 +90,11 @@ JSON schema:
 - The site computes the first-buy price as `intrinsicValue * 75%`, watch price as `firstBuyPrice * 105%`, and aggressive buy price as `firstBuyPrice * 90%`.
 - Dividend data is fetched by the quote update flow when the data source provides it. Dividend yield is calculated as latest full fiscal-year cash dividend total divided by company market capitalization; comprehensive shareholder return is calculated as cash dividends plus buybacks divided by market capitalization.
 - `dividend.reliability` is optional. If omitted, the website derives `stable/review/risk` from dividend data completeness, valuation confidence, and major risk text.
+- The investment committee views are computed locally from the same imported data:
+  - Howard Marks focuses on risk compensation, safety margin, valuation confidence, major risk words, and position concentration.
+  - Benjamin Graham focuses on safety margin, financial quality, dividend reliability, and whether the valuation is defensive enough.
+  - Warren Buffett focuses on quality score, business model, moat, governance, financial quality, valuation confidence, and long-term risk.
+- Future optional analysis fields may be useful but are not required: `circleOfCompetence`, `ownerEarnings`, `roeHistory`, `debtRatio`, `dividendCoverage`, and capital allocation notes. Missing fields should not block import.
 - The website preview validates the JSON before writing. Confirmed imports update `data/portfolio.json` and first create a backup under `data/backups/`.
 - Holding safety margin is calculated as `(intrinsicValue - currentPrice) / intrinsicValue`. Candidate-pool stocks use the same formula after the overview `更新行情` button has fetched quote data; otherwise they continue to use the imported `valuation.marginOfSafety`.
 - Quote fields such as `currentPrice`, `previousClose`, and close dates are owned by the overview `更新行情` button or `cmd/update-quotes`, not this import.

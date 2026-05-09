@@ -187,11 +187,18 @@ func main() {
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
-	mux.Handle("/", http.FileServer(http.Dir(".")))
+	mux.Handle("/", noCache(http.FileServer(http.Dir("."))))
 
 	addr := "0.0.0.0:8080"
 	log.Printf("portfolio desk listening on http://%s", addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
+}
+
+func noCache(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleGetState(w http.ResponseWriter, r *http.Request) {

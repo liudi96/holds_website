@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>纸牌屋</title>
-    <link rel="stylesheet" href="./styles.css?v=discipline-1" />
+    <link rel="stylesheet" href="./styles.css?v=masters-1" />
   </head>
   <body>
     <aside class="sidebar">
@@ -17,9 +17,13 @@
       </div>
 
       <nav class="nav">
-        <button class="nav-item active" data-view="overview" title="总览">
+        <button class="nav-item active" data-view="overview" title="投资委员会">
           <span class="nav-icon">⌂</span>
-          总览
+          投资委员会
+        </button>
+        <button class="nav-item" data-view="masters" title="三大师视角">
+          <span class="nav-icon">◇</span>
+          三大师视角
         </button>
         <button class="nav-item" data-view="positions" title="持仓">
           <span class="nav-icon">▦</span>
@@ -58,8 +62,8 @@
       <section class="page active" data-page="overview">
         <div class="overview-toolbar">
           <div class="overview-toolbar-copy">
-            <p class="eyebrow">Dashboard</p>
-            <strong>总览操作</strong>
+            <p class="eyebrow">Investment Committee</p>
+            <strong>委员会操作</strong>
             <span id="quoteUpdateStatus">行情待更新</span>
           </div>
           <div class="overview-actions">
@@ -86,6 +90,8 @@
           </div>
           <div class="action-conclusion-reasons" id="actionConclusionReasons"></div>
         </section>
+
+        <section class="committee-grid" id="committeeCards" aria-label="三大师委员会结论"></section>
 
         <section class="metrics-grid" aria-label="资产概览">
           <article class="metric">
@@ -120,7 +126,47 @@
           </article>
         </section>
 
-        <section class="decision-grid" aria-label="投资决策区">
+        <section class="overview-grid">
+          <section class="panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Consensus</p>
+                <h2>共同结论</h2>
+              </div>
+            </div>
+            <div class="committee-consensus" id="committeeConsensus"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Plan</p>
+                <h2>执行优先级</h2>
+              </div>
+            </div>
+            <div class="plan-list" id="overviewPlanList"></div>
+          </section>
+        </section>
+      </section>
+
+      <section class="page" data-page="masters">
+        <section class="masters-hero panel">
+          <div>
+            <p class="eyebrow">Three Lenses</p>
+            <h2>三大师视角</h2>
+          </div>
+          <p>同一份组合数据，用风险与周期、防守与便宜、好生意与复利三种滤镜审查。</p>
+        </section>
+
+        <section class="masters-layout" aria-label="三大师视角">
+          <section class="master-section marks">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Howard Marks</p>
+                <h2>马克斯：风险与周期</h2>
+              </div>
+            </div>
+            <section class="decision-grid compact-decision-grid">
           <section class="panel">
             <div class="panel-head compact">
               <div>
@@ -160,27 +206,29 @@
             </div>
             <div class="dividend-cash-list" id="dividendCashList"></div>
           </section>
-        </section>
-
-        <section class="overview-grid">
-          <section class="panel">
-            <div class="panel-head compact">
-              <div>
-                <p class="eyebrow">Allocation</p>
-                <h2>资产分布</h2>
-              </div>
-            </div>
-            <div class="allocation-chart" id="allocationChart"></div>
+            </section>
           </section>
 
-          <section class="panel">
+          <section class="master-section graham">
             <div class="panel-head compact">
               <div>
-                <p class="eyebrow">Plan</p>
-                <h2>执行优先级</h2>
+                <p class="eyebrow">Benjamin Graham</p>
+                <h2>格雷厄姆：便宜与防守</h2>
               </div>
             </div>
-            <div class="plan-list" id="overviewPlanList"></div>
+            <div class="master-summary" id="grahamSummary"></div>
+            <div class="master-stock-list" id="grahamList"></div>
+          </section>
+
+          <section class="master-section buffett">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Warren Buffett</p>
+                <h2>巴菲特：好生意与复利</h2>
+              </div>
+            </div>
+            <div class="master-summary" id="buffettSummary"></div>
+            <div class="master-stock-list" id="buffettList"></div>
           </section>
         </section>
 
@@ -223,6 +271,9 @@
                   <th>质量</th>
                   <th>仓位</th>
                   <th>健康</th>
+                  <th>马克斯</th>
+                  <th>格雷厄姆</th>
+                  <th>巴菲特</th>
                   <th></th>
                 </tr>
               </thead>
@@ -258,6 +309,7 @@
             <div class="candidate-sort">
               <label for="candidateSort">排序</label>
               <select id="candidateSort">
+                <option value="consensus">综合共识</option>
                 <option value="discipline">纪律优先</option>
                 <option value="priority">执行优先级</option>
                 <option value="margin">安全边际</option>
@@ -406,6 +458,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=discipline-1"></script>
+    <script src="./app.js?v=masters-1"></script>
   </body>
 </html>
