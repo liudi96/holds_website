@@ -667,6 +667,28 @@
       "decision": "更新多年财务数据",
       "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
       "detail": "来源 东方财富财务分析；年度 10 年；最新期 2025；收入 115931105775；利润 11565166498；ROE 20.87%；ROIC 9.88%；FCF 11307276334"
+    },
+    {
+      "id": 1778398013628948500,
+      "date": "2026-05-10 15:26:53",
+      "type": "financials",
+      "symbol": "0700.HK",
+      "name": "腾讯控股",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 751766000000；利润 224842000000；ROE 21.13%；ROIC 15.25%；FCF 303052000000"
+    },
+    {
+      "id": 1778398259297470300,
+      "date": "2026-05-10 15:30:59",
+      "type": "financials",
+      "symbol": "03613.HK",
+      "name": "同仁堂国药",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 1366894310；利润 358773436；ROE 9.61%；ROIC 16.66%；FCF 712041745"
     }
   ],
   "holdings": [
@@ -695,7 +717,7 @@
       "moat": 23,
       "governance": 17,
       "financialQuality": 21,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 hk00700；币种 HKD；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 hk00700；币种 HKD；日期 2026-05-08/2026-05-08",
       "notes": "市场价格口径：2026-05-08约HK$470。财务口径：腾讯FY2025，收入RMB7517.66亿，同比+14%；Non-IFRS归母净利RMB2596.26亿；自由现金流RMB1826亿；净现金RMB1071亿；2026-04-30股本约91.18亿股。估值采用Non-IFRS PE、P/FCF、DCF/SOTP交叉验证，1 RMB≈HK$1.15；2026Q1尚未披露，AI capex投入回报是主要复盘变量。",
       "reports": [
         {
@@ -764,8 +786,38 @@
         "buybackAmount": 80000000000,
         "buybackCurrency": "HKD"
       },
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "pass",
+          "note": "????????????????????????????????"
+        },
+        "assetDurability": {
+          "status": "pass",
+          "note": "???????/IP??????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "review",
+          "note": "??????????????AI???????????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "pass",
+          "note": "FY2025????????????????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "review",
+          "note": "????????????????H?8%????????????"
+        },
+        "roeRoicDurability": {
+          "status": "pass",
+          "note": "ROE?21%?ROIC?15%???????????????"
+        },
+        "valuationSystemRisk": {
+          "status": "review",
+          "note": "??????AI????????????????????????"
+        }
+      },
       "financials": {
-        "updatedAt": "2026-05-10 07:56:40",
+        "updatedAt": "2026-05-10 15:26:53",
         "source": "东方财富港股财务分析",
         "sourceSymbol": "00700.HK",
         "currency": "HKD",
@@ -1096,7 +1148,7 @@
       "moat": 22,
       "governance": 17,
       "financialQuality": 23,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 sz000333；币种 CNY；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 sz000333；币种 CNY；日期 2026-05-08/2026-05-08",
       "notes": "基于2026-05-08 A股收盘约80.51元、2025年报和2026Q1财报。2025收入4564.5亿元、归母净利439.45亿元、经营现金流533.46亿元、FCF约422亿元、EPS5.80元、ROE19.70%。2026Q1收入1311.0亿元、归母净利126.75亿元、扣非净利109.62亿元且同比下滑14.02%。综合价值区间CNY78-102，中枢约94；当前仅约14%安全边际，未达到优秀资产≥20%买入纪律。导入格式遵循Research Bridge schema。",
       "reports": [
         {
@@ -1172,6 +1224,36 @@
         "cashDividendCurrency": "CNY",
         "buybackAmount": 11605319584,
         "buybackCurrency": "CNY"
+      },
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "pass",
+          "note": "?????????????????????????"
+        },
+        "assetDurability": {
+          "status": "pass",
+          "note": "????????????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "review",
+          "note": "??????????????????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "pass",
+          "note": "FY2025??????????????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "review",
+          "note": "??????????A?6%???????????????????"
+        },
+        "roeRoicDurability": {
+          "status": "review",
+          "note": "ROE??20%??Q1?????????????????"
+        },
+        "valuationSystemRisk": {
+          "status": "review",
+          "note": "????????????????????????????"
+        }
       },
       "financials": {
         "updatedAt": "2026-05-10 07:56:55",
@@ -1507,7 +1589,7 @@
       "moat": 23,
       "governance": 16,
       "financialQuality": 20,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 sz002415；币种 CNY；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 sz002415；币种 CNY；日期 2026-05-08/2026-05-08",
       "notes": "FY2025：营收约RMB925.08亿、归母净利约RMB141.95亿；2026Q1归母净利同比+36.42%。",
       "reports": [
         {
@@ -1583,6 +1665,36 @@
         "cashDividendCurrency": "CNY",
         "buybackAmount": 2028000000,
         "buybackCurrency": "CNY"
+      },
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "pass",
+          "note": "????????AIoT?????????"
+        },
+        "assetDurability": {
+          "status": "review",
+          "note": "??????????????????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "review",
+          "note": "?????????/????????????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "pass",
+          "note": "FY2025??????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "review",
+          "note": "??????????????????????????????"
+        },
+        "roeRoicDurability": {
+          "status": "review",
+          "note": "ROE/ROIC???????????????AIoT????????"
+        },
+        "valuationSystemRisk": {
+          "status": "review",
+          "note": "???????????????????????????"
+        }
       },
       "financials": {
         "updatedAt": "2026-05-10 07:58:50",
@@ -1918,7 +2030,7 @@
       "moat": 21,
       "governance": 16,
       "financialQuality": 21,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 sh600887；币种 CNY；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 sh600887；币种 CNY；日期 2026-05-08/2026-05-08",
       "notes": "基于2025年报、2026年一季报及2026-05-08附近市场价格约27.52元。2025年收入1156.36亿元、归母净利润115.65亿元、EPS 1.83元、ROE 20.87%、经营现金流143.44亿元；2026Q1收入347.41亿元、归母净利润53.95亿元、EPS 0.85元、经营现金流37.35亿元。估值假设采用低个位数收入增长、约10%净利率、成熟消费龙头14-16倍PE及高分红支撑；综合内在价值区间26-32元，中枢约29.5元。",
       "reports": [
         {
@@ -1994,6 +2106,36 @@
         "cashDividendCurrency": "CNY",
         "buybackAmount": 249240096.02,
         "buybackCurrency": "CNY"
+      },
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "pass",
+          "note": "???????????????"
+        },
+        "assetDurability": {
+          "status": "review",
+          "note": "???????????????????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "review",
+          "note": "?????????????????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "review",
+          "note": "??????????????????????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "review",
+          "note": "???????????A?6%??????????????"
+        },
+        "roeRoicDurability": {
+          "status": "review",
+          "note": "ROE???ROIC???????????????"
+        },
+        "valuationSystemRisk": {
+          "status": "review",
+          "note": "??????????????????????????"
+        }
       },
       "financials": {
         "updatedAt": "2026-05-10 08:00:31",
@@ -2329,7 +2471,7 @@
       "moat": 23,
       "governance": 17,
       "financialQuality": 21,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 sh600036；币种 CNY；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 sh600036；币种 CNY；日期 2026-05-08/2026-05-08",
       "notes": "截至2026-05-08，A股价格37.94元，约6.64x TTM PE、约0.85-0.87x PB，2025年度股息2.016元。2026Q1营收869.40亿元，同比+3.81%；归母净利润378.52亿元，同比+1.52%；年化ROAE 13.48%；不良率0.94%，拨备覆盖率387.76%。估值假设为ROAE中枢12.5%-13.5%、合理PB约0.95-1.10x，综合内在价值区间40-50元，中性值45元。",
       "reports": [
         {
@@ -2403,6 +2545,36 @@
         "dividendCurrency": "CNY",
         "cashDividendTotal": 50843000000,
         "cashDividendCurrency": "CNY"
+      },
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "pass",
+          "note": "?????????????????????"
+        },
+        "assetDurability": {
+          "status": "review",
+          "note": "????????????????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "review",
+          "note": "????????????????????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "review",
+          "note": "????????FCF?????????????????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "review",
+          "note": "??????????????????A?6%??????"
+        },
+        "roeRoicDurability": {
+          "status": "review",
+          "note": "ROAE????????????????????????"
+        },
+        "valuationSystemRisk": {
+          "status": "review",
+          "note": "???????????????????????"
+        }
       },
       "financials": {
         "updatedAt": "2026-05-10 07:56:34",
@@ -2648,7 +2820,7 @@
       "moat": 22,
       "governance": 16,
       "financialQuality": 19,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 hk00696；币种 HKD；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 hk00696；币种 HKD；日期 2026-05-08/2026-05-08",
       "notes": "基于2025年报和2026-05-08约HK$10.06价格测算：2025收入RMB87.66亿、归母净利RMB23.42亿、EPS RMB0.80、经营现金流RMB29.24亿、资本开支RMB9.01亿；综合内在价值区间HK$11.5-13.5。",
       "reports": [
         {
@@ -2690,6 +2862,36 @@
         "dividendCurrency": "CNY",
         "cashDividendTotal": 807576000,
         "cashDividendCurrency": "CNY"
+      },
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "pass",
+          "note": "????????????????????????"
+        },
+        "assetDurability": {
+          "status": "pass",
+          "note": "????????????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "review",
+          "note": "?????????????????????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "pass",
+          "note": "FY2025????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "review",
+          "note": "?????H?8%???????????????????"
+        },
+        "roeRoicDurability": {
+          "status": "review",
+          "note": "ROE?10%?ROIC?11%???????????"
+        },
+        "valuationSystemRisk": {
+          "status": "review",
+          "note": "??????????????????????"
+        }
       },
       "financials": {
         "updatedAt": "2026-05-10 07:59:03",
@@ -3031,7 +3233,7 @@
       "moat": 21,
       "governance": 15,
       "financialQuality": 22,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 hk00506；币种 HKD；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 hk00506；币种 HKD；日期 2026-05-08/2026-05-08",
       "notes": "2026-05-08股价约HK$3.69，市值约HK$10.32bn；FY2025收入RMB220.70亿，归母净利RMB8.62亿，EPS RMB0.3082，拟派末期股息RMB0.154/股；公司净现金约RMB45.49亿，无计息借款，经营现金流RMB32.29亿，简算自由现金流约RMB21.69亿，但扣少数股东股息后普通股东现金流约RMB10.19亿。估值以成熟低增长装瓶商为前提，综合内在价值区间HK$4.20-5.20，中枢HK$4.70。",
       "reports": [
         {
@@ -3073,6 +3275,36 @@
         "dividendCurrency": "CNY",
         "cashDividendTotal": 430738000,
         "cashDividendCurrency": "CNY"
+      },
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "pass",
+          "note": "?????????????????????"
+        },
+        "assetDurability": {
+          "status": "review",
+          "note": "????????????????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "review",
+          "note": "???????????????????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "review",
+          "note": "???????????????????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "review",
+          "note": "????????????H?8%????"
+        },
+        "roeRoicDurability": {
+          "status": "review",
+          "note": "ROE???ROIC?????????????????"
+        },
+        "valuationSystemRisk": {
+          "status": "review",
+          "note": "???????????????????????"
+        }
       },
       "financials": {
         "updatedAt": "2026-05-10 08:00:24",
@@ -3410,7 +3642,7 @@
       "moat": 18,
       "governance": 16,
       "financialQuality": 20,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 hk02669；币种 HKD；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 hk02669；币种 HKD；日期 2026-05-08/2026-05-08",
       "notes": "基于2025年年报和2026-05-08附近市场价格约HK$4.16估算。2025年收入约RMB149.60亿，同比+6.0%；归母净利润约RMB13.67亿，同比-9.7%；EPS约RMB0.4162；现金及银行结余约RMB62.71亿，银行借款约RMB0.50亿；全年股息约HK$0.20，股息率约4.8%。主要折价来自利润率下行、应收账款净额升至约RMB28.77亿、合同资产升至约RMB4.77亿，以及地产链需求疲弱。",
       "reports": [
         {
@@ -3452,6 +3684,36 @@
         "dividendCurrency": "HKD",
         "cashDividendTotal": 657372092,
         "cashDividendCurrency": "HKD"
+      },
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "review",
+          "note": "????????????????????????????"
+        },
+        "assetDurability": {
+          "status": "review",
+          "note": "????????????????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "pass",
+          "note": "???????????????????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "pass",
+          "note": "FY2025????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "review",
+          "note": "?????H?8%????????????????"
+        },
+        "roeRoicDurability": {
+          "status": "review",
+          "note": "ROE/ROIC?????????????????????????"
+        },
+        "valuationSystemRisk": {
+          "status": "review",
+          "note": "?????????????????????"
+        }
       },
       "financials": {
         "updatedAt": "2026-05-10 07:59:32",
@@ -3788,7 +4050,7 @@
       "moat": 20,
       "governance": 16,
       "financialQuality": 21,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 hk06049；币种 HKD；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 hk06049；币种 HKD；日期 2026-05-08/2026-05-08",
       "notes": "2026-05-08收盘价约HK$32.34；2025年收入RMB171.26亿、归母净利RMB15.49亿、EPS RMB2.81、经营现金流RMB18.27亿、年度股息RMB1.401/股、无银行借款。估值以2025年业绩、CNY/HKD约1.1507、约10倍PE和5%股息率为基础；综合内在价值区间HK$31-40，中枢约HK$36.5，当前安全边际约11%，不足以新建核心仓。",
       "reports": [
         {
@@ -3830,6 +4092,36 @@
         "dividendCurrency": "CNY",
         "cashDividendTotal": 775220093.4,
         "cashDividendCurrency": "CNY"
+      },
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "review",
+          "note": "????????????????????????"
+        },
+        "assetDurability": {
+          "status": "review",
+          "note": "??????????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "pass",
+          "note": "????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "pass",
+          "note": "FY2025??????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "review",
+          "note": "?????H?8%??????????"
+        },
+        "roeRoicDurability": {
+          "status": "review",
+          "note": "ROE/ROIC???????????????????????????"
+        },
+        "valuationSystemRisk": {
+          "status": "review",
+          "note": "????????????????"
+        }
       },
       "financials": {
         "updatedAt": "2026-05-10 07:59:25",
@@ -4161,7 +4453,7 @@
       "moat": 20,
       "governance": 15,
       "financialQuality": 23,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 hk00883；币种 HKD；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 hk00883；币种 HKD；日期 2026-05-08/2026-05-08",
       "notes": "按H股00883.HK导入；当前价约HK$26.44，2025净利润RMB1220.8亿、EPS RMB2.57、自由现金流约RMB974亿、全年股息HK$1.28，2026Q1归母净利润RMB391.4亿。估值采用中周期油价，不把高油价永久资本化；A股600938.SH因A/H溢价较高暂不作为优先买入标的。",
       "reports": [
         {
@@ -4235,6 +4527,36 @@
         "dividendCurrency": "HKD",
         "cashDividendTotal": 60838000000,
         "cashDividendCurrency": "HKD"
+      },
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "pass",
+          "note": "????????????????"
+        },
+        "assetDurability": {
+          "status": "pass",
+          "note": "???????????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "fail",
+          "note": "???????????????????????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "pass",
+          "note": "???????FY2025???????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "review",
+          "note": "?????????????????????????????"
+        },
+        "roeRoicDurability": {
+          "status": "review",
+          "note": "ROE/ROIC????????????????????????"
+        },
+        "valuationSystemRisk": {
+          "status": "review",
+          "note": "???????????????????????????"
+        }
       },
       "financials": {
         "updatedAt": "2026-05-10 08:00:16",
@@ -4562,7 +4884,7 @@
       "moat": 16,
       "governance": 5,
       "financialQuality": 19,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 hk01448；币种 HKD；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 hk01448；币种 HKD；日期 2026-05-08/2026-05-08",
       "notes": "计划：剔除/仅风险观察。复牌前不行动；复牌后若审计无保留、调查无重大重述且价格≤HK$2.0-2.2，才重新评估普通候选价值。纪律：质量分低于75且有重大风险否决项；不因低估值或净现金买入，先等风险解除。最新市场状态：股份自2026-03-20起停牌，停牌前最后价约HK$2.64。最新可用财务口径：2024收入约RMB20.77亿，归母净利约RMB3.73亿，EPS约RMB0.164；2025H1收入约RMB6.11亿，归母亏损约RMB2.61亿，EPS约-RMB0.115。核心判断：福寿园当前不是单纯估值杀，而是业绩杀、治理杀和财报可信度风险叠加；内在价值区间仅为压力测试，不作为可执行买入依据。",
       "reports": [
         {
@@ -4596,6 +4918,36 @@
         "dividendCurrency": "HKD",
         "cashDividendTotal": 361543200,
         "cashDividendCurrency": "HKD"
+      },
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "pass",
+          "note": "???????????"
+        },
+        "assetDurability": {
+          "status": "review",
+          "note": "??????????????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "review",
+          "note": "???????????????????????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "fail",
+          "note": "2025???????????????????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "fail",
+          "note": "?????????????????????????????"
+        },
+        "roeRoicDurability": {
+          "status": "fail",
+          "note": "?????ASP????????ROE/ROIC???????"
+        },
+        "valuationSystemRisk": {
+          "status": "fail",
+          "note": "??????????/???????????????????????"
+        }
       },
       "financials": {
         "updatedAt": "2026-05-10 07:52:01",
@@ -4927,7 +5279,7 @@
       "moat": 16,
       "governance": 16,
       "financialQuality": 19,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 hk07489；币种 HKD；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 hk07489；币种 HKD；日期 2026-05-08/2026-05-08",
       "notes": "2025年收入约人民币348.65亿元，毛利率约20.9%，净利润约人民币10.17亿元，首次年度盈利；2025年交付约150169辆，2026年1-4月交付约49038辆。估值基于HK$5.89附近股价、市值约HK$216.8亿、PE约16.9倍、PB约1.78倍。核心假设是2026年需验证扣非利润、经营现金流和自由现金流质量。",
       "reports": [
         {
@@ -4947,6 +5299,36 @@
           "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0212/2026021201452.pdf"
         }
       ],
+      "ownerCashFlowAudit": {
+        "tenYearDemand": {
+          "status": "review",
+          "note": "???????????????????????????"
+        },
+        "assetDurability": {
+          "status": "review",
+          "note": "??????????????????????????"
+        },
+        "maintenanceCapexLight": {
+          "status": "fail",
+          "note": "??????????????????????????????"
+        },
+        "dividendFcfSupport": {
+          "status": "fail",
+          "note": "???????????????????????????"
+        },
+        "dividendReinvestmentEfficiency": {
+          "status": "review",
+          "note": "??????????????????"
+        },
+        "roeRoicDurability": {
+          "status": "review",
+          "note": "?????ROIC????????????????????"
+        },
+        "valuationSystemRisk": {
+          "status": "review",
+          "note": "???????????????????????????"
+        }
+      },
       "financials": {
         "updatedAt": "2026-05-10 07:59:13",
         "source": "东方财富港股财务分析",
@@ -5221,7 +5603,7 @@
       "moat": 22,
       "governance": 16,
       "financialQuality": 19,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 sh600690；币种 CNY；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 sh600690；币种 CNY；日期 2026-05-08/2026-05-08",
       "notes": "市场价格口径：2026-05-08，A股约¥21.39，H股约HK$21.64；HKD/CNY约0.869。FY2025收入RMB3023.5亿、归母净利RMB195.5亿、EPS RMB2.12、经营现金流RMB260亿、分红比例55%。2026Q1收入RMB736.87亿、归母净利RMB46.52亿，同比承压。估值维持A股内在价值区间CNY24-28，中枢CNY26；H股折算中枢约HK$29.9，赔率优于A股。",
       "reports": [
         {
@@ -5630,7 +6012,7 @@
       "moat": 24,
       "governance": 17,
       "financialQuality": 22,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 sh600519；币种 CNY；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 sh600519；币种 CNY；日期 2026-05-08/2026-05-08",
       "notes": "最新市场价约¥1372.99；2025年营收1688.38亿元、归母净利823.20亿元、EPS约65.66元；2026Q1营收539.09亿元、归母净利272.43亿元、EPS约21.76元。估值采用2025年报、2026Q1财报和2026-05-08行情，综合内在价值区间¥1200-1580，中枢¥1400。",
       "reports": [
         {
@@ -6032,7 +6414,7 @@
       "moat": 22,
       "governance": 16,
       "financialQuality": 20,
-      "updatedAt": "2026-05-10 06:42:38；行情源 腾讯实时行情；代码 hk03613；币种 HKD；日期 2026-05-08/2026-05-08",
+      "updatedAt": "2026-05-10 15:25:35；行情源 腾讯实时行情；代码 hk03613；币种 HKD；日期 2026-05-08/2026-05-08",
       "notes": "2025收入HK$15.13亿，同比-6.1%；归母利润HK$3.97亿，同比-20.6%；EPS约HK$0.47；现金及银行结余HK$22.79亿，负债率约2.9%，流动性强。当前约HK$7.40，对应约15.6x 2025 PE、约5.4%股息率。内在价值中枢按正常化EPS、PE、股息和净现金保护综合估算为HK$8.2，安全边际不足。",
       "reports": [
         {
@@ -6108,7 +6490,7 @@
         "cashDividendCurrency": "HKD"
       },
       "financials": {
-        "updatedAt": "2026-05-10 07:59:48",
+        "updatedAt": "2026-05-10 15:30:58",
         "source": "东方财富港股财务分析",
         "sourceSymbol": "03613.HK",
         "currency": "HKD",

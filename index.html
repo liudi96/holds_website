@@ -17,13 +17,9 @@
       </div>
 
       <nav class="nav">
-        <button class="nav-item active" data-view="overview" title="投资委员会">
+        <button class="nav-item active" data-view="overview" title="总览">
           <span class="nav-icon">⌂</span>
-          投资委员会
-        </button>
-        <button class="nav-item" data-view="masters" title="三大师视角">
-          <span class="nav-icon">◇</span>
-          三大师视角
+          总览
         </button>
         <button class="nav-item" data-view="positions" title="持仓">
           <span class="nav-icon">▦</span>
@@ -63,7 +59,7 @@
       <section class="page active" data-page="overview">
         <section class="executive-hero panel" id="actionConclusion" aria-label="当前组合结论">
           <div class="executive-hero-main">
-            <p class="eyebrow">Investment Committee</p>
+            <p class="eyebrow">Dual Strategy</p>
             <strong id="actionConclusionStatus">继续等待</strong>
             <span id="actionConclusionDetail">等待行情和安全边际信号</span>
             <div class="action-conclusion-reasons" id="actionConclusionReasons"></div>
@@ -121,26 +117,24 @@
               <p class="eyebrow">Next Actions</p>
               <h2>下一步动作</h2>
             </div>
-            <a class="ghost-button compact-link" href="#masters">查看完整视角</a>
+            <a class="ghost-button compact-link" href="#masters">查看双策略评分</a>
           </div>
           <div class="next-actions-list" id="committeeConsensus"></div>
         </section>
-      </section>
-
-      <section class="page" data-page="masters">
-        <section class="masters-hero panel">
+        <section class="overview-embedded-masters" id="masters">
+          <section class="masters-hero panel">
           <div class="masters-hero-copy">
             <p class="masters-hero-line">
-              <span class="eyebrow">Three Lenses</span>
-              <strong>三大师视角</strong>
-              <span>同一份组合数据，用安全边际、好生意、成长预期差审查个股，再交给风险委员会决定节奏。</span>
+              <span class="eyebrow">Dual Strategy</span>
+              <strong>股息蓝筹 + 净现金烟蒂</strong>
+              <span>主策略用 A股6% / H股8% 股息与15% DCF边际筛蓝筹；辅策略用净现金保护、低估值和自由现金流筛烟蒂。</span>
             </p>
           </div>
           <div class="masters-hero-links" aria-label="视角跳转">
-            <button type="button" data-master-scroll="grahamLens">格雷厄姆</button>
-            <button type="button" data-master-scroll="buffettLens">巴菲特/芒格</button>
-            <button type="button" data-master-scroll="lynchLens">彼得林奇</button>
-            <button type="button" data-master-scroll="marksLens">风险主席</button>
+            <button type="button" data-master-scroll="grahamLens">主策略</button>
+            <button type="button" data-master-scroll="buffettLens">辅策略</button>
+            <button type="button" data-master-scroll="lynchLens">过渡观察</button>
+            <button type="button" data-master-scroll="marksLens">风险排除</button>
           </div>
         </section>
 
@@ -148,18 +142,18 @@
           <div class="panel-head compact">
             <div>
               <p class="eyebrow">Compare</p>
-              <h2>三大师 + 风险委员会分歧表</h2>
+              <h2>双策略评分表</h2>
             </div>
           </div>
           <div class="master-matrix" id="masterMatrix"></div>
         </section>
 
-        <section class="masters-layout" aria-label="三大师视角">
+        <section class="masters-layout" aria-label="双策略评分">
           <section class="master-section graham" id="grahamLens">
             <div class="panel-head compact">
               <div>
-                <p class="eyebrow">Benjamin Graham</p>
-                <h2>格雷厄姆：便宜与防守</h2>
+                <p class="eyebrow">Main Strategy</p>
+                <h2>主策略：股息蓝筹</h2>
               </div>
             </div>
             <div class="master-summary" id="grahamSummary"></div>
@@ -169,8 +163,8 @@
           <section class="master-section buffett" id="buffettLens">
             <div class="panel-head compact">
               <div>
-                <p class="eyebrow">Buffett & Munger</p>
-                <h2>巴菲特/芒格：好生意与复利</h2>
+                <p class="eyebrow">Side Strategy</p>
+                <h2>辅策略：净现金烟蒂</h2>
               </div>
             </div>
             <div class="master-summary" id="buffettSummary"></div>
@@ -180,8 +174,8 @@
           <section class="master-section lynch" id="lynchLens">
             <div class="panel-head compact">
               <div>
-                <p class="eyebrow">Peter Lynch</p>
-                <h2>彼得林奇：成长故事与预期差</h2>
+                <p class="eyebrow">Transition</p>
+                <h2>过渡观察：旧仓等待换仓</h2>
               </div>
             </div>
             <div class="master-summary" id="lynchSummary"></div>
@@ -191,8 +185,8 @@
           <section class="master-section marks" id="marksLens">
             <div class="panel-head compact">
               <div>
-                <p class="eyebrow">Howard Marks</p>
-                <h2>风险委员会主席：马克斯</h2>
+                <p class="eyebrow">Exclusion</p>
+                <h2>风险排除：先处理可信度</h2>
               </div>
             </div>
             <div class="master-summary" id="marksSummary"></div>
@@ -200,8 +194,8 @@
             <section class="marks-discipline">
               <div class="panel-head compact">
                 <div>
-                  <p class="eyebrow">Risk Discipline</p>
-                  <h2>风险纪律</h2>
+                  <p class="eyebrow">Allocation Discipline</p>
+                  <h2>70/30 仓位纪律</h2>
                 </div>
               </div>
               <div class="discipline-grid marks-discipline-grid" id="disciplineDashboard"></div>
@@ -209,6 +203,7 @@
           </section>
         </section>
 
+        </section>
       </section>
 
       <section class="page" data-page="positions">
@@ -234,7 +229,7 @@
                   <th>盈亏</th>
                   <th>安全边际</th>
                   <th>健康</th>
-                  <th>委员会</th>
+                  <th>策略</th>
                   <th></th>
                 </tr>
               </thead>
@@ -312,7 +307,7 @@
             <div class="candidate-sort">
               <label for="candidateSort">排序</label>
               <select id="candidateSort">
-                <option value="consensus">综合共识</option>
+                <option value="consensus">双策略优先</option>
                 <option value="discipline">纪律优先</option>
                 <option value="priority">执行优先级</option>
                 <option value="margin">安全边际</option>
@@ -324,9 +319,9 @@
           </div>
           <div class="candidate-filter-tabs" id="candidateFilters" aria-label="候选池筛选">
             <button class="active" type="button" data-candidate-filter="all">全部</button>
-            <button type="button" data-candidate-filter="consensus">三方共识</button>
-            <button type="button" data-candidate-filter="margin">安全边际&gt;20%</button>
-            <button type="button" data-candidate-filter="quality">高质量&gt;85</button>
+            <button type="button" data-candidate-filter="consensus">主策略达标</button>
+            <button type="button" data-candidate-filter="margin">辅策略烟蒂</button>
+            <button type="button" data-candidate-filter="quality">过渡观察</button>
             <button type="button" data-candidate-filter="nearBuy">接近买点</button>
             <button type="button" data-candidate-filter="dividend">高股息</button>
             <button type="button" data-candidate-filter="lowConfidence">低可信</button>

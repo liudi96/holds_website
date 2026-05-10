@@ -19,43 +19,45 @@ const (
 )
 
 type chatGPTStockRecord struct {
-	Symbol            string
-	Name              string
-	Status            string
-	Currency          string
-	Industry          string
-	Shares            float64
-	Cost              float64
-	CurrentPrice      float64
-	CurrentPriceDate  string
-	PreviousClose     float64
-	PreviousCloseDate string
-	MarketCap         *float64
-	MarketCapCurrency string
-	IntrinsicValue    *float64
-	FairValueRange    string
-	TargetBuyPrice    *float64
-	PriceLevels       *PriceLevels
-	MarginOfSafety    *float64
-	QualityScore      *float64
-	BusinessModel     *float64
-	Moat              *float64
-	Governance        *float64
-	FinancialQuality  *float64
-	Action            string
-	Risk              string
-	UpdatedAt         string
-	Notes             string
-	Reports           []Report
-	Dividend          *Dividend
-	Financials        *Financials
-	Plan              *PlanItem
-	DecisionLogs      []DecisionLog
-	MarketValueCNY    float64
-	CostValueCNY      float64
-	ProfitLossCNY     float64
-	ProfitLossRate    *float64
-	Weight            float64
+	Symbol             string
+	Name               string
+	Status             string
+	Currency           string
+	Industry           string
+	Shares             float64
+	Cost               float64
+	CurrentPrice       float64
+	CurrentPriceDate   string
+	PreviousClose      float64
+	PreviousCloseDate  string
+	MarketCap          *float64
+	MarketCapCurrency  string
+	IntrinsicValue     *float64
+	FairValueRange     string
+	TargetBuyPrice     *float64
+	PriceLevels        *PriceLevels
+	MarginOfSafety     *float64
+	QualityScore       *float64
+	BusinessModel      *float64
+	Moat               *float64
+	Governance         *float64
+	FinancialQuality   *float64
+	Action             string
+	Risk               string
+	UpdatedAt          string
+	Notes              string
+	Reports            []Report
+	Dividend           *Dividend
+	NetCash            *NetCashProfile
+	OwnerCashFlowAudit *OwnerCashFlowAudit
+	Financials         *Financials
+	Plan               *PlanItem
+	DecisionLogs       []DecisionLog
+	MarketValueCNY     float64
+	CostValueCNY       float64
+	ProfitLossCNY      float64
+	ProfitLossRate     *float64
+	Weight             float64
 }
 
 func (s *Server) handleExportChatGPTContext(w http.ResponseWriter, r *http.Request) {
@@ -206,79 +208,83 @@ func chatGPTHoldingRecord(state AppState, holding Holding, totalAssets float64) 
 	}
 	targetBuyPrice := targetBuyPriceFromIntrinsicValue(holding.IntrinsicValue)
 	return chatGPTStockRecord{
-		Symbol:            holding.Symbol,
-		Name:              holding.Name,
-		Status:            "持仓",
-		Currency:          currency,
-		Industry:          holding.Industry,
-		Shares:            holding.Shares,
-		Cost:              holding.Cost,
-		CurrentPrice:      holding.CurrentPrice,
-		CurrentPriceDate:  holding.CurrentPriceDate,
-		PreviousClose:     holding.PreviousClose,
-		PreviousCloseDate: holding.PreviousCloseDate,
-		MarketCap:         holding.MarketCap,
-		MarketCapCurrency: holding.MarketCapCurrency,
-		IntrinsicValue:    holding.IntrinsicValue,
-		FairValueRange:    holding.FairValueRange,
-		TargetBuyPrice:    targetBuyPrice,
-		PriceLevels:       priceLevelsFromTarget(targetBuyPrice),
-		MarginOfSafety:    marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, holding.MarginOfSafety),
-		QualityScore:      holding.QualityScore,
-		BusinessModel:     holding.BusinessModel,
-		Moat:              holding.Moat,
-		Governance:        holding.Governance,
-		FinancialQuality:  holding.FinancialQuality,
-		Action:            holding.Action,
-		Risk:              holding.Risk,
-		UpdatedAt:         holding.UpdatedAt,
-		Notes:             holding.Notes,
-		Reports:           holding.Reports,
-		Dividend:          holding.Dividend,
-		Financials:        holding.Financials,
-		Plan:              findPlanForDecisionLog(&state, holding.Symbol, holding.Name),
-		DecisionLogs:      chatGPTLogsForStock(state.DecisionLogs, holding.Symbol),
-		MarketValueCNY:    marketValue,
-		CostValueCNY:      costValue,
-		ProfitLossCNY:     marketValue - costValue,
-		ProfitLossRate:    profitLossRate,
-		Weight:            weight,
+		Symbol:             holding.Symbol,
+		Name:               holding.Name,
+		Status:             "持仓",
+		Currency:           currency,
+		Industry:           holding.Industry,
+		Shares:             holding.Shares,
+		Cost:               holding.Cost,
+		CurrentPrice:       holding.CurrentPrice,
+		CurrentPriceDate:   holding.CurrentPriceDate,
+		PreviousClose:      holding.PreviousClose,
+		PreviousCloseDate:  holding.PreviousCloseDate,
+		MarketCap:          holding.MarketCap,
+		MarketCapCurrency:  holding.MarketCapCurrency,
+		IntrinsicValue:     holding.IntrinsicValue,
+		FairValueRange:     holding.FairValueRange,
+		TargetBuyPrice:     targetBuyPrice,
+		PriceLevels:        priceLevelsFromTarget(targetBuyPrice),
+		MarginOfSafety:     marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, holding.MarginOfSafety),
+		QualityScore:       holding.QualityScore,
+		BusinessModel:      holding.BusinessModel,
+		Moat:               holding.Moat,
+		Governance:         holding.Governance,
+		FinancialQuality:   holding.FinancialQuality,
+		Action:             holding.Action,
+		Risk:               holding.Risk,
+		UpdatedAt:          holding.UpdatedAt,
+		Notes:              holding.Notes,
+		Reports:            holding.Reports,
+		Dividend:           holding.Dividend,
+		NetCash:            holding.NetCash,
+		OwnerCashFlowAudit: holding.OwnerCashFlowAudit,
+		Financials:         holding.Financials,
+		Plan:               findPlanForDecisionLog(&state, holding.Symbol, holding.Name),
+		DecisionLogs:       chatGPTLogsForStock(state.DecisionLogs, holding.Symbol),
+		MarketValueCNY:     marketValue,
+		CostValueCNY:       costValue,
+		ProfitLossCNY:      marketValue - costValue,
+		ProfitLossRate:     profitLossRate,
+		Weight:             weight,
 	}
 }
 
 func chatGPTCandidateRecord(state AppState, candidate Candidate, totalAssets float64) chatGPTStockRecord {
 	targetBuyPrice := targetBuyPriceFromIntrinsicValue(candidate.IntrinsicValue)
 	return chatGPTStockRecord{
-		Symbol:            candidate.Symbol,
-		Name:              candidate.Name,
-		Status:            "候选",
-		Currency:          firstNonEmpty(candidate.Currency, expectedCurrency(candidate.Symbol)),
-		Industry:          candidate.Industry,
-		CurrentPrice:      candidate.CurrentPrice,
-		CurrentPriceDate:  candidate.CurrentPriceDate,
-		PreviousClose:     candidate.PreviousClose,
-		PreviousCloseDate: candidate.PreviousCloseDate,
-		MarketCap:         candidate.MarketCap,
-		MarketCapCurrency: candidate.MarketCapCurrency,
-		IntrinsicValue:    candidate.IntrinsicValue,
-		FairValueRange:    candidate.FairValueRange,
-		TargetBuyPrice:    targetBuyPrice,
-		PriceLevels:       priceLevelsFromTarget(targetBuyPrice),
-		MarginOfSafety:    marginOfSafetyFromPrice(candidate.IntrinsicValue, candidate.CurrentPrice, candidate.MarginOfSafety),
-		QualityScore:      candidate.QualityScore,
-		BusinessModel:     candidate.BusinessModel,
-		Moat:              candidate.Moat,
-		Governance:        candidate.Governance,
-		FinancialQuality:  candidate.FinancialQuality,
-		Action:            candidate.Action,
-		Risk:              candidate.Risk,
-		UpdatedAt:         candidate.UpdatedAt,
-		Notes:             candidate.Notes,
-		Reports:           candidate.Reports,
-		Dividend:          candidate.Dividend,
-		Financials:        candidate.Financials,
-		Plan:              findPlanForDecisionLog(&state, candidate.Symbol, candidate.Name),
-		DecisionLogs:      chatGPTLogsForStock(state.DecisionLogs, candidate.Symbol),
+		Symbol:             candidate.Symbol,
+		Name:               candidate.Name,
+		Status:             "候选",
+		Currency:           firstNonEmpty(candidate.Currency, expectedCurrency(candidate.Symbol)),
+		Industry:           candidate.Industry,
+		CurrentPrice:       candidate.CurrentPrice,
+		CurrentPriceDate:   candidate.CurrentPriceDate,
+		PreviousClose:      candidate.PreviousClose,
+		PreviousCloseDate:  candidate.PreviousCloseDate,
+		MarketCap:          candidate.MarketCap,
+		MarketCapCurrency:  candidate.MarketCapCurrency,
+		IntrinsicValue:     candidate.IntrinsicValue,
+		FairValueRange:     candidate.FairValueRange,
+		TargetBuyPrice:     targetBuyPrice,
+		PriceLevels:        priceLevelsFromTarget(targetBuyPrice),
+		MarginOfSafety:     marginOfSafetyFromPrice(candidate.IntrinsicValue, candidate.CurrentPrice, candidate.MarginOfSafety),
+		QualityScore:       candidate.QualityScore,
+		BusinessModel:      candidate.BusinessModel,
+		Moat:               candidate.Moat,
+		Governance:         candidate.Governance,
+		FinancialQuality:   candidate.FinancialQuality,
+		Action:             candidate.Action,
+		Risk:               candidate.Risk,
+		UpdatedAt:          candidate.UpdatedAt,
+		Notes:              candidate.Notes,
+		Reports:            candidate.Reports,
+		Dividend:           candidate.Dividend,
+		NetCash:            candidate.NetCash,
+		OwnerCashFlowAudit: candidate.OwnerCashFlowAudit,
+		Financials:         candidate.Financials,
+		Plan:               findPlanForDecisionLog(&state, candidate.Symbol, candidate.Name),
+		DecisionLogs:       chatGPTLogsForStock(state.DecisionLogs, candidate.Symbol),
 	}
 }
 
@@ -301,10 +307,10 @@ func renderProjectInstructions(meta string) string {
 ## 使用原则
 
 - 优先读取 ` + "`00_reference_tables.md`" + ` 建立横向比较视图，再读取 ` + "`01_portfolio_snapshot.md`" + ` 理解当前现金、仓位、汇率、持仓和候选池。
-- 做个股分析时读取 ` + "`05_master_lens_tables.md`" + `，按格雷厄姆、巴菲特/芒格、彼得林奇三种视角交叉审查。
-- 做仓位和风险判断时读取 ` + "`06_risk_committee_memo.md`" + `，由霍华德马克斯视角决定进攻、防守或等待。
+- 做个股分析时读取 ` + "`05_master_lens_tables.md`" + `，先按“双策略”判断主策略、辅策略、过渡观察或风险排除。
+- 做仓位和风险判断时读取 ` + "`06_risk_committee_memo.md`" + `，优先检查 70% 股息蓝筹主策略、30% 净现金烟蒂辅策略的偏离度。
 - 深度研究单只股票前，先读取 ` + "`stocks/`" + ` 下对应股票档案，避免重复询问已经存在的成本、目标价、风险和历史决策。
-- 所有建议必须同时考虑估值、安全边际、质量评分、仓位和既有投资纪律。
+- 所有建议必须同时考虑股息盾、DCF安全边际、长期股东现金流审计、净现金保护、自由现金流、仓位和既有投资纪律。
 - 如果研究结论需要回写网站，请输出符合 ` + "`import_schema.md`" + ` 的 JSON；不要输出散乱字段。
 - 遇到价格、财报或新闻这类会变化的信息时，先说明信息时点，再给出结论。
 - 不把短期波动当成买卖理由，除非它改变了估值、安全边际或基本面判断。
@@ -553,9 +559,12 @@ func renderDecisionRules(meta string, state AppState) string {
 	builder.WriteString("| 财务质量 | 关注利润率、资产负债表、现金流、ROE/ROIC 和周期波动。 |\n")
 
 	builder.WriteString("\n## 买入纪律\n\n")
-	builder.WriteString("- 买入前必须同时检查质量分、目标买入价、安全边际和现有仓位。\n")
+	builder.WriteString("- 主策略固定为 70% 目标仓位：自选池大盘蓝筹，A股股息率≥6%或H股股息率≥8%，最近财年或预估下一年满足其一，DCF安全边际≥15%。\n")
+	builder.WriteString("- 主策略买入前必须通过长期股东现金流审计；缺审计或审计待复核时进入过渡观察，不使用新增资金。\n")
+	builder.WriteString("- 辅策略固定为 30% 目标仓位：账上净现金保护、折扣后净现金可验证，A股 ex-cash PE≤10，H股 ex-cash PE≤8，并优先看 ex-cash P/FCF、FCF yield 和FCF连续性。\n")
+	builder.WriteString("- 买入前必须同时检查策略归属、股息盾、DCF边际、长期需求、资产耐久、再投资需求、分红FCF支持、净现金折扣、自由现金流和现有仓位。\n")
 	builder.WriteString("- 对已经持仓的股票，新增买入必须证明风险收益比优于候选池替代项。\n")
-	builder.WriteString("- 候选股只有在价格进入目标区间、风险没有恶化、研究结论仍有效时才考虑执行。\n")
+	builder.WriteString("- 旧持仓未达新阈值时默认过渡观察，不自动触发卖出；新资金只进入主策略达标或辅策略烟蒂达标标的。\n")
 	builder.WriteString("- 如果最新价格、财报或重大新闻缺失，先补研究，不直接给交易建议。\n")
 
 	builder.WriteString("\n## 风险否决原则\n\n")
@@ -617,57 +626,53 @@ func renderWatchlistAndTriggers(meta string, records []chatGPTStockRecord) strin
 func renderMasterLensTables(meta string, records []chatGPTStockRecord) string {
 	var builder strings.Builder
 	builder.WriteString(meta)
-	builder.WriteString("# 三大师个股分析表\n\n")
-	builder.WriteString("本文件用于让 ChatGPT 先按三位个股大师审查标的，再回到单股档案补证据。\n\n")
+	builder.WriteString("# 双策略评分表\n\n")
+	builder.WriteString("本文件用于让 ChatGPT 先按股息蓝筹主策略与净现金烟蒂辅策略审查标的，再回到单股档案补证据。\n\n")
 
-	builder.WriteString("## 格雷厄姆：安全边际与估值纪律\n\n")
-	builder.WriteString("| 状态 | 档案 | 最新价 | 内在价值 | 首买价 | 安全边际 | 财务质量 | 判断 | 主要风险 |\n")
-	builder.WriteString("| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |\n")
-	for _, record := range records {
-		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
-			mdCell(record.Status),
-			mdCell(chatGPTStockLink(record)),
-			formatNumber(record.CurrentPrice),
-			formatFloatPtr(record.IntrinsicValue),
-			formatPriceLevel(record.PriceLevels, "initial"),
-			formatPercentPtr(record.MarginOfSafety),
-			formatScorePtr(record.FinancialQuality),
-			mdCell(exportGrahamStatus(record)),
-			mdCell(record.Risk),
-		))
-	}
-
-	builder.WriteString("\n## 巴菲特/芒格：好生意、护城河与长期复利\n\n")
-	builder.WriteString("| 状态 | 档案 | 质量分 | 商业模式 | 护城河 | 治理 | 财务质量 | 安全边际 | 判断 | 当前动作 |\n")
-	builder.WriteString("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |\n")
+	builder.WriteString("## 主策略：股息蓝筹\n\n")
+	builder.WriteString("| 状态 | 档案 | 市场 | 最新价 | 股息率 | 预估股息率 | 股息门槛 | DCF边际 | 长期审计 | 当前动作 |\n")
+	builder.WriteString("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |\n")
 	for _, record := range records {
 		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
 			mdCell(record.Status),
 			mdCell(chatGPTStockLink(record)),
-			formatScorePtr(record.QualityScore),
-			formatScorePtr(record.BusinessModel),
-			formatScorePtr(record.Moat),
-			formatScorePtr(record.Governance),
-			formatScorePtr(record.FinancialQuality),
+			mdCell(recordMarketKind(record)),
+			formatNumber(record.CurrentPrice),
+			formatStockDividendYield(record),
+			formatForecastDividendYield(record.Dividend),
+			formatPercent(recordDividendTarget(record)),
 			formatPercentPtr(record.MarginOfSafety),
-			mdCell(exportBuffettStatus(record)),
+			mdCell(formatOwnerAuditConclusion(record.OwnerCashFlowAudit)),
 			mdCell(record.Action),
 		))
 	}
 
-	builder.WriteString("\n## 彼得林奇：成长故事、分类与预期差\n\n")
-	builder.WriteString("| 状态 | 档案 | 林奇分类 | 质量分 | 安全边际 | 价格距离首买价 | 成长/预期差信号 | 判断 | 下一步验证 |\n")
-	builder.WriteString("| --- | --- | --- | ---: | ---: | ---: | --- | --- | --- |\n")
+	builder.WriteString("\n## 辅策略：净现金烟蒂\n\n")
+	builder.WriteString("| 状态 | 档案 | 调整后净现金 | ex-cash PE | ex-cash P/FCF | FCF yield | FCF为正年数 | 折扣说明 |\n")
+	builder.WriteString("| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |\n")
 	for _, record := range records {
-		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s |\n",
 			mdCell(record.Status),
 			mdCell(chatGPTStockLink(record)),
-			mdCell(exportLynchCategory(record)),
+			formatNetCashAmount(record.NetCash, "adjusted"),
+			formatFloatPtr(netCashFloat(record.NetCash, "pe")),
+			formatFloatPtr(netCashFloat(record.NetCash, "pfcf")),
+			formatPercentPtr(netCashFloat(record.NetCash, "fcfYield")),
+			formatIntPtr(netCashInt(record.NetCash, "fcfYears")),
+			mdCell(formatNetCashReason(record.NetCash)),
+		))
+	}
+
+	builder.WriteString("\n## 过渡观察与风险排除\n\n")
+	builder.WriteString("| 状态 | 档案 | 质量分 | 安全边际 | 主要风险 | 下一步 |\n")
+	builder.WriteString("| --- | --- | ---: | ---: | --- | --- |\n")
+	for _, record := range records {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s |\n",
+			mdCell(record.Status),
+			mdCell(chatGPTStockLink(record)),
 			formatScorePtr(record.QualityScore),
 			formatPercentPtr(record.MarginOfSafety),
-			formatTargetDistance(record.CurrentPrice, record.TargetBuyPrice),
-			mdCell(exportGrowthCue(record)),
-			mdCell(exportLynchStatus(record)),
+			mdCell(record.Risk),
 			mdCell(firstNonEmpty(record.Action, record.Notes)),
 		))
 	}
@@ -768,6 +773,7 @@ func renderImportSchema(meta string) string {
   "status": "未达标（安全边际<15%）",
   "action": "继续持有；新资金暂不追买，等待安全边际达标后再分批",
   "risk": "政策、地缘、AI投入回报周期和广告/游戏周期波动需折价",
+  "valuationConfidence": "high",
   "valuation": {
     "intrinsicValue": 508,
     "fairValueRange": "HK$480-560",
@@ -787,6 +793,40 @@ func renderImportSchema(meta string) string {
     "advice": "等待安全边际达标后再分批，未达标不追买",
     "discipline": "优秀资产要求≥15%安全边际；未达标不追买"
   },
+  "dividend": {
+    "fiscalYear": "FY2025",
+    "dividendPerShare": 4.5,
+    "dividendCurrency": "HKD",
+    "payoutRatio": 0.16,
+    "reliability": "stable",
+    "forecastFiscalYear": "FY2026E",
+    "forecastPerShare": 5.2,
+    "forecastCurrency": "HKD",
+    "forecastYield": 0.083
+  },
+  "netCash": {
+    "cashAndShortInvestments": 320000000000,
+    "interestBearingDebt": 120000000000,
+    "netCash": 200000000000,
+    "currency": "HKD",
+    "haircut": 0.7,
+    "haircutReason": "平台现金流稳定但需保留监管和再投资折扣",
+    "adjustedNetCash": 140000000000,
+    "exCashPe": 13.5,
+    "exCashPfcf": 14.2,
+    "fcfYield": 0.065,
+    "fcfPositiveYears": 5,
+    "note": "净现金、FCF 和估值口径使用 FY2025 年报与当前市值。"
+  },
+  "ownerCashFlowAudit": {
+    "tenYearDemand": { "status": "pass", "note": "核心产品/服务十年后仍有稳定需求。" },
+    "assetDurability": { "status": "pass", "note": "品牌、资源或网络资产不易折旧。" },
+    "maintenanceCapexLight": { "status": "review", "note": "需继续核实维持性资本开支。" },
+    "dividendFcfSupport": { "status": "pass", "note": "分红由真实自由现金流覆盖。" },
+    "dividendReinvestmentEfficiency": { "status": "review", "note": "当前估值对分红再投入效率一般。" },
+    "roeRoicDurability": { "status": "pass", "note": "ROE/ROIC 有长期维持基础。" },
+    "valuationSystemRisk": { "status": "pass", "note": "暂未发现行业估值体系永久改变。" }
+  },
   "notes": "总结关键财务事实、估值假设、研究来源时点和需要跟踪的变化。"
 }
 ~~~
@@ -795,10 +835,15 @@ func renderImportSchema(meta string) string {
 
 - symbol 必填，使用网站现有代码格式，例如 0700.HK、000333.SZ。
 - 金额字段使用该股票交易货币，不要换算成人民币，除非字段名明确写 CNY。
-- valuation.intrinsicValue 是核心估值输入；targetBuyPrice、priceLevels、dividend、dividendYield、estimatedAnnualCash 不需要提供，网站会自行计算或抓取。
+- valuation.intrinsicValue 是核心 DCF 估值输入；主策略要求显示 DCF 安全边际≥15%。
 - marginOfSafety 使用小数，例如 0.25 表示 25%。
 - 首买价默认按 intrinsicValue × 75% 计算，观察价为首买价 × 105%，重仓价为首买价 × 90%。
-- 股息数据由“更新行情”尽量从行情源抓取；股息率按最新完整财年现金分红总额 ÷ 公司总市值计算，综合回报率按现金分红总额 + 回购金额 ÷ 公司总市值计算。
+- 主策略股息盾：A股股息率≥6%，H股股息率≥8%；最近财年或预估下一年满足其一即可。
+- 主策略还必须通过 ownerCashFlowAudit；资料不足写 review，不要猜 pass。valuationSystemRisk=fail 会进入风险排除。
+- 股息数据由“更新行情”尽量从行情源抓取；研究也可以提供 dividend.forecastFiscalYear、forecastPerShare、forecastCurrency、forecastYield。
+- 辅策略烟蒂：提供 netCash 结构化字段，重点说明净现金折扣、折扣后净现金、ex-cash PE、ex-cash P/FCF、FCF yield 和 FCF 连续性。
+- 净现金折扣约定：稳定分红100%，一般70%，弱/周期40%，重大风险0%。如果 haircut 为空，网站会按股息可靠性和风险文本自动分档。
+- ownerCashFlowAudit 七项 status 只能是 pass、review、fail；核心项为 tenYearDemand、dividendFcfSupport、valuationSystemRisk。
 - quality.totalScore 应等于 businessModel + moat + governance + financialQuality。
 - asOf 必须为 YYYY-MM-DD。
 - plan 不要写 symbol；网站会用顶层 symbol 关联执行计划。
@@ -838,13 +883,36 @@ func renderStockMarkdown(meta string, record chatGPTStockRecord) string {
 	builder.WriteString(fmt.Sprintf("| 重仓价 | %s |\n", formatPriceLevel(record.PriceLevels, "aggressive")))
 	builder.WriteString(fmt.Sprintf("| 安全边际 | %s |\n", formatPercentPtr(record.MarginOfSafety)))
 
+	builder.WriteString("\n## 长期股东现金流审计\n\n")
+	builder.WriteString("| 项目 | 状态 | 说明 |\n| --- | --- | --- |\n")
+	for _, item := range ownerAuditRows(record.OwnerCashFlowAudit) {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s |\n", mdCell(item.Label), mdCell(item.Status), mdCell(item.Note)))
+	}
+
 	builder.WriteString("\n## 股息与现金流\n\n")
 	builder.WriteString("| 项目 | 数值 |\n| --- | --- |\n")
 	builder.WriteString(fmt.Sprintf("| 财年 | %s |\n", mdCell(dividendFiscalYear(record.Dividend))))
 	builder.WriteString(fmt.Sprintf("| 每股分红 | %s |\n", formatDividendPerShare(record.Dividend)))
 	builder.WriteString(fmt.Sprintf("| 股息率 | %s |\n", formatStockDividendYield(record)))
+	builder.WriteString(fmt.Sprintf("| 股息门槛 | %s |\n", formatPercent(recordDividendTarget(record))))
+	builder.WriteString(fmt.Sprintf("| 预估财年 | %s |\n", mdCell(dividendForecastFiscalYear(record.Dividend))))
+	builder.WriteString(fmt.Sprintf("| 预估每股 | %s |\n", formatForecastDividendPerShare(record.Dividend)))
+	builder.WriteString(fmt.Sprintf("| 预估股息率 | %s |\n", formatForecastDividendYield(record.Dividend)))
 	builder.WriteString(fmt.Sprintf("| 综合回报率 | %s |\n", formatShareholderReturnYield(record)))
 	builder.WriteString(fmt.Sprintf("| 预估年度现金 | %s |\n", formatStockEstimatedAnnualCash(record)))
+
+	builder.WriteString("\n## 净现金烟蒂\n\n")
+	builder.WriteString("| 项目 | 数值 |\n| --- | --- |\n")
+	builder.WriteString(fmt.Sprintf("| 现金/短投 | %s |\n", formatNetCashAmount(record.NetCash, "cash")))
+	builder.WriteString(fmt.Sprintf("| 有息债务 | %s |\n", formatNetCashAmount(record.NetCash, "debt")))
+	builder.WriteString(fmt.Sprintf("| 净现金 | %s |\n", formatNetCashAmount(record.NetCash, "net")))
+	builder.WriteString(fmt.Sprintf("| 净现金折扣 | %s |\n", formatNetCashHaircut(record.NetCash)))
+	builder.WriteString(fmt.Sprintf("| 折扣说明 | %s |\n", mdCell(formatNetCashReason(record.NetCash))))
+	builder.WriteString(fmt.Sprintf("| 调整后净现金 | %s |\n", formatNetCashAmount(record.NetCash, "adjusted")))
+	builder.WriteString(fmt.Sprintf("| ex-cash PE | %s |\n", formatFloatPtr(netCashFloat(record.NetCash, "pe"))))
+	builder.WriteString(fmt.Sprintf("| ex-cash P/FCF | %s |\n", formatFloatPtr(netCashFloat(record.NetCash, "pfcf"))))
+	builder.WriteString(fmt.Sprintf("| FCF yield | %s |\n", formatPercentPtr(netCashFloat(record.NetCash, "fcfYield"))))
+	builder.WriteString(fmt.Sprintf("| FCF为正年数 | %s |\n", formatIntPtr(netCashInt(record.NetCash, "fcfYears"))))
 
 	builder.WriteString("\n## 质量\n\n")
 	builder.WriteString("| 维度 | 分数 |\n| --- | ---: |\n")
@@ -1352,6 +1420,53 @@ func formatDividendPerShare(dividend *Dividend) string {
 	return formatCurrency(*dividend.DividendPerShare, currency)
 }
 
+func recordMarketKind(record chatGPTStockRecord) string {
+	symbol := strings.ToUpper(strings.TrimSpace(record.Symbol))
+	if strings.HasSuffix(symbol, ".HK") || strings.EqualFold(record.Currency, "HKD") {
+		return "HK"
+	}
+	return "A"
+}
+
+func recordDividendTarget(record chatGPTStockRecord) float64 {
+	if recordMarketKind(record) == "HK" {
+		return 0.08
+	}
+	return 0.06
+}
+
+func dividendForecastFiscalYear(dividend *Dividend) string {
+	if dividend == nil || strings.TrimSpace(dividend.ForecastFiscalYear) == "" {
+		return "-"
+	}
+	return strings.TrimSpace(dividend.ForecastFiscalYear)
+}
+
+func forecastDividendCurrencyCode(dividend *Dividend) string {
+	if dividend == nil || strings.TrimSpace(dividend.ForecastCurrency) == "" {
+		return dividendCurrencyCode(dividend)
+	}
+	return strings.ToUpper(strings.TrimSpace(dividend.ForecastCurrency))
+}
+
+func formatForecastDividendPerShare(dividend *Dividend) string {
+	if dividend == nil || dividend.ForecastPerShare == nil {
+		return "-"
+	}
+	currency := forecastDividendCurrencyCode(dividend)
+	if currency == "" {
+		return formatFloatPtr(dividend.ForecastPerShare)
+	}
+	return formatCurrency(*dividend.ForecastPerShare, currency)
+}
+
+func formatForecastDividendYield(dividend *Dividend) string {
+	if dividend == nil {
+		return "-"
+	}
+	return formatPercentPtr(dividend.ForecastYield)
+}
+
 func formatStockDividendYield(record chatGPTStockRecord) string {
 	if record.Dividend == nil {
 		return "-"
@@ -1421,6 +1536,163 @@ func formatStockEstimatedAnnualCash(record chatGPTStockRecord) string {
 	return formatCurrency(*record.Dividend.EstimatedAnnualCash, currency)
 }
 
+func netCashCurrencyCode(netCash *NetCashProfile) string {
+	if netCash == nil || strings.TrimSpace(netCash.Currency) == "" {
+		return ""
+	}
+	return strings.ToUpper(strings.TrimSpace(netCash.Currency))
+}
+
+func netCashFloat(netCash *NetCashProfile, field string) *float64 {
+	if netCash == nil {
+		return nil
+	}
+	switch field {
+	case "cash":
+		return netCash.CashAndShortInvestments
+	case "debt":
+		return netCash.InterestBearingDebt
+	case "net":
+		return netCash.NetCash
+	case "haircut":
+		return netCash.Haircut
+	case "adjusted":
+		return netCash.AdjustedNetCash
+	case "pe":
+		return netCash.ExCashPE
+	case "pfcf":
+		return netCash.ExCashPFCF
+	case "fcfYield":
+		return netCash.FCFYield
+	default:
+		return nil
+	}
+}
+
+func netCashInt(netCash *NetCashProfile, field string) *int {
+	if netCash == nil {
+		return nil
+	}
+	if field == "fcfYears" {
+		return netCash.FCFPositiveYears
+	}
+	return nil
+}
+
+func formatNetCashAmount(netCash *NetCashProfile, field string) string {
+	value := netCashFloat(netCash, field)
+	if value == nil || *value == 0 {
+		return "-"
+	}
+	currency := netCashCurrencyCode(netCash)
+	if currency == "" {
+		return formatFloatPtr(value)
+	}
+	return formatCurrency(*value, currency)
+}
+
+func formatNetCashHaircut(netCash *NetCashProfile) string {
+	return formatPercentPtr(netCashFloat(netCash, "haircut"))
+}
+
+func formatNetCashReason(netCash *NetCashProfile) string {
+	if netCash == nil {
+		return "-"
+	}
+	return firstNonEmpty(strings.TrimSpace(netCash.HaircutReason), strings.TrimSpace(netCash.Note), "-")
+}
+
+type ownerAuditRow struct {
+	Label  string
+	Status string
+	Note   string
+}
+
+func ownerAuditRows(audit *OwnerCashFlowAudit) []ownerAuditRow {
+	rows := []struct {
+		label string
+		item  OwnerAuditItem
+	}{
+		{"十年需求", ownerAuditItem(audit, "tenYearDemand")},
+		{"资产耐久", ownerAuditItem(audit, "assetDurability")},
+		{"轻再投资", ownerAuditItem(audit, "maintenanceCapexLight")},
+		{"分红FCF", ownerAuditItem(audit, "dividendFcfSupport")},
+		{"再投资效率", ownerAuditItem(audit, "dividendReinvestmentEfficiency")},
+		{"ROE/ROIC", ownerAuditItem(audit, "roeRoicDurability")},
+		{"估值体系", ownerAuditItem(audit, "valuationSystemRisk")},
+	}
+	result := make([]ownerAuditRow, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, ownerAuditRow{
+			Label:  row.label,
+			Status: formatOwnerAuditStatus(row.item.Status),
+			Note:   firstNonEmpty(strings.TrimSpace(row.item.Note), "待补充"),
+		})
+	}
+	return result
+}
+
+func ownerAuditItem(audit *OwnerCashFlowAudit, key string) OwnerAuditItem {
+	if audit == nil {
+		return OwnerAuditItem{Status: "review"}
+	}
+	switch key {
+	case "tenYearDemand":
+		return audit.TenYearDemand
+	case "assetDurability":
+		return audit.AssetDurability
+	case "maintenanceCapexLight":
+		return audit.MaintenanceCapexLight
+	case "dividendFcfSupport":
+		return audit.DividendFCFSupport
+	case "dividendReinvestmentEfficiency":
+		return audit.DividendReinvestmentEfficiency
+	case "roeRoicDurability":
+		return audit.RoeRoicDurability
+	case "valuationSystemRisk":
+		return audit.ValuationSystemRisk
+	default:
+		return OwnerAuditItem{Status: "review"}
+	}
+}
+
+func formatOwnerAuditConclusion(audit *OwnerCashFlowAudit) string {
+	hasAudit := false
+	hasFail := false
+	hasReview := false
+	for _, row := range ownerAuditRows(audit) {
+		status := strings.TrimSpace(row.Status)
+		note := strings.TrimSpace(row.Note)
+		if status != "复核" || note != "待补充" {
+			hasAudit = true
+		}
+		if status == "失败" {
+			hasFail = true
+		}
+		if status == "复核" {
+			hasReview = true
+		}
+	}
+	if hasFail {
+		return "长期股东失败"
+	}
+	if !hasAudit || hasReview {
+		return "长期股东复核"
+	}
+	return "长期股东通过"
+}
+
+func formatOwnerAuditStatus(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "pass":
+		return "通过"
+	case "fail":
+		return "失败"
+	default:
+		return "复核"
+	}
+}
+
 func formatScorePtr(value *float64) string {
 	if value == nil || *value == 0 {
 		return "-"
@@ -1440,6 +1712,13 @@ func formatPercentPtr(value *float64) string {
 		return "-"
 	}
 	return fmt.Sprintf("%.2f%%", *value*100)
+}
+
+func formatIntPtr(value *int) string {
+	if value == nil {
+		return "-"
+	}
+	return strconv.Itoa(*value)
 }
 
 func formatTargetDistance(currentPrice float64, targetPrice *float64) string {

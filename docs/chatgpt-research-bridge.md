@@ -19,7 +19,7 @@ go run ./cmd/import-research data/research/0700.HK.json
 ## ChatGPT Prompt
 
 ```text
-Analyze the following stock for a long-term value-investing portfolio.
+Analyze the following stock for a dual-strategy value-investing portfolio.
 
 Requirements:
 - Output only valid JSON. No Markdown fences, no explanation outside JSON.
@@ -27,6 +27,10 @@ Requirements:
 - Do not add extra fields. Unknown fields are rejected by the importer.
 - Use decimal ratios for percentages, for example 0.09 means 9%.
 - Use null when a numeric field is unknown.
+- Main strategy: self-selected blue chips, A-share dividend yield >= 6% or H-share dividend yield >= 8%, DCF margin >= 15%, no major risk, no low-confidence valuation, no clearly unsustainable dividend.
+- Main strategy also requires `ownerCashFlowAudit` pass. Use `review` when evidence is incomplete; do not guess `pass`.
+- Side strategy: net-cash cigar butts, adjusted net cash after haircut, A-share ex-cash PE <= 10 or H-share ex-cash PE <= 8, with positive/free-cash-flow support.
+- Existing holdings that fail the new thresholds should usually be marked as transition observation, not forced sale, unless major risk is present.
 - `valuation.marginOfSafety` is the analysis-time estimate. For existing holdings, the website recalculates displayed safety margin from `intrinsicValue` and the latest close price.
 - `currency` should match the listing: `.HK` uses `HKD`, `.SH`/`.SZ`/`.SS` use `CNY`.
 - `quality.totalScore` should equal `businessModel + moat + governance + financialQuality`.
@@ -69,6 +73,40 @@ JSON schema:
     "advice": "等待安全边际达标后再分批，未达标不追买",
     "discipline": "优秀资产要求≥15%安全边际；未达标不追买"
   },
+  "dividend": {
+    "fiscalYear": "FY2025",
+    "dividendPerShare": 4.5,
+    "dividendCurrency": "HKD",
+    "payoutRatio": 0.16,
+    "reliability": "stable",
+    "forecastFiscalYear": "FY2026E",
+    "forecastPerShare": 5.2,
+    "forecastCurrency": "HKD",
+    "forecastYield": 0.083
+  },
+  "netCash": {
+    "cashAndShortInvestments": 320000000000,
+    "interestBearingDebt": 120000000000,
+    "netCash": 200000000000,
+    "currency": "HKD",
+    "haircut": 0.7,
+    "haircutReason": "平台现金流稳定但需保留监管和再投资折扣",
+    "adjustedNetCash": 140000000000,
+    "exCashPe": 13.5,
+    "exCashPfcf": 14.2,
+    "fcfYield": 0.065,
+    "fcfPositiveYears": 5,
+    "note": "净现金、FCF 和估值口径使用 FY2025 年报与当前市值。"
+  },
+  "ownerCashFlowAudit": {
+    "tenYearDemand": { "status": "pass", "note": "核心产品/服务十年后仍有稳定需求。" },
+    "assetDurability": { "status": "pass", "note": "品牌、资源或网络资产不易折旧。" },
+    "maintenanceCapexLight": { "status": "review", "note": "需继续核实维持性资本开支。" },
+    "dividendFcfSupport": { "status": "pass", "note": "分红由真实自由现金流覆盖。" },
+    "dividendReinvestmentEfficiency": { "status": "review", "note": "当前估值对分红再投入效率一般。" },
+    "roeRoicDurability": { "status": "pass", "note": "ROE/ROIC 有长期维持基础。" },
+    "valuationSystemRisk": { "status": "pass", "note": "暂未发现行业估值体系永久改变。" }
+  },
   "killCriteria": [
     "若核心业务增长和自由现金流连续两个季度明显恶化，应重新评估内在价值",
     "若监管、治理或财报可信度出现重大风险，应暂停新增资金"
@@ -85,15 +123,17 @@ JSON schema:
 - `plan` is upserted by the top-level `symbol` when possible, then by stock name for old data.
 - Do not include `symbol` inside `plan`; the importer derives Plan identity from the top-level `symbol`.
 - `plan.rank` may be approximate. The importer normalizes Plan ranks into a unique sequence after import.
-- `valuation.intrinsicValue` is the core estimate from ChatGPT. `targetBuyPrice`, `priceLevels`, `dividend`, `dividendYield`, and `estimatedAnnualCash` do not need to be provided.
+- `valuation.intrinsicValue` is the core DCF estimate from ChatGPT. The main strategy requires displayed DCF margin >= 15%.
 - `valuationConfidence` and `killCriteria` are optional. If omitted, the website derives valuation confidence from quality score and risk text, and derives the detail-page bear case from existing risk/status fields.
 - The site computes the first-buy price as `intrinsicValue * 75%`, watch price as `firstBuyPrice * 105%`, and aggressive buy price as `firstBuyPrice * 90%`.
-- Dividend data is fetched by the quote update flow when the data source provides it. Dividend yield is calculated as latest full fiscal-year cash dividend total divided by company market capitalization; comprehensive shareholder return is calculated as cash dividends plus buybacks divided by market capitalization.
+- Dividend data is fetched by the quote update flow when the data source provides it, but research may also provide `dividend.forecastFiscalYear`, `forecastPerShare`, `forecastCurrency`, and `forecastYield`. Main-strategy dividend shield passes if either latest fiscal-year yield or next-year forecast yield reaches A-share 6% / H-share 8%.
+- `ownerCashFlowAudit` is required for a main-strategy buy. Each item uses `status: pass|review|fail` plus `note`; core items are `tenYearDemand`, `dividendFcfSupport`, and `valuationSystemRisk`. Missing audit defaults to review and blocks new main-strategy buys.
+- If `valuationSystemRisk.status` is `fail`, the website treats the stock as risk exclusion. Other review/fail audit items block main-strategy buying but do not force old holdings to sell.
+- Dividend yield is calculated as latest full fiscal-year cash dividend total divided by company market capitalization; comprehensive shareholder return is calculated as cash dividends plus buybacks divided by market capitalization.
 - `dividend.reliability` is optional. If omitted, the website derives `stable/review/risk` from dividend data completeness, valuation confidence, and major risk text.
-- The investment committee views are computed locally from the same imported data:
-  - Howard Marks focuses on risk compensation, safety margin, valuation confidence, major risk words, and position concentration.
-  - Benjamin Graham focuses on safety margin, financial quality, dividend reliability, and whether the valuation is defensive enough.
-  - Warren Buffett focuses on quality score, business model, moat, governance, financial quality, valuation confidence, and long-term risk.
+- `netCash.cashAndShortInvestments`, `interestBearingDebt`, `netCash`, `currency`, `haircut`, `haircutReason`, `adjustedNetCash`, `exCashPe`, `exCashPfcf`, `fcfYield`, and `fcfPositiveYears` are optional but should be supplied for cigar-butt candidates.
+- Net-cash haircut convention: stable dividend 100%, normal 70%, weak/cyclical 40%, major risk 0%. If `haircut` is omitted, the website estimates it from dividend reliability and risk text.
+- The website computes dual-strategy grouping locally: main strategy, side-strategy cigar butt, transition observation, or risk exclusion.
 - Future optional analysis fields may be useful but are not required: `circleOfCompetence`, `ownerEarnings`, `roeHistory`, `debtRatio`, `dividendCoverage`, and capital allocation notes. Missing fields should not block import.
 - The website preview validates the JSON before writing. Confirmed imports update `data/portfolio.json` and first create a backup under `data/backups/`.
 - Holding safety margin is calculated as `(intrinsicValue - currentPrice) / intrinsicValue`. Candidate-pool stocks use the same formula after the overview `更新行情` button has fetched quote data; otherwise they continue to use the imported `valuation.marginOfSafety`.

@@ -56,38 +56,40 @@ type DecisionLog struct {
 }
 
 type Holding struct {
-	Symbol              string          `json:"symbol"`
-	Name                string          `json:"name"`
-	Shares              float64         `json:"shares"`
-	Cost                float64         `json:"cost"`
-	CurrentPrice        float64         `json:"currentPrice"`
-	PreviousClose       float64         `json:"previousClose"`
-	MarketCap           *float64        `json:"marketCap,omitempty"`
-	MarketCapCurrency   string          `json:"marketCapCurrency,omitempty"`
-	CurrentPriceDate    string          `json:"currentPriceDate"`
-	PreviousCloseDate   string          `json:"previousCloseDate"`
-	Action              string          `json:"action"`
-	Status              string          `json:"status"`
-	MarginOfSafety      *float64        `json:"marginOfSafety"`
-	QualityScore        *float64        `json:"qualityScore"`
-	Risk                string          `json:"risk"`
-	Industry            string          `json:"industry"`
-	Currency            string          `json:"currency"`
-	IntrinsicValue      *float64        `json:"intrinsicValue"`
-	FairValueRange      string          `json:"fairValueRange"`
-	TargetBuyPrice      *float64        `json:"targetBuyPrice"`
-	PriceLevels         *PriceLevels    `json:"priceLevels,omitempty"`
-	ValuationConfidence string          `json:"valuationConfidence,omitempty"`
-	BusinessModel       *float64        `json:"businessModel"`
-	Moat                *float64        `json:"moat"`
-	Governance          *float64        `json:"governance"`
-	FinancialQuality    *float64        `json:"financialQuality"`
-	UpdatedAt           string          `json:"updatedAt"`
-	Notes               string          `json:"notes"`
-	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
-	Reports             []Report        `json:"reports,omitempty"`
-	Dividend            *Dividend       `json:"dividend,omitempty"`
-	Financials          json.RawMessage `json:"financials,omitempty"`
+	Symbol              string              `json:"symbol"`
+	Name                string              `json:"name"`
+	Shares              float64             `json:"shares"`
+	Cost                float64             `json:"cost"`
+	CurrentPrice        float64             `json:"currentPrice"`
+	PreviousClose       float64             `json:"previousClose"`
+	MarketCap           *float64            `json:"marketCap,omitempty"`
+	MarketCapCurrency   string              `json:"marketCapCurrency,omitempty"`
+	CurrentPriceDate    string              `json:"currentPriceDate"`
+	PreviousCloseDate   string              `json:"previousCloseDate"`
+	Action              string              `json:"action"`
+	Status              string              `json:"status"`
+	MarginOfSafety      *float64            `json:"marginOfSafety"`
+	QualityScore        *float64            `json:"qualityScore"`
+	Risk                string              `json:"risk"`
+	Industry            string              `json:"industry"`
+	Currency            string              `json:"currency"`
+	IntrinsicValue      *float64            `json:"intrinsicValue"`
+	FairValueRange      string              `json:"fairValueRange"`
+	TargetBuyPrice      *float64            `json:"targetBuyPrice"`
+	PriceLevels         *PriceLevels        `json:"priceLevels,omitempty"`
+	ValuationConfidence string              `json:"valuationConfidence,omitempty"`
+	BusinessModel       *float64            `json:"businessModel"`
+	Moat                *float64            `json:"moat"`
+	Governance          *float64            `json:"governance"`
+	FinancialQuality    *float64            `json:"financialQuality"`
+	UpdatedAt           string              `json:"updatedAt"`
+	Notes               string              `json:"notes"`
+	KillCriteria        json.RawMessage     `json:"killCriteria,omitempty"`
+	Reports             []Report            `json:"reports,omitempty"`
+	Dividend            *Dividend           `json:"dividend,omitempty"`
+	NetCash             *NetCashProfile     `json:"netCash,omitempty"`
+	OwnerCashFlowAudit  *OwnerCashFlowAudit `json:"ownerCashFlowAudit,omitempty"`
+	Financials          json.RawMessage     `json:"financials,omitempty"`
 }
 
 type PriceLevels struct {
@@ -108,6 +110,40 @@ type Dividend struct {
 	PayoutRatio          *float64 `json:"payoutRatio,omitempty"`
 	EstimatedAnnualCash  *float64 `json:"estimatedAnnualCash,omitempty"`
 	Reliability          string   `json:"reliability,omitempty"`
+	ForecastFiscalYear   string   `json:"forecastFiscalYear,omitempty"`
+	ForecastPerShare     *float64 `json:"forecastPerShare,omitempty"`
+	ForecastCurrency     string   `json:"forecastCurrency,omitempty"`
+	ForecastYield        *float64 `json:"forecastYield,omitempty"`
+}
+
+type NetCashProfile struct {
+	CashAndShortInvestments *float64 `json:"cashAndShortInvestments,omitempty"`
+	InterestBearingDebt     *float64 `json:"interestBearingDebt,omitempty"`
+	NetCash                 *float64 `json:"netCash,omitempty"`
+	Currency                string   `json:"currency,omitempty"`
+	Haircut                 *float64 `json:"haircut,omitempty"`
+	HaircutReason           string   `json:"haircutReason,omitempty"`
+	AdjustedNetCash         *float64 `json:"adjustedNetCash,omitempty"`
+	ExCashPE                *float64 `json:"exCashPe,omitempty"`
+	ExCashPFCF              *float64 `json:"exCashPfcf,omitempty"`
+	FCFYield                *float64 `json:"fcfYield,omitempty"`
+	FCFPositiveYears        *int     `json:"fcfPositiveYears,omitempty"`
+	Note                    string   `json:"note,omitempty"`
+}
+
+type OwnerCashFlowAudit struct {
+	TenYearDemand                  OwnerAuditItem `json:"tenYearDemand,omitempty"`
+	AssetDurability                OwnerAuditItem `json:"assetDurability,omitempty"`
+	MaintenanceCapexLight          OwnerAuditItem `json:"maintenanceCapexLight,omitempty"`
+	DividendFCFSupport             OwnerAuditItem `json:"dividendFcfSupport,omitempty"`
+	DividendReinvestmentEfficiency OwnerAuditItem `json:"dividendReinvestmentEfficiency,omitempty"`
+	RoeRoicDurability              OwnerAuditItem `json:"roeRoicDurability,omitempty"`
+	ValuationSystemRisk            OwnerAuditItem `json:"valuationSystemRisk,omitempty"`
+}
+
+type OwnerAuditItem struct {
+	Status string `json:"status,omitempty"`
+	Note   string `json:"note,omitempty"`
 }
 
 type Report struct {
@@ -129,36 +165,38 @@ type PlanItem struct {
 }
 
 type Candidate struct {
-	Symbol              string          `json:"symbol"`
-	Name                string          `json:"name"`
-	Status              string          `json:"status"`
-	Action              string          `json:"action"`
-	CurrentPrice        float64         `json:"currentPrice"`
-	PreviousClose       float64         `json:"previousClose"`
-	MarketCap           *float64        `json:"marketCap,omitempty"`
-	MarketCapCurrency   string          `json:"marketCapCurrency,omitempty"`
-	CurrentPriceDate    string          `json:"currentPriceDate"`
-	PreviousCloseDate   string          `json:"previousCloseDate"`
-	MarginOfSafety      *float64        `json:"marginOfSafety"`
-	QualityScore        *float64        `json:"qualityScore"`
-	Risk                string          `json:"risk"`
-	Industry            string          `json:"industry"`
-	Currency            string          `json:"currency"`
-	IntrinsicValue      *float64        `json:"intrinsicValue"`
-	FairValueRange      string          `json:"fairValueRange"`
-	TargetBuyPrice      *float64        `json:"targetBuyPrice"`
-	PriceLevels         *PriceLevels    `json:"priceLevels,omitempty"`
-	ValuationConfidence string          `json:"valuationConfidence,omitempty"`
-	BusinessModel       *float64        `json:"businessModel"`
-	Moat                *float64        `json:"moat"`
-	Governance          *float64        `json:"governance"`
-	FinancialQuality    *float64        `json:"financialQuality"`
-	UpdatedAt           string          `json:"updatedAt"`
-	Notes               string          `json:"notes"`
-	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
-	Reports             []Report        `json:"reports,omitempty"`
-	Dividend            *Dividend       `json:"dividend,omitempty"`
-	Financials          json.RawMessage `json:"financials,omitempty"`
+	Symbol              string              `json:"symbol"`
+	Name                string              `json:"name"`
+	Status              string              `json:"status"`
+	Action              string              `json:"action"`
+	CurrentPrice        float64             `json:"currentPrice"`
+	PreviousClose       float64             `json:"previousClose"`
+	MarketCap           *float64            `json:"marketCap,omitempty"`
+	MarketCapCurrency   string              `json:"marketCapCurrency,omitempty"`
+	CurrentPriceDate    string              `json:"currentPriceDate"`
+	PreviousCloseDate   string              `json:"previousCloseDate"`
+	MarginOfSafety      *float64            `json:"marginOfSafety"`
+	QualityScore        *float64            `json:"qualityScore"`
+	Risk                string              `json:"risk"`
+	Industry            string              `json:"industry"`
+	Currency            string              `json:"currency"`
+	IntrinsicValue      *float64            `json:"intrinsicValue"`
+	FairValueRange      string              `json:"fairValueRange"`
+	TargetBuyPrice      *float64            `json:"targetBuyPrice"`
+	PriceLevels         *PriceLevels        `json:"priceLevels,omitempty"`
+	ValuationConfidence string              `json:"valuationConfidence,omitempty"`
+	BusinessModel       *float64            `json:"businessModel"`
+	Moat                *float64            `json:"moat"`
+	Governance          *float64            `json:"governance"`
+	FinancialQuality    *float64            `json:"financialQuality"`
+	UpdatedAt           string              `json:"updatedAt"`
+	Notes               string              `json:"notes"`
+	KillCriteria        json.RawMessage     `json:"killCriteria,omitempty"`
+	Reports             []Report            `json:"reports,omitempty"`
+	Dividend            *Dividend           `json:"dividend,omitempty"`
+	NetCash             *NetCashProfile     `json:"netCash,omitempty"`
+	OwnerCashFlowAudit  *OwnerCashFlowAudit `json:"ownerCashFlowAudit,omitempty"`
+	Financials          json.RawMessage     `json:"financials,omitempty"`
 }
 
 type Rule struct {
@@ -168,21 +206,23 @@ type Rule struct {
 }
 
 type ResearchImport struct {
-	Symbol              string          `json:"symbol"`
-	Name                string          `json:"name"`
-	AsOf                string          `json:"asOf"`
-	Currency            string          `json:"currency"`
-	Industry            string          `json:"industry"`
-	Status              string          `json:"status"`
-	Action              string          `json:"action"`
-	Risk                string          `json:"risk"`
-	Valuation           Valuation       `json:"valuation"`
-	Quality             Quality         `json:"quality"`
-	Plan                PlanInput       `json:"plan"`
-	Dividend            *Dividend       `json:"dividend,omitempty"`
-	ValuationConfidence string          `json:"valuationConfidence,omitempty"`
-	KillCriteria        json.RawMessage `json:"killCriteria,omitempty"`
-	Notes               string          `json:"notes"`
+	Symbol              string              `json:"symbol"`
+	Name                string              `json:"name"`
+	AsOf                string              `json:"asOf"`
+	Currency            string              `json:"currency"`
+	Industry            string              `json:"industry"`
+	Status              string              `json:"status"`
+	Action              string              `json:"action"`
+	Risk                string              `json:"risk"`
+	Valuation           Valuation           `json:"valuation"`
+	Quality             Quality             `json:"quality"`
+	Plan                PlanInput           `json:"plan"`
+	Dividend            *Dividend           `json:"dividend,omitempty"`
+	NetCash             *NetCashProfile     `json:"netCash,omitempty"`
+	OwnerCashFlowAudit  *OwnerCashFlowAudit `json:"ownerCashFlowAudit,omitempty"`
+	ValuationConfidence string              `json:"valuationConfidence,omitempty"`
+	KillCriteria        json.RawMessage     `json:"killCriteria,omitempty"`
+	Notes               string              `json:"notes"`
 }
 
 type Valuation struct {
@@ -276,6 +316,12 @@ func validateResearch(research ResearchImport) error {
 	if err := validateDividend(research.Dividend); err != nil {
 		return err
 	}
+	if err := validateNetCash(research.NetCash); err != nil {
+		return err
+	}
+	if err := validateOwnerCashFlowAudit(research.OwnerCashFlowAudit); err != nil {
+		return err
+	}
 	if err := validateScore("quality.totalScore", research.Quality.TotalScore, 100); err != nil {
 		return err
 	}
@@ -321,7 +367,51 @@ func validateDividend(dividend *Dividend) error {
 	if err := validatePositiveAmount("dividend.dividendPerShare", dividend.DividendPerShare); err != nil {
 		return err
 	}
+	if err := validatePositiveAmount("dividend.forecastPerShare", dividend.ForecastPerShare); err != nil {
+		return err
+	}
+	if err := validateRatio("dividend.forecastYield", dividend.ForecastYield, 5); err != nil {
+		return err
+	}
 	return validateRatio("dividend.payoutRatio", dividend.PayoutRatio, 5)
+}
+
+func validateNetCash(netCash *NetCashProfile) error {
+	if netCash == nil {
+		return nil
+	}
+	if err := validateNonNegativeAmount("netCash.cashAndShortInvestments", netCash.CashAndShortInvestments); err != nil {
+		return err
+	}
+	if err := validateNonNegativeAmount("netCash.interestBearingDebt", netCash.InterestBearingDebt); err != nil {
+		return err
+	}
+	if err := validateRatio("netCash.haircut", netCash.Haircut, 1); err != nil {
+		return err
+	}
+	if err := validateNonNegativeAmount("netCash.exCashPe", netCash.ExCashPE); err != nil {
+		return err
+	}
+	if err := validateNonNegativeAmount("netCash.exCashPfcf", netCash.ExCashPFCF); err != nil {
+		return err
+	}
+	return validateRatio("netCash.fcfYield", netCash.FCFYield, 5)
+}
+
+func validateOwnerCashFlowAudit(audit *OwnerCashFlowAudit) error {
+	if audit == nil {
+		return nil
+	}
+	for _, item := range ownerAuditItems(audit) {
+		status := strings.ToLower(strings.TrimSpace(item.value.Status))
+		if status == "" {
+			continue
+		}
+		if status != "pass" && status != "review" && status != "fail" {
+			return fmt.Errorf("%s.status must be pass, review, or fail", item.field)
+		}
+	}
+	return nil
 }
 
 func validatePositiveAmount(field string, value *float64) error {
@@ -413,6 +503,15 @@ func applyHoldingResearch(holding *Holding, research ResearchImport, updateLabel
 	holding.UpdatedAt = updateLabel
 	holding.Notes = strings.TrimSpace(research.Notes)
 	holding.KillCriteria = cloneRawMessage(research.KillCriteria)
+	if research.Dividend != nil {
+		holding.Dividend = research.Dividend
+	}
+	if research.NetCash != nil {
+		holding.NetCash = research.NetCash
+	}
+	if research.OwnerCashFlowAudit != nil {
+		holding.OwnerCashFlowAudit = research.OwnerCashFlowAudit
+	}
 }
 
 func applyCandidateResearch(candidate *Candidate, research ResearchImport, updateLabel string) {
@@ -436,6 +535,15 @@ func applyCandidateResearch(candidate *Candidate, research ResearchImport, updat
 	candidate.UpdatedAt = updateLabel
 	candidate.Notes = strings.TrimSpace(research.Notes)
 	candidate.KillCriteria = cloneRawMessage(research.KillCriteria)
+	if research.Dividend != nil {
+		candidate.Dividend = research.Dividend
+	}
+	if research.NetCash != nil {
+		candidate.NetCash = research.NetCash
+	}
+	if research.OwnerCashFlowAudit != nil {
+		candidate.OwnerCashFlowAudit = research.OwnerCashFlowAudit
+	}
 }
 
 func upsertPlan(state *AppState, research ResearchImport) {
@@ -529,6 +637,8 @@ func normalizeResearch(research ResearchImport) ResearchImport {
 	research.ValuationConfidence = strings.TrimSpace(research.ValuationConfidence)
 	research.KillCriteria = normalizeRawMessage(research.KillCriteria)
 	research.Dividend = normalizeDividend(research.Dividend, research.Currency)
+	research.NetCash = normalizeNetCash(research.NetCash, research.Currency)
+	research.OwnerCashFlowAudit = normalizeOwnerCashFlowAudit(research.OwnerCashFlowAudit)
 	research.Notes = strings.TrimSpace(research.Notes)
 	return research
 }
@@ -573,9 +683,16 @@ func normalizeDividend(dividend *Dividend, fallbackCurrency string) *Dividend {
 		PayoutRatio:          cloneFloat(dividend.PayoutRatio),
 		EstimatedAnnualCash:  nil,
 		Reliability:          strings.TrimSpace(dividend.Reliability),
+		ForecastFiscalYear:   strings.TrimSpace(dividend.ForecastFiscalYear),
+		ForecastPerShare:     cloneFloat(dividend.ForecastPerShare),
+		ForecastCurrency:     strings.ToUpper(strings.TrimSpace(dividend.ForecastCurrency)),
+		ForecastYield:        cloneFloat(dividend.ForecastYield),
 	}
 	if next.DividendCurrency == "" {
 		next.DividendCurrency = strings.ToUpper(strings.TrimSpace(fallbackCurrency))
+	}
+	if next.ForecastCurrency == "" {
+		next.ForecastCurrency = strings.ToUpper(strings.TrimSpace(fallbackCurrency))
 	}
 	if next.FiscalYear == "" &&
 		next.DividendPerShare == nil &&
@@ -586,13 +703,119 @@ func normalizeDividend(dividend *Dividend, fallbackCurrency string) *Dividend {
 		next.BuybackCurrency == "" &&
 		next.DividendYield == nil &&
 		next.PayoutRatio == nil &&
-		next.EstimatedAnnualCash == nil {
+		next.EstimatedAnnualCash == nil &&
+		next.ForecastFiscalYear == "" &&
+		next.ForecastPerShare == nil &&
+		next.ForecastCurrency == "" &&
+		next.ForecastYield == nil {
 		return nil
 	}
 	return next
 }
 
+func normalizeNetCash(netCash *NetCashProfile, fallbackCurrency string) *NetCashProfile {
+	if netCash == nil {
+		return nil
+	}
+	next := &NetCashProfile{
+		CashAndShortInvestments: cloneFloat(netCash.CashAndShortInvestments),
+		InterestBearingDebt:     cloneFloat(netCash.InterestBearingDebt),
+		NetCash:                 cloneFloat(netCash.NetCash),
+		Currency:                strings.ToUpper(strings.TrimSpace(netCash.Currency)),
+		Haircut:                 cloneFloat(netCash.Haircut),
+		HaircutReason:           strings.TrimSpace(netCash.HaircutReason),
+		AdjustedNetCash:         cloneFloat(netCash.AdjustedNetCash),
+		ExCashPE:                cloneFloat(netCash.ExCashPE),
+		ExCashPFCF:              cloneFloat(netCash.ExCashPFCF),
+		FCFYield:                cloneFloat(netCash.FCFYield),
+		FCFPositiveYears:        cloneInt(netCash.FCFPositiveYears),
+		Note:                    strings.TrimSpace(netCash.Note),
+	}
+	if next.Currency == "" {
+		next.Currency = strings.ToUpper(strings.TrimSpace(fallbackCurrency))
+	}
+	if next.NetCash == nil && next.CashAndShortInvestments != nil && next.InterestBearingDebt != nil {
+		value := *next.CashAndShortInvestments - *next.InterestBearingDebt
+		next.NetCash = &value
+	}
+	if next.AdjustedNetCash == nil && next.NetCash != nil && next.Haircut != nil {
+		value := *next.NetCash * *next.Haircut
+		next.AdjustedNetCash = &value
+	}
+	if next.CashAndShortInvestments == nil &&
+		next.InterestBearingDebt == nil &&
+		next.NetCash == nil &&
+		next.Haircut == nil &&
+		next.HaircutReason == "" &&
+		next.AdjustedNetCash == nil &&
+		next.ExCashPE == nil &&
+		next.ExCashPFCF == nil &&
+		next.FCFYield == nil &&
+		next.FCFPositiveYears == nil &&
+		next.Note == "" {
+		return nil
+	}
+	return next
+}
+
+func normalizeOwnerCashFlowAudit(audit *OwnerCashFlowAudit) *OwnerCashFlowAudit {
+	if audit == nil {
+		return nil
+	}
+	next := &OwnerCashFlowAudit{
+		TenYearDemand:                  normalizeOwnerAuditItem(audit.TenYearDemand),
+		AssetDurability:                normalizeOwnerAuditItem(audit.AssetDurability),
+		MaintenanceCapexLight:          normalizeOwnerAuditItem(audit.MaintenanceCapexLight),
+		DividendFCFSupport:             normalizeOwnerAuditItem(audit.DividendFCFSupport),
+		DividendReinvestmentEfficiency: normalizeOwnerAuditItem(audit.DividendReinvestmentEfficiency),
+		RoeRoicDurability:              normalizeOwnerAuditItem(audit.RoeRoicDurability),
+		ValuationSystemRisk:            normalizeOwnerAuditItem(audit.ValuationSystemRisk),
+	}
+	for _, item := range ownerAuditItems(next) {
+		if item.value.Status != "" || item.value.Note != "" {
+			return next
+		}
+	}
+	return nil
+}
+
+func normalizeOwnerAuditItem(item OwnerAuditItem) OwnerAuditItem {
+	return OwnerAuditItem{
+		Status: strings.ToLower(strings.TrimSpace(item.Status)),
+		Note:   strings.TrimSpace(item.Note),
+	}
+}
+
+func ownerAuditItems(audit *OwnerCashFlowAudit) []struct {
+	field string
+	value OwnerAuditItem
+} {
+	if audit == nil {
+		return nil
+	}
+	return []struct {
+		field string
+		value OwnerAuditItem
+	}{
+		{"ownerCashFlowAudit.tenYearDemand", audit.TenYearDemand},
+		{"ownerCashFlowAudit.assetDurability", audit.AssetDurability},
+		{"ownerCashFlowAudit.maintenanceCapexLight", audit.MaintenanceCapexLight},
+		{"ownerCashFlowAudit.dividendFcfSupport", audit.DividendFCFSupport},
+		{"ownerCashFlowAudit.dividendReinvestmentEfficiency", audit.DividendReinvestmentEfficiency},
+		{"ownerCashFlowAudit.roeRoicDurability", audit.RoeRoicDurability},
+		{"ownerCashFlowAudit.valuationSystemRisk", audit.ValuationSystemRisk},
+	}
+}
+
 func cloneFloat(value *float64) *float64 {
+	if value == nil {
+		return nil
+	}
+	next := *value
+	return &next
+}
+
+func cloneInt(value *int) *int {
 	if value == nil {
 		return nil
 	}
