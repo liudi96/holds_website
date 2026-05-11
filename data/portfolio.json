@@ -163,6 +163,39 @@
       "decision": "继续持有；新资金暂不追买，等待22-24元区间再复盘",
       "discipline": "合格核心候选要求约25%安全边际；当前价格接近中性内在价值，不满足买入纪律。若液态奶持续弱增长、奶粉修复放缓或自由现金流无法覆盖高分红，应下调内在价值。",
       "detail": "holding；updated holding 600887.SH (伊利股份)"
+    },
+    {
+      "id": 1778500004957933000,
+      "date": "2026-05-11 19:46:44",
+      "type": "financials",
+      "symbol": "0700.HK",
+      "name": "腾讯控股",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 751766000000；利润 224842000000；ROE 21.13%；ROIC 15.25%；FCF 303052000000"
+    },
+    {
+      "id": 1778500371396985000,
+      "date": "2026-05-11 19:52:51",
+      "type": "financials",
+      "symbol": "0700.HK",
+      "name": "腾讯控股",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 751766000000；利润 224842000000；ROE 21.13%；ROIC 15.25%；FCF 303052000000"
+    },
+    {
+      "id": 1778500386384894000,
+      "date": "2026-05-11 19:53:06",
+      "type": "financials",
+      "symbol": "7489.HK",
+      "name": "岚图汽车",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 4 年；最新期 2025；收入 34864815000；利润 1017378000；ROE 14.70%；ROIC 4.23%；FCF 1872302000"
     }
   ],
   "holdings": [
@@ -188,7 +221,7 @@
       "moat": 23,
       "governance": 17,
       "financialQuality": 21,
-      "updatedAt": "",
+      "updatedAt": "2026-05-11 19:20:41；ChatGPT分析导入；分析日 2026-05-11",
       "notes": "FY2025收入RMB7518亿、Non-IFRS归母利润RMB2596亿、FCF约RMB1826亿、净现金约RMB1071亿；业务质量仍强，但2026年AI投入和回购下降是主要复盘变量。当前HK$464附近安全边际约13%，持有合格但新增买入赔率不足，等待HK$400-430或Q1财报验证后再行动。",
       "reports": [
         {
@@ -308,7 +341,7 @@
         }
       },
       "financials": {
-        "updatedAt": "2026-05-10 21:43:24",
+        "updatedAt": "2026-05-11 19:52:49",
         "source": "东方财富港股财务分析",
         "sourceSymbol": "00700.HK",
         "currency": "HKD",
@@ -338,8 +371,8 @@
             "operatingMargin": 0.32132605092542094,
             "netMargin": 0.305681555165,
             "dividendPaid": 39907000000,
-            "peAtCurrentPrice": 19.047233985069475,
-            "pbAtCurrentPrice": 3.724137896532343
+            "peAtCurrentPrice": 18.76439427437409,
+            "pbAtCurrentPrice": 3.6688367391007395
           },
           {
             "fiscalYear": "2024",
@@ -366,8 +399,8 @@
             "operatingMargin": 0.315178786442249,
             "netMargin": 0.29756140412,
             "dividendPaid": 31244000000,
-            "peAtCurrentPrice": 22.51408892427569,
-            "pbAtCurrentPrice": 4.415006965818417
+            "peAtCurrentPrice": 22.179768549836872,
+            "pbAtCurrentPrice": 4.34944682759
           },
           {
             "fiscalYear": "2023",
@@ -395,8 +428,8 @@
             "operatingMargin": 0.262840816728652,
             "netMargin": 0.19383430621599998,
             "dividendPaid": 21788000000,
-            "peAtCurrentPrice": 38.68373493324179,
-            "pbAtCurrentPrice": 5.315692607954541
+            "peAtCurrentPrice": 38.10930525984608,
+            "pbAtCurrentPrice": 5.236757841858951
           },
           {
             "fiscalYear": "2022",
@@ -424,8 +457,8 @@
             "operatingMargin": 0.19984960833249182,
             "netMargin": 0.34029090148400004,
             "dividendPaid": 15117000000,
-            "peAtCurrentPrice": 23.85989744882747,
-            "pbAtCurrentPrice": 5.958240678853171
+            "peAtCurrentPrice": 23.50559264546664,
+            "pbAtCurrentPrice": 5.869764469069573
           },
           {
             "fiscalYear": "2021",
@@ -453,8 +486,8 @@
             "operatingMargin": 0.4730610335679268,
             "netMargin": 0.40671787016300004,
             "dividendPaid": 13906000000,
-            "peAtCurrentPrice": 19.97711547639464,
-            "pbAtCurrentPrice": 5.330803091109611
+            "peAtCurrentPrice": 19.680467597426976,
+            "pbAtCurrentPrice": 5.251643943632063
           },
           {
             "fiscalYear": "2020",
@@ -482,8 +515,8 @@
             "operatingMargin": 0.3677519997344751,
             "netMargin": 0.332165438614,
             "dividendPaid": 11418000000,
-            "peAtCurrentPrice": 27.9862261871577,
-            "pbAtCurrentPrice": 6.105566606000439
+            "peAtCurrentPrice": 27.57064793971054,
+            "pbAtCurrentPrice": 6.014902696803638
           },
           {
             "fiscalYear": "2019",
@@ -509,8 +542,8 @@
             "grossMargin": 0.44404422074325,
             "operatingMargin": 0.2978618512599095,
             "netMargin": 0.254150001723,
-            "peAtCurrentPrice": 47.82873314696473,
-            "pbAtCurrentPrice": 9.93335244151584
+            "peAtCurrentPrice": 47.11850587423746,
+            "pbAtCurrentPrice": 9.78584826673666
           },
           {
             "fiscalYear": "2018",
@@ -536,8 +569,8 @@
             "grossMargin": 0.45450184525447,
             "operatingMargin": 0.2976680077008193,
             "netMargin": 0.255790005565,
-            "peAtCurrentPrice": 56.549903298522594,
-            "pbAtCurrentPrice": 13.286208159125339
+            "peAtCurrentPrice": 55.71017201253411,
+            "pbAtCurrentPrice": 13.088916138934307
           },
           {
             "fiscalYear": "2017",
@@ -563,8 +596,8 @@
             "grossMargin": 0.49177742261104,
             "operatingMargin": 0.36323183041722745,
             "netMargin": 0.304807368775,
-            "peAtCurrentPrice": 62.04264199743148,
-            "pbAtCurrentPrice": 16.78507463295198
+            "peAtCurrentPrice": 61.12134691977947,
+            "pbAtCurrentPrice": 16.535826597415376
           },
           {
             "fiscalYear": "2016",
@@ -588,27 +621,27 @@
             "roic": 0.16910200437002998,
             "grossMargin": 0.55614132080191,
             "netMargin": 0.272788900736,
-            "peAtCurrentPrice": 107.55190369529646,
-            "pbAtCurrentPrice": 24.61414926675966
+            "peAtCurrentPrice": 105.9548240694694,
+            "pbAtCurrentPrice": 24.248644287764787
           }
         ],
         "valuation": {
           "date": "2025-12-31",
-          "price": 471.3999938964844,
+          "price": 464.3999938964844,
           "currency": "HKD",
-          "pe": 19.047233985069475,
-          "pb": 3.724137896532343,
-          "peg": 1.2013890088020958,
-          "dividendYield": 0.01116740012167965,
+          "pe": 18.76439427437409,
+          "pb": 3.6688367391007395,
+          "peg": 1.1835491208714621,
+          "dividendYield": 0.009689922607972856,
           "peRange": {
-            "min": 19.047233985069475,
-            "median": 33.334980560199746,
-            "max": 107.55190369529646
+            "min": 18.76439427437409,
+            "median": 32.83997659977831,
+            "max": 105.9548240694694
           },
           "pbRange": {
-            "min": 3.724137896532343,
-            "median": 6.031903642426805,
-            "max": 24.61414926675966
+            "min": 3.6688367391007395,
+            "median": 5.942333582936605,
+            "max": 24.248644287764787
           },
           "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
         }
@@ -1552,7 +1585,7 @@
       "moat": 21,
       "governance": 16,
       "financialQuality": 21,
-      "updatedAt": "2026-05-11 19:20:41；ChatGPT分析导入；分析日 2026-05-11",
+      "updatedAt": "",
       "notes": "本次为完整重估。结论维持：伊利股份适合现有仓位持有收息，但现价安全边际不足，新资金不追买；22-24元区间再进入买入复盘。",
       "reports": [
         {
@@ -4974,7 +5007,7 @@
         }
       },
       "financials": {
-        "updatedAt": "2026-05-10 18:29:59",
+        "updatedAt": "2026-05-11 19:53:05",
         "source": "东方财富港股财务分析",
         "sourceSymbol": "07489.HK",
         "currency": "HKD",
@@ -5004,8 +5037,8 @@
             "grossMargin": 0.20926567371718,
             "operatingMargin": 0.03314278306080213,
             "netMargin": 0.029180651037000002,
-            "peAtCurrentPrice": 20.266666412353516,
-            "pbAtCurrentPrice": 2.1186592479791333
+            "peAtCurrentPrice": 19.133332570393883,
+            "pbAtCurrentPrice": 2.000181538006472
           },
           {
             "fiscalYear": "2024",
@@ -5032,7 +5065,7 @@
             "grossMargin": 0.20998761301407,
             "operatingMargin": -0.0070923267937085975,
             "netMargin": -0.004672314069,
-            "pbAtCurrentPrice": 6.816141335756305
+            "pbAtCurrentPrice": 6.43497536152959
           },
           {
             "fiscalYear": "2023",
@@ -5059,7 +5092,7 @@
             "grossMargin": 0.14222926918799,
             "operatingMargin": -0.14965786571582304,
             "netMargin": -0.117302253129,
-            "pbAtCurrentPrice": 6.765395117001601
+            "pbAtCurrentPrice": 6.387066926053893
           },
           {
             "fiscalYear": "2022",
@@ -5084,25 +5117,25 @@
             "grossMargin": 0.08305492919903999,
             "operatingMargin": -0.30457054268894607,
             "netMargin": -0.25416019884499996,
-            "pbAtCurrentPrice": 4.696669844586078
+            "pbAtCurrentPrice": 4.434027001847218
           }
         ],
         "valuation": {
           "date": "2025-12-31",
-          "price": 6.079999923706055,
+          "price": 5.739999771118164,
           "currency": "HKD",
-          "pe": 20.266666412353516,
-          "pb": 2.1186592479791333,
-          "peg": 0.01654848481315508,
+          "pe": 19.133332570393883,
+          "pb": 2.000181538006472,
+          "peg": 0.015623075696021164,
           "peRange": {
-            "min": 20.266666412353516,
-            "median": 20.266666412353516,
-            "max": 20.266666412353516
+            "min": 19.133332570393883,
+            "median": 19.133332570393883,
+            "max": 19.133332570393883
           },
           "pbRange": {
-            "min": 2.1186592479791333,
-            "median": 5.731032480793839,
-            "max": 6.816141335756305
+            "min": 2.000181538006472,
+            "median": 5.410546963950555,
+            "max": 6.43497536152959
           },
           "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
         }

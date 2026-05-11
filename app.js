@@ -364,24 +364,30 @@ function fx(currencyCode) {
 }
 
 function currency(value, currencyCode = "CNY") {
+  const number = finiteNumber(value);
+  if (number === null) return "-";
   return new Intl.NumberFormat("zh-CN", {
     style: "currency",
     currency: currencyCode,
     minimumFractionDigits: 2
-  }).format(value);
+  }).format(number);
 }
 
 function wholeCurrency(value, currencyCode = "CNY") {
+  const number = finiteNumber(value);
+  if (number === null) return "-";
   return new Intl.NumberFormat("zh-CN", {
     style: "currency",
     currency: currencyCode,
     maximumFractionDigits: 0
-  }).format(value);
+  }).format(number);
 }
 
 function percent(value, signed = true) {
-  const prefix = signed && value >= 0 ? "+" : "";
-  return `${prefix}${value.toFixed(2)}%`;
+  const number = finiteNumber(value);
+  if (number === null) return "-";
+  const prefix = signed && number >= 0 ? "+" : "";
+  return `${prefix}${number.toFixed(2)}%`;
 }
 
 function finiteNumber(value) {
@@ -1216,22 +1222,33 @@ function computePositions() {
   return state.holdings
     .filter((holding) => holding.shares > 0)
     .map((holding) => {
-      const marketValueLocal = holding.shares * holding.currentPrice;
-      const costValueLocal = holding.shares * holding.cost;
+      const shares = finiteNumber(holding.shares) ?? 0;
+      const cost = finiteNumber(holding.cost) ?? 0;
+      const currentPrice = finiteNumber(holding.currentPrice);
+      const previousClose = finiteNumber(holding.previousClose);
+      const hasCurrentPrice = Number.isFinite(currentPrice) && currentPrice > 0;
+      const marketValueLocal = hasCurrentPrice ? shares * currentPrice : 0;
+      const costValueLocal = shares * cost;
       const marketValueCny = marketValueLocal * fx(holding.currency);
       const costValueCny = costValueLocal * fx(holding.currency);
-      const pnlCny = marketValueCny - costValueCny;
-      const previousClose = holding.previousClose > 0 ? holding.previousClose : holding.currentPrice;
-      const dayChange = holding.shares * (holding.currentPrice - previousClose) * fx(holding.currency);
+      const pnlCny = hasCurrentPrice ? marketValueCny - costValueCny : null;
+      const closeForDayChange = Number.isFinite(previousClose) && previousClose > 0 ? previousClose : currentPrice;
+      const dayChange = hasCurrentPrice && Number.isFinite(closeForDayChange)
+        ? shares * (currentPrice - closeForDayChange) * fx(holding.currency)
+        : null;
 
       return {
         ...holding,
-        marginOfSafety: calculatedMarginOfSafety(holding) ?? holding.marginOfSafety,
+        shares,
+        cost,
+        currentPrice,
+        previousClose,
+        marginOfSafety: calculatedMarginOfSafety({ ...holding, currentPrice }) ?? holding.marginOfSafety,
         marketValueLocal,
         marketValueCny,
         costValueCny,
         pnlCny,
-        pnlRate: costValueCny ? (pnlCny / costValueCny) * 100 : 0,
+        pnlRate: costValueCny && Number.isFinite(pnlCny) ? (pnlCny / costValueCny) * 100 : null,
         dayChange
       };
     });
@@ -1241,7 +1258,9 @@ function syncCash() {
   if (Number.isFinite(state.cash)) return;
 
   const invested = state.holdings.reduce((sum, holding) => {
-    return sum + holding.shares * holding.currentPrice * fx(holding.currency);
+    const shares = finiteNumber(holding.shares) ?? 0;
+    const currentPrice = finiteNumber(holding.currentPrice) ?? 0;
+    return sum + shares * currentPrice * fx(holding.currency);
   }, 0);
 
   state.cash = state.totalCapital - invested;

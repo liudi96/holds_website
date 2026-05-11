@@ -293,7 +293,7 @@ func applyDividendQuote(current **Dividend, quote quote, fallbackCurrency string
 		*current = &Dividend{}
 	}
 	dividend := *current
-	if dividend.CashDividendTotal != nil && *dividend.CashDividendTotal > 0 {
+	if shouldPreserveDividendQuote(dividend) {
 		if strings.TrimSpace(dividend.DividendCurrency) == "" {
 			dividend.DividendCurrency = strings.ToUpper(firstNonEmpty(quote.DividendCurrency, quote.Currency, fallbackCurrency))
 		}
@@ -306,6 +306,20 @@ func applyDividendQuote(current **Dividend, quote quote, fallbackCurrency string
 	dividend.DividendCurrency = strings.ToUpper(firstNonEmpty(quote.DividendCurrency, quote.Currency, fallbackCurrency))
 	dividend.DividendYield = nil
 	dividend.EstimatedAnnualCash = nil
+}
+
+func shouldPreserveDividendQuote(dividend *Dividend) bool {
+	if dividend == nil {
+		return false
+	}
+	if dividend.CashDividendTotal != nil && *dividend.CashDividendTotal > 0 {
+		return true
+	}
+	fiscalYear := strings.ToUpper(strings.TrimSpace(dividend.FiscalYear))
+	return dividend.DividendPerShare != nil &&
+		*dividend.DividendPerShare > 0 &&
+		fiscalYear != "" &&
+		!strings.HasPrefix(fiscalYear, "TTM")
 }
 
 func fetchQuote(client *http.Client, symbol string, fallbackCache map[string]quote, fallbackErr error) (quote, error) {
