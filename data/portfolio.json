@@ -18,7 +18,151 @@
       "currency": "HKD",
       "decision": "继续持有；暂不加仓，等待HK$3.50-3.55以下且基本面未恶化再考虑补仓",
       "discipline": "质量分82要求≥25%安全边际；当前约21%，持有收息但不追买",
-      "detail": "进入/离开关键区间：观察区 -> 等待区；现价 HKD 3.7300；前值 3.6800；今收 2026-05-11；昨收 2026-05-08"
+      "detail": "进入/离开关键区间：观察区 -\u003e 等待区；现价 HKD 3.7300；前值 3.6800；今收 2026-05-11；昨收 2026-05-08"
+    },
+    {
+      "id": 1778491659416078000,
+      "date": "2026-05-11 17:27:39",
+      "type": "research",
+      "symbol": "2669.HK",
+      "name": "中海物业",
+      "price": 4.21999979019165,
+      "currency": "HKD",
+      "decision": "继续持有；不加仓；等待HK$3.50-3.60或2026中报确认毛利率、回款和经营现金流改善后再复核",
+      "discipline": "75-84分合格候选通常要求≥25%安全边际；未达标不追买",
+      "detail": "holding；updated holding 2669.HK (中海物业)"
+    },
+    {
+      "id": 1778492158536383000,
+      "date": "2026-05-11 17:35:58",
+      "type": "research",
+      "symbol": "0506.HK",
+      "name": "中国食品",
+      "price": 3.7200000286102295,
+      "currency": "HKD",
+      "decision": "继续持有；暂不加仓；等待HK$3.50-3.55以下且基本面未恶化再考虑补仓",
+      "discipline": "质量分82要求约25%安全边际；当前约21%，持有收息但不追买",
+      "detail": "holding；updated holding 0506.HK (中国食品)"
+    },
+    {
+      "id": 1778492541173141000,
+      "date": "2026-05-11 17:42:21",
+      "type": "research",
+      "symbol": "0696.HK",
+      "name": "中国民航信息网络",
+      "price": 9.949999809265137,
+      "currency": "HKD",
+      "decision": "继续持有；暂不追买；等待≤HK$9.4再考虑分批，≤HK$8.8安全边际更充分",
+      "discipline": "75-84分资产要求≥25%安全边际；当前约20%，未达标不追买",
+      "detail": "holding；updated holding 0696.HK (中国民航信息网络)"
+    },
+    {
+      "id": 1778493117440618000,
+      "date": "2026-05-11 17:51:57",
+      "type": "research",
+      "symbol": "7489.HK",
+      "name": "岚图汽车",
+      "price": 5.739999771118164,
+      "currency": "HKD",
+      "decision": "继续持有小仓观察；当前不加仓，等待2026H1扣非利润、经营利润和自由现金流验证",
+      "discipline": "质量分低于75且长期股东现金流评分偏弱，不进入核心资产池；新增买入必须等待扣非利润、经营利润和自由现金流同时验证",
+      "detail": "holding；updated holding 7489.HK (岚图汽车)"
+    },
+    {
+      "id": 1778493519895113000,
+      "date": "2026-05-11 17:58:39",
+      "type": "research",
+      "symbol": "600690.SH",
+      "name": "海尔智家",
+      "price": 21.489999771118164,
+      "currency": "CNY",
+      "decision": "A股当前不追买，等待≤CNY19.5；H股06690.HK因折价已进入第一档小仓复核区，但不重仓替代美的",
+      "discipline": "质量分83要求约25%安全边际；A股当前未达标，H股折人民币价格低于目标买入线但需结合港股通股息税和Q2经营验证",
+      "detail": "candidate；updated candidate 600690.SH (海尔智家)"
+    },
+    {
+      "id": 1778497689541332000,
+      "date": "2026-05-11 19:08:09",
+      "type": "research",
+      "symbol": "000333.SZ",
+      "name": "美的集团",
+      "price": 80.66999816894531,
+      "currency": "CNY",
+      "decision": "继续持有；当前不追买；等待75元附近复核，70.5元以下才更符合新增买入纪律",
+      "discipline": "优秀资产新增买入要求约20%安全边际；A股综合回报率需不低于6%；当前安全边际约14%，低于新增买入纪律",
+      "detail": "holding；updated holding 000333.SZ (美的集团)"
+    },
+    {
+      "id": 1778497722255833000,
+      "date": "2026-05-11 19:08:42",
+      "type": "research",
+      "symbol": "6049.HK",
+      "name": "保利物业",
+      "price": 33.040000915527344,
+      "currency": "HKD",
+      "decision": "继续持有；当前不主动加仓；等待HK$28-30再严肃复核，HK$27以下才适合分批",
+      "discipline": "物业股需约25%安全边际；H股综合回报率需接近8%门槛；当前约5%股息率和约9.5%安全边际均不足以支持主动加仓",
+      "detail": "holding；updated holding 6049.HK (保利物业)"
+    },
+    {
+      "id": 1778497745905332000,
+      "date": "2026-05-11 19:09:05",
+      "type": "research",
+      "symbol": "0700.HK",
+      "name": "腾讯控股",
+      "price": 464.3999938964844,
+      "currency": "HKD",
+      "decision": "继续持有；新资金暂不追买；等待2026Q1财报后复核，HK$400-430再考虑分批加仓",
+      "discipline": "优秀资产新增买入要求至少15%-20%安全边际；H股综合回报率需接近8%门槛；当前安全边际和综合回报率均未充分达标",
+      "detail": "holding；updated holding 0700.HK (腾讯控股)"
+    },
+    {
+      "id": 1778497775472392000,
+      "date": "2026-05-11 19:09:35",
+      "type": "research",
+      "symbol": "600036.SH",
+      "name": "招商银行",
+      "price": 37.970001220703125,
+      "currency": "CNY",
+      "decision": "已有持仓继续持有；新资金暂不追买，等待¥34-36再复核分批，接近或低于¥33.75才进入正式买入区",
+      "discipline": "优秀银行资产要求至少约20%安全边际或A股综合回报率达到6%；当前安全边际约15.6%，FY2025股息率约5.31%，未达新增买入纪律",
+      "detail": "holding；updated holding 600036.SH (招商银行)"
+    },
+    {
+      "id": 1778497799677055000,
+      "date": "2026-05-11 19:09:59",
+      "type": "research",
+      "symbol": "002415.SZ",
+      "name": "海康威视",
+      "price": 35.36000061035156,
+      "currency": "CNY",
+      "decision": "继续持有；当前¥35-37不加仓，等待≤¥31.5或2026H1经营现金流、毛利率和收入恢复进一步验证后再提高优先级",
+      "discipline": "质量分84但长期股东现金流评分约73，新增买入仍要求约25%安全边际；综合回报率低于A股6%门槛，不因Q1利润高增而追买",
+      "detail": "holding；updated holding 002415.SZ (海康威视)"
+    },
+    {
+      "id": 1778498324395615000,
+      "date": "2026-05-11 19:18:44",
+      "type": "research",
+      "symbol": "0883.HK",
+      "name": "中国海洋石油",
+      "price": 26.600000381469727,
+      "currency": "HKD",
+      "decision": "继续持有，不加仓；等待≤HK$22再分批复核。若反弹至HK$29-32且油价未结构性上移，可考虑卖出1手降低周期能源暴露",
+      "discipline": "H股主策略要求综合回报率接近8%或至少25%安全边际；当前安全边际约3.3%，FY2025税前股息率约4.8%，不达新增买入纪律",
+      "detail": "holding；updated holding 0883.HK (中国海洋石油)"
+    },
+    {
+      "id": 1778498441731166000,
+      "date": "2026-05-11 19:20:41",
+      "type": "research",
+      "symbol": "600887.SH",
+      "name": "伊利股份",
+      "price": 28.059999465942383,
+      "currency": "CNY",
+      "decision": "继续持有；新资金暂不追买，等待22-24元区间再复盘",
+      "discipline": "合格核心候选要求约25%安全边际；当前价格接近中性内在价值，不满足买入纪律。若液态奶持续弱增长、奶粉修复放缓或自由现金流无法覆盖高分红，应下调内在价值。",
+      "detail": "holding；updated holding 600887.SH (伊利股份)"
     }
   ],
   "holdings": [
@@ -29,22 +173,23 @@
       "cost": 480.43,
       "marketCap": 4298225144348.1445,
       "marketCapCurrency": "HKD",
-      "action": "继续持有；新资金暂不追买，等待HK$400-430再分批加仓",
-      "status": "未达标（安全边际约12%，低于优秀资产>20%纪律）",
-      "marginOfSafety": 0.13233642578125,
+      "action": "继续持有；新资金暂不追买；等待2026Q1财报后复核，HK$400-430再考虑分批加仓",
+      "status": "持仓观察（安全边际约13%，未达新增买入门槛）",
+      "marginOfSafety": 0.13196262823087032,
       "qualityScore": 89,
-      "risk": "AI资本开支上升、政策与地缘折价、广告和游戏周期波动、回购力度下降需持续跟踪",
+      "risk": "AI资本开支和研发投入上升、2026年回购可能低于2025年、平台监管、地缘风险、广告和游戏周期波动需折价",
       "industry": "互联网平台/游戏/广告/金融科技",
       "currency": "HKD",
       "intrinsicValue": 535,
       "fairValueRange": "HK$480-590",
-      "targetBuyPrice": 428,
+      "targetBuyPrice": 401.25,
+      "valuationConfidence": "high",
       "businessModel": 28,
       "moat": 23,
       "governance": 17,
       "financialQuality": 21,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 0700.HK；币种 HKD；日期 2026-05-08/2026-05-11",
-      "notes": "市场价格口径：2026-05-08约HK$470。财务口径：腾讯FY2025，收入RMB7517.66亿，同比+14%；Non-IFRS归母净利RMB2596.26亿；自由现金流RMB1826亿；净现金RMB1071亿；2026-04-30股本约91.18亿股。估值采用Non-IFRS PE、P/FCF、DCF/SOTP交叉验证，1 RMB≈HK$1.15；2026Q1尚未披露，AI capex投入回报是主要复盘变量。",
+      "updatedAt": "",
+      "notes": "FY2025收入RMB7518亿、Non-IFRS归母利润RMB2596亿、FCF约RMB1826亿、净现金约RMB1071亿；业务质量仍强，但2026年AI投入和回购下降是主要复盘变量。当前HK$464附近安全边际约13%，持有合格但新增买入赔率不足，等待HK$400-430或Q1财报验证后再行动。",
       "reports": [
         {
           "period": "2025 FY",
@@ -104,56 +249,62 @@
         }
       ],
       "dividend": {
-        "fiscalYear": "FY2025",
-        "dividendPerShare": 5.3,
+        "fiscalYear": "TTM 2025-05-16",
+        "dividendPerShare": 4.5,
         "dividendCurrency": "HKD",
-        "cashDividendTotal": 48000000000,
         "cashDividendCurrency": "HKD",
-        "buybackAmount": 80000000000,
-        "buybackCurrency": "HKD"
+        "buybackCurrency": "HKD",
+        "payoutRatio": 0.161,
+        "reliability": "stable",
+        "forecastCurrency": "HKD"
       },
       "netCash": {
-        "cashAndShortInvestments": 494900000000,
-        "interestBearingDebt": 387800000000,
-        "netCash": 107100000000,
-        "currency": "CNY",
+        "cashAndShortInvestments": 567700000000,
+        "interestBearingDebt": 444800000000,
+        "netCash": 122900000000,
+        "currency": "HKD",
         "haircut": 0.7,
-        "haircutReason": "FY2025披露净现金约RMB1071亿；平台现金流强，但考虑AI资本开支、投资资产和监管折价，按70%折扣纳入烟蒂口径。",
-        "adjustedNetCash": 74970000000,
-        "exCashPe": 16.3,
-        "exCashPfcf": 20.1,
-        "fcfYield": 0.049,
+        "haircutReason": "腾讯平台现金流强、净现金为正，但考虑AI资本开支、投资资产折价、监管和地缘风险，仅按70%折扣纳入烟蒂口径",
+        "adjustedNetCash": 86000000000,
+        "exCashPe": 13.81,
+        "exCashPfcf": 20.06,
+        "fcfYield": 0.0484,
+        "shareholderFcf": 204975000000,
+        "shareholderFcfCurrency": "HKD",
+        "shareholderFcfBasis": "FY2025合并自由现金流按少数股东利润占比近似扣减后估算，作为普通股东FCF参考口径",
+        "consolidatedFcf": 209500000000,
+        "minorityFcfAdjustment": 4525000000,
         "fcfPositiveYears": 5,
-        "note": "净现金、自由现金流和市值口径使用FY2025业绩与2026-05-08附近行情；腾讯有净现金，但不是净现金烟蒂，主要仍按高质量平台资产估值。"
+        "note": "RMB口径财务数据按组合档案汇率近似折算为HKD；FY2025 FCF强，但2026年AI投入和回购下降需复核。"
       },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
           "status": "pass",
-          "note": "微信生态、游戏、广告、金融科技和云服务仍具十年需求基础，用户关系链和内容消费粘性强。"
+          "note": "微信生态、游戏、广告、支付、云服务仍具长期需求基础。"
         },
         "assetDurability": {
           "status": "pass",
-          "note": "社交网络、游戏IP、支付生态和开发者生态构成耐久资产，短期技术变化不易直接替代。"
+          "note": "社交关系链、内容生态、支付场景、游戏IP和开发者生态构成高耐久资产。"
         },
         "maintenanceCapexLight": {
           "status": "review",
-          "note": "软件平台本身轻资产，但AI算力和云投入上升，需继续验证新增资本开支回报。"
+          "note": "平台业务本身轻资产，但AI算力、云基础设施和研发投入上升，需要继续验证投入回报。"
         },
         "dividendFcfSupport": {
           "status": "pass",
-          "note": "FY2025经营现金流约3031亿港元，现金分红约480亿港元、回购约800亿港元，股东回报由现金流覆盖。"
+          "note": "FY2025自由现金流足以覆盖现金分红和回购。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "review",
-          "note": "回购对股东友好，但当前综合回报率仍低于H股8%门槛，需看回购力度是否持续。"
+          "note": "2025回购强，但公司已提示2026年回购可能低于2025年，当前综合回报率未达H股8%门槛。"
         },
         "roeRoicDurability": {
           "status": "pass",
-          "note": "FY2025 ROE约21%、ROIC约15%，利润率和现金流质量仍支持较高资本回报。"
+          "note": "高毛利平台业务、广告效率提升和游戏现金流支持较高资本回报。"
         },
         "valuationSystemRisk": {
           "status": "review",
-          "note": "监管、地缘、AI投入和游戏广告周期可能影响估值锚，DCF假设需持续复盘。"
+          "note": "AI投入周期、平台监管、地缘风险和回购下降可能影响估值体系。"
         }
       },
       "financials": {
@@ -470,22 +621,23 @@
       "cost": 79.638,
       "marketCap": 611602811607.3608,
       "marketCapCurrency": "CNY",
-      "action": "继续持有；新资金暂不追买，等待≤75元再分批",
-      "status": "核心替补（质量达标但安全边际不足）",
-      "marginOfSafety": 0.138404278045005,
+      "action": "继续持有；当前不追买；等待75元附近复核，70.5元以下才更符合新增买入纪律",
+      "status": "持仓达标但新增买入安全边际不足",
+      "marginOfSafety": 0.14180853011760305,
       "qualityScore": 89,
-      "risk": "Q1扣非利润下滑、家电补贴退坡、价格战、海外关税、并购整合和可转债摊薄需折价",
+      "risk": "2026Q1扣非利润下滑、家电补贴退坡、白电价格战、原材料和汇率波动、海外关税、H股可转债潜在摊薄、ToB业务利润率验证不足",
       "industry": "家电/智能制造/楼宇科技/机器人与自动化",
       "currency": "CNY",
       "intrinsicValue": 94,
       "fairValueRange": "CNY78-102",
-      "targetBuyPrice": 75,
+      "targetBuyPrice": 70.5,
+      "valuationConfidence": "high",
       "businessModel": 27,
       "moat": 22,
       "governance": 17,
       "financialQuality": 23,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 000333.SZ；币种 CNY；日期 2026-05-08/2026-05-11",
-      "notes": "基于2026-05-08 A股收盘约80.51元、2025年报和2026Q1财报。2025收入4564.5亿元、归母净利439.45亿元、经营现金流533.46亿元、FCF约422亿元、EPS5.80元、ROE19.70%。2026Q1收入1311.0亿元、归母净利126.75亿元、扣非净利109.62亿元且同比下滑14.02%。综合价值区间CNY78-102，中枢约94；当前仅约14%安全边际，未达到优秀资产≥20%买入纪律。导入格式遵循Research Bridge schema。",
+      "updatedAt": "",
+      "notes": "FY2025收入4564.52亿元、归母净利润439.45亿元、扣非归母净利润412.67亿元、经营现金流533.46亿元、估算FCF约422.04亿元。2026Q1收入1310.99亿元，同比增长2.55%；归母净利润126.75亿元，同比增长2.03%；扣非归母净利润109.62亿元，同比下降14.02%，是主要复核点。2026年65-130亿元A股回购拟100%注销为正面变化，但H股可转债潜在摊薄和海外关税/汇率风险需折价。维持中性内在价值94元，当前80.67元安全边际约14%，继续持有但不追买。",
       "reports": [
         {
           "period": "2026 Q1",
@@ -553,13 +705,14 @@
         }
       ],
       "dividend": {
-        "fiscalYear": "FY2025",
-        "dividendPerShare": 4.3,
+        "fiscalYear": "TTM 2025-11-18",
+        "dividendPerShare": 4,
         "dividendCurrency": "CNY",
-        "cashDividendTotal": 32360630265,
         "cashDividendCurrency": "CNY",
-        "buybackAmount": 11605319584,
-        "buybackCurrency": "CNY"
+        "buybackCurrency": "CNY",
+        "payoutRatio": 0.744,
+        "reliability": "stable",
+        "forecastCurrency": "CNY"
       },
       "netCash": {
         "cashAndShortInvestments": 297035954000,
@@ -567,39 +720,47 @@
         "netCash": 232717206000,
         "currency": "CNY",
         "haircut": 0.4,
-        "haircutReason": "FY2025货币资金、结构性存款、固定收益类产品、定期存款和大额存单合计约RMB2970.36亿；短期借款、长期借款、应付债券和少量吸收存款合计约RMB643.19亿。现金类投资规模大，但部分用于质押、金融子公司及营运资金安排，按40%纳入净现金口径。",
+        "haircutReason": "现金类资产规模大，但部分用于质押、金融子公司、海外营运资金和回购安排；同时存在可转债、全球化扩张和资本开支需求，按40%纳入净现金烟蒂口径",
         "adjustedNetCash": 93086882400,
+        "exCashPe": 11.85,
+        "exCashPfcf": 12.5,
+        "fcfYield": 0.0679,
+        "shareholderFcf": 41659159084,
+        "shareholderFcfCurrency": "CNY",
+        "shareholderFcfBasis": "FY2025经营现金流扣除购建固定资产、无形资产和其他长期资产支付现金后得到合并FCF，再按少数股东利润占比估算普通股东FCF",
+        "consolidatedFcf": 42204041000,
+        "minorityFcfAdjustment": 544881916,
         "fcfPositiveYears": 5,
-        "note": "已把货币资金以外的定期存款、大额存单和固定收益类产品纳入现金类投资；美的主要仍按经营现金流和长期质量估值。"
+        "note": "FY2025经营现金流约533.46亿元，资本开支约111.42亿元，自由现金流约422.04亿元；净现金口径来自组合档案，未完全计入2026年5月拟发行H股可转债的后续影响。"
       },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
           "status": "pass",
-          "note": "家电、暖通、楼宇科技和工业自动化需求具备长期基础，替换和升级需求稳定。"
+          "note": "家电、暖通、楼宇科技、工业自动化和海外替换需求具备长期基础。"
         },
         "assetDurability": {
           "status": "pass",
-          "note": "品牌、渠道、供应链规模和制造效率构成耐久资产，全球化布局增强抗周期能力。"
+          "note": "品牌、渠道、供应链、制造效率和全球化布局构成较强耐久资产。"
         },
         "maintenanceCapexLight": {
           "status": "review",
-          "note": "主业现金流强，但机器人、楼宇科技和海外整合仍需要持续投入，资本开支回报需跟踪。"
+          "note": "主业现金流强，但机器人、楼宇科技、海外供应链、AI和新能源等方向仍需持续投入。"
         },
         "dividendFcfSupport": {
           "status": "review",
-          "note": "FY2025自由现金流约422亿元，分红加回购约440亿元，接近自由现金流上限，需看后续现金流覆盖。"
+          "note": "FY2025自由现金流约422亿元，分红加回购约440亿元，接近或略高于当年FCF，需持续观察现金流覆盖。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "pass",
-          "note": "分红加回购后的综合回报率约7.2%，超过A股6%门槛，资本配置对股东较友好。"
+          "note": "FY2025股息率约5.3%，叠加回购综合回报率超过A股6%门槛；2026年回购用途改为注销，对每股价值更友好。"
         },
         "roeRoicDurability": {
           "status": "review",
-          "note": "FY2025 ROE约19.7%、ROIC约12.4%，仍强，但2026Q1扣非利润下滑需验证持续性。"
+          "note": "FY2025 ROE约19.7%，仍属优秀，但2026Q1扣非利润下滑，需要验证真实经营回报率稳定性。"
         },
         "valuationSystemRisk": {
           "status": "review",
-          "note": "白电成熟、补贴退坡、关税和价格战可能压低估值中枢，暂不直接给估值体系通过。"
+          "note": "白电成熟、补贴退坡、价格战、海外关税和H股可转债潜在摊薄可能压低估值中枢。"
         }
       },
       "financials": {
@@ -918,22 +1079,23 @@
       "cost": 34.54,
       "marketCap": 325811176610.2579,
       "marketCapCurrency": "CNY",
-      "action": "重点预期差候选/核心替补边缘；可小仓验证，不宜重仓；Q2验证后再升级",
-      "status": "未达标（安全边际约13.6%<25%；预期差仓可观察）",
-      "marginOfSafety": 0.14928572518484934,
+      "action": "继续持有；当前¥35-37不加仓，等待≤¥31.5或2026H1经营现金流、毛利率和收入恢复进一步验证后再提高优先级",
+      "status": "持仓；重点预期差候选/核心替补边缘",
+      "marginOfSafety": 0.15809522356305802,
       "qualityScore": 84,
-      "risk": "无一票否决；地缘/合规/实体清单、Q1经营现金流为负、AIoT重估需验证",
+      "risk": "地缘合规和美国FCC限制、国内政企数字化预算波动、SMBG渠道恢复不确定、创新业务毛利率低于主业、少数股东分流和Q1经营现金流为负需折价",
       "industry": "AIoT/安防/机器视觉/科技制造平台",
       "currency": "CNY",
       "intrinsicValue": 42,
-      "fairValueRange": "¥34-48",
+      "fairValueRange": "CNY34-48",
       "targetBuyPrice": 31.5,
+      "valuationConfidence": "medium",
       "businessModel": 25,
       "moat": 23,
       "governance": 16,
       "financialQuality": 20,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 002415.SZ；币种 CNY；日期 2026-05-08/2026-05-11",
-      "notes": "FY2025：营收约RMB925.08亿、归母净利约RMB141.95亿；2026Q1归母净利同比+36.42%。",
+      "updatedAt": "",
+      "notes": "2026-05-11复核：持仓1200股，成本约¥34.54，组合口径最新价¥35.36，仓位约3.85%。2025年收入925.08亿元、归母净利润141.95亿元、经营现金流253.39亿元、粗略FCF约217.17亿元；2026Q1收入207.15亿元，同比+11.78%，归母净利润27.81亿元，同比+36.42%，扣非净利润26.48亿元，同比+37.44%，但经营现金流为-22.20亿元。维持内在价值¥42、目标买入价¥31.5，当前安全边际约15.8%，不达25%加仓纪律。",
       "reports": [
         {
           "period": "2026 Q1",
@@ -1001,13 +1163,14 @@
         }
       ],
       "dividend": {
-        "fiscalYear": "FY2025",
-        "dividendPerShare": 1.15,
+        "fiscalYear": "TTM 2025-10-10",
+        "dividendPerShare": 1.1,
         "dividendCurrency": "CNY",
-        "cashDividendTotal": 10539602282.5,
         "cashDividendCurrency": "CNY",
-        "buybackAmount": 2028000000,
-        "buybackCurrency": "CNY"
+        "buybackCurrency": "CNY",
+        "payoutRatio": 0.74,
+        "reliability": "stable",
+        "forecastCurrency": "CNY"
       },
       "netCash": {
         "cashAndShortInvestments": 46508328658.44,
@@ -1015,10 +1178,18 @@
         "netCash": 39001204485.37,
         "currency": "CNY",
         "haircut": 0.7,
-        "haircutReason": "FY2025货币资金约RMB465.08亿；短期借款和长期借款含一年内到期部分合计约RMB75.07亿。长期应收款和权益类金融资产不作为现金类投资；因地缘、应收账款和渠道风险，按70%纳入净现金口径。",
+        "haircutReason": "货币资金充足，但需考虑地缘合规、海外业务、应收账款、渠道风险、创新业务再投资和少数股东分流，按一般优质制造业折价处理",
         "adjustedNetCash": 27300843139.76,
+        "exCashPe": 20.91,
+        "exCashPfcf": 14.86,
+        "fcfYield": 0.0616,
+        "shareholderFcf": 19974922317.21,
+        "shareholderFcfCurrency": "CNY",
+        "shareholderFcfBasis": "FY2025合并FCF约217.17亿元，按归母净利润占合并净利润比例粗略扣除少数股东分流后估算普通股东FCF",
+        "consolidatedFcf": 21717364418.43,
+        "minorityFcfAdjustment": 1742442101.22,
         "fcfPositiveYears": 5,
-        "note": "净现金保护较强，但不能抵消地缘合规和AIoT转型风险。"
+        "note": "FY2025现金流质量显著改善，但2026Q1经营现金流仍为负，需等待H1验证。"
       },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
@@ -1027,27 +1198,27 @@
         },
         "assetDurability": {
           "status": "review",
-          "note": "渠道、算法和工程能力仍有价值，但地缘合规和实体清单影响海外资产价值。"
+          "note": "渠道、算法、产品矩阵和工程能力仍有价值，但地缘合规和实体清单影响海外资产价值。"
         },
         "maintenanceCapexLight": {
           "status": "review",
-          "note": "研发、AIoT转型和渠道维护投入较重，应收和存货周转也需要继续观察。"
+          "note": "研发、AIoT转型、销售服务网络和渠道维护投入较重，不属于极轻资产模式。"
         },
         "dividendFcfSupport": {
           "status": "pass",
-          "note": "FY2025自由现金流约217亿元，现金分红约105亿元、回购约20亿元，股东回报有现金流覆盖。"
+          "note": "FY2025自由现金流对现金分红和回购有覆盖能力。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "review",
-          "note": "综合回报率约3.9%，未达A股6%门槛，回购和分红对买入纪律支撑不足。"
+          "note": "当前股息加回购综合回报约3.9%，低于A股6%门槛，回报盾不足以支持追买。"
         },
         "roeRoicDurability": {
           "status": "review",
-          "note": "FY2025 ROE约17.3%、ROIC约15.5%尚可，但AIoT重估和海外限制使持续性需验证。"
+          "note": "FY2025 ROE约17.3%，2026Q1利润改善，但AIoT重估、海外限制和现金流季节性需继续验证。"
         },
         "valuationSystemRisk": {
           "status": "review",
-          "note": "地缘、合规和技术平台化转型可能改变估值体系，需等待经营现金流和海外风险验证。"
+          "note": "美国FCC限制、地缘合规、数据安全和传统安防估值体系变化仍可能压低长期估值中枢。"
         }
       },
       "financials": {
@@ -1366,22 +1537,23 @@
       "cost": 26.469,
       "marketCap": 174073928451.3603,
       "marketCapCurrency": "CNY",
-      "action": "放入核心替补；新资金暂不买入，等待22-24元区间再复盘",
-      "status": "未达标（安全边际约7%，低于合格核心候选25%要求）",
-      "marginOfSafety": 0.046779632568359375,
+      "action": "继续持有；新资金暂不追买，等待22-24元区间再复盘",
+      "status": "持仓；核心替补/中优先级观察",
+      "marginOfSafety": 0.04881357742568194,
       "qualityScore": 84,
-      "risk": "液态奶增长疲弱、婴配粉人口压力、原奶成本波动、短债与金融类资产结构、股东及管理层质押、食品安全风险需折价",
+      "risk": "液态奶增长疲弱、婴配粉人口压力、原奶与包材波动、渠道价格战、短债及金融资产结构、管理层/股东质押、食品安全事件",
       "industry": "乳制品/消费品/食品饮料",
       "currency": "CNY",
       "intrinsicValue": 29.5,
       "fairValueRange": "CNY 26-32",
-      "targetBuyPrice": 23,
+      "targetBuyPrice": 22.125,
+      "valuationConfidence": "medium",
       "businessModel": 26,
       "moat": 21,
       "governance": 16,
       "financialQuality": 21,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 600887.SS；币种 CNY；日期 2026-05-08/2026-05-11",
-      "notes": "基于2025年报、2026年一季报及2026-05-08附近市场价格约27.52元。2025年收入1156.36亿元、归母净利润115.65亿元、EPS 1.83元、ROE 20.87%、经营现金流143.44亿元；2026Q1收入347.41亿元、归母净利润53.95亿元、EPS 0.85元、经营现金流37.35亿元。估值假设采用低个位数收入增长、约10%净利率、成熟消费龙头14-16倍PE及高分红支撑；综合内在价值区间26-32元，中枢约29.5元。",
+      "updatedAt": "2026-05-11 19:20:41；ChatGPT分析导入；分析日 2026-05-11",
+      "notes": "本次为完整重估。结论维持：伊利股份适合现有仓位持有收息，但现价安全边际不足，新资金不追买；22-24元区间再进入买入复盘。",
       "reports": [
         {
           "period": "2026 Q1",
@@ -1452,10 +1624,11 @@
         "fiscalYear": "FY2025",
         "dividendPerShare": 1.38,
         "dividendCurrency": "CNY",
-        "cashDividendTotal": 8728997720.46,
         "cashDividendCurrency": "CNY",
-        "buybackAmount": 249240096.02,
-        "buybackCurrency": "CNY"
+        "buybackCurrency": "CNY",
+        "payoutRatio": 0.7548,
+        "reliability": "stable",
+        "forecastCurrency": "CNY"
       },
       "netCash": {
         "cashAndShortInvestments": 72033373199.88,
@@ -1463,10 +1636,18 @@
         "netCash": 12623796339.47,
         "currency": "CNY",
         "haircut": 0.5,
-        "haircutReason": "FY2025货币资金、大额存单、定期存款和少量交易性金融资产合计约RMB720.33亿；短期借款、一年内到期长期借款、短期应付债券和长期借款合计约RMB594.10亿。小额贷款、保理款和权益类金融资产不纳入现金类投资，按50%纳入净现金口径。",
+        "haircutReason": "FY2025货币资金、大额存单、定期存款和少量交易性金融资产合计约720.33亿元；有息债务约594.10亿元。考虑乳制品业务仍需保留营运、牧场、渠道和安全库存资金，按50%折扣处理。",
         "adjustedNetCash": 6311898169.74,
+        "exCashPe": 14.8,
+        "exCashPfcf": 15.2,
+        "fcfYield": 0.063,
+        "shareholderFcf": 11241831589.39,
+        "shareholderFcfCurrency": "CNY",
+        "shareholderFcfBasis": "FY2025合并自由现金流约113.07亿元，扣除少数股东分红约0.65亿元后，普通股东近似自由现金流约112.42亿元。",
+        "consolidatedFcf": 11307276333.64,
+        "minorityFcfAdjustment": 65444744.25,
         "fcfPositiveYears": 5,
-        "note": "已把大额存单和定期存款纳入现金类投资，同时排除小额贷款、保理款和权益类金融资产；伊利有净现金缓冲但不构成烟蒂型净现金机会。"
+        "note": "Q1经营现金流改善明显，但部分来自营运资本变化，仍需观察全年回款、应付账款和渠道库存的可持续性。"
       },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
@@ -1483,15 +1664,15 @@
         },
         "dividendFcfSupport": {
           "status": "pass",
-          "note": "FY2025自由现金流约113亿元，分红加回购约90亿元，现金流基本覆盖股东回报。"
+          "note": "FY2025自由现金流可以覆盖全年现金分红，分红质量较好。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "review",
-          "note": "综合回报率约5.2%，低于A股6%门槛，现价下股东回报吸引力不足。"
+          "note": "现价综合回报率约5.16%，低于A股6%门槛，股东回报吸引力不足。"
         },
         "roeRoicDurability": {
           "status": "review",
-          "note": "FY2025 ROE约20.9%较强，但ROIC约9.9%且行业增长偏弱，持续性需复核。"
+          "note": "ROE较高，但ROIC、收入增长和产品结构改善的持续性仍需验证。"
         },
         "valuationSystemRisk": {
           "status": "review",
@@ -1814,22 +1995,23 @@
       "cost": 39.18,
       "marketCap": 956840907467.7526,
       "marketCapCurrency": "CNY",
-      "action": "已有持仓继续持有；新资金暂不追买，等待34-36元再复核分批",
-      "status": "核心替补（安全边际不足20%）",
-      "marginOfSafety": 0.15977774726019967,
+      "action": "已有持仓继续持有；新资金暂不追买，等待¥34-36再复核分批，接近或低于¥33.75才进入正式买入区",
+      "status": "持仓；核心替补/等待",
+      "marginOfSafety": 0.1562221950954861,
       "qualityScore": 88,
-      "risk": "净息差下行、信用卡与消费贷资产质量、房地产与地方债链条、低利率和政策性让利需折价",
+      "risk": "净息差下行、信用卡与消费贷资产质量、房地产与地方债链条、低利率环境、政策性让利和银行估值中枢下移需折价",
       "industry": "银行/零售银行/财富管理",
       "currency": "CNY",
       "intrinsicValue": 45,
-      "fairValueRange": "CNY 40-50",
-      "targetBuyPrice": 36,
+      "fairValueRange": "CNY40-50",
+      "targetBuyPrice": 33.75,
+      "valuationConfidence": "medium",
       "businessModel": 27,
       "moat": 23,
       "governance": 17,
       "financialQuality": 21,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 600036.SS；币种 CNY；日期 2026-05-08/2026-05-11",
-      "notes": "截至2026-05-08，A股价格37.94元，约6.64x TTM PE、约0.85-0.87x PB，2025年度股息2.016元。2026Q1营收869.40亿元，同比+3.81%；归母净利润378.52亿元，同比+1.52%；年化ROAE 13.48%；不良率0.94%，拨备覆盖率387.76%。估值假设为ROAE中枢12.5%-13.5%、合理PB约0.95-1.10x，综合内在价值区间40-50元，中性值45元。",
+      "updatedAt": "",
+      "notes": "2026-05-11复核：A股收盘约¥37.97，持仓500股，成本约¥39.18，仓位约1.72%。维持内在价值¥45、公允区间¥40-50、目标买入价¥33.75。2025年营业收入3375.32亿元、归母净利润1501.81亿元、FY2025每股现金分红¥2.016。2026Q1营业收入869.40亿元，同比+3.81%；归母净利润378.52亿元，同比+1.52%；净息差1.77%，净利息收益率1.83%，仍有下行压力；不良率0.94%，拨备覆盖率387.76%。当前安全边际约15.6%，股息率约5.31%，已有持仓继续持有，新资金等待¥34-36或≤¥33.75再复核分批。",
       "reports": [
         {
           "period": "2026 Q1",
@@ -1897,40 +2079,43 @@
         }
       ],
       "dividend": {
-        "fiscalYear": "FY2025",
-        "dividendPerShare": 2.016,
+        "fiscalYear": "TTM 2026-01-16",
+        "dividendPerShare": 3.013,
         "dividendCurrency": "CNY",
-        "cashDividendTotal": 50843000000,
-        "cashDividendCurrency": "CNY"
+        "cashDividendCurrency": "CNY",
+        "buybackCurrency": "CNY",
+        "payoutRatio": 0.35,
+        "reliability": "stable",
+        "forecastCurrency": "CNY"
       },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
           "status": "pass",
-          "note": "零售银行、财富管理和支付结算长期需求稳定，客户基础较强。"
+          "note": "零售银行、财富管理、支付结算和企业金融服务具备长期需求。"
         },
         "assetDurability": {
           "status": "review",
-          "note": "品牌、客群和风控能力是核心资产，但银行资产质量受地产、消费贷和宏观周期影响。"
+          "note": "品牌、客户基础、低成本存款和风控能力强，但银行资产质量受宏观、地产和消费信贷周期影响。"
         },
         "maintenanceCapexLight": {
           "status": "review",
-          "note": "银行不适用传统资本开支口径，需用资本充足率、拨备和资产质量替代审计。"
+          "note": "银行不适用传统资本开支口径，应以资本充足率、拨备、风险加权资产增长和资产质量替代审计。"
         },
         "dividendFcfSupport": {
           "status": "review",
-          "note": "银行分红应以盈利、拨备和资本充足率审计，不能直接用自由现金流判断覆盖。"
+          "note": "银行分红不能用制造业FCF判断覆盖，应以盈利、拨备、资本充足率和监管要求判断；FY2025分红稳定。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "review",
-          "note": "当前综合回报率约5.3%，低于A股6%门槛，新增资金需等待更高股东回报。"
+          "note": "当前FY2025股息率约5.31%，低于A股6%回报盾，新增资金需等待更高股东回报。"
         },
         "roeRoicDurability": {
           "status": "review",
-          "note": "ROAE约13%仍优于多数银行，但净息差下行和资产质量压力会影响持续性。"
+          "note": "ROAE仍高于多数银行，但净息差下行、低利率和信用成本可能继续压制长期ROE。"
         },
         "valuationSystemRisk": {
           "status": "review",
-          "note": "低利率、政策让利、地产链和银行估值折价可能改变PB估值中枢。"
+          "note": "低利率、政策让利、地产链条和银行板块长期低PB可能压低估值体系。"
         }
       },
       "financials": {
@@ -2159,22 +2344,23 @@
       "cost": 10.648,
       "marketCap": 29260000000,
       "marketCapCurrency": "HKD",
-      "action": "放入核心替补；暂不追买；已有仓位继续持有",
-      "status": "未达标（安全边际约20%，低于25%买入纪律）",
-      "marginOfSafety": 0.20639999389648436,
+      "action": "继续持有；暂不追买；等待≤HK$9.4再考虑分批，≤HK$8.8安全边际更充分",
+      "status": "核心替补/中等优先级（长期股东达标，安全边际未达买入纪律）",
+      "marginOfSafety": 0.20400001525878905,
       "qualityScore": 82,
-      "risk": "增长弹性不足、国企资本配置折价、机场数字化项目波动、税收优惠续期和网络安全风险需折价",
+      "risk": "增长弹性不足、机场数字化项目波动、政策定价、税收优惠续期、网络安全、国企资本配置折价需持续跟踪",
       "industry": "民航IT/航空信息网络/交易清算/机场数字化",
       "currency": "HKD",
       "intrinsicValue": 12.5,
       "fairValueRange": "HK$11.5-13.5",
-      "targetBuyPrice": 9.4,
+      "targetBuyPrice": 9.375,
+      "valuationConfidence": "medium",
       "businessModel": 25,
       "moat": 22,
       "governance": 16,
       "financialQuality": 19,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 0696.HK；币种 HKD；日期 2026-05-08/2026-05-11",
-      "notes": "基于2025年报和2026-05-08约HK$10.06价格测算：2025收入RMB87.66亿、归母净利RMB23.42亿、EPS RMB0.80、经营现金流RMB29.24亿、资本开支RMB9.01亿；综合内在价值区间HK$11.5-13.5。",
+      "updatedAt": "",
+      "notes": "基于FY2025年报、2026-05-11附近股价和组合旧档案重估。中国民航信息网络质量分维持82，内在价值维持HK$12.50；当前安全边际约20%，低于25%买入纪律。公司净现金强、FCF稳定、基础设施属性明确，但收入增长弹性一般，机场数字化项目波动和税收优惠续期需跟踪。已有仓位继续持有，不追买；等待≤HK$9.4再考虑分批，≤HK$8.8安全边际更充分。",
       "reports": [
         {
           "period": "2025 FY",
@@ -2210,51 +2396,62 @@
         }
       ],
       "dividend": {
-        "fiscalYear": "FY2025",
-        "dividendPerShare": 0.276,
-        "dividendCurrency": "CNY",
-        "cashDividendTotal": 807576000,
-        "cashDividendCurrency": "CNY"
+        "fiscalYear": "TTM 2025-06-18",
+        "dividendPerShare": 0.26104,
+        "dividendCurrency": "HKD",
+        "cashDividendCurrency": "CNY",
+        "buybackCurrency": "CNY",
+        "payoutRatio": 0.345,
+        "reliability": "stable",
+        "forecastCurrency": "HKD"
       },
       "netCash": {
-        "cashAndShortInvestments": 13473503000,
-        "interestBearingDebt": 1759925000,
-        "netCash": 11713578000,
+        "cashAndShortInvestments": 13473525714,
+        "interestBearingDebt": 1759602135,
+        "netCash": 11713923579,
         "currency": "CNY",
         "haircut": 0.7,
-        "haircutReason": "FY2025现金及银行结余约RMB100.59亿、交易性金融资产约RMB34.15亿、租赁负债约RMB17.60亿。民航IT项目回款和政策定价需折价，按70%纳入净现金口径。",
-        "adjustedNetCash": 8199504600,
+        "haircutReason": "FY2025现金及银行结余约RMB100.59亿、交易性金融资产约RMB34.15亿，借款约RMB17.60亿；民航IT现金流稳定，但政策定价、国企资本配置、系统安全和机场数字化投入需折价，按70%纳入净现金保护。",
+        "adjustedNetCash": 8199746505,
+        "exCashPe": 7.39,
+        "exCashPfcf": 8.36,
+        "fcfYield": 0.081,
+        "shareholderFcf": 2069954897,
+        "shareholderFcfCurrency": "CNY",
+        "shareholderFcfBasis": "普通股东FCF按FY2025合并FCF约RMB20.81亿扣除已付予少数股东股息约RMB0.11亿后的近似口径；少数股东分流很小。",
+        "consolidatedFcf": 2080744520,
+        "minorityFcfAdjustment": 10789624,
         "fcfPositiveYears": 5,
-        "note": "净现金保护较强，但股东回报率和政策定价约束仍限制买入优先级。"
+        "note": "FY2025收入约RMB87.66亿，同比-0.6%；归母净利润约RMB23.42亿，同比+12.9%；经营现金流约RMB29.24亿，合并FCF约RMB20.81亿。估值重点是民航处理量、机场数字化项目验收、税收优惠续期和FCF稳定性。"
       },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
           "status": "pass",
-          "note": "民航订座、离港、结算和机场航司IT具备基础设施属性，长期需求稳定。"
+          "note": "民航订座、离港、结算和机场旅客处理系统具备基础设施属性，十年需求稳定。"
         },
         "assetDurability": {
           "status": "pass",
-          "note": "行业准入、系统嵌入和客户切换成本形成耐久资产。"
+          "note": "行业准入、系统嵌入、客户切换成本和安全责任形成耐久资产。"
         },
         "maintenanceCapexLight": {
           "status": "review",
-          "note": "系统安全、云化和机场数字化升级仍需投入，需看资本开支与收入增长匹配。"
+          "note": "业务不是重资产制造，但系统安全、灾备、云化、数据中心和机场数字化升级仍需持续投入。"
         },
         "dividendFcfSupport": {
           "status": "pass",
-          "note": "FY2025自由现金流约20.8亿港元，现金分红约8.1亿人民币，覆盖较充足。"
+          "note": "FY2025自由现金流对现金分红覆盖充足。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "review",
-          "note": "综合回报率约3.2%，低于H股8%门槛，股东回报不足以支撑主策略买入。"
+          "note": "税前股息率约3.2%，低于H股8%综合回报门槛，需更高安全边际才适合新增买入。"
         },
         "roeRoicDurability": {
           "status": "review",
-          "note": "FY2025 ROE约10%、ROIC约11%，稳定但不算高，增长弹性需验证。"
+          "note": "ROE和ROIC处于合格区间，但增长弹性受民航客流、政策定价和项目验收节奏约束。"
         },
         "valuationSystemRisk": {
           "status": "review",
-          "note": "政策定价、国企资本配置和民航客流周期可能限制估值上限。"
+          "note": "政策定价、税收优惠续期、国企资本配置、网络安全责任和民航周期可能限制估值上限。"
         }
       },
       "financials": {
@@ -2579,22 +2776,23 @@
       "cost": 4.041,
       "marketCap": 10292960186.7199,
       "marketCapCurrency": "HKD",
-      "action": "继续持有；暂不加仓，等待HK$3.50-3.55以下且基本面未恶化再考虑补仓",
-      "status": "接近低估但未达标（安全边际不足25%）",
-      "marginOfSafety": 0.2063829746652157,
+      "action": "继续持有；暂不加仓；等待HK$3.50-3.55以下且基本面未恶化再考虑补仓",
+      "status": "核心替补/中等优先级（持有，安全边际未达买入纪律）",
+      "marginOfSafety": 0.2085106322105895,
       "qualityScore": 82,
-      "risk": "授权依赖、浓缩液采购定价权、少数股东权益、控糖政策、碳酸饮料成熟和港股小市值折价需折价",
+      "risk": "授权依赖、浓缩液采购定价权、少数股东权益分流、铝价高位、水品类低毛利、控糖政策和港股小市值流动性折价需持续跟踪",
       "industry": "饮料制造/可口可乐中国装瓶商/消费防御",
       "currency": "HKD",
       "intrinsicValue": 4.7,
       "fairValueRange": "HK$4.20-5.20",
-      "targetBuyPrice": 3.53,
+      "targetBuyPrice": 3.5250000000000004,
+      "valuationConfidence": "medium",
       "businessModel": 24,
       "moat": 21,
       "governance": 15,
       "financialQuality": 22,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 0506.HK；币种 HKD；日期 2026-05-08/2026-05-11",
-      "notes": "2026-05-08股价约HK$3.69，市值约HK$10.32bn；FY2025收入RMB220.70亿，归母净利RMB8.62亿，EPS RMB0.3082，拟派末期股息RMB0.154/股；公司净现金约RMB45.49亿，无计息借款，经营现金流RMB32.29亿，简算自由现金流约RMB21.69亿，但扣少数股东股息后普通股东现金流约RMB10.19亿。DCF/内在价值按归母净利、普通股东现金流和少数股东折价后估算，不使用合并报表FCF直接资本化；综合内在价值区间HK$4.20-5.20，中枢HK$4.70。",
+      "updatedAt": "",
+      "notes": "基于FY2025年报、2026-05-11附近股价和组合旧档案重估。中国食品质量分维持82，内在价值维持HK$4.70，当前安全边际约21%，未达到25%买入纪律；继续持有，不追买。主要新增关注点是铝价高位、水品类低毛利导致毛利率下行，以及糖税/控糖政策概率上升。",
       "reports": [
         {
           "period": "2025 FY",
@@ -2630,25 +2828,33 @@
         }
       ],
       "dividend": {
-        "fiscalYear": "FY2025",
-        "dividendPerShare": 0.154,
-        "dividendCurrency": "CNY",
-        "cashDividendTotal": 430738000,
-        "cashDividendCurrency": "CNY"
+        "fiscalYear": "TTM 2025-06-17",
+        "dividendPerShare": 0.166,
+        "dividendCurrency": "HKD",
+        "cashDividendCurrency": "CNY",
+        "buybackCurrency": "CNY",
+        "payoutRatio": 0.5,
+        "reliability": "stable",
+        "forecastCurrency": "HKD"
       },
       "netCash": {
-        "cashAndShortInvestments": 4549000000,
+        "cashAndShortInvestments": 4549480000,
         "interestBearingDebt": 0,
-        "netCash": 4549000000,
+        "netCash": 4549480000,
         "currency": "CNY",
         "haircut": 0.4,
-        "haircutReason": "FY2025现金及现金等价物约RMB45.49亿、无计息借款；但装瓶业务存在少数股东权益、授权依赖和现金可分配性折扣，按40%纳入烟蒂口径。",
-        "adjustedNetCash": 1819600000,
-        "exCashPe": 8.3,
-        "exCashPfcf": 7,
-        "fcfYield": 0.1136,
+        "haircutReason": "FY2025现金及现金等价物约RMB45.49亿，无计息借款；但装瓶业务存在少数股东权益、授权依赖、营运资本和现金可分配性折扣，按40%纳入净现金保护。",
+        "adjustedNetCash": 1819792000,
+        "exCashPe": 8.4,
+        "exCashPfcf": 7.1,
+        "fcfYield": 0.112,
+        "shareholderFcf": 1019353000,
+        "shareholderFcfCurrency": "CNY",
+        "shareholderFcfBasis": "普通股东FCF按合并FCF约RMB21.69亿扣除已付予非控股权益股息约RMB11.49亿后的近似口径；用于避免直接资本化合并FCF。",
+        "consolidatedFcf": 2168793000,
+        "minorityFcfAdjustment": 1149440000,
         "fcfPositiveYears": 5,
-        "note": "FCF估值使用扣除少数股东分流后的普通股东现金流约RMB10.19亿，而不是合并报表自由现金流RMB21.69亿。"
+        "note": "FY2025收入约RMB220.70亿，同比+2.7%；归母净利润约RMB8.62亿，同比基本持平；经营现金流净额约RMB32.29亿，合并FCF约RMB21.69亿。估值重点应看普通股东FCF、少数股东分流和毛利率修复。"
       },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
@@ -2657,27 +2863,27 @@
         },
         "assetDurability": {
           "status": "review",
-          "note": "区域装瓶权和渠道有价值，但授权依赖和浓缩液采购削弱独立定价权。"
+          "note": "区域装瓶权、品牌和渠道有价值，但授权依赖和浓缩液采购削弱独立定价权。"
         },
         "maintenanceCapexLight": {
           "status": "review",
-          "note": "装瓶厂、冷链和渠道需要持续资本开支，低增长环境下需严控投入回报。"
+          "note": "业务现金流强，但装瓶厂、冷链、冰柜、智慧零售和渠道扩张需要持续资本开支。"
         },
         "dividendFcfSupport": {
           "status": "review",
-          "note": "经营现金流较好，但少数股东权益和资本开支影响普通股东可分配现金流，需要折价审计。"
+          "note": "分红由现金流覆盖，但普通股东FCF需扣除少数股东分流后审计，不能直接使用合并FCF。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "review",
-          "note": "综合回报率约4.8%，低于H股8%门槛，暂不支持新增买入。"
+          "note": "税前股息率约4.7%-4.8%，低于H股8%综合回报门槛，需更高安全边际才适合新增买入。"
         },
         "roeRoicDurability": {
           "status": "review",
-          "note": "FY2025 ROE约12.9%、ROIC约8.6%，成熟低增长业务的回报持续性一般。"
+          "note": "ROE和ROIC处于合格区间，但成熟饮料、低毛利水品类和包材成本会压制持续提升空间。"
         },
         "valuationSystemRisk": {
           "status": "review",
-          "note": "控糖政策、碳酸饮料成熟和港股小市值流动性可能压低估值。"
+          "note": "控糖政策、糖税可能性、碳酸饮料成熟、授权依赖和港股小市值流动性可能长期压低估值体系。"
         }
       },
       "financials": {
@@ -2998,22 +3204,23 @@
       "cost": 4.468,
       "marketCap": 13673339012.0649,
       "marketCapCurrency": "HKD",
-      "action": "放入普通候选池观察；暂不新买；已持有可继续持有但不加仓",
-      "status": "未达标（安全边际约13%，低于合格候选要求）",
-      "marginOfSafety": 0.1291667024294535,
+      "action": "继续持有；不加仓；等待HK$3.50-3.60或2026中报确认毛利率、回款和经营现金流改善后再复核",
+      "status": "普通候选池观察（安全边际不足）",
+      "marginOfSafety": 0.10212770421454251,
       "qualityScore": 78,
       "risk": "地产链下行、毛利率下降、非业主增值服务承压、应收账款和合同资产上升导致现金流质量折价",
       "industry": "物业管理/社区增值服务/地产链服务",
       "currency": "HKD",
-      "intrinsicValue": 4.8,
-      "fairValueRange": "HK$4.40-5.30",
-      "targetBuyPrice": 3.6,
+      "intrinsicValue": 4.7,
+      "fairValueRange": "HK$4.30-5.30",
+      "targetBuyPrice": 3.5250000000000004,
+      "valuationConfidence": "medium",
       "businessModel": 24,
       "moat": 18,
       "governance": 16,
       "financialQuality": 20,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 2669.HK；币种 HKD；日期 2026-05-08/2026-05-11",
-      "notes": "基于2025年年报和2026-05-08附近市场价格约HK$4.16估算。2025年收入约RMB149.60亿，同比+6.0%；归母净利润约RMB13.67亿，同比-9.7%；EPS约RMB0.4162；现金及银行结余约RMB62.71亿，银行借款约RMB0.50亿；全年股息约HK$0.20，股息率约4.8%。主要折价来自利润率下行、应收账款净额升至约RMB28.77亿、合同资产升至约RMB4.77亿，以及地产链需求疲弱。",
+      "updatedAt": "",
+      "notes": "基于FY2025业绩和2026-05-11附近股价重估。中海物业质量仍合格，但2025年利润下滑、毛利率下降、应收和合同资产压力使估值中枢下调至HK$4.70；当前安全边际约10%，不足以加仓。维持持有、不加仓，等待HK$3.50-3.60或2026中报确认经营质量改善后再复核。FY2025普通全年股息按HK$0.19计，另有特别息HK$0.01；若按全部现金分派口径则为HK$0.20。",
       "reports": [
         {
           "period": "2025 FY",
@@ -3049,11 +3256,14 @@
         }
       ],
       "dividend": {
-        "fiscalYear": "FY2025",
-        "dividendPerShare": 0.2,
+        "fiscalYear": "TTM 2025-09-19",
+        "dividendPerShare": 0.195,
         "dividendCurrency": "HKD",
-        "cashDividendTotal": 657372092,
-        "cashDividendCurrency": "HKD"
+        "cashDividendCurrency": "HKD",
+        "buybackCurrency": "HKD",
+        "payoutRatio": 0.432,
+        "reliability": "stable",
+        "forecastCurrency": "HKD"
       },
       "netCash": {
         "cashAndShortInvestments": 6271000000,
@@ -3061,10 +3271,14 @@
         "netCash": 6221000000,
         "currency": "CNY",
         "haircut": 0.4,
-        "haircutReason": "FY2025现金及银行结余约RMB62.71亿、银行借款约RMB0.50亿；物业链条应收和现金可分配性需折价，按40%纳入净现金口径。",
+        "haircutReason": "FY2025现金及银行结余约RMB62.71亿、银行借款约RMB0.50亿；物业链条应收和合同资产上升，现金可分配性需折价，按40%纳入净现金口径。",
         "adjustedNetCash": 2488400000,
+        "fcfYield": 0.091,
+        "shareholderFcfCurrency": "CNY",
+        "shareholderFcfBasis": "普通股东FCF需在经营现金流、资本开支、少数股东分流和现金可分配性基础上进一步核实，暂不填入确定值。",
+        "consolidatedFcf": 1095972000,
         "fcfPositiveYears": 5,
-        "note": "净现金来自FY2025年报披露的现金及银行结余和银行借款；折价后用于净现金烟蒂口径，不代表全部现金可立即分配。"
+        "note": "FY2025收入约RMB149.60亿，同比+6.0%；归母净利润约RMB13.67亿，同比-9.7%；经营现金流约RMB11.53亿，FCF约RMB10.96亿。主要折价来自毛利率下行、应收账款和合同资产压力。"
       },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
@@ -3077,15 +3291,15 @@
         },
         "maintenanceCapexLight": {
           "status": "pass",
-          "note": "FY2025资本开支约0.57亿港元，低于经营现金流，业务整体偏轻资产。"
+          "note": "业务整体偏轻资产，维持性资本开支相对经营现金流较低。"
         },
         "dividendFcfSupport": {
           "status": "pass",
-          "note": "FY2025自由现金流约10.96亿港元，现金分红约6.57亿港元，覆盖尚可。"
+          "note": "FY2025自由现金流对现金分红覆盖尚可。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "review",
-          "note": "综合回报率约4.8%，低于H股8%门槛，物业行业需更高折价才有吸引力。"
+          "note": "当前股东回报率低于H股8%门槛，需更高安全边际才有吸引力。"
         },
         "roeRoicDurability": {
           "status": "review",
@@ -3413,22 +3627,23 @@
       "cost": 32.663,
       "marketCap": 17894802240.432,
       "marketCapCurrency": "HKD",
-      "action": "放入核心替补；已有持仓继续持有；无持仓暂不行动，等待HK$28-30再评估",
-      "status": "未达标（安全边际不足）",
-      "marginOfSafety": 0.1030136526447453,
+      "action": "继续持有；当前不主动加仓；等待HK$28-30再严肃复核，HK$27以下才适合分批",
+      "status": "持仓观察（安全边际约9.5%，未达新增买入门槛）",
+      "marginOfSafety": 0.09479449546500428,
       "qualityScore": 82,
-      "risk": "地产链下行、增值服务萎缩、物管毛利率承压、应收账款增长快于收入及审计师变更需持续跟踪",
+      "risk": "地产链下行、基础物管毛利率下降、社区增值服务收缩、应收账款和收缴率压力、物业服务提质政策可能增加成本但未必同步带来提价权",
       "industry": "物业管理/央企物管/社区服务",
       "currency": "HKD",
       "intrinsicValue": 36.5,
       "fairValueRange": "HK$31-40",
-      "targetBuyPrice": 28,
+      "targetBuyPrice": 27.375,
+      "valuationConfidence": "medium",
       "businessModel": 25,
       "moat": 20,
       "governance": 16,
       "financialQuality": 21,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 6049.HK；币种 HKD；日期 2026-05-08/2026-05-11",
-      "notes": "2026-05-08收盘价约HK$32.34；2025年收入RMB171.26亿、归母净利RMB15.49亿、EPS RMB2.81、经营现金流RMB18.27亿、年度股息RMB1.401/股、无银行借款。估值以2025年业绩、CNY/HKD约1.1507、约10倍PE和5%股息率为基础；综合内在价值区间HK$31-40，中枢约HK$36.5，当前安全边际约11%，不足以新建核心仓。",
+      "updatedAt": "",
+      "notes": "FY2025收入RMB171.26亿，同比增长4.8%；归母净利润RMB15.50亿，同比增长5.1%；经营现金流RMB18.27亿，同比下降约20.7%；年度股息RMB1.401/股，派息率约50%。基础物管收入增长12.6%，但综合毛利率降至17.43%，非业主增值和社区增值服务分别下滑16.5%和13.6%。公司质量和现金流仍适合持有，但当前HK$33附近安全边际不足，维持HK$36.5中性内在价值和HK$27.38目标买入价。",
       "reports": [
         {
           "period": "2025 FY",
@@ -3464,51 +3679,59 @@
         }
       ],
       "dividend": {
-        "fiscalYear": "FY2025",
-        "dividendPerShare": 1.401,
-        "dividendCurrency": "CNY",
-        "cashDividendTotal": 775220093.4,
-        "cashDividendCurrency": "CNY"
+        "fiscalYear": "TTM 2025-06-10",
+        "dividendPerShare": 1.45332,
+        "dividendCurrency": "HKD",
+        "cashDividendCurrency": "CNY",
+        "buybackCurrency": "CNY",
+        "payoutRatio": 0.5,
+        "reliability": "stable",
+        "forecastCurrency": "HKD"
       },
       "netCash": {
-        "cashAndShortInvestments": 12886000000,
+        "cashAndShortInvestments": 12885900000,
         "interestBearingDebt": 0,
-        "netCash": 12886000000,
+        "netCash": 12885900000,
         "currency": "CNY",
         "haircut": 0.4,
-        "haircutReason": "FY2025现金及银行结余约RMB128.86亿且无借款；央企物管现金可分配性、应收和地产链风险需折价，按40%纳入净现金口径。",
-        "adjustedNetCash": 5154400000,
+        "haircutReason": "公司现金充足且无明显有息债务压力，但物业公司现金可分配性、应收账款、项目保证金、地产链风险和央企资本配置约束需要折价，按40%纳入净现金烟蒂口径",
+        "adjustedNetCash": 5154360000,
+        "shareholderFcf": 1761000000,
+        "shareholderFcfCurrency": "CNY",
+        "shareholderFcfBasis": "FY2025合并自由现金流扣除少数股东利润占比后的普通股东FCF估算",
+        "consolidatedFcf": 1782175000,
+        "minorityFcfAdjustment": 21000000,
         "fcfPositiveYears": 5,
-        "note": "净现金使用FY2025披露现金及银行结余与无借款口径；折价后用于净现金烟蒂分析。"
+        "note": "FY2025经营现金流约RMB18.27亿，按内部档案口径扣除资本开支后FCF约RMB17.82亿；现金及银行结余约RMB128.86亿。"
       },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
           "status": "review",
-          "note": "基础物管需求长期存在，但地产链下行和增值服务收缩会影响成长性。"
+          "note": "基础物业服务长期需求稳定，但地产链下行、增值服务收缩和物业费提价难度会压制成长性。"
         },
         "assetDurability": {
           "status": "review",
-          "note": "央企物管平台和项目资源有价值，但关联方、应收账款和提价权需折价。"
+          "note": "央企物管平台、公共服务和第三方拓展能力有价值，但行业竞争、合同续约、收缴率和关联地产周期需折价。"
         },
         "maintenanceCapexLight": {
           "status": "pass",
-          "note": "FY2025资本开支约0.45亿港元，相对经营现金流约18.27亿港元较低。"
+          "note": "物业管理本身资本开支较轻，FY2025自由现金流仍为正。"
         },
         "dividendFcfSupport": {
           "status": "pass",
-          "note": "FY2025自由现金流约17.82亿港元，现金分红约7.75亿人民币，覆盖较充足。"
+          "note": "FY2025分红约占归母利润50%，由经营现金流和自由现金流覆盖。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "review",
-          "note": "综合回报率约5.0%，低于H股8%门槛，股东回报尚未进入主策略买点。"
+          "note": "股息率约5%，缺少大额回购，综合股东回报未达到H股8%主策略门槛。"
         },
         "roeRoicDurability": {
           "status": "review",
-          "note": "ROE约15%、ROIC约22%较好，但毛利率承压和审计师变更需持续跟踪。"
+          "note": "ROE和现金流质量尚可，但基础物管毛利率下降、增值服务下滑，需要继续验证资本回报可持续性。"
         },
         "valuationSystemRisk": {
           "status": "review",
-          "note": "地产链风险、应收增长和行业估值折价仍可能压低合理倍数。"
+          "note": "物业行业估值仍受地产链信用、应收账款、提价权和成长降速影响，短期政策利好不足以完全解除估值折价。"
         }
       },
       "financials": {
@@ -3823,22 +4046,23 @@
       "cost": 29.326,
       "marketCap": 1256692008720.6938,
       "marketCapCurrency": "HKD",
-      "action": "已有低成本仓继续持有；新资金暂不追买，等待≤HK$22再分批",
-      "status": "核心替补观察（安全边际不足）",
-      "marginOfSafety": 0.041454523259943185,
+      "action": "继续持有，不加仓；等待≤HK$22再分批复核。若反弹至HK$29-32且油价未结构性上移，可考虑卖出1手降低周期能源暴露",
+      "status": "持仓；核心替补/中等优先级，但安全边际不足",
+      "marginOfSafety": 0.032727258855646306,
       "qualityScore": 82,
-      "risk": "油价周期、地缘政治、政策税费、资本开支和A/H溢价需折价",
+      "risk": "油价周期、地缘冲突、资本开支刚性、资源税费、储量接续、能源转型和A/H估值溢价需折价；当前高油价不能永久资本化",
       "industry": "油气勘探与生产/海上油气/高股息能源",
       "currency": "HKD",
       "intrinsicValue": 27.5,
-      "fairValueRange": "HK$24-31",
-      "targetBuyPrice": 22,
+      "fairValueRange": "HK$24-32",
+      "targetBuyPrice": 20.625,
+      "valuationConfidence": "medium",
       "businessModel": 24,
       "moat": 20,
       "governance": 15,
       "financialQuality": 23,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 0883.HK；币种 HKD；日期 2026-05-08/2026-05-11",
-      "notes": "按H股00883.HK导入；当前价约HK$26.44，2025净利润RMB1220.8亿、EPS RMB2.57、自由现金流约RMB974亿、全年股息HK$1.28，2026Q1归母净利润RMB391.4亿。估值采用中周期油价，不把高油价永久资本化；A股600938.SH因A/H溢价较高暂不作为优先买入标的。",
+      "updatedAt": "",
+      "notes": "2026-05-11复核：持仓2000股，成本约HK$29.33，当前价约HK$26.60，仓位约4.21%，浮亏约9.3%。2025年净产量777.3百万桶油当量，归母净利润RMB1221亿元，自由现金流约RMB974亿元，年度股息HK$1.28，分红率约45%。2026Q1净产量205.1百万桶油当量，同比+8.6%；收入RMB1160.79亿元，同比+8.6%；归母净利润RMB391.44亿元，同比+7.1%；资本开支RMB330.19亿元，同比+19.1%。维持内在价值HK$27.5和目标买入价HK$20.62；当前不加仓，若反弹至HK$29-32可考虑减1手降低周期暴露。",
       "reports": [
         {
           "period": "2026 Q1",
@@ -3906,11 +4130,14 @@
         }
       ],
       "dividend": {
-        "fiscalYear": "FY2025",
-        "dividendPerShare": 1.28,
+        "fiscalYear": "TTM 2025-09-11",
+        "dividendPerShare": 1.3900000000000001,
         "dividendCurrency": "HKD",
-        "cashDividendTotal": 60838000000,
-        "cashDividendCurrency": "HKD"
+        "cashDividendCurrency": "HKD",
+        "buybackCurrency": "HKD",
+        "payoutRatio": 0.45,
+        "reliability": "stable",
+        "forecastCurrency": "HKD"
       },
       "netCash": {
         "cashAndShortInvestments": 214695000000,
@@ -3918,10 +4145,18 @@
         "netCash": 144895000000,
         "currency": "CNY",
         "haircut": 0.5,
-        "haircutReason": "FY2025货币资金及定期存款合计约RMB2146.95亿；上游油气存在弃置义务、资本开支和油价周期风险，按50%纳入净现金口径。",
+        "haircutReason": "上游油气存在弃置义务、持续资本开支、油价周期和储量接续压力，净现金按50%折价纳入估值",
         "adjustedNetCash": 72447500000,
+        "exCashPe": 8.43,
+        "exCashPfcf": 10.57,
+        "fcfYield": 0.088,
+        "shareholderFcf": 97400000000,
+        "shareholderFcfCurrency": "CNY",
+        "shareholderFcfBasis": "FY2025公司口径自由现金流约RMB974亿元；合并层面基本归属母公司，但仍需按上游油气高资本开支和弃置义务折价",
+        "consolidatedFcf": 97400000000,
+        "minorityFcfAdjustment": 0,
         "fcfPositiveYears": 5,
-        "note": "中海油有较强现金缓冲，但估值仍应以中周期油价和资本开支纪律为核心。"
+        "note": "2025经营现金流约RMB2090亿元，自由现金流约RMB974亿元；分红覆盖尚可，但资本开支仍高，不属于轻资产现金牛。"
       },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
@@ -3930,27 +4165,27 @@
         },
         "assetDurability": {
           "status": "pass",
-          "note": "海上油气储量、开采资质和低成本项目构成耐久资源资产。"
+          "note": "海上油气储量、低成本项目、勘探开发资质和央企资源构成较耐久资源资产。"
         },
         "maintenanceCapexLight": {
           "status": "fail",
-          "note": "上游油气需要持续高资本开支维持产量，不符合轻再投资审计。"
+          "note": "上游油气需要持续高资本开支维持产量和储量接续，不符合轻再投资审计。"
         },
         "dividendFcfSupport": {
           "status": "pass",
-          "note": "FY2025经营现金流和自由现金流较强，现金分红约608亿港元具备覆盖基础。"
+          "note": "FY2025自由现金流约RMB974亿元，对现金分红有覆盖基础。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "review",
-          "note": "综合回报率约4.8%，低于H股8%门槛；周期股应要求更高安全边际。"
+          "note": "当前税前股息率约4.8%，港股通税后更低，低于H股8%综合回报盾，新增买入需等待更高安全边际。"
         },
         "roeRoicDurability": {
           "status": "review",
-          "note": "ROE约15.7%、ROIC约13.7%尚可，但高度依赖油价中枢。"
+          "note": "ROE/ROIC仍较好，但高度依赖油价中枢和资本开支效率。"
         },
         "valuationSystemRisk": {
           "status": "review",
-          "note": "油价、地缘、能源转型和央企资本配置可能显著改变估值体系。"
+          "note": "油价、地缘政治、资源税费、能源转型和A/H估值体系变化可能显著影响估值。"
         }
       },
       "financials": {
@@ -4275,7 +4510,7 @@
       "moat": 16,
       "governance": 5,
       "financialQuality": 19,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 1448.HK；币种 HKD；日期 2026-05-07/2026-05-08",
+      "updatedAt": "",
       "notes": "计划：剔除/仅风险观察。复牌前不行动；复牌后若审计无保留、调查无重大重述且价格≤HK$2.0-2.2，才重新评估普通候选价值。纪律：质量分低于75且有重大风险否决项；不因低估值或净现金买入，先等风险解除。最新市场状态：股份自2026-03-20起停牌，停牌前最后价约HK$2.64。最新可用财务口径：2024收入约RMB20.77亿，归母净利约RMB3.73亿，EPS约RMB0.164；2025H1收入约RMB6.11亿，归母亏损约RMB2.61亿，EPS约-RMB0.115。核心判断：福寿园当前不是单纯估值杀，而是业绩杀、治理杀和财报可信度风险叠加；内在价值区间仅为压力测试，不作为可执行买入依据。",
       "reports": [
         {
@@ -4648,28 +4883,29 @@
       }
     },
     {
-      "symbol": "07489.HK",
+      "symbol": "7489.HK",
       "name": "岚图汽车",
       "shares": 2132,
       "cost": 0,
       "marketCap": 21680000000,
       "marketCapCurrency": "HKD",
-      "action": "放入普通候选池观察；当前不买入，等待扣非利润和自由现金流验证",
-      "status": "未达标（质量分<75且安全边际不足）",
-      "marginOfSafety": 0.177142824445452,
+      "action": "继续持有小仓观察；当前不加仓，等待2026H1扣非利润、经营利润和自由现金流验证",
+      "status": "观察（质量分\u003c75，长期股东现金流仍需验证）",
+      "marginOfSafety": 0.18000003269740514,
       "qualityScore": 72,
-      "risk": "盈利质量受政府补助影响，梦想家单一车型依赖较高，新能源车价格战和智能化竞争可能压缩毛利率",
+      "risk": "盈利质量受非经营收入和政府补助影响，梦想家单一车型依赖较高，X8订单转化需验证，新能源车价格战、智能化投入和H股全流通潜在供给压力需折价",
       "industry": "新能源乘用车/高端MPV/央企汽车",
       "currency": "HKD",
       "intrinsicValue": 7,
       "fairValueRange": "HK$4.5-8.5",
-      "targetBuyPrice": 4.8,
+      "targetBuyPrice": 5.25,
+      "valuationConfidence": "low",
       "businessModel": 21,
       "moat": 16,
       "governance": 16,
       "financialQuality": 19,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 7489.HK；币种 HKD；日期 2026-05-08/2026-05-11",
-      "notes": "2025年收入约人民币348.65亿元，毛利率约20.9%，净利润约人民币10.17亿元，首次年度盈利；2025年交付约150169辆，2026年1-4月交付约49038辆。估值基于HK$5.89附近股价、市值约HK$216.8亿、PE约16.9倍、PB约1.78倍。核心假设是2026年需验证扣非利润、经营现金流和自由现金流质量。",
+      "updatedAt": "",
+      "notes": "2026-05-11复核：岚图汽车已在港股上市，代码07489.HK。2025收入约348.65亿元人民币，净利润约10.17亿元人民币，毛利率约20.93%，FCF约18.72亿元人民币；但经营利润仍为负，非经营收入对净利润贡献较大。2026年4月交付15146辆，同比+51%，1-4月交付49038辆，同比+36%；泰山X8截至5月1日预售订单超过3万辆。维持内在价值HK$7.0和普通候选池观察评级，不追买，等待2026H1扣非利润、经营利润和FCF验证。",
       "reports": [
         {
           "period": "2025 FY",
@@ -4688,34 +4924,53 @@
           "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0212/2026021201452.pdf"
         }
       ],
+      "netCash": {
+        "cashAndShortInvestments": 9360000000,
+        "interestBearingDebt": 5240000000,
+        "netCash": 4120000000,
+        "currency": "HKD",
+        "haircut": 0.4,
+        "haircutReason": "新能源汽车资本开支、研发、渠道和价格战压力较重，净现金需按成长制造业折价处理",
+        "adjustedNetCash": 1650000000,
+        "exCashPe": 14.6,
+        "exCashPfcf": 9.1,
+        "fcfYield": 0.102,
+        "shareholderFcf": 2150000000,
+        "shareholderFcfCurrency": "HKD",
+        "shareholderFcfBasis": "FY2025合并自由现金流折算HKD；暂按无重大少数股东分流，但需扣除营运资本和供应商账期带来的质量折价",
+        "consolidatedFcf": 2150000000,
+        "minorityFcfAdjustment": 0,
+        "fcfPositiveYears": 3,
+        "note": "FCF账面为正，但2025经营现金流受应付账款增加支持，不能直接按成熟现金牛估值。"
+      },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
           "status": "review",
-          "note": "新能源车需求长期存在，但高端MPV和单一车型依赖仍需验证。"
+          "note": "新能源车需求长期存在，但高端新能源SUV/MPV竞争激烈，品牌心智仍需验证。"
         },
         "assetDurability": {
           "status": "review",
-          "note": "央企背景和品牌有一定价值，但品牌心智、渠道和智能化壁垒仍未充分证明。"
+          "note": "央企背景、东风资源和产品矩阵有一定支撑，但品牌、渠道和智能化壁垒尚未充分证明。"
         },
         "maintenanceCapexLight": {
           "status": "fail",
-          "note": "新能源车研发、渠道、产能和智能化投入较重，不符合轻再投资特征。"
+          "note": "整车制造、研发、渠道、智能驾驶硬件和产能投入较重，不符合轻资产再投资特征。"
         },
         "dividendFcfSupport": {
           "status": "fail",
-          "note": "当前无股息数据，盈利质量仍需扣非利润和自由现金流验证，不能证明股东回报覆盖。"
+          "note": "目前无稳定分红，无法证明普通股东现金回报由FCF覆盖。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "review",
-          "note": "公司处于验证期，留存资金应优先证明投入产出效率，暂不能按成熟股东回报资产看待。"
+          "note": "公司仍处成长验证期，留存资金需要继续证明投入产出效率。"
         },
         "roeRoicDurability": {
           "status": "review",
-          "note": "2025首次年度盈利，ROIC约4.2%，持续盈利和现金流仍需多个报告期验证。"
+          "note": "2025首次年度盈利，经营利润仍偏弱，ROE/ROIC持续性需多个报告期验证。"
         },
         "valuationSystemRisk": {
           "status": "review",
-          "note": "新能源车价格战、补贴和竞争格局会显著影响估值体系。"
+          "note": "新能源车价格战、补贴变化、智能化竞争和H股全流通均可能影响估值体系。"
         }
       },
       "financials": {
@@ -4860,8 +5115,8 @@
       "symbol": "0700.HK",
       "name": "腾讯控股",
       "priority": "核心持有/等待低价加仓",
-      "advice": "当前约HK$470不追买；HK$400-430可分批，HK$390以下若基本面不变可提高仓位",
-      "discipline": "优秀资产要求>20%安全边际；当前仅约12%，持有合格但买入不达标"
+      "advice": "已有持仓继续持有；当前价格不追买；若Q1验证广告、游戏和FCF韧性，HK$420-430可小额复核，HK$390-410可更积极分批",
+      "discipline": "优秀资产新增买入要求至少15%-20%安全边际；H股综合回报率需接近8%门槛；当前安全边际和综合回报率均未充分达标"
     },
     {
       "rank": 2,
@@ -4875,89 +5130,89 @@
       "rank": 3,
       "symbol": "000333.SZ",
       "name": "美的集团",
-      "priority": "核心替补/中等偏高优先级",
-      "advice": "等待≤75元进入买入区，68-72元且基本面未恶化时可加仓",
-      "discipline": "优秀资产要求≥20%安全边际；当前约80.5元安全边际不足，不追买"
+      "priority": "核心替补/中高优先级",
+      "advice": "已有600股继续持有；当前80元附近不追买；若跌至75元附近且Q2扣非利润、FCF、回购进度未恶化，可重新复核；68-72元可考虑分批加仓",
+      "discipline": "优秀资产新增买入要求约20%安全边际；A股综合回报率需不低于6%；当前安全边际约14%，低于新增买入纪律"
     },
     {
       "rank": 4,
       "symbol": "600036.SH",
       "name": "招商银行",
       "priority": "核心替补/等待",
-      "advice": "等待≤36元；34-36元可复核分批，32-34元且基本面未恶化可提高优先级",
-      "discipline": "优秀资产要求≥20%安全边际；当前约15.7%，未达标不追买"
+      "advice": "现有500股继续持有，不因约3%浮亏卖出；¥37-38不补仓，¥34-36复核，≤¥33.75可分批",
+      "discipline": "优秀银行资产要求至少约20%安全边际或A股综合回报率达到6%；当前安全边际约15.6%，FY2025股息率约5.31%，未达新增买入纪律"
     },
     {
       "rank": 5,
       "symbol": "0883.HK",
       "name": "中国海洋石油",
       "priority": "核心替补/中等优先级",
-      "advice": "等待≤HK$22，HK$20-21更符合25%安全边际",
-      "discipline": "合格核心候选要求≥25%安全边际；未达标不追买"
+      "advice": "现有2000股继续持有；HK$26-27不加仓也不急卖，HK$29-32可考虑减1手，≤HK$22才重新进入买入复核区",
+      "discipline": "H股主策略要求综合回报率接近8%或至少25%安全边际；当前安全边际约3.3%，FY2025税前股息率约4.8%，不达新增买入纪律"
     },
     {
       "rank": 6,
       "symbol": "002415.SZ",
       "name": "海康威视",
       "priority": "重点预期差候选/中优先级",
-      "advice": "不重仓；¥35-37仅适合小仓验证，¥30-32更从容；Q2验证后可升核心替补",
-      "discipline": "质量分84，合格候选要求≥25%安全边际"
+      "advice": "现有1200股可继续持有；¥35-37不补仓，¥33-34仅复核，≤¥31.5进入正式加仓区，¥28-30为强安全边际区",
+      "discipline": "质量分84但长期股东现金流评分约73，新增买入仍要求约25%安全边际；综合回报率低于A股6%门槛，不因Q1利润高增而追买"
     },
     {
       "rank": 7,
       "symbol": "600690.SH",
       "name": "海尔智家",
       "priority": "核心替补观察；H股优先",
-      "advice": "A股等待≤¥19.5；H股约HK$21-22.5可小仓复核，HK$19-20.5更有吸引力",
-      "discipline": "质量分83要求约25%安全边际；A股未达标不追买，H股仅限小仓验证"
+      "advice": "A股等待≤CNY19.5再复核；H股HKD21-22.5可小仓验证，HKD19-20.5更有吸引力；不超过美的仓位",
+      "discipline": "质量分83要求约25%安全边际；A股当前未达标，H股折人民币价格低于目标买入线但需结合港股通股息税和Q2经营验证"
     },
     {
       "rank": 8,
       "symbol": "6049.HK",
       "name": "保利物业",
       "priority": "核心替补/中优先级观察",
-      "advice": "HK$28以下可考虑分批；HK$28-30严肃观察；HK$30以上安全边际不足不主动加仓",
-      "discipline": "合格核心候选要求约25%安全边际；未达标不追买，优先等待更低买点或基本面改善"
+      "advice": "已有持仓继续持有；当前价格安全边际不足，不追买；若跌至HK$28-30且毛利率、收缴率、经营现金流未恶化，可重新评估分批；HK$27以下才更符合安全边际纪律",
+      "discipline": "物业股需约25%安全边际；H股综合回报率需接近8%门槛；当前约5%股息率和约9.5%安全边际均不足以支持主动加仓"
     },
     {
       "rank": 9,
       "symbol": "600887.SH",
       "name": "伊利股份",
-      "priority": "核心替补/中优先级观察",
-      "advice": "≤24元进入买入复盘，≤23元才具备较好安全边际；27元以上不追买",
-      "discipline": "合格核心候选要求≥25%安全边际；当前价接近中性内在价值，不满足买入纪律"
+      "priority": "观察/中优先级",
+      "advice": "现有仓位收息持有；≤24元进入买入复盘，≤23元具备较好安全边际；27元以上不追买",
+      "discipline": "合格核心候选要求约25%安全边际；当前价格接近中性内在价值，不满足买入纪律。若液态奶持续弱增长、奶粉修复放缓或自由现金流无法覆盖高分红，应下调内在价值。"
     },
     {
       "rank": 10,
       "symbol": "0696.HK",
       "name": "中国民航信息网络",
       "priority": "核心替补/中等优先级",
-      "advice": "等待≤HK$9.4再考虑分批；≤HK$8.8安全边际更充分",
-      "discipline": "75-84分资产要求≥25%安全边际；当前未达标不追买"
+      "advice": "已有仓位继续持有，不新增资金；若跌至HK$9.3-9.4且基本面未恶化，可小幅加仓；若跌至HK$8.8以下，安全边际更充分，可优先复核加仓",
+      "discipline": "75-84分资产要求≥25%安全边际；当前约20%，未达标不追买"
     },
     {
       "rank": 11,
       "symbol": "2669.HK",
       "name": "中海物业",
-      "priority": "普通候选池观察",
-      "advice": "等待HK$3.50-3.70或2026中报确认毛利率、回款和经营现金流止跌后再评估",
-      "discipline": "75-84分合格候选通常要求≥25%安全边际；当前约13%，不追买"
+      "priority": "观察/低优先级",
+      "advice": "当前安全边际不足，不新增资金；若跌至HK$3.50-3.60且基本面未恶化，再结合2026中报复核是否加仓",
+      "discipline": "75-84分合格候选通常要求≥25%安全边际；未达标不追买"
     },
     {
       "rank": 12,
       "symbol": "0506.HK",
       "name": "中国食品",
       "priority": "核心替补/中等优先级",
-      "advice": "HK$3.50-3.55以下可小幅加仓；HK$3.30-3.40更有吸引力；HK$4.90-5.20若盈利未上修可逐步减仓",
-      "discipline": "质量分82要求≥25%安全边际；当前约21%，持有收息但不追买"
+      "advice": "当前持有即可，不新增资金；HK$3.50-3.55以下可小幅加仓，HK$3.30-3.40更有吸引力；若HK$4.90-5.20但盈利未上修，可逐步减仓",
+      "discipline": "质量分82要求约25%安全边际；当前约21%，持有收息但不追买"
     },
     {
       "rank": 13,
-      "symbol": "07489.HK",
+      "symbol": "7489.HK",
       "name": "岚图汽车",
       "priority": "普通候选池/低优先级",
-      "advice": "HK$4.2-4.8才接近可观察买入区；若2026H1扣非利润和自由现金流转正，可重新上修估值",
-      "discipline": "质量分低于75原则上不进入核心资产池；安全边际不足时不试仓"
+      "advice": "现有约1%观察仓可继续持有；HK$5.7-6.1不追买，HK$4.2-4.8且基本面未恶化时再复核小幅加仓",
+      "discipline": "质量分低于75且长期股东现金流评分偏弱，不进入核心资产池；新增买入必须等待扣非利润、经营利润和自由现金流同时验证"
     },
     {
       "rank": 14,
@@ -4972,24 +5227,25 @@
     {
       "symbol": "600690.SH",
       "name": "海尔智家",
-      "status": "A股未达标（安全边际约18%<25%）；H股赔率更优",
-      "action": "A股暂不追买；H股可进入第一档小仓复核，但不重仓替代美的",
+      "status": "核心替补观察；A股安全边际不足，H股优先",
+      "action": "A股当前不追买，等待≤CNY19.5；H股06690.HK因折价已进入第一档小仓复核区，但不重仓替代美的",
       "marketCap": 200595414276.123,
       "marketCapCurrency": "CNY",
-      "marginOfSafety": 0.1738461714524489,
+      "marginOfSafety": 0.173461547264686,
       "qualityScore": 83,
-      "risk": "2026Q1收入和利润下滑、北美关税与需求、汇率、库存周转、并购整合和白电竞争需折价",
+      "risk": "2026Q1收入、利润和经营现金流同比下滑，北美需求、关税、汇率、大宗原材料、库存周转、海外并购整合和白电竞争需折价",
       "industry": "家电/全球化白电/智慧家庭",
       "currency": "CNY",
       "intrinsicValue": 26,
       "fairValueRange": "CNY 24-28",
       "targetBuyPrice": 19.5,
+      "valuationConfidence": "medium",
       "businessModel": 26,
       "moat": 22,
       "governance": 16,
       "financialQuality": 19,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 600690.SS；币种 CNY；日期 2026-05-08/2026-05-11",
-      "notes": "市场价格口径：2026-05-08，A股约¥21.39，H股约HK$21.64；HKD/CNY约0.869。FY2025收入RMB3023.5亿、归母净利RMB195.5亿、EPS RMB2.12、经营现金流RMB260亿、分红比例55%。2026Q1收入RMB736.87亿、归母净利RMB46.52亿，同比承压。估值维持A股内在价值区间CNY24-28，中枢CNY26；H股折算中枢约HK$29.9，赔率优于A股。",
+      "updatedAt": "",
+      "notes": "2026-05-11复核：A股600690.SH约CNY21.49，H股06690.HK约HKD21.52，按HKD/CNY约0.868折人民币约CNY18.68。维持内在价值CNY26、公允区间CNY24-28、A股目标买入价CNY19.5。2025年收入3023.47亿元、归母净利润195.53亿元、经营现金流260.03亿元；2026Q1收入736.87亿元，同比-6.86%，归母净利润46.52亿元，同比-15.22%，经营现金流16.11亿元，同比-29.46%。A股安全边际约17.3%，不达25%纪律；H股安全边际约28.2%，可小仓复核，但需跟踪北美恢复、毛利率、库存和FCF。",
       "reports": [
         {
           "period": "2026 Q1",
@@ -5057,13 +5313,14 @@
         }
       ],
       "dividend": {
-        "fiscalYear": "FY2025",
-        "dividendPerShare": 1.1559,
+        "fiscalYear": "TTM 2025-11-07",
+        "dividendPerShare": 1.23424,
         "dividendCurrency": "CNY",
-        "cashDividendTotal": 10773000000,
         "cashDividendCurrency": "CNY",
-        "buybackAmount": 1287160000,
-        "buybackCurrency": "CNY"
+        "buybackCurrency": "CNY",
+        "payoutRatio": 0.55,
+        "reliability": "stable",
+        "forecastCurrency": "CNY"
       },
       "netCash": {
         "cashAndShortInvestments": 76027773750.76,
@@ -5071,10 +5328,18 @@
         "netCash": 39584653160.81,
         "currency": "CNY",
         "haircut": 0.6,
-        "haircutReason": "FY2025货币资金、交易性金融资产、一年内到期债权投资、短期定期存款和长期债权投资合计约RMB760.28亿；短期借款、一年内到期长期借款、长期借款和应付债券合计约RMB364.43亿。海外资金、财务公司定期存款和制造业周转需求需折价，按60%纳入净现金口径。",
+        "haircutReason": "海外资金、财务公司定期存款、制造业周转资金和并购整合需求需折价处理",
         "adjustedNetCash": 23750791896.49,
+        "exCashPe": 9.33,
+        "exCashPfcf": 10.27,
+        "fcfYield": 0.083,
+        "shareholderFcf": 16632241132.64,
+        "shareholderFcfCurrency": "CNY",
+        "shareholderFcfBasis": "FY2025合并FCF约171.51亿元，按少数股东损益占比约3.03%粗略扣除少数股东分流后估算普通股东FCF",
+        "consolidatedFcf": 17151378029.03,
+        "minorityFcfAdjustment": 519136896.39,
         "fcfPositiveYears": 5,
-        "note": "已把定期存款和债权投资纳入现金类投资；海尔智家有净现金缓冲，但主要买入依据仍是全球白电竞争力和现金流稳定性。"
+        "note": "FCF由FY2025经营现金流260.03亿元减购建固定资产、无形资产和其他长期资产支付现金88.52亿元估算。"
       },
       "ownerCashFlowAudit": {
         "tenYearDemand": {
@@ -5083,27 +5348,27 @@
         },
         "assetDurability": {
           "status": "pass",
-          "note": "海尔品牌、全球渠道、供应链和高端品牌矩阵形成较耐久资产。"
+          "note": "海尔、卡萨帝、GEA、Fisher \u0026 Paykel、Candy等品牌和全球渠道具备较强耐久性。"
         },
         "maintenanceCapexLight": {
           "status": "review",
-          "note": "家电制造需要持续产能、渠道和海外整合投入，资本开支回报需跟踪。"
+          "note": "制造业和海外本地化运营需要持续资本开支，轻资产属性弱于互联网和品牌药。"
         },
         "dividendFcfSupport": {
           "status": "pass",
-          "note": "FY2025自由现金流约171.5亿元，分红加回购约120.6亿元，现金流覆盖较好。"
+          "note": "FY2025自由现金流对全年分红有覆盖能力，未来分红比例规划提升。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "pass",
-          "note": "综合回报率约6.0%，略高于A股6%门槛，资本配置对股东较友好。"
+          "note": "当前综合回报率接近或略高于要求，H股折价下再投资效率更好。"
         },
         "roeRoicDurability": {
           "status": "review",
-          "note": "ROE约17%、ROIC约12.6%尚可，但2026Q1收入和利润承压，需确认恢复。"
+          "note": "ROE约17%较稳定，但2026Q1收入、利润和经营现金流承压，需要Q2/Q3验证。"
         },
         "valuationSystemRisk": {
           "status": "review",
-          "note": "北美关税、汇率、海外需求和白电竞争可能压低估值中枢。"
+          "note": "关税、汇率、北美需求、地产链和白电竞争可能压低估值中枢。"
         }
       },
       "financials": {
@@ -5422,7 +5687,7 @@
       "action": "已有仓位继续持有；新资金暂不买入；放入核心替补，等待纪律买入区间",
       "marketCap": 1719354470263.6487,
       "marketCapCurrency": "CNY",
-      "marginOfSafety": 0.027457101004464284,
+      "marginOfSafety": 0.0276214599609375,
       "qualityScore": 88,
       "risk": "高端白酒需求放缓、价格体系重构、政策与税制风险、渠道库存和批价波动需折价",
       "industry": "白酒/高端消费",
@@ -5434,7 +5699,7 @@
       "moat": 24,
       "governance": 17,
       "financialQuality": 22,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 600519.SS；币种 CNY；日期 2026-05-08/2026-05-11",
+      "updatedAt": "",
       "notes": "最新市场价约¥1372.99；2025年营收1688.38亿元、归母净利823.20亿元、EPS约65.66元；2026Q1营收539.09亿元、归母净利272.43亿元、EPS约21.76元。估值采用2025年报、2026Q1财报和2026-05-08行情，综合内在价值区间¥1200-1580，中枢¥1400。",
       "reports": [
         {
@@ -5861,7 +6126,7 @@
       "action": "放入普通候选池观察；当前暂不买入，等待HK$6.2-6.5以下或2026业绩恢复确认",
       "marketCap": 6228024047.8992,
       "marketCapCurrency": "HKD",
-      "marginOfSafety": 0.09146343789449544,
+      "marginOfSafety": 0.07926826942257757,
       "qualityScore": 84,
       "risk": "2025收入和利润下滑、毛利率压缩、原材料成本上升、香港渠道优化不确定、金融资产减值及关联治理需折价",
       "industry": "中医药/品牌中成药/海外零售与批发",
@@ -5873,7 +6138,7 @@
       "moat": 22,
       "governance": 16,
       "financialQuality": 20,
-      "updatedAt": "2026-05-11 13:43:59；行情源 Yahoo Finance 日线收盘价；代码 3613.HK；币种 HKD；日期 2026-05-08/2026-05-11",
+      "updatedAt": "",
       "notes": "2025收入HK$15.13亿，同比-6.1%；归母利润HK$3.97亿，同比-20.6%；EPS约HK$0.47；现金及银行结余HK$22.79亿，负债率约2.9%，流动性强。当前约HK$7.40，对应约15.6x 2025 PE、约5.4%股息率。内在价值中枢按正常化EPS、PE、股息和净现金保护综合估算为HK$8.2，安全边际不足。",
       "reports": [
         {

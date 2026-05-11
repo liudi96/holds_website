@@ -12,6 +12,8 @@ The website writes the confirmed result into `data/portfolio.json` and creates a
 
 Use `updateType: "fullReview"` for annual/full re-underwriting. Use `updateType: "eventUpdate"` for quarterly results, dividends, buybacks, regulatory events, earnings previews, or other incremental updates. If `updateType` is omitted, the importer treats the JSON as `fullReview`.
 
+For institutional research, ChatGPT should first write a full Markdown research report, then output the import JSON. The full report should cover the old ZIP archive, latest facts, profit driver map, sensitivity analysis, scenario valuation, and operation discipline. The website JSON remains a compact summary for execution.
+
 CLI import is still available for saved files:
 
 ```bash
@@ -38,6 +40,14 @@ Requirements:
 - `quality.totalScore` should equal `businessModel + moat + governance + financialQuality`.
 - Keep action, risk, notes, advice, and discipline concise but specific.
 - asOf must be YYYY-MM-DD.
+
+Institutional research steps before JSON:
+- Read the old ZIP stock file first: cost, position size, old conclusion, target buy price, intrinsic value, safety margin, plan discipline, risk triggers, and recent research updates.
+- Verify latest price, market cap, latest financial report, dividend, buyback, material news, industry data, and policy changes.
+- Build a profit driver map: revenue side, cost side, policy side, competition side, and capital allocation side.
+- Run sensitivity checks on variables that can change value: raw materials, volume, gross margin, expense ratio, tax/regulatory policy, or industry-specific factors.
+- Provide bearish/base/bullish intrinsic value ranges before choosing the JSON intrinsicValue.
+- State whether the research quality checklist is fully covered. If not, state the gaps in the report, not in the JSON.
 
 Stock:
 - Symbol:
@@ -158,6 +168,7 @@ Event update schema:
 - If `symbol` is new, it is added to the candidate pool.
 - `fullReview` replaces the stock's current research fields. `eventUpdate` only applies fields explicitly present under `updates`; missing fields keep their previous website values.
 - `eventUpdate` records a durable `researchUpdates` timeline entry so the next ChatGPT export can build on prior event/earnings updates.
+- Full profit driver maps, sensitivity tables, industry policy analysis, competition analysis, and scenario valuation belong in the Markdown research report. JSON only stores the compact decision summary; use `notes` or `notesAppend` for the most important changes.
 - `plan` is upserted by the top-level `symbol` when possible, then by stock name for old data.
 - Do not include `symbol` inside `plan`; the importer derives Plan identity from the top-level `symbol`.
 - `plan.rank` may be approximate. The importer normalizes Plan ranks into a unique sequence after import.
