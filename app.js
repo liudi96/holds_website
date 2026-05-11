@@ -266,12 +266,10 @@ const elements = {
   candidateList: document.querySelector("#candidateList"),
   candidateSort: document.querySelector("#candidateSort"),
   stockDetail: document.querySelector("#stockDetail"),
+  totalFunds: document.querySelector("#totalFunds"),
   totalValue: document.querySelector("#totalValue"),
-  totalPnl: document.querySelector("#totalPnl"),
-  totalPnlRate: document.querySelector("#totalPnlRate"),
   dayChange: document.querySelector("#dayChange"),
   dayChangeRate: document.querySelector("#dayChangeRate"),
-  cashBalance: document.querySelector("#cashBalance"),
   annualDividend: document.querySelector("#annualDividend"),
   portfolioDividendYield: document.querySelector("#portfolioDividendYield"),
   dataQualityMetric: document.querySelector("#dataQualityMetric"),
@@ -370,6 +368,14 @@ function currency(value, currencyCode = "CNY") {
     style: "currency",
     currency: currencyCode,
     minimumFractionDigits: 2
+  }).format(value);
+}
+
+function wholeCurrency(value, currencyCode = "CNY") {
+  return new Intl.NumberFormat("zh-CN", {
+    style: "currency",
+    currency: currencyCode,
+    maximumFractionDigits: 0
   }).format(value);
 }
 
@@ -1736,27 +1742,23 @@ function consensusLabel(stock, totalValue = 0) {
 
 function renderMetrics(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
-  const totalCost = positions.reduce((sum, item) => sum + item.costValueCny, 0);
-  const totalPnl = totalValue - totalCost;
+  const cashValue = finiteNumber(state.cash) ?? 0;
+  const totalFunds = totalValue + cashValue;
   const dayChange = positions.reduce((sum, item) => sum + item.dayChange, 0);
   const dividends = dividendSummary(positions);
   const dividendYield = totalValue ? dividends.annualCashCny / totalValue : 0;
 
-  elements.totalValue.textContent = currency(totalValue);
-  elements.totalPnl.textContent = currency(totalPnl);
-  elements.totalPnl.className = totalPnl >= 0 ? "positive" : "negative";
-  elements.totalPnlRate.textContent = percent(totalCost ? (totalPnl / totalCost) * 100 : 0);
-  elements.totalPnlRate.className = totalPnl >= 0 ? "positive" : "negative";
+  elements.totalFunds.textContent = wholeCurrency(totalFunds);
+  elements.totalValue.textContent = wholeCurrency(totalValue);
   if (elements.dayChange) {
-    elements.dayChange.textContent = currency(dayChange);
+    elements.dayChange.textContent = wholeCurrency(dayChange);
     elements.dayChange.className = dayChange >= 0 ? "positive" : "negative";
   }
   if (elements.dayChangeRate) {
     elements.dayChangeRate.textContent = percent(totalValue ? (dayChange / totalValue) * 100 : 0);
     elements.dayChangeRate.className = dayChange >= 0 ? "positive" : "negative";
   }
-  elements.cashBalance.textContent = currency(state.cash);
-  elements.annualDividend.textContent = currency(dividends.annualCashCny);
+  elements.annualDividend.textContent = wholeCurrency(dividends.annualCashCny);
   elements.portfolioDividendYield.textContent = dividends.topContributor
     ? `组合股息率 ${percent(dividendYield * 100, false)} · 高风险 ${percent(dividends.annualCashCny ? (dividends.highRiskCashCny / dividends.annualCashCny) * 100 : 0, false)}`
     : "组合股息率 0.00%";
