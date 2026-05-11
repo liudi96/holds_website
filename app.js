@@ -1091,8 +1091,10 @@ function previewValue(value, formatter = (item) => displayText(item)) {
 
 function researchPreviewDiff(existing, research) {
   if (!existing) return [];
-  const valuation = research.valuation ?? {};
-  const quality = research.quality ?? {};
+  const isEventUpdate = research.updateType === "eventUpdate";
+  const updates = isEventUpdate ? (research.updates ?? {}) : research;
+  const valuation = updates.valuation ?? {};
+  const quality = updates.quality ?? {};
   const nextLevels = priceLevels({
     targetBuyPrice: valuation.targetBuyPrice,
     intrinsicValue: valuation.intrinsicValue
@@ -1105,30 +1107,40 @@ function researchPreviewDiff(existing, research) {
     if (beforeText !== afterText) rows.push({ label, beforeText, afterText });
   };
 
-  push("内在价值", existing.intrinsicValue, valuation.intrinsicValue, (value) => currency(Number(value), research.currency || existing.currency || "CNY"));
-  push("公允区间", existing.fairValueRange, valuation.fairValueRange);
-  push("首买价", currentLevels.initialBuyPrice, nextLevels.initialBuyPrice, (value) => currency(Number(value), research.currency || existing.currency || "CNY"));
-  push("质量总分", existing.qualityScore, quality.totalScore, (value) => String(value));
-  push("达标状态", existing.status, research.status);
-  push("最终动作", existing.action, research.action);
-  push("主要风险", existing.risk, research.risk);
+  if (!isEventUpdate || valuation.intrinsicValue !== undefined) {
+    push("内在价值", existing.intrinsicValue, valuation.intrinsicValue, (value) => currency(Number(value), research.currency || existing.currency || "CNY"));
+  }
+  if (!isEventUpdate || valuation.fairValueRange !== undefined) push("公允区间", existing.fairValueRange, valuation.fairValueRange);
+  if (!isEventUpdate || valuation.intrinsicValue !== undefined || valuation.targetBuyPrice !== undefined) {
+    push("首买价", currentLevels.initialBuyPrice, nextLevels.initialBuyPrice, (value) => currency(Number(value), research.currency || existing.currency || "CNY"));
+  }
+  if (!isEventUpdate || quality.totalScore !== undefined) push("质量总分", existing.qualityScore, quality.totalScore, (value) => String(value));
+  if (!isEventUpdate || updates.status !== undefined) push("达标状态", existing.status, updates.status);
+  if (!isEventUpdate || updates.action !== undefined) push("最终动作", existing.action, updates.action);
+  if (!isEventUpdate || updates.risk !== undefined) push("主要风险", existing.risk, updates.risk);
+  if (isEventUpdate && updates.notesAppend) rows.push({ label: "研究脉络", beforeText: "保留原 notes", afterText: updates.notesAppend });
   return rows;
 }
 
 function renderResearchPreview(result, imported = false) {
   const research = result.research ?? {};
-  const valuation = research.valuation ?? {};
+  const isEventUpdate = research.updateType === "eventUpdate";
+  const updates = isEventUpdate ? (research.updates ?? {}) : research;
+  const valuation = updates.valuation ?? {};
   const levels = priceLevels({
     targetBuyPrice: valuation.targetBuyPrice,
     intrinsicValue: valuation.intrinsicValue
   });
-  const dividend = research.dividend ?? {};
-  const quality = research.quality ?? {};
-  const audit = ownerAuditProfile(research);
+  const dividend = updates.dividend ?? {};
+  const quality = updates.quality ?? {};
+  const audit = ownerAuditProfile(isEventUpdate ? { ownerCashFlowAudit: updates.ownerCashFlowAudit } : research);
   const warnings = result.warnings ?? [];
   const plan = result.plan ?? [];
   const existing = findRawStock(research.symbol);
   const diffRows = researchPreviewDiff(existing, research);
+  const changedFields = result.changedFields ?? [];
+  const event = research.event ?? {};
+  const impact = research.impact ?? {};
   const targetPlan = plan.find((item) => {
     const itemSymbol = String(item.symbol ?? "").toUpperCase();
     return itemSymbol ? itemSymbol === String(research.symbol ?? "").toUpperCase() : item.name === research.name;
@@ -1137,9 +1149,25 @@ function renderResearchPreview(result, imported = false) {
   elements.researchPreview.innerHTML = `
     <div class="research-summary">
       <strong>${escapeHTML(targetTypeText(result.targetType))}</strong>
-      <span>${escapeHTML(result.summary ?? "")}</span>
+      <span>${escapeHTML(isEventUpdate ? "事件/财报增量更新" : "完整重估")} · ${escapeHTML(result.summary ?? "")}</span>
       ${result.backupPath ? `<small>备份：${escapeHTML(result.backupPath)}</small>` : ""}
     </div>
+    ${isEventUpdate ? `
+      <div class="research-event-card">
+        <div>
+          <span>${escapeHTML(event.type || "event")}</span>
+          <strong>${escapeHTML(event.title || "未填写事件标题")}</strong>
+          <small>${escapeHTML([event.date, event.source].filter(Boolean).join(" · ") || "事件来源待补充")}</small>
+        </div>
+        <p>${escapeHTML(event.summary || "暂无事件摘要")}</p>
+        <small>影响：${escapeHTML([
+          impact.thesisChange ? `thesis ${impact.thesisChange}` : "",
+          impact.valuationChange ? `valuation ${impact.valuationChange}` : "",
+          impact.riskChange ? `risk ${impact.riskChange}` : "",
+          impact.actionChange ? `action ${impact.actionChange}` : ""
+        ].filter(Boolean).join(" · ") || "未填写影响判断")}</small>
+      </div>
+    ` : ""}
     <div class="research-preview-grid">
       <div><span>股票</span><strong>${escapeHTML(research.name ?? "-")}</strong><small>${escapeHTML(research.symbol ?? "-")} · ${escapeHTML(research.asOf ?? "-")}</small></div>
       <div><span>安全边际</span><strong>${Number.isFinite(valuation.marginOfSafety) ? percent(valuation.marginOfSafety * 100, false) : "-"}</strong><small>${escapeHTML(valuation.fairValueRange ?? "-")}</small></div>
@@ -1149,6 +1177,11 @@ function renderResearchPreview(result, imported = false) {
       <div><span>股东回报</span><strong>${Number.isFinite(dividend.dividendPerShare) ? currency(dividend.dividendPerShare, dividend.dividendCurrency || research.currency || "CNY") : "-"}</strong><small>${dividend.fiscalYear ? `${escapeHTML(dividend.fiscalYear)} · ` : ""}综合回报按分红+回购/总市值计算</small></div>
       <div><span>长期评分</span><strong>${badge(audit.text, audit.tone)}</strong><small>${escapeHTML(audit.hasAudit ? `${audit.score}/100 · ${audit.grade}` : "待补评分")}</small></div>
     </div>
+    ${isEventUpdate ? `
+      <div class="research-warnings neutral">
+        <span>更新字段：${escapeHTML(changedFields.length ? changedFields.join(" / ") : "仅追加研究记录")}</span>
+      </div>
+    ` : ""}
     ${warnings.length ? `
       <div class="research-warnings">
         ${warnings.map((item) => `<span>${escapeHTML(item)}</span>`).join("")}
@@ -3049,6 +3082,45 @@ function renderStockDecisionLogs(stock) {
   return renderDecisionLogItems(sortedDecisionLogs(stock.symbol).slice(0, 8), "暂无该股票的决策日志");
 }
 
+function renderResearchUpdatesPanel(stock) {
+  const updates = [...(stock.researchUpdates ?? [])].sort((a, b) => String(b.importedAt || b.asOf || "").localeCompare(String(a.importedAt || a.asOf || "")));
+  return `
+    <section class="panel research-updates-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">Research Loop</p>
+          <h2>研究更新</h2>
+        </div>
+      </div>
+      <div class="research-update-list">
+        ${updates.length ? updates.map((item) => {
+          const event = item.event ?? {};
+          const impact = item.impact ?? {};
+          const impactText = [
+            impact.thesisChange ? `thesis ${impact.thesisChange}` : "",
+            impact.valuationChange ? `valuation ${impact.valuationChange}` : "",
+            impact.riskChange ? `risk ${impact.riskChange}` : "",
+            impact.actionChange ? `action ${impact.actionChange}` : ""
+          ].filter(Boolean).join(" · ");
+          return `
+            <article class="research-update-item">
+              <div>
+                <span>${escapeHTML(event.type || item.updateType || "update")}</span>
+                <strong>${escapeHTML(event.title || "未填写事件标题")}</strong>
+                <small>${escapeHTML([event.date || item.asOf, event.source].filter(Boolean).join(" · ") || item.importedAt || "-")}</small>
+              </div>
+              <p>${escapeHTML(event.summary || item.summary || "暂无摘要")}</p>
+              <small>${escapeHTML(impactText || "影响判断待补充")}</small>
+              <small>更新字段：${escapeHTML((item.changedFields ?? []).join(" / ") || "仅记录")}</small>
+              ${item.notesAppend ? `<p class="muted-note">${escapeHTML(item.notesAppend)}</p>` : ""}
+            </article>
+          `;
+        }).join("") : `<div class="empty-state">暂无研究更新记录</div>`}
+      </div>
+    </section>
+  `;
+}
+
 function renderDecisionArea(positions) {
   renderActionConclusion(positions);
   renderOpportunityRadar(positions);
@@ -3803,6 +3875,8 @@ function renderStockDetail(positions, symbol) {
         <p class="eyebrow">Records</p>
         <h2>财报日志</h2>
       </div>
+    ${renderResearchUpdatesPanel(stock)}
+
     <section class="panel decision-log-panel detail-log-panel">
       <div class="panel-head compact">
         <div>

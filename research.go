@@ -17,6 +17,7 @@ import (
 const defaultSafetyMarginTarget = 0.25
 
 type ResearchImport struct {
+	UpdateType          string              `json:"updateType,omitempty"`
 	Symbol              string              `json:"symbol"`
 	Name                string              `json:"name"`
 	AsOf                string              `json:"asOf"`
@@ -34,6 +35,9 @@ type ResearchImport struct {
 	ValuationConfidence string              `json:"valuationConfidence,omitempty"`
 	KillCriteria        json.RawMessage     `json:"killCriteria,omitempty"`
 	Notes               string              `json:"notes"`
+	Event               *ResearchEvent      `json:"event,omitempty"`
+	Impact              *ResearchImpact     `json:"impact,omitempty"`
+	Updates             *ResearchPatch      `json:"updates,omitempty"`
 }
 
 type Valuation struct {
@@ -59,14 +63,31 @@ type PlanInput struct {
 	Discipline string `json:"discipline"`
 }
 
+type ResearchPatch struct {
+	Status              string              `json:"status,omitempty"`
+	Action              string              `json:"action,omitempty"`
+	Risk                string              `json:"risk,omitempty"`
+	Notes               string              `json:"notes,omitempty"`
+	NotesAppend         string              `json:"notesAppend,omitempty"`
+	Valuation           *Valuation          `json:"valuation,omitempty"`
+	Quality             *Quality            `json:"quality,omitempty"`
+	Plan                *PlanInput          `json:"plan,omitempty"`
+	Dividend            *Dividend           `json:"dividend,omitempty"`
+	NetCash             *NetCashProfile     `json:"netCash,omitempty"`
+	OwnerCashFlowAudit  *OwnerCashFlowAudit `json:"ownerCashFlowAudit,omitempty"`
+	ValuationConfidence string              `json:"valuationConfidence,omitempty"`
+	KillCriteria        json.RawMessage     `json:"killCriteria,omitempty"`
+}
+
 type ResearchResponse struct {
-	Summary    string         `json:"summary"`
-	TargetType string         `json:"targetType"`
-	Warnings   []string       `json:"warnings"`
-	Research   ResearchImport `json:"research"`
-	Plan       []PlanItem     `json:"plan"`
-	BackupPath string         `json:"backupPath,omitempty"`
-	State      *AppState      `json:"state,omitempty"`
+	Summary       string         `json:"summary"`
+	TargetType    string         `json:"targetType"`
+	Warnings      []string       `json:"warnings"`
+	Research      ResearchImport `json:"research"`
+	Plan          []PlanItem     `json:"plan"`
+	ChangedFields []string       `json:"changedFields,omitempty"`
+	BackupPath    string         `json:"backupPath,omitempty"`
+	State         *AppState      `json:"state,omitempty"`
 }
 
 func (s *Server) handlePreviewResearch(w http.ResponseWriter, r *http.Request) {
@@ -90,13 +111,14 @@ func (s *Server) handlePreviewResearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	summary, targetType := applyResearch(&state, research)
+	summary, targetType, changedFields := applyResearch(&state, research)
 	writeJSON(w, http.StatusOK, ResearchResponse{
-		Summary:    summary,
-		TargetType: targetType,
-		Warnings:   warnings,
-		Research:   normalizeResearch(research),
-		Plan:       state.Plan,
+		Summary:       summary,
+		TargetType:    targetType,
+		Warnings:      warnings,
+		Research:      normalizeResearch(research),
+		Plan:          state.Plan,
+		ChangedFields: changedFields,
 	})
 }
 
@@ -122,7 +144,7 @@ func (s *Server) handleImportResearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	summary, targetType := applyResearch(&state, research)
+	summary, targetType, changedFields := applyResearch(&state, research)
 	appendResearchDecisionLog(&state, research, summary, targetType)
 	backupPath, err := backupPortfolioFile()
 	if err != nil {
@@ -136,13 +158,14 @@ func (s *Server) handleImportResearch(w http.ResponseWriter, r *http.Request) {
 
 	s.state = state
 	writeJSON(w, http.StatusOK, ResearchResponse{
-		Summary:    summary,
-		TargetType: targetType,
-		Warnings:   warnings,
-		Research:   normalizeResearch(research),
-		Plan:       state.Plan,
-		BackupPath: backupPath,
-		State:      &state,
+		Summary:       summary,
+		TargetType:    targetType,
+		Warnings:      warnings,
+		Research:      normalizeResearch(research),
+		Plan:          state.Plan,
+		ChangedFields: changedFields,
+		BackupPath:    backupPath,
+		State:         &state,
 	})
 }
 
@@ -170,6 +193,9 @@ func validateResearch(research ResearchImport) ([]string, error) {
 	if strings.TrimSpace(research.AsOf) == "" {
 		return nil, errors.New("asOf is required")
 	}
+	if research.UpdateType != "fullReview" && research.UpdateType != "eventUpdate" {
+		return nil, errors.New("updateType must be fullReview or eventUpdate")
+	}
 
 	asOfDate, err := time.Parse("2006-01-02", research.AsOf)
 	if err != nil {
@@ -180,42 +206,33 @@ func validateResearch(research ResearchImport) ([]string, error) {
 		return nil, fmt.Errorf("asOf cannot be later than today: %s", today.Format("2006-01-02"))
 	}
 
-	if err := validatePercent("valuation.marginOfSafety", research.Valuation.MarginOfSafety); err != nil {
-		return nil, err
-	}
-	if err := validateDividend(research.Dividend); err != nil {
-		return nil, err
-	}
-	if err := validateNetCash(research.NetCash); err != nil {
-		return nil, err
-	}
-	if err := validateOwnerCashFlowAudit(research.OwnerCashFlowAudit); err != nil {
-		return nil, err
-	}
-	if err := validateScore("quality.totalScore", research.Quality.TotalScore, 100); err != nil {
-		return nil, err
-	}
-	if err := validateScore("quality.businessModel", research.Quality.BusinessModel, 30); err != nil {
-		return nil, err
-	}
-	if err := validateScore("quality.moat", research.Quality.Moat, 25); err != nil {
-		return nil, err
-	}
-	if err := validateScore("quality.governance", research.Quality.Governance, 20); err != nil {
-		return nil, err
-	}
-	if err := validateScore("quality.financialQuality", research.Quality.FinancialQuality, 25); err != nil {
-		return nil, err
+	if research.UpdateType == "eventUpdate" {
+		eventWarnings, err := validateEventUpdate(research)
+		if err != nil {
+			return nil, err
+		}
+		warnings = append(warnings, eventWarnings...)
+	} else {
+		if err := validateFullReview(research); err != nil {
+			return nil, err
+		}
 	}
 
 	if expected := expectedCurrency(research.Symbol); expected != "" && research.Currency != "" && research.Currency != expected {
 		warnings = append(warnings, fmt.Sprintf("currency is %s, but %s usually uses %s", research.Currency, research.Symbol, expected))
 	}
-	if hasAllQualityScores(research.Quality) {
-		sum := *research.Quality.BusinessModel + *research.Quality.Moat + *research.Quality.Governance + *research.Quality.FinancialQuality
-		if math.Abs(*research.Quality.TotalScore-sum) > 0.01 {
-			warnings = append(warnings, fmt.Sprintf("quality.totalScore is %.2f, but component scores add up to %.2f", *research.Quality.TotalScore, sum))
+	qualityForCheck := research.Quality
+	if research.UpdateType == "eventUpdate" && research.Updates != nil && research.Updates.Quality != nil {
+		qualityForCheck = *research.Updates.Quality
+	}
+	if hasAllQualityScores(qualityForCheck) {
+		sum := *qualityForCheck.BusinessModel + *qualityForCheck.Moat + *qualityForCheck.Governance + *qualityForCheck.FinancialQuality
+		if math.Abs(*qualityForCheck.TotalScore-sum) > 0.01 {
+			warnings = append(warnings, fmt.Sprintf("quality.totalScore is %.2f, but component scores add up to %.2f", *qualityForCheck.TotalScore, sum))
 		}
+	}
+	if research.UpdateType == "eventUpdate" {
+		return warnings, nil
 	}
 	if strings.TrimSpace(research.Status) == "" {
 		warnings = append(warnings, "status is empty")
@@ -238,31 +255,133 @@ func validateResearch(research ResearchImport) ([]string, error) {
 	return warnings, nil
 }
 
-func applyResearch(state *AppState, research ResearchImport) (string, string) {
+func validateFullReview(research ResearchImport) error {
+	if err := validatePercent("valuation.marginOfSafety", research.Valuation.MarginOfSafety); err != nil {
+		return err
+	}
+	if err := validateDividend(research.Dividend); err != nil {
+		return err
+	}
+	if err := validateNetCash(research.NetCash); err != nil {
+		return err
+	}
+	if err := validateOwnerCashFlowAudit(research.OwnerCashFlowAudit); err != nil {
+		return err
+	}
+	return validateQuality(research.Quality)
+}
+
+func validateEventUpdate(research ResearchImport) ([]string, error) {
+	warnings := []string{}
+	if research.Event == nil {
+		return nil, errors.New("event is required when updateType is eventUpdate")
+	}
+	if strings.TrimSpace(research.Event.Title) == "" {
+		return nil, errors.New("event.title is required when updateType is eventUpdate")
+	}
+	if strings.TrimSpace(research.Event.Date) == "" {
+		return nil, errors.New("event.date is required when updateType is eventUpdate")
+	}
+	if _, err := time.Parse("2006-01-02", research.Event.Date); err != nil {
+		return nil, fmt.Errorf("event.date must be YYYY-MM-DD: %w", err)
+	}
+	if strings.TrimSpace(research.Event.Type) == "" {
+		warnings = append(warnings, "event.type is empty")
+	}
+	if strings.TrimSpace(research.Event.Source) == "" {
+		warnings = append(warnings, "event.source is empty")
+	}
+	if strings.TrimSpace(research.Event.Summary) == "" {
+		warnings = append(warnings, "event.summary is empty")
+	}
+	if research.Updates == nil {
+		warnings = append(warnings, "updates is empty; only research timeline will be appended")
+		return warnings, nil
+	}
+	if research.Updates.Valuation != nil {
+		if err := validatePercent("updates.valuation.marginOfSafety", research.Updates.Valuation.MarginOfSafety); err != nil {
+			return nil, err
+		}
+	}
+	if research.Updates.Dividend != nil {
+		if err := validateDividend(research.Updates.Dividend); err != nil {
+			return nil, err
+		}
+	}
+	if research.Updates.NetCash != nil {
+		if err := validateNetCash(research.Updates.NetCash); err != nil {
+			return nil, err
+		}
+	}
+	if research.Updates.OwnerCashFlowAudit != nil {
+		if err := validateOwnerCashFlowAudit(research.Updates.OwnerCashFlowAudit); err != nil {
+			return nil, err
+		}
+	}
+	if research.Updates.Quality != nil {
+		if err := validateQuality(*research.Updates.Quality); err != nil {
+			return nil, err
+		}
+	}
+	return warnings, nil
+}
+
+func validateQuality(quality Quality) error {
+	if err := validateScore("quality.totalScore", quality.TotalScore, 100); err != nil {
+		return err
+	}
+	if err := validateScore("quality.businessModel", quality.BusinessModel, 30); err != nil {
+		return err
+	}
+	if err := validateScore("quality.moat", quality.Moat, 25); err != nil {
+		return err
+	}
+	if err := validateScore("quality.governance", quality.Governance, 20); err != nil {
+		return err
+	}
+	return validateScore("quality.financialQuality", quality.FinancialQuality, 25)
+}
+
+func applyResearch(state *AppState, research ResearchImport) (string, string, []string) {
 	symbol := normalizeSymbol(research.Symbol)
 	now := time.Now().Format("2006-01-02 15:04:05")
 	updateLabel := fmt.Sprintf("%s；ChatGPT分析导入；分析日 %s", now, research.AsOf)
 
 	for i := range state.Holdings {
 		if normalizeSymbol(state.Holdings[i].Symbol) == symbol {
+			if research.UpdateType == "eventUpdate" {
+				changedFields := applyHoldingEventUpdate(&state.Holdings[i], research, now)
+				upsertPlanFromPatch(state, research)
+				return fmt.Sprintf("event update for holding %s (%s)", research.Symbol, research.Name), "holding", changedFields
+			}
 			applyHoldingResearch(&state.Holdings[i], research, updateLabel)
 			upsertPlan(state, research)
-			return fmt.Sprintf("updated holding %s (%s)", research.Symbol, research.Name), "holding"
+			return fmt.Sprintf("updated holding %s (%s)", research.Symbol, research.Name), "holding", fullReviewChangedFields()
 		}
 	}
 
 	for i := range state.Candidates {
 		if normalizeSymbol(state.Candidates[i].Symbol) == symbol {
+			if research.UpdateType == "eventUpdate" {
+				changedFields := applyCandidateEventUpdate(&state.Candidates[i], research, now)
+				upsertPlanFromPatch(state, research)
+				return fmt.Sprintf("event update for candidate %s (%s)", research.Symbol, research.Name), "candidate", changedFields
+			}
 			applyCandidateResearch(&state.Candidates[i], research, updateLabel)
 			upsertPlan(state, research)
-			return fmt.Sprintf("updated candidate %s (%s)", research.Symbol, research.Name), "candidate"
+			return fmt.Sprintf("updated candidate %s (%s)", research.Symbol, research.Name), "candidate", fullReviewChangedFields()
 		}
 	}
 
 	state.Candidates = append(state.Candidates, Candidate{Symbol: normalizeDisplaySymbol(research.Symbol)})
+	if research.UpdateType == "eventUpdate" {
+		changedFields := applyCandidateEventUpdate(&state.Candidates[len(state.Candidates)-1], research, now)
+		upsertPlanFromPatch(state, research)
+		return fmt.Sprintf("added candidate event update %s (%s)", research.Symbol, research.Name), "newCandidate", changedFields
+	}
 	applyCandidateResearch(&state.Candidates[len(state.Candidates)-1], research, updateLabel)
 	upsertPlan(state, research)
-	return fmt.Sprintf("added candidate %s (%s)", research.Symbol, research.Name), "newCandidate"
+	return fmt.Sprintf("added candidate %s (%s)", research.Symbol, research.Name), "newCandidate", fullReviewChangedFields()
 }
 
 func applyHoldingResearch(holding *Holding, research ResearchImport, updateLabel string) {
@@ -329,6 +448,402 @@ func applyCandidateResearch(candidate *Candidate, research ResearchImport, updat
 	}
 }
 
+func applyHoldingEventUpdate(holding *Holding, research ResearchImport, importedAt string) []string {
+	holding.Symbol = normalizeDisplaySymbol(research.Symbol)
+	if strings.TrimSpace(research.Name) != "" {
+		holding.Name = strings.TrimSpace(research.Name)
+	}
+	changedFields := applyResearchPatchToHolding(holding, research)
+	appendHoldingResearchUpdate(holding, research, importedAt, changedFields)
+	return changedFields
+}
+
+func applyCandidateEventUpdate(candidate *Candidate, research ResearchImport, importedAt string) []string {
+	candidate.Symbol = normalizeDisplaySymbol(research.Symbol)
+	if strings.TrimSpace(research.Name) != "" {
+		candidate.Name = strings.TrimSpace(research.Name)
+	}
+	changedFields := applyResearchPatchToCandidate(candidate, research)
+	appendCandidateResearchUpdate(candidate, research, importedAt, changedFields)
+	return changedFields
+}
+
+func applyResearchPatchToHolding(holding *Holding, research ResearchImport) []string {
+	patch := research.Updates
+	changed := []string{"researchUpdates"}
+	if patch == nil {
+		return changed
+	}
+	if text := strings.TrimSpace(patch.Status); text != "" {
+		holding.Status = text
+		changed = append(changed, "status")
+	}
+	if text := strings.TrimSpace(patch.Action); text != "" {
+		holding.Action = text
+		changed = append(changed, "action")
+	}
+	if text := strings.TrimSpace(patch.Risk); text != "" {
+		holding.Risk = text
+		changed = append(changed, "risk")
+	}
+	if text := strings.TrimSpace(patch.Notes); text != "" {
+		holding.Notes = text
+		changed = append(changed, "notes")
+	}
+	if text := strings.TrimSpace(patch.ValuationConfidence); text != "" {
+		holding.ValuationConfidence = text
+		changed = append(changed, "valuationConfidence")
+	}
+	if len(patch.KillCriteria) > 0 {
+		holding.KillCriteria = cloneRawMessage(patch.KillCriteria)
+		changed = append(changed, "killCriteria")
+	}
+	if patch.Valuation != nil {
+		if applyValuationPatch(&holding.IntrinsicValue, &holding.FairValueRange, &holding.TargetBuyPrice, patch.Valuation) {
+			holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, patch.Valuation.MarginOfSafety)
+			changed = append(changed, "valuation")
+		}
+	}
+	if patch.Quality != nil && applyQualityPatch(&holding.QualityScore, &holding.BusinessModel, &holding.Moat, &holding.Governance, &holding.FinancialQuality, patch.Quality) {
+		changed = append(changed, "quality")
+	}
+	if mergeDividendPatch(&holding.Dividend, patch.Dividend, holding.Currency) {
+		changed = append(changed, "dividend")
+	}
+	if mergeNetCashPatch(&holding.NetCash, patch.NetCash) {
+		changed = append(changed, "netCash")
+	}
+	if mergeOwnerAuditPatch(&holding.OwnerCashFlowAudit, patch.OwnerCashFlowAudit) {
+		changed = append(changed, "ownerCashFlowAudit")
+	}
+	return uniqueStrings(changed)
+}
+
+func applyResearchPatchToCandidate(candidate *Candidate, research ResearchImport) []string {
+	patch := research.Updates
+	changed := []string{"researchUpdates"}
+	if patch == nil {
+		return changed
+	}
+	if text := strings.TrimSpace(patch.Status); text != "" {
+		candidate.Status = text
+		changed = append(changed, "status")
+	}
+	if text := strings.TrimSpace(patch.Action); text != "" {
+		candidate.Action = text
+		changed = append(changed, "action")
+	}
+	if text := strings.TrimSpace(patch.Risk); text != "" {
+		candidate.Risk = text
+		changed = append(changed, "risk")
+	}
+	if text := strings.TrimSpace(patch.Notes); text != "" {
+		candidate.Notes = text
+		changed = append(changed, "notes")
+	}
+	if text := strings.TrimSpace(patch.ValuationConfidence); text != "" {
+		candidate.ValuationConfidence = text
+		changed = append(changed, "valuationConfidence")
+	}
+	if len(patch.KillCriteria) > 0 {
+		candidate.KillCriteria = cloneRawMessage(patch.KillCriteria)
+		changed = append(changed, "killCriteria")
+	}
+	if patch.Valuation != nil {
+		if applyValuationPatch(&candidate.IntrinsicValue, &candidate.FairValueRange, &candidate.TargetBuyPrice, patch.Valuation) {
+			candidate.MarginOfSafety = marginOfSafetyFromPrice(candidate.IntrinsicValue, candidate.CurrentPrice, patch.Valuation.MarginOfSafety)
+			changed = append(changed, "valuation")
+		}
+	}
+	if patch.Quality != nil && applyQualityPatch(&candidate.QualityScore, &candidate.BusinessModel, &candidate.Moat, &candidate.Governance, &candidate.FinancialQuality, patch.Quality) {
+		changed = append(changed, "quality")
+	}
+	if mergeDividendPatch(&candidate.Dividend, patch.Dividend, candidate.Currency) {
+		changed = append(changed, "dividend")
+	}
+	if mergeNetCashPatch(&candidate.NetCash, patch.NetCash) {
+		changed = append(changed, "netCash")
+	}
+	if mergeOwnerAuditPatch(&candidate.OwnerCashFlowAudit, patch.OwnerCashFlowAudit) {
+		changed = append(changed, "ownerCashFlowAudit")
+	}
+	return uniqueStrings(changed)
+}
+
+func applyValuationPatch(intrinsicValue **float64, fairValueRange *string, targetBuyPrice **float64, valuation *Valuation) bool {
+	changed := false
+	if valuation.IntrinsicValue != nil {
+		*intrinsicValue = valuation.IntrinsicValue
+		changed = true
+	}
+	if text := strings.TrimSpace(valuation.FairValueRange); text != "" {
+		*fairValueRange = text
+		changed = true
+	}
+	if valuation.TargetBuyPrice != nil {
+		*targetBuyPrice = valuation.TargetBuyPrice
+		changed = true
+	}
+	if valuation.MarginOfSafety != nil {
+		changed = true
+	}
+	return changed
+}
+
+func applyQualityPatch(totalScore **float64, businessModel **float64, moat **float64, governance **float64, financialQuality **float64, quality *Quality) bool {
+	changed := false
+	if quality.TotalScore != nil {
+		*totalScore = quality.TotalScore
+		changed = true
+	}
+	if quality.BusinessModel != nil {
+		*businessModel = quality.BusinessModel
+		changed = true
+	}
+	if quality.Moat != nil {
+		*moat = quality.Moat
+		changed = true
+	}
+	if quality.Governance != nil {
+		*governance = quality.Governance
+		changed = true
+	}
+	if quality.FinancialQuality != nil {
+		*financialQuality = quality.FinancialQuality
+		changed = true
+	}
+	return changed
+}
+
+func mergeDividendPatch(current **Dividend, patch *Dividend, fallbackCurrency string) bool {
+	if patch == nil {
+		return false
+	}
+	if *current == nil {
+		*current = &Dividend{}
+	}
+	changed := false
+	dividend := *current
+	if text := strings.TrimSpace(patch.FiscalYear); text != "" {
+		dividend.FiscalYear = text
+		changed = true
+	}
+	if patch.DividendPerShare != nil {
+		dividend.DividendPerShare = patch.DividendPerShare
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.DividendCurrency); text != "" {
+		dividend.DividendCurrency = strings.ToUpper(text)
+		changed = true
+	} else if dividend.DividendCurrency == "" && fallbackCurrency != "" {
+		dividend.DividendCurrency = strings.ToUpper(fallbackCurrency)
+	}
+	if patch.CashDividendTotal != nil {
+		dividend.CashDividendTotal = patch.CashDividendTotal
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.CashDividendCurrency); text != "" {
+		dividend.CashDividendCurrency = strings.ToUpper(text)
+		changed = true
+	}
+	if patch.BuybackAmount != nil {
+		dividend.BuybackAmount = patch.BuybackAmount
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.BuybackCurrency); text != "" {
+		dividend.BuybackCurrency = strings.ToUpper(text)
+		changed = true
+	}
+	if patch.DividendYield != nil {
+		dividend.DividendYield = patch.DividendYield
+		changed = true
+	}
+	if patch.PayoutRatio != nil {
+		dividend.PayoutRatio = patch.PayoutRatio
+		changed = true
+	}
+	if patch.EstimatedAnnualCash != nil {
+		dividend.EstimatedAnnualCash = patch.EstimatedAnnualCash
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.Reliability); text != "" {
+		dividend.Reliability = text
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.ForecastFiscalYear); text != "" {
+		dividend.ForecastFiscalYear = text
+		changed = true
+	}
+	if patch.ForecastPerShare != nil {
+		dividend.ForecastPerShare = patch.ForecastPerShare
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.ForecastCurrency); text != "" {
+		dividend.ForecastCurrency = strings.ToUpper(text)
+		changed = true
+	}
+	if patch.ForecastYield != nil {
+		dividend.ForecastYield = patch.ForecastYield
+		changed = true
+	}
+	return changed
+}
+
+func mergeNetCashPatch(current **NetCashProfile, patch *NetCashProfile) bool {
+	if patch == nil {
+		return false
+	}
+	if *current == nil {
+		*current = &NetCashProfile{}
+	}
+	changed := false
+	netCash := *current
+	if patch.CashAndShortInvestments != nil {
+		netCash.CashAndShortInvestments = patch.CashAndShortInvestments
+		changed = true
+	}
+	if patch.InterestBearingDebt != nil {
+		netCash.InterestBearingDebt = patch.InterestBearingDebt
+		changed = true
+	}
+	if patch.NetCash != nil {
+		netCash.NetCash = patch.NetCash
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.Currency); text != "" {
+		netCash.Currency = strings.ToUpper(text)
+		changed = true
+	}
+	if patch.Haircut != nil {
+		netCash.Haircut = patch.Haircut
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.HaircutReason); text != "" {
+		netCash.HaircutReason = text
+		changed = true
+	}
+	if patch.AdjustedNetCash != nil {
+		netCash.AdjustedNetCash = patch.AdjustedNetCash
+		changed = true
+	}
+	if patch.ExCashPE != nil {
+		netCash.ExCashPE = patch.ExCashPE
+		changed = true
+	}
+	if patch.ExCashPFCF != nil {
+		netCash.ExCashPFCF = patch.ExCashPFCF
+		changed = true
+	}
+	if patch.FCFYield != nil {
+		netCash.FCFYield = patch.FCFYield
+		changed = true
+	}
+	if patch.ShareholderFCF != nil {
+		netCash.ShareholderFCF = patch.ShareholderFCF
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.ShareholderFCFCurrency); text != "" {
+		netCash.ShareholderFCFCurrency = strings.ToUpper(text)
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.ShareholderFCFBasis); text != "" {
+		netCash.ShareholderFCFBasis = text
+		changed = true
+	}
+	if patch.ConsolidatedFCF != nil {
+		netCash.ConsolidatedFCF = patch.ConsolidatedFCF
+		changed = true
+	}
+	if patch.MinorityFCFAdjustment != nil {
+		netCash.MinorityFCFAdjustment = patch.MinorityFCFAdjustment
+		changed = true
+	}
+	if patch.FCFPositiveYears != nil {
+		netCash.FCFPositiveYears = patch.FCFPositiveYears
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.Note); text != "" {
+		netCash.Note = text
+		changed = true
+	}
+	return changed
+}
+
+func mergeOwnerAuditPatch(current **OwnerCashFlowAudit, patch *OwnerCashFlowAudit) bool {
+	if patch == nil {
+		return false
+	}
+	if *current == nil {
+		*current = &OwnerCashFlowAudit{}
+	}
+	changed := false
+	audit := *current
+	changed = mergeOwnerAuditItem(&audit.TenYearDemand, patch.TenYearDemand) || changed
+	changed = mergeOwnerAuditItem(&audit.AssetDurability, patch.AssetDurability) || changed
+	changed = mergeOwnerAuditItem(&audit.MaintenanceCapexLight, patch.MaintenanceCapexLight) || changed
+	changed = mergeOwnerAuditItem(&audit.DividendFCFSupport, patch.DividendFCFSupport) || changed
+	changed = mergeOwnerAuditItem(&audit.DividendReinvestmentEfficiency, patch.DividendReinvestmentEfficiency) || changed
+	changed = mergeOwnerAuditItem(&audit.RoeRoicDurability, patch.RoeRoicDurability) || changed
+	changed = mergeOwnerAuditItem(&audit.ValuationSystemRisk, patch.ValuationSystemRisk) || changed
+	return changed
+}
+
+func mergeOwnerAuditItem(current *OwnerAuditItem, patch OwnerAuditItem) bool {
+	changed := false
+	if text := strings.TrimSpace(patch.Status); text != "" {
+		current.Status = text
+		changed = true
+	}
+	if text := strings.TrimSpace(patch.Note); text != "" {
+		current.Note = text
+		changed = true
+	}
+	return changed
+}
+
+func appendHoldingResearchUpdate(holding *Holding, research ResearchImport, importedAt string, changedFields []string) {
+	holding.ResearchUpdates = appendResearchUpdate(holding.ResearchUpdates, research, importedAt, changedFields)
+}
+
+func appendCandidateResearchUpdate(candidate *Candidate, research ResearchImport, importedAt string, changedFields []string) {
+	candidate.ResearchUpdates = appendResearchUpdate(candidate.ResearchUpdates, research, importedAt, changedFields)
+}
+
+func appendResearchUpdate(updates []ResearchUpdate, research ResearchImport, importedAt string, changedFields []string) []ResearchUpdate {
+	event := ResearchEvent{}
+	if research.Event != nil {
+		event = *research.Event
+	}
+	impact := ResearchImpact{}
+	if research.Impact != nil {
+		impact = *research.Impact
+	}
+	notesAppend := ""
+	if research.Updates != nil {
+		notesAppend = strings.TrimSpace(research.Updates.NotesAppend)
+	}
+	entry := ResearchUpdate{
+		ID:            time.Now().UnixNano(),
+		ImportedAt:    importedAt,
+		AsOf:          research.AsOf,
+		UpdateType:    research.UpdateType,
+		Event:         event,
+		Impact:        impact,
+		Summary:       firstNonEmpty(event.Summary, notesAppend),
+		ChangedFields: uniqueStrings(changedFields),
+		NotesAppend:   notesAppend,
+	}
+	updates = append(updates, entry)
+	if len(updates) > 50 {
+		updates = updates[len(updates)-50:]
+	}
+	return updates
+}
+
+func fullReviewChangedFields() []string {
+	return []string{"valuation", "quality", "status", "action", "risk", "plan", "dividend", "netCash", "ownerCashFlowAudit", "notes"}
+}
+
 func upsertPlan(state *AppState, research ResearchImport) {
 	if strings.TrimSpace(research.Plan.Priority) == "" &&
 		strings.TrimSpace(research.Plan.Advice) == "" &&
@@ -358,6 +873,23 @@ func upsertPlan(state *AppState, research ResearchImport) {
 
 	state.Plan = append(state.Plan, next)
 	normalizePlanRanks(state.Plan)
+}
+
+func upsertPlanFromPatch(state *AppState, research ResearchImport) {
+	if research.Updates == nil || research.Updates.Plan == nil {
+		return
+	}
+	plan := research.Updates.Plan
+	if strings.TrimSpace(plan.Priority) == "" &&
+		strings.TrimSpace(plan.Advice) == "" &&
+		strings.TrimSpace(plan.Discipline) == "" {
+		return
+	}
+	upsertPlan(state, ResearchImport{
+		Symbol: normalizeDisplaySymbol(research.Symbol),
+		Name:   strings.TrimSpace(research.Name),
+		Plan:   *plan,
+	})
 }
 
 func samePlanItem(current, next PlanItem) bool {
@@ -415,6 +947,10 @@ func backupPortfolioFile() (string, error) {
 }
 
 func normalizeResearch(research ResearchImport) ResearchImport {
+	research.UpdateType = strings.TrimSpace(research.UpdateType)
+	if research.UpdateType == "" {
+		research.UpdateType = "fullReview"
+	}
 	research.Symbol = normalizeDisplaySymbol(research.Symbol)
 	research.Name = strings.TrimSpace(research.Name)
 	research.AsOf = strings.TrimSpace(research.AsOf)
@@ -435,7 +971,50 @@ func normalizeResearch(research ResearchImport) ResearchImport {
 	research.NetCash = normalizeNetCash(research.NetCash, research.Currency)
 	research.OwnerCashFlowAudit = normalizeOwnerCashFlowAudit(research.OwnerCashFlowAudit)
 	research.Notes = strings.TrimSpace(research.Notes)
+	if research.Event != nil {
+		research.Event.Type = strings.TrimSpace(research.Event.Type)
+		research.Event.Title = strings.TrimSpace(research.Event.Title)
+		research.Event.Date = strings.TrimSpace(research.Event.Date)
+		research.Event.Source = strings.TrimSpace(research.Event.Source)
+		research.Event.Summary = strings.TrimSpace(research.Event.Summary)
+	}
+	if research.Impact != nil {
+		research.Impact.ThesisChange = strings.TrimSpace(research.Impact.ThesisChange)
+		research.Impact.ValuationChange = strings.TrimSpace(research.Impact.ValuationChange)
+		research.Impact.RiskChange = strings.TrimSpace(research.Impact.RiskChange)
+		research.Impact.ActionChange = strings.TrimSpace(research.Impact.ActionChange)
+	}
+	research.Updates = normalizeResearchPatch(research.Updates, research.Currency)
 	return research
+}
+
+func normalizeResearchPatch(patch *ResearchPatch, currency string) *ResearchPatch {
+	if patch == nil {
+		return nil
+	}
+	patch.Status = strings.TrimSpace(patch.Status)
+	patch.Action = strings.TrimSpace(patch.Action)
+	patch.Risk = strings.TrimSpace(patch.Risk)
+	patch.Notes = strings.TrimSpace(patch.Notes)
+	patch.NotesAppend = strings.TrimSpace(patch.NotesAppend)
+	patch.ValuationConfidence = strings.TrimSpace(patch.ValuationConfidence)
+	patch.KillCriteria = normalizeRawMessage(patch.KillCriteria)
+	if patch.Valuation != nil {
+		patch.Valuation.FairValueRange = strings.TrimSpace(patch.Valuation.FairValueRange)
+		if patch.Valuation.TargetBuyPrice == nil && patch.Valuation.IntrinsicValue != nil {
+			patch.Valuation.TargetBuyPrice = targetBuyPriceFromIntrinsicValue(patch.Valuation.IntrinsicValue)
+		}
+		patch.Valuation.PriceLevels = nil
+	}
+	if patch.Plan != nil {
+		patch.Plan.Priority = strings.TrimSpace(patch.Plan.Priority)
+		patch.Plan.Advice = strings.TrimSpace(patch.Plan.Advice)
+		patch.Plan.Discipline = strings.TrimSpace(patch.Plan.Discipline)
+	}
+	patch.Dividend = normalizeDividend(patch.Dividend, currency)
+	patch.NetCash = normalizeNetCash(patch.NetCash, currency)
+	patch.OwnerCashFlowAudit = normalizeOwnerCashFlowAudit(patch.OwnerCashFlowAudit)
+	return patch
 }
 
 func normalizeRawMessage(raw json.RawMessage) json.RawMessage {
@@ -492,10 +1071,22 @@ func validateDividend(dividend *Dividend) error {
 	if err := validatePositiveAmount("dividend.dividendPerShare", dividend.DividendPerShare); err != nil {
 		return err
 	}
+	if err := validateNonNegativeAmount("dividend.cashDividendTotal", dividend.CashDividendTotal); err != nil {
+		return err
+	}
+	if err := validateNonNegativeAmount("dividend.buybackAmount", dividend.BuybackAmount); err != nil {
+		return err
+	}
+	if err := validateRatio("dividend.dividendYield", dividend.DividendYield, 5); err != nil {
+		return err
+	}
 	if err := validatePositiveAmount("dividend.forecastPerShare", dividend.ForecastPerShare); err != nil {
 		return err
 	}
 	if err := validateRatio("dividend.forecastYield", dividend.ForecastYield, 5); err != nil {
+		return err
+	}
+	if err := validateNonNegativeAmount("dividend.estimatedAnnualCash", dividend.EstimatedAnnualCash); err != nil {
 		return err
 	}
 	return validateRatio("dividend.payoutRatio", dividend.PayoutRatio, 5)
@@ -600,17 +1191,35 @@ func normalizeDividend(dividend *Dividend, fallbackCurrency string) *Dividend {
 	if dividend == nil {
 		return nil
 	}
+	hasContent := strings.TrimSpace(dividend.FiscalYear) != "" ||
+		dividend.DividendPerShare != nil ||
+		strings.TrimSpace(dividend.DividendCurrency) != "" ||
+		dividend.CashDividendTotal != nil ||
+		strings.TrimSpace(dividend.CashDividendCurrency) != "" ||
+		dividend.BuybackAmount != nil ||
+		strings.TrimSpace(dividend.BuybackCurrency) != "" ||
+		dividend.DividendYield != nil ||
+		dividend.PayoutRatio != nil ||
+		dividend.EstimatedAnnualCash != nil ||
+		strings.TrimSpace(dividend.Reliability) != "" ||
+		strings.TrimSpace(dividend.ForecastFiscalYear) != "" ||
+		dividend.ForecastPerShare != nil ||
+		strings.TrimSpace(dividend.ForecastCurrency) != "" ||
+		dividend.ForecastYield != nil
+	if !hasContent {
+		return nil
+	}
 	next := &Dividend{
 		FiscalYear:           strings.TrimSpace(dividend.FiscalYear),
 		DividendPerShare:     cloneFloat(dividend.DividendPerShare),
 		DividendCurrency:     strings.ToUpper(strings.TrimSpace(dividend.DividendCurrency)),
-		CashDividendTotal:    nil,
-		CashDividendCurrency: "",
-		BuybackAmount:        nil,
-		BuybackCurrency:      "",
-		DividendYield:        nil,
+		CashDividendTotal:    cloneFloat(dividend.CashDividendTotal),
+		CashDividendCurrency: strings.ToUpper(strings.TrimSpace(dividend.CashDividendCurrency)),
+		BuybackAmount:        cloneFloat(dividend.BuybackAmount),
+		BuybackCurrency:      strings.ToUpper(strings.TrimSpace(dividend.BuybackCurrency)),
+		DividendYield:        cloneFloat(dividend.DividendYield),
 		PayoutRatio:          cloneFloat(dividend.PayoutRatio),
-		EstimatedAnnualCash:  nil,
+		EstimatedAnnualCash:  cloneFloat(dividend.EstimatedAnnualCash),
 		Reliability:          strings.TrimSpace(dividend.Reliability),
 		ForecastFiscalYear:   strings.TrimSpace(dividend.ForecastFiscalYear),
 		ForecastPerShare:     cloneFloat(dividend.ForecastPerShare),
@@ -619,6 +1228,12 @@ func normalizeDividend(dividend *Dividend, fallbackCurrency string) *Dividend {
 	}
 	if next.DividendCurrency == "" {
 		next.DividendCurrency = strings.ToUpper(strings.TrimSpace(fallbackCurrency))
+	}
+	if next.CashDividendCurrency == "" {
+		next.CashDividendCurrency = next.DividendCurrency
+	}
+	if next.BuybackCurrency == "" {
+		next.BuybackCurrency = next.CashDividendCurrency
 	}
 	if next.ForecastCurrency == "" {
 		next.ForecastCurrency = strings.ToUpper(strings.TrimSpace(fallbackCurrency))
@@ -633,6 +1248,7 @@ func normalizeDividend(dividend *Dividend, fallbackCurrency string) *Dividend {
 		next.DividendYield == nil &&
 		next.PayoutRatio == nil &&
 		next.EstimatedAnnualCash == nil &&
+		next.Reliability == "" &&
 		next.ForecastFiscalYear == "" &&
 		next.ForecastPerShare == nil &&
 		next.ForecastCurrency == "" &&
@@ -688,6 +1304,11 @@ func normalizeNetCash(netCash *NetCashProfile, fallbackCurrency string) *NetCash
 		next.ExCashPE == nil &&
 		next.ExCashPFCF == nil &&
 		next.FCFYield == nil &&
+		next.ShareholderFCF == nil &&
+		next.ShareholderFCFCurrency == "" &&
+		next.ShareholderFCFBasis == "" &&
+		next.ConsolidatedFCF == nil &&
+		next.MinorityFCFAdjustment == nil &&
 		next.FCFPositiveYears == nil &&
 		next.Note == "" {
 		return nil

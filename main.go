@@ -14,6 +14,7 @@ import (
 )
 
 const dataFile = "data/portfolio.json"
+const runtimeQuotesFile = "data/runtime/quotes.json"
 const decisionLogLimit = 500
 
 type AppState struct {
@@ -58,12 +59,12 @@ type Holding struct {
 	Name                string              `json:"name"`
 	Shares              float64             `json:"shares"`
 	Cost                float64             `json:"cost"`
-	CurrentPrice        float64             `json:"currentPrice"`
-	PreviousClose       float64             `json:"previousClose"`
+	CurrentPrice        float64             `json:"currentPrice,omitempty"`
+	PreviousClose       float64             `json:"previousClose,omitempty"`
 	MarketCap           *float64            `json:"marketCap,omitempty"`
 	MarketCapCurrency   string              `json:"marketCapCurrency,omitempty"`
-	CurrentPriceDate    string              `json:"currentPriceDate"`
-	PreviousCloseDate   string              `json:"previousCloseDate"`
+	CurrentPriceDate    string              `json:"currentPriceDate,omitempty"`
+	PreviousCloseDate   string              `json:"previousCloseDate,omitempty"`
 	Action              string              `json:"action"`
 	Status              string              `json:"status"`
 	MarginOfSafety      *float64            `json:"marginOfSafety"`
@@ -87,6 +88,7 @@ type Holding struct {
 	Dividend            *Dividend           `json:"dividend,omitempty"`
 	NetCash             *NetCashProfile     `json:"netCash,omitempty"`
 	OwnerCashFlowAudit  *OwnerCashFlowAudit `json:"ownerCashFlowAudit,omitempty"`
+	ResearchUpdates     []ResearchUpdate    `json:"researchUpdates,omitempty"`
 	Financials          *Financials         `json:"financials,omitempty"`
 }
 
@@ -149,6 +151,33 @@ type OwnerAuditItem struct {
 	Note   string `json:"note,omitempty"`
 }
 
+type ResearchUpdate struct {
+	ID            int64          `json:"id"`
+	ImportedAt    string         `json:"importedAt"`
+	AsOf          string         `json:"asOf"`
+	UpdateType    string         `json:"updateType"`
+	Event         ResearchEvent  `json:"event"`
+	Impact        ResearchImpact `json:"impact,omitempty"`
+	Summary       string         `json:"summary,omitempty"`
+	ChangedFields []string       `json:"changedFields,omitempty"`
+	NotesAppend   string         `json:"notesAppend,omitempty"`
+}
+
+type ResearchEvent struct {
+	Type    string `json:"type,omitempty"`
+	Title   string `json:"title,omitempty"`
+	Date    string `json:"date,omitempty"`
+	Source  string `json:"source,omitempty"`
+	Summary string `json:"summary,omitempty"`
+}
+
+type ResearchImpact struct {
+	ThesisChange    string `json:"thesisChange,omitempty"`
+	ValuationChange string `json:"valuationChange,omitempty"`
+	RiskChange      string `json:"riskChange,omitempty"`
+	ActionChange    string `json:"actionChange,omitempty"`
+}
+
 type Report struct {
 	Period string `json:"period"`
 	Kind   string `json:"kind"`
@@ -172,12 +201,12 @@ type Candidate struct {
 	Name                string              `json:"name"`
 	Status              string              `json:"status"`
 	Action              string              `json:"action"`
-	CurrentPrice        float64             `json:"currentPrice"`
-	PreviousClose       float64             `json:"previousClose"`
+	CurrentPrice        float64             `json:"currentPrice,omitempty"`
+	PreviousClose       float64             `json:"previousClose,omitempty"`
 	MarketCap           *float64            `json:"marketCap,omitempty"`
 	MarketCapCurrency   string              `json:"marketCapCurrency,omitempty"`
-	CurrentPriceDate    string              `json:"currentPriceDate"`
-	PreviousCloseDate   string              `json:"previousCloseDate"`
+	CurrentPriceDate    string              `json:"currentPriceDate,omitempty"`
+	PreviousCloseDate   string              `json:"previousCloseDate,omitempty"`
 	MarginOfSafety      *float64            `json:"marginOfSafety"`
 	QualityScore        *float64            `json:"qualityScore"`
 	Risk                string              `json:"risk"`
@@ -199,6 +228,7 @@ type Candidate struct {
 	Dividend            *Dividend           `json:"dividend,omitempty"`
 	NetCash             *NetCashProfile     `json:"netCash,omitempty"`
 	OwnerCashFlowAudit  *OwnerCashFlowAudit `json:"ownerCashFlowAudit,omitempty"`
+	ResearchUpdates     []ResearchUpdate    `json:"researchUpdates,omitempty"`
 	Financials          *Financials         `json:"financials,omitempty"`
 }
 
@@ -502,9 +532,20 @@ func appendResearchDecisionLog(state *AppState, research ResearchImport, summary
 	name, price, currency, decision, discipline := decisionLogContext(state, research.Symbol)
 	name = firstNonEmpty(name, research.Name)
 	currency = firstNonEmpty(currency, research.Currency)
-	decision = firstNonEmpty(decision, research.Action, research.Status)
-	discipline = firstNonEmpty(discipline, research.Plan.Discipline, research.Status)
+	if research.UpdateType == "eventUpdate" && research.Updates != nil {
+		decision = firstNonEmpty(research.Updates.Action, research.Updates.Status, decision)
+		if research.Updates.Plan != nil {
+			discipline = firstNonEmpty(research.Updates.Plan.Discipline, discipline)
+		}
+		discipline = firstNonEmpty(discipline, research.Updates.Status)
+	} else {
+		decision = firstNonEmpty(decision, research.Action, research.Status)
+		discipline = firstNonEmpty(discipline, research.Plan.Discipline, research.Status)
+	}
 	detail := strings.TrimSpace(summary)
+	if research.UpdateType == "eventUpdate" && research.Event != nil {
+		detail = strings.TrimSpace(firstNonEmpty(research.Event.Title, research.Event.Summary) + "；" + detail)
+	}
 	if strings.TrimSpace(targetType) != "" {
 		detail = strings.TrimSpace(targetType + "；" + detail)
 	}
@@ -669,10 +710,14 @@ func loadState() (AppState, error) {
 	if err := json.Unmarshal(body, &state); err != nil {
 		return AppState{}, err
 	}
+	if err := mergeRuntimeQuotes(&state); err != nil {
+		return AppState{}, err
+	}
 	return state, nil
 }
 
 func saveState(state AppState) error {
+	state = persistentState(state)
 	if err := os.MkdirAll(filepath.Dir(dataFile), 0o755); err != nil {
 		return err
 	}

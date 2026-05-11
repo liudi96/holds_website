@@ -2658,6 +2658,38 @@ label textarea {
   line-height: 1.5;
 }
 
+.research-event-card,
+.research-update-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.research-event-card div,
+.research-update-item div {
+  display: grid;
+  gap: 3px;
+}
+
+.research-event-card span,
+.research-event-card small,
+.research-update-item span,
+.research-update-item small,
+.muted-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.research-event-card p,
+.research-update-item p {
+  margin: 0;
+  line-height: 1.6;
+}
+
 .research-preview-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2701,6 +2733,17 @@ label textarea {
   background: #fff8ed;
   color: #8a5a12;
   font-size: 12px;
+}
+
+.research-warnings.neutral span {
+  border-color: var(--line);
+  background: #f8faf9;
+  color: var(--muted);
+}
+
+.research-update-list {
+  display: grid;
+  gap: 10px;
 }
 
 .research-diff {

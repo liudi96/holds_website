@@ -24,12 +24,20 @@ PORT=8081 go run .
 
 ## 更新行情
 
-推荐在总览页点击“更新行情”。网站会优先拉取 Yahoo Finance 日线收盘价；如果云服务器 IP 被 Yahoo 限流，会自动切换到腾讯实时行情，必要时再尝试东方财富。更新会写入 `data/portfolio.json`，持仓和已拉取行情的候选股安全边际会按 `(内在价值 - 最新价) / 内在价值` 同步重算。
+推荐在总览页点击“更新行情”。网站会优先拉取 Yahoo Finance 日线收盘价；如果云服务器 IP 被 Yahoo 限流，会自动切换到腾讯实时行情，必要时再尝试东方财富。
+
+行情更新只写入本机运行时文件 `data/runtime/quotes.json`，不会改动 `data/portfolio.json`。`data/runtime/` 已加入 `.gitignore`，适合在云服务器上部署后本地生成最新行情。页面读取状态时会自动把 `portfolio.json` 和 runtime 行情合并，安全边际按 `(内在价值 - 最新价) / 内在价值` 实时重算。
 
 也可以用命令行更新：
 
 ```bash
 go run ./cmd/update-quotes
+```
+
+指定 runtime 行情文件：
+
+```bash
+go run ./cmd/update-quotes -quotes data/runtime/quotes.json
 ```
 
 只校验不写入：

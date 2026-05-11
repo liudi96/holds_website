@@ -78,13 +78,10 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
-	updated, skipped, quoteLogs := updateQuotes(&state, &http.Client{Timeout: 12 * time.Second}, now)
+	updated, skipped, quoteRecords := updateQuotes(&state, &http.Client{Timeout: 12 * time.Second}, now)
 	if updated > 0 {
-		for _, log := range quoteLogs {
-			appendDecisionLog(&state, log)
-		}
-		if err := saveState(state); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to save state")
+		if err := saveRuntimeQuoteRecords(quoteRecords, now.Format("2006-01-02 15:04:05")); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to save runtime quotes")
 			return
 		}
 	}
@@ -97,10 +94,10 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []QuoteSkip, []DecisionLog) {
+func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []QuoteSkip, []RuntimeQuote) {
 	updated := 0
 	skipped := []QuoteSkip{}
-	quoteLogs := []DecisionLog{}
+	quoteRecords := map[string]RuntimeQuote{}
 	cache := make(map[string]quote)
 	fallbackCache, fallbackErr := fetchFallbackQuotes(client, quoteSymbols(state))
 	updateLabel := now.Format("2006-01-02 15:04:05")
@@ -117,11 +114,8 @@ func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []Q
 			continue
 		}
 
-		beforePrice := holding.CurrentPrice
 		applyHoldingQuote(holding, quote, updateLabel)
-		if log := quoteTriggerDecisionLog(state, holding.Symbol, holding.Name, holding.Currency, beforePrice, holding.CurrentPrice, holding.IntrinsicValue, holding.CurrentPriceDate, holding.PreviousCloseDate, now); log != nil {
-			quoteLogs = append(quoteLogs, *log)
-		}
+		quoteRecords[normalizeSymbol(holding.Symbol)] = runtimeQuoteFromQuote(holding.Symbol, quote, updateLabel)
 		updated++
 	}
 
@@ -137,15 +131,12 @@ func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []Q
 			continue
 		}
 
-		beforePrice := candidate.CurrentPrice
 		applyCandidateQuote(candidate, quote, updateLabel)
-		if log := quoteTriggerDecisionLog(state, candidate.Symbol, candidate.Name, candidate.Currency, beforePrice, candidate.CurrentPrice, candidate.IntrinsicValue, candidate.CurrentPriceDate, candidate.PreviousCloseDate, now); log != nil {
-			quoteLogs = append(quoteLogs, *log)
-		}
+		quoteRecords[normalizeSymbol(candidate.Symbol)] = runtimeQuoteFromQuote(candidate.Symbol, quote, updateLabel)
 		updated++
 	}
 
-	return updated, skipped, quoteLogs
+	return updated, skipped, runtimeQuoteList(quoteRecords)
 }
 
 func quoteSymbols(state *AppState) []string {

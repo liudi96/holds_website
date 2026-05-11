@@ -89,6 +89,7 @@ type Holding struct {
 	Dividend            *Dividend           `json:"dividend,omitempty"`
 	NetCash             *NetCashProfile     `json:"netCash,omitempty"`
 	OwnerCashFlowAudit  *OwnerCashFlowAudit `json:"ownerCashFlowAudit,omitempty"`
+	ResearchUpdates     []ResearchUpdate    `json:"researchUpdates,omitempty"`
 	Financials          json.RawMessage     `json:"financials,omitempty"`
 }
 
@@ -151,6 +152,33 @@ type OwnerAuditItem struct {
 	Note   string `json:"note,omitempty"`
 }
 
+type ResearchUpdate struct {
+	ID            int64          `json:"id"`
+	ImportedAt    string         `json:"importedAt"`
+	AsOf          string         `json:"asOf"`
+	UpdateType    string         `json:"updateType"`
+	Event         ResearchEvent  `json:"event"`
+	Impact        ResearchImpact `json:"impact,omitempty"`
+	Summary       string         `json:"summary,omitempty"`
+	ChangedFields []string       `json:"changedFields,omitempty"`
+	NotesAppend   string         `json:"notesAppend,omitempty"`
+}
+
+type ResearchEvent struct {
+	Type    string `json:"type,omitempty"`
+	Title   string `json:"title,omitempty"`
+	Date    string `json:"date,omitempty"`
+	Source  string `json:"source,omitempty"`
+	Summary string `json:"summary,omitempty"`
+}
+
+type ResearchImpact struct {
+	ThesisChange    string `json:"thesisChange,omitempty"`
+	ValuationChange string `json:"valuationChange,omitempty"`
+	RiskChange      string `json:"riskChange,omitempty"`
+	ActionChange    string `json:"actionChange,omitempty"`
+}
+
 type Report struct {
 	Period string `json:"period"`
 	Kind   string `json:"kind"`
@@ -201,6 +229,7 @@ type Candidate struct {
 	Dividend            *Dividend           `json:"dividend,omitempty"`
 	NetCash             *NetCashProfile     `json:"netCash,omitempty"`
 	OwnerCashFlowAudit  *OwnerCashFlowAudit `json:"ownerCashFlowAudit,omitempty"`
+	ResearchUpdates     []ResearchUpdate    `json:"researchUpdates,omitempty"`
 	Financials          json.RawMessage     `json:"financials,omitempty"`
 }
 
@@ -211,6 +240,7 @@ type Rule struct {
 }
 
 type ResearchImport struct {
+	UpdateType          string              `json:"updateType,omitempty"`
 	Symbol              string              `json:"symbol"`
 	Name                string              `json:"name"`
 	AsOf                string              `json:"asOf"`
@@ -303,6 +333,10 @@ func loadResearch(path string) (ResearchImport, error) {
 }
 
 func validateResearch(research ResearchImport) error {
+	updateType := strings.TrimSpace(research.UpdateType)
+	if updateType != "" && updateType != "fullReview" {
+		return errors.New("cmd/import-research supports only fullReview JSON; use the website import dialog for eventUpdate")
+	}
 	if strings.TrimSpace(research.Symbol) == "" {
 		return errors.New("symbol is required")
 	}
@@ -372,10 +406,22 @@ func validateDividend(dividend *Dividend) error {
 	if err := validatePositiveAmount("dividend.dividendPerShare", dividend.DividendPerShare); err != nil {
 		return err
 	}
+	if err := validateNonNegativeAmount("dividend.cashDividendTotal", dividend.CashDividendTotal); err != nil {
+		return err
+	}
+	if err := validateNonNegativeAmount("dividend.buybackAmount", dividend.BuybackAmount); err != nil {
+		return err
+	}
+	if err := validateRatio("dividend.dividendYield", dividend.DividendYield, 5); err != nil {
+		return err
+	}
 	if err := validatePositiveAmount("dividend.forecastPerShare", dividend.ForecastPerShare); err != nil {
 		return err
 	}
 	if err := validateRatio("dividend.forecastYield", dividend.ForecastYield, 5); err != nil {
+		return err
+	}
+	if err := validateNonNegativeAmount("dividend.estimatedAnnualCash", dividend.EstimatedAnnualCash); err != nil {
 		return err
 	}
 	return validateRatio("dividend.payoutRatio", dividend.PayoutRatio, 5)
@@ -685,17 +731,35 @@ func normalizeDividend(dividend *Dividend, fallbackCurrency string) *Dividend {
 	if dividend == nil {
 		return nil
 	}
+	hasContent := strings.TrimSpace(dividend.FiscalYear) != "" ||
+		dividend.DividendPerShare != nil ||
+		strings.TrimSpace(dividend.DividendCurrency) != "" ||
+		dividend.CashDividendTotal != nil ||
+		strings.TrimSpace(dividend.CashDividendCurrency) != "" ||
+		dividend.BuybackAmount != nil ||
+		strings.TrimSpace(dividend.BuybackCurrency) != "" ||
+		dividend.DividendYield != nil ||
+		dividend.PayoutRatio != nil ||
+		dividend.EstimatedAnnualCash != nil ||
+		strings.TrimSpace(dividend.Reliability) != "" ||
+		strings.TrimSpace(dividend.ForecastFiscalYear) != "" ||
+		dividend.ForecastPerShare != nil ||
+		strings.TrimSpace(dividend.ForecastCurrency) != "" ||
+		dividend.ForecastYield != nil
+	if !hasContent {
+		return nil
+	}
 	next := &Dividend{
 		FiscalYear:           strings.TrimSpace(dividend.FiscalYear),
 		DividendPerShare:     cloneFloat(dividend.DividendPerShare),
 		DividendCurrency:     strings.ToUpper(strings.TrimSpace(dividend.DividendCurrency)),
-		CashDividendTotal:    nil,
-		CashDividendCurrency: "",
-		BuybackAmount:        nil,
-		BuybackCurrency:      "",
-		DividendYield:        nil,
+		CashDividendTotal:    cloneFloat(dividend.CashDividendTotal),
+		CashDividendCurrency: strings.ToUpper(strings.TrimSpace(dividend.CashDividendCurrency)),
+		BuybackAmount:        cloneFloat(dividend.BuybackAmount),
+		BuybackCurrency:      strings.ToUpper(strings.TrimSpace(dividend.BuybackCurrency)),
+		DividendYield:        cloneFloat(dividend.DividendYield),
 		PayoutRatio:          cloneFloat(dividend.PayoutRatio),
-		EstimatedAnnualCash:  nil,
+		EstimatedAnnualCash:  cloneFloat(dividend.EstimatedAnnualCash),
 		Reliability:          strings.TrimSpace(dividend.Reliability),
 		ForecastFiscalYear:   strings.TrimSpace(dividend.ForecastFiscalYear),
 		ForecastPerShare:     cloneFloat(dividend.ForecastPerShare),
@@ -704,6 +768,12 @@ func normalizeDividend(dividend *Dividend, fallbackCurrency string) *Dividend {
 	}
 	if next.DividendCurrency == "" {
 		next.DividendCurrency = strings.ToUpper(strings.TrimSpace(fallbackCurrency))
+	}
+	if next.CashDividendCurrency == "" {
+		next.CashDividendCurrency = next.DividendCurrency
+	}
+	if next.BuybackCurrency == "" {
+		next.BuybackCurrency = next.CashDividendCurrency
 	}
 	if next.ForecastCurrency == "" {
 		next.ForecastCurrency = strings.ToUpper(strings.TrimSpace(fallbackCurrency))
@@ -718,6 +788,7 @@ func normalizeDividend(dividend *Dividend, fallbackCurrency string) *Dividend {
 		next.DividendYield == nil &&
 		next.PayoutRatio == nil &&
 		next.EstimatedAnnualCash == nil &&
+		next.Reliability == "" &&
 		next.ForecastFiscalYear == "" &&
 		next.ForecastPerShare == nil &&
 		next.ForecastCurrency == "" &&
@@ -773,6 +844,11 @@ func normalizeNetCash(netCash *NetCashProfile, fallbackCurrency string) *NetCash
 		next.ExCashPE == nil &&
 		next.ExCashPFCF == nil &&
 		next.FCFYield == nil &&
+		next.ShareholderFCF == nil &&
+		next.ShareholderFCFCurrency == "" &&
+		next.ShareholderFCFBasis == "" &&
+		next.ConsolidatedFCF == nil &&
+		next.MinorityFCFAdjustment == nil &&
 		next.FCFPositiveYears == nil &&
 		next.Note == "" {
 		return nil

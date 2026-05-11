@@ -50,6 +50,7 @@ type chatGPTStockRecord struct {
 	Dividend           *Dividend
 	NetCash            *NetCashProfile
 	OwnerCashFlowAudit *OwnerCashFlowAudit
+	ResearchUpdates    []ResearchUpdate
 	Financials         *Financials
 	Plan               *PlanItem
 	DecisionLogs       []DecisionLog
@@ -116,6 +117,7 @@ func buildChatGPTContextZip(state AppState, generatedAt time.Time) ([]byte, erro
 		{"04_recent_decision_logs.md", renderRecentDecisionLogs(meta, state.DecisionLogs, 100)},
 		{"05_master_lens_tables.md", renderMasterLensTables(meta, records)},
 		{"06_risk_committee_memo.md", renderRiskCommitteeMemo(meta, state, records, totalPositions, totalAssets)},
+		{"research_loop_guide.md", renderResearchLoopGuide(meta)},
 		{"import_schema.md", renderImportSchema(meta)},
 	}
 
@@ -128,7 +130,7 @@ func buildChatGPTContextZip(state AppState, generatedAt time.Time) ([]byte, erro
 
 	usedPaths := make(map[string]int)
 	for _, record := range records {
-		path := uniqueZipPath(usedPaths, "stocks/"+sanitizeZipFileName(record.Symbol+"_"+record.Name)+".md")
+		path := uniqueZipPath(usedPaths, stockZipPath(record))
 		if err := addZipFile(writer, path, renderStockMarkdown(meta, record), generatedAt); err != nil {
 			_ = writer.Close()
 			return nil, err
@@ -160,7 +162,7 @@ func addZipFile(writer *zip.Writer, name string, content string, modTime time.Ti
 }
 
 func chatGPTExportMeta(generatedAt time.Time) string {
-	return fmt.Sprintf("---\ngeneratedAt: %s\nsource: holds_website data/portfolio.json\ntimezone: %s\n---\n\n", generatedAt.Format(time.RFC3339), chatGPTExportTimezone)
+	return fmt.Sprintf("---\ngeneratedAt: %s\nsource: holds_website data/portfolio.json + data/runtime/quotes.json\ntimezone: %s\n---\n\n", generatedAt.Format(time.RFC3339), chatGPTExportTimezone)
 }
 
 func buildChatGPTStockRecords(state AppState) ([]chatGPTStockRecord, float64, float64) {
@@ -239,6 +241,7 @@ func chatGPTHoldingRecord(state AppState, holding Holding, totalAssets float64) 
 		Dividend:           holding.Dividend,
 		NetCash:            holding.NetCash,
 		OwnerCashFlowAudit: holding.OwnerCashFlowAudit,
+		ResearchUpdates:    holding.ResearchUpdates,
 		Financials:         holding.Financials,
 		Plan:               findPlanForDecisionLog(&state, holding.Symbol, holding.Name),
 		DecisionLogs:       chatGPTLogsForStock(state.DecisionLogs, holding.Symbol),
@@ -282,6 +285,7 @@ func chatGPTCandidateRecord(state AppState, candidate Candidate, totalAssets flo
 		Dividend:           candidate.Dividend,
 		NetCash:            candidate.NetCash,
 		OwnerCashFlowAudit: candidate.OwnerCashFlowAudit,
+		ResearchUpdates:    candidate.ResearchUpdates,
 		Financials:         candidate.Financials,
 		Plan:               findPlanForDecisionLog(&state, candidate.Symbol, candidate.Name),
 		DecisionLogs:       chatGPTLogsForStock(state.DecisionLogs, candidate.Symbol),
@@ -310,6 +314,7 @@ func renderProjectInstructions(meta string) string {
 - 做个股分析时读取 ` + "`05_master_lens_tables.md`" + `，先按“双策略”判断主策略、辅策略、过渡观察或风险排除。
 - 做仓位和风险判断时读取 ` + "`06_risk_committee_memo.md`" + `，优先检查 70% 回报蓝筹主策略、30% 净现金烟蒂辅策略的偏离度。
 - 深度研究单只股票前，先读取 ` + "`stocks/`" + ` 下对应股票档案，避免重复询问已经存在的成本、目标价、风险和历史决策。
+- 事件或财报更新请先读取 ` + "`research_loop_guide.md`" + `，判断应该输出完整重估 ` + "`fullReview`" + ` 还是增量更新 ` + "`eventUpdate`" + `。
 - 所有建议必须同时考虑综合回报盾、DCF安全边际、长期股东现金流评分、净现金保护、自由现金流、仓位和既有投资纪律。
 - 如果研究结论需要回写网站，请输出符合 ` + "`import_schema.md`" + ` 的 JSON；不要输出散乱字段。
 - 遇到价格、财报或新闻这类会变化的信息时，先说明信息时点，再给出结论。
@@ -760,12 +765,13 @@ func renderRecentDecisionLogs(meta string, logs []DecisionLog, limit int) string
 }
 
 func renderImportSchema(meta string) string {
-	return meta + "# 网站导入 JSON Schema\n\n" + `ChatGPT 深度研究后，如需回写网站，请只输出一个 JSON 对象。不要添加 Markdown 代码块以外的解释文字；不要添加额外字段，未知数字字段使用 null。
+	return meta + "# 网站导入 JSON Schema\n\n" + `ChatGPT 深度研究后，如需回写网站，请只输出一个 JSON 对象。不要 Markdown fences，不要解释文字；不要添加额外字段，未知数字字段使用 null。
 
-## 顶层结构（单只股票）
+## fullReview：完整重估
 
 ~~~json
 {
+  "updateType": "fullReview",
   "symbol": "0700.HK",
   "name": "腾讯控股",
   "asOf": "2026-05-09",
@@ -837,8 +843,44 @@ func renderImportSchema(meta string) string {
 }
 ~~~
 
+## eventUpdate：事件/财报增量更新
+
+~~~json
+{
+  "updateType": "eventUpdate",
+  "symbol": "0700.HK",
+  "name": "腾讯控股",
+  "asOf": "2026-05-15",
+  "event": {
+    "type": "earnings",
+    "title": "2026Q1 财报更新",
+    "date": "2026-05-15",
+    "source": "公司公告",
+    "summary": "收入和自由现金流好于原假设，AI capex 继续上升。"
+  },
+  "impact": {
+    "thesisChange": "minor",
+    "valuationChange": "raise",
+    "riskChange": "unchanged",
+    "actionChange": "unchanged"
+  },
+  "updates": {
+    "valuation": {
+      "intrinsicValue": 550,
+      "fairValueRange": "HK$500-610",
+      "marginOfSafety": 0.15
+    },
+    "risk": "AI资本开支仍需跟踪，但短期现金流韧性增强",
+    "notesAppend": "2026Q1 证实广告和游戏恢复，暂不改变买入纪律。"
+  }
+}
+~~~
+
 ## 字段要求
 
+- updateType 可为 fullReview 或 eventUpdate；旧 JSON 不写 updateType 时按 fullReview 处理。
+- fullReview 用于年度/重大重估，会覆盖核心研究字段。
+- eventUpdate 用于财报、公告、分红、回购、监管和重大新闻；只覆盖 updates 中明确给出的字段，未给字段保留网站原值。
 - symbol 必填，使用网站现有代码格式，例如 0700.HK、000333.SZ。
 - 金额字段使用该股票交易货币，不要换算成人民币，除非字段名明确写 CNY。
 - valuation.intrinsicValue 是核心 DCF 估值输入；主策略要求显示 DCF 安全边际≥15%。
@@ -853,7 +895,7 @@ func renderImportSchema(meta string) string {
 - quality.totalScore 应等于 businessModel + moat + governance + financialQuality。
 - asOf 必须为 YYYY-MM-DD。
 - plan 不要写 symbol；网站会用顶层 symbol 关联执行计划。
-- 行情字段 currentPrice、previousClose 和日期由网站“更新行情”负责，不通过研究导入更新。
+- 行情字段 currentPrice、previousClose 和日期由网站 runtime quote 文件负责，不通过研究导入更新。
 - 如果 symbol 匹配现有持仓，会更新持仓研究字段；匹配候选股会更新候选字段；新标的会加入候选池。
 `
 }
@@ -862,6 +904,16 @@ func renderStockMarkdown(meta string, record chatGPTStockRecord) string {
 	var builder strings.Builder
 	builder.WriteString(meta)
 	builder.WriteString(fmt.Sprintf("# %s %s\n\n", mdText(record.Symbol), mdText(record.Name)))
+	builder.WriteString("## ChatGPT 分析入口\n\n")
+	builder.WriteString(fmt.Sprintf("- 当前结论：%s\n", mdText(firstNonEmpty(record.Action, record.Status))))
+	builder.WriteString(fmt.Sprintf("- 执行纪律：%s\n", mdText(planDiscipline(record.Plan))))
+	builder.WriteString(fmt.Sprintf("- 本次分析必须先复核：最新价日期 %s、安全边际 %s、综合回报率 %s、长期股东评分 %s。\n",
+		mdText(record.CurrentPriceDate),
+		formatPercentPtr(record.MarginOfSafety),
+		formatShareholderReturnYield(record),
+		mdText(formatOwnerAuditConclusion(record.OwnerCashFlowAudit)),
+	))
+	builder.WriteString("- 若只是财报/公告/事件增量，请输出 `eventUpdate`；若需要系统性重估，请输出 `fullReview`。\n\n")
 	builder.WriteString("## 当前状态\n\n")
 	builder.WriteString("| 项目 | 数值 |\n| --- | --- |\n")
 	builder.WriteString(fmt.Sprintf("| 状态 | %s |\n", mdCell(record.Status)))
@@ -945,6 +997,8 @@ func renderStockMarkdown(meta string, record chatGPTStockRecord) string {
 	}
 	builder.WriteString(fmt.Sprintf("- 主要风险：%s\n", mdText(record.Risk)))
 
+	builder.WriteString(renderResearchUpdatesMarkdown(record.ResearchUpdates))
+
 	builder.WriteString("\n## 研究材料\n\n")
 	builder.WriteString("### Notes\n\n")
 	builder.WriteString(mdText(record.Notes))
@@ -1017,6 +1071,62 @@ func renderFinancialsMarkdown(financials *Financials) string {
 	return builder.String()
 }
 
+func renderResearchUpdatesMarkdown(updates []ResearchUpdate) string {
+	var builder strings.Builder
+	builder.WriteString("\n## 最近研究更新\n\n")
+	if len(updates) == 0 {
+		builder.WriteString("暂无事件/财报增量更新记录。\n")
+		return builder.String()
+	}
+	sorted := append([]ResearchUpdate(nil), updates...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		left := firstNonEmpty(sorted[i].ImportedAt, sorted[i].AsOf, sorted[i].Event.Date)
+		right := firstNonEmpty(sorted[j].ImportedAt, sorted[j].AsOf, sorted[j].Event.Date)
+		return left > right
+	})
+	if len(sorted) > 12 {
+		sorted = sorted[:12]
+	}
+	builder.WriteString("| 导入时间 | 事件日期 | 类型 | 标题 | 影响 | 更新字段 | 摘要 |\n")
+	builder.WriteString("| --- | --- | --- | --- | --- | --- | --- |\n")
+	for _, item := range sorted {
+		impact := strings.Join(nonEmptyStrings(
+			impactText("thesis", item.Impact.ThesisChange),
+			impactText("valuation", item.Impact.ValuationChange),
+			impactText("risk", item.Impact.RiskChange),
+			impactText("action", item.Impact.ActionChange),
+		), "；")
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s |\n",
+			mdCell(item.ImportedAt),
+			mdCell(firstNonEmpty(item.Event.Date, item.AsOf)),
+			mdCell(firstNonEmpty(item.Event.Type, item.UpdateType)),
+			mdCell(item.Event.Title),
+			mdCell(firstNonEmpty(impact, "-")),
+			mdCell(strings.Join(item.ChangedFields, "/")),
+			mdCell(firstNonEmpty(item.Event.Summary, item.Summary, item.NotesAppend)),
+		))
+	}
+	return builder.String()
+}
+
+func impactText(label string, value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	return label + "=" + value
+}
+
+func nonEmptyStrings(values ...string) []string {
+	result := []string{}
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			result = append(result, strings.TrimSpace(value))
+		}
+	}
+	return result
+}
+
 func chatGPTLogsForStock(logs []DecisionLog, symbol string) []DecisionLog {
 	normalized := normalizeSymbol(symbol)
 	filtered := make([]DecisionLog, 0)
@@ -1060,6 +1170,34 @@ func sortedPlanItems(plan []PlanItem) []PlanItem {
 		return leftRank < rightRank
 	})
 	return sorted
+}
+
+func renderResearchLoopGuide(meta string) string {
+	return meta + `# ChatGPT 研究闭环指南
+
+本网站使用双模式导入，让研究可以持续迭代，而不是每次从零开始。
+
+## 先读什么
+
+1. 先读 ` + "`00_project_instructions.md`" + ` 和 ` + "`00_reference_tables.md`" + ` 建立组合上下文。
+2. 再读目标股票的 ` + "`stocks/{symbol}.md`" + `，确认已有结论、估值、执行纪律、最近研究更新和财报材料。
+3. 如果要回写网站，最后读 ` + "`import_schema.md`" + `，只输出一个 JSON 对象。
+
+## 什么时候用 fullReview
+
+用于年度报告、重大策略重估、首次纳入候选池，或原有内在价值/质量分/风险判断需要系统性重写。` + "`fullReview`" + ` 会覆盖股票当前核心研究字段。
+
+## 什么时候用 eventUpdate
+
+用于季度财报、分红/回购公告、监管或经营事件、业绩预告、重要管理层变化等增量信息。` + "`eventUpdate`" + ` 只写明本次需要改变的字段；未写字段会保留网站原值，避免误清空历史分析。
+
+## 输出原则
+
+- 不回写 currentPrice、previousClose 或收盘日期；行情由网站 runtime quote 文件维护。
+- 每次事件更新必须说明事件日期、来源、摘要和影响判断。
+- 若事件不改变估值或动作，也可以只追加 researchUpdates，用于保留复盘脉络。
+- 不要孤立分析；结论必须解释相对既有内在价值、执行纪律和历史判断的变化。
+`
 }
 
 func exportGrahamStatus(record chatGPTStockRecord) string {
@@ -1296,8 +1434,15 @@ func chatGPTStockLink(record chatGPTStockRecord) string {
 	if label == "" {
 		label = "股票档案"
 	}
-	path := "stocks/" + sanitizeZipFileName(record.Symbol+"_"+record.Name) + ".md"
-	return fmt.Sprintf("[%s](%s)", label, path)
+	return fmt.Sprintf("[%s](%s)", label, stockZipPath(record))
+}
+
+func stockZipPath(record chatGPTStockRecord) string {
+	symbol := strings.ToUpper(strings.TrimSpace(record.Symbol))
+	if symbol == "" {
+		symbol = "stock"
+	}
+	return "stocks/" + sanitizeZipFileName(symbol) + ".md"
 }
 
 func uniqueZipPath(used map[string]int, path string) string {

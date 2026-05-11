@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 const (
 	decisionLogLimit          = 500
 	defaultSafetyMarginTarget = 0.25
+	runtimeQuotesFile         = "data/runtime/quotes.json"
 )
 
 type AppState struct {
@@ -237,7 +239,8 @@ type yahooChartResponse struct {
 }
 
 func main() {
-	dataPath := flag.String("data", "data/portfolio.json", "portfolio JSON file to update")
+	dataPath := flag.String("data", "data/portfolio.json", "portfolio JSON file to read")
+	quotesPath := flag.String("quotes", runtimeQuotesFile, "runtime quote JSON file to update")
 	dryRun := flag.Bool("dry-run", false, "print updates without writing the file")
 	flag.Parse()
 
@@ -245,10 +248,14 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
+	if err := mergeRuntimeQuotes(&state, *quotesPath); err != nil {
+		fail(err)
+	}
 
 	client := &http.Client{Timeout: 12 * time.Second}
 	now := time.Now().Format("2006-01-02 15:04:05")
 	updated := 0
+	quoteRecords := map[string]RuntimeQuote{}
 	cache := make(map[string]quote)
 	fallbackCache, fallbackErr := fetchFallbackQuotes(client, quoteSymbols(&state))
 
@@ -264,7 +271,6 @@ func main() {
 			continue
 		}
 
-		beforePrice := holding.CurrentPrice
 		fmt.Printf("%s %s: %.4f -> %.4f (%s), yesterday close %.4f (%s) [%s]\n", holding.Symbol, holding.Name, holding.CurrentPrice, quote.Price, quote.PriceDate, quote.PreviousClose, quote.PreviousCloseDate, quote.SourceSymbol)
 		holding.CurrentPrice = quote.Price
 		holding.PreviousClose = quote.PreviousClose
@@ -276,7 +282,7 @@ func main() {
 			holding.Currency = strings.ToUpper(strings.TrimSpace(quote.Currency))
 		}
 		holding.UpdatedAt = quoteUpdateLabel(now, quote)
-		appendQuoteDecisionLog(&state, holding.Symbol, holding.Name, holding.Currency, beforePrice, holding.CurrentPrice, holding.IntrinsicValue, holding.CurrentPriceDate, holding.PreviousCloseDate, now)
+		quoteRecords[normalizeSymbol(holding.Symbol)] = runtimeQuoteFromQuote(holding.Symbol, quote, now)
 		updated++
 	}
 
@@ -292,7 +298,6 @@ func main() {
 			continue
 		}
 
-		beforePrice := candidate.CurrentPrice
 		fmt.Printf("%s %s: %.4f -> %.4f (%s), yesterday close %.4f (%s) [%s]\n", candidate.Symbol, candidate.Name, candidate.CurrentPrice, quote.Price, quote.PriceDate, quote.PreviousClose, quote.PreviousCloseDate, quote.SourceSymbol)
 		candidate.CurrentPrice = quote.Price
 		candidate.PreviousClose = quote.PreviousClose
@@ -304,7 +309,7 @@ func main() {
 			candidate.Currency = strings.ToUpper(strings.TrimSpace(quote.Currency))
 		}
 		candidate.UpdatedAt = quoteUpdateLabel(now, quote)
-		appendQuoteDecisionLog(&state, candidate.Symbol, candidate.Name, candidate.Currency, beforePrice, candidate.CurrentPrice, candidate.IntrinsicValue, candidate.CurrentPriceDate, candidate.PreviousCloseDate, now)
+		quoteRecords[normalizeSymbol(candidate.Symbol)] = runtimeQuoteFromQuote(candidate.Symbol, quote, now)
 		updated++
 	}
 
@@ -313,14 +318,14 @@ func main() {
 	}
 
 	if *dryRun {
-		fmt.Printf("dry run: %d quote records would be updated\n", updated)
+		fmt.Printf("dry run: %d quote records would be updated in %s\n", updated, *quotesPath)
 		return
 	}
 
-	if err := saveState(*dataPath, state); err != nil {
+	if err := saveRuntimeQuoteRecords(*quotesPath, runtimeQuoteList(quoteRecords), now); err != nil {
 		fail(err)
 	}
-	fmt.Printf("updated %d quote records in %s\n", updated, *dataPath)
+	fmt.Printf("updated %d quote records in %s\n", updated, *quotesPath)
 }
 
 type quote struct {
@@ -1098,6 +1103,184 @@ func normalizeSymbol(symbol string) string {
 		}
 	}
 	return symbol
+}
+
+type RuntimeQuoteBook struct {
+	UpdatedAt string                  `json:"updatedAt,omitempty"`
+	Quotes    map[string]RuntimeQuote `json:"quotes"`
+}
+
+type RuntimeQuote struct {
+	Symbol             string   `json:"symbol"`
+	CurrentPrice       float64  `json:"currentPrice,omitempty"`
+	PreviousClose      float64  `json:"previousClose,omitempty"`
+	CurrentPriceDate   string   `json:"currentPriceDate,omitempty"`
+	PreviousCloseDate  string   `json:"previousCloseDate,omitempty"`
+	Currency           string   `json:"currency,omitempty"`
+	SourceSymbol       string   `json:"sourceSymbol,omitempty"`
+	SourceName         string   `json:"sourceName,omitempty"`
+	UpdatedAt          string   `json:"updatedAt,omitempty"`
+	DividendPerShare   *float64 `json:"dividendPerShare,omitempty"`
+	DividendCurrency   string   `json:"dividendCurrency,omitempty"`
+	DividendFiscalYear string   `json:"dividendFiscalYear,omitempty"`
+}
+
+func loadRuntimeQuoteBook(path string) (RuntimeQuoteBook, error) {
+	book := RuntimeQuoteBook{Quotes: map[string]RuntimeQuote{}}
+	body, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return book, nil
+	}
+	if err != nil {
+		return book, err
+	}
+	if err := json.Unmarshal(body, &book); err != nil {
+		return book, err
+	}
+	if book.Quotes == nil {
+		book.Quotes = map[string]RuntimeQuote{}
+	}
+	normalized := make(map[string]RuntimeQuote, len(book.Quotes))
+	for key, record := range book.Quotes {
+		symbol := normalizeSymbol(firstNonEmpty(record.Symbol, key))
+		if symbol == "" {
+			continue
+		}
+		record.Symbol = symbol
+		normalized[symbol] = record
+	}
+	book.Quotes = normalized
+	return book, nil
+}
+
+func saveRuntimeQuoteRecords(path string, records []RuntimeQuote, updatedAt string) error {
+	book, err := loadRuntimeQuoteBook(path)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(updatedAt) != "" {
+		book.UpdatedAt = strings.TrimSpace(updatedAt)
+	}
+	for _, record := range records {
+		symbol := normalizeSymbol(record.Symbol)
+		if symbol == "" {
+			continue
+		}
+		record.Symbol = symbol
+		book.Quotes[symbol] = record
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	body, err := json.MarshalIndent(book, "", "  ")
+	if err != nil {
+		return err
+	}
+	body = append(body, '\n')
+	return os.WriteFile(path, body, 0o644)
+}
+
+func mergeRuntimeQuotes(state *AppState, path string) error {
+	book, err := loadRuntimeQuoteBook(path)
+	if err != nil {
+		return err
+	}
+	for i := range state.Holdings {
+		record, ok := book.Quotes[normalizeSymbol(state.Holdings[i].Symbol)]
+		if ok {
+			applyRuntimeQuoteToHolding(&state.Holdings[i], record)
+		}
+	}
+	for i := range state.Candidates {
+		record, ok := book.Quotes[normalizeSymbol(state.Candidates[i].Symbol)]
+		if ok {
+			applyRuntimeQuoteToCandidate(&state.Candidates[i], record)
+		}
+	}
+	return nil
+}
+
+func applyRuntimeQuoteToHolding(holding *Holding, record RuntimeQuote) {
+	if record.CurrentPrice > 0 {
+		holding.CurrentPrice = record.CurrentPrice
+		holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, holding.MarginOfSafety)
+	}
+	if record.PreviousClose > 0 {
+		holding.PreviousClose = record.PreviousClose
+	}
+	holding.CurrentPriceDate = firstNonEmpty(record.CurrentPriceDate, holding.CurrentPriceDate)
+	holding.PreviousCloseDate = firstNonEmpty(record.PreviousCloseDate, holding.PreviousCloseDate)
+	if strings.TrimSpace(holding.Currency) == "" {
+		holding.Currency = strings.ToUpper(strings.TrimSpace(record.Currency))
+	}
+	applyDividendQuote(&holding.Dividend, runtimeRecordAsQuote(record), holding.Currency)
+	if strings.TrimSpace(record.UpdatedAt) != "" {
+		holding.UpdatedAt = record.UpdatedAt
+	}
+}
+
+func applyRuntimeQuoteToCandidate(candidate *Candidate, record RuntimeQuote) {
+	if record.CurrentPrice > 0 {
+		candidate.CurrentPrice = record.CurrentPrice
+		candidate.MarginOfSafety = marginOfSafetyFromPrice(candidate.IntrinsicValue, candidate.CurrentPrice, candidate.MarginOfSafety)
+	}
+	if record.PreviousClose > 0 {
+		candidate.PreviousClose = record.PreviousClose
+	}
+	candidate.CurrentPriceDate = firstNonEmpty(record.CurrentPriceDate, candidate.CurrentPriceDate)
+	candidate.PreviousCloseDate = firstNonEmpty(record.PreviousCloseDate, candidate.PreviousCloseDate)
+	if strings.TrimSpace(candidate.Currency) == "" {
+		candidate.Currency = strings.ToUpper(strings.TrimSpace(record.Currency))
+	}
+	applyDividendQuote(&candidate.Dividend, runtimeRecordAsQuote(record), candidate.Currency)
+	if strings.TrimSpace(record.UpdatedAt) != "" {
+		candidate.UpdatedAt = record.UpdatedAt
+	}
+}
+
+func runtimeQuoteFromQuote(symbol string, quote quote, updateLabel string) RuntimeQuote {
+	return RuntimeQuote{
+		Symbol:             normalizeSymbol(symbol),
+		CurrentPrice:       quote.Price,
+		PreviousClose:      quote.PreviousClose,
+		CurrentPriceDate:   quote.PriceDate,
+		PreviousCloseDate:  quote.PreviousCloseDate,
+		Currency:           strings.ToUpper(strings.TrimSpace(quote.Currency)),
+		SourceSymbol:       quote.SourceSymbol,
+		SourceName:         quote.SourceName,
+		UpdatedAt:          quoteUpdateLabel(updateLabel, quote),
+		DividendPerShare:   quote.DividendPerShare,
+		DividendCurrency:   strings.ToUpper(strings.TrimSpace(quote.DividendCurrency)),
+		DividendFiscalYear: quote.DividendFiscalYear,
+	}
+}
+
+func runtimeRecordAsQuote(record RuntimeQuote) quote {
+	return quote{
+		Price:              record.CurrentPrice,
+		PreviousClose:      record.PreviousClose,
+		PriceDate:          record.CurrentPriceDate,
+		PreviousCloseDate:  record.PreviousCloseDate,
+		Currency:           record.Currency,
+		SourceSymbol:       record.SourceSymbol,
+		SourceName:         record.SourceName,
+		DividendPerShare:   record.DividendPerShare,
+		DividendCurrency:   record.DividendCurrency,
+		DividendFiscalYear: record.DividendFiscalYear,
+	}
+}
+
+func runtimeQuoteList(records map[string]RuntimeQuote) []RuntimeQuote {
+	keys := make([]string, 0, len(records))
+	for key := range records {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	list := make([]RuntimeQuote, 0, len(keys))
+	for _, key := range keys {
+		list = append(list, records[key])
+	}
+	return list
 }
 
 func loadState(path string) (AppState, error) {

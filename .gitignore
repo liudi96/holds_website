@@ -2,3 +2,4 @@
 .gomodcache/
 .run/
 .tools/
+data/runtime/
