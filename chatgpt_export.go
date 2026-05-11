@@ -773,6 +773,8 @@ func renderImportSchema(meta string) string {
 
 完整利润驱动因子地图、敏感性测算、行业政策、竞争格局和三情景估值应写在研究报告中；JSON 只保存网站执行需要的核心结论。关键变化可压缩进 notes 或 eventUpdate.updates.notesAppend。
 
+按钮可获取的数据不要让 ChatGPT 重复录入：最新价、昨收、收盘日期、总市值由“更新行情”写入 data/runtime/quotes.json；最新完整财年现金分红总额、股息率、综合回报率、现金/短投、有息债务、净现金、合并 FCF、普通股东 FCF、FCF 为正年数、ex-cash PE/PFCF 和 FCF yield 由“更新财务”刷新。ChatGPT 只在网站导出明确显示缺失、或财务源无法捕捉少数股东分流等特殊口径时补充这些事实。
+
 ## fullReview：完整重估
 
 ~~~json
@@ -807,10 +809,6 @@ func renderImportSchema(meta string) string {
     "discipline": "优秀资产要求≥15%安全边际；未达标不追买"
   },
   "dividend": {
-    "fiscalYear": "FY2025",
-    "dividendPerShare": 4.5,
-    "dividendCurrency": "HKD",
-    "payoutRatio": 0.16,
     "reliability": "stable",
     "forecastFiscalYear": "FY2026E",
     "forecastPerShare": 5.2,
@@ -818,23 +816,9 @@ func renderImportSchema(meta string) string {
     "forecastYield": 0.083
   },
   "netCash": {
-    "cashAndShortInvestments": 320000000000,
-    "interestBearingDebt": 120000000000,
-    "netCash": 200000000000,
-    "currency": "HKD",
     "haircut": 0.7,
     "haircutReason": "平台现金流稳定但需保留监管和再投资折扣",
-    "adjustedNetCash": 140000000000,
-    "exCashPe": 13.5,
-    "exCashPfcf": 14.2,
-    "fcfYield": 0.065,
-    "shareholderFcf": 9000000000,
-    "shareholderFcfCurrency": "HKD",
-    "shareholderFcfBasis": "普通股东 FCF：合并FCF扣除少数股东分流后口径",
-    "consolidatedFcf": 12000000000,
-    "minorityFcfAdjustment": 3000000000,
-    "fcfPositiveYears": 5,
-    "note": "净现金、FCF 和估值口径使用 FY2025 年报与当前市值。"
+    "note": "财务按钮已刷新现金、债务、净现金和普通股东FCF；这里仅保留折扣判断。"
   },
   "ownerCashFlowAudit": {
     "tenYearDemand": { "status": "pass", "note": "核心产品/服务十年后仍有稳定需求。" },
@@ -895,14 +879,14 @@ func renderImportSchema(meta string) string {
 - 首买价默认按 intrinsicValue × 75% 计算，观察价为首买价 × 105%，重仓价为首买价 × 90%。
 - 主策略综合回报盾：A股综合回报率≥6%，H股综合回报率≥8%；使用最近完整财年现金分红加回购相对总市值计算。
 - ownerCashFlowAudit 会被网站折算成 100 分长期股东评分；主策略要求评分≥75。review 项给部分分，不再要求七项全部 pass。valuationSystemRisk=fail 仍会进入风险排除。
-- 股息数据由“更新行情”尽量从行情源抓取；研究也可以提供 dividend.forecastFiscalYear、forecastPerShare、forecastCurrency、forecastYield 作为参考，但预估股息率不替代综合回报硬门槛。
-- 辅策略烟蒂：提供 netCash 结构化字段，重点说明净现金折扣、折扣后净现金、ex-cash PE、ex-cash P/FCF、FCF yield 和 FCF 连续性。
+- 股息事实和综合回报率由“更新财务”计算；研究主要提供 dividend.reliability、forecastFiscalYear、forecastPerShare、forecastCurrency、forecastYield 作为参考，预估股息率不替代综合回报硬门槛。
+- 辅策略烟蒂：财务按钮刷新现金、债务、净现金、普通股东 FCF 和倍数；研究只需提供 netCash.haircut、haircutReason，或在财务源缺失时补充明确事实。
 - 净现金折扣约定：稳定分红100%，一般70%，弱/周期40%，重大风险0%。如果 haircut 为空，网站会按股息可靠性和风险文本自动分档。
 - ownerCashFlowAudit 七项 status 只能是 pass、review、fail；评分权重为十年需求18、资产耐久14、轻再投资12、分红FCF18、再投资效率12、ROE/ROIC14、估值体系12。
 - quality.totalScore 应等于 businessModel + moat + governance + financialQuality。
 - asOf 必须为 YYYY-MM-DD。
 - plan 不要写 symbol；网站会用顶层 symbol 关联执行计划。
-- 行情字段 currentPrice、previousClose 和日期由网站 runtime quote 文件负责，不通过研究导入更新。
+- 行情字段 currentPrice、previousClose、marketCap 和日期由网站 runtime quote 文件负责，不通过研究导入更新。
 - 如果 symbol 匹配现有持仓，会更新持仓研究字段；匹配候选股会更新候选字段；新标的会加入候选池。
 `
 }
@@ -1215,7 +1199,8 @@ func renderInstitutionalResearchProtocol(meta string) string {
 - 不得在没有核验股价、市值和最新财报的情况下给出买入建议。
 - 不得把合并自由现金流直接当普通股东 FCF，必须考虑少数股东分流。
 - 不得把完整研究报告塞进 JSON；只在 notes 或 notesAppend 放关键摘要。
-- 行情字段 currentPrice、previousClose 和日期由网站 runtime quote 文件维护，不通过研究 JSON 回写。
+- 行情字段 currentPrice、previousClose、marketCap 和日期由网站 runtime quote 文件维护，不通过研究 JSON 回写。
+- 现金分红总额、股息率、综合回报率、现金/短投、有息债务、净现金、合并 FCF、普通股东 FCF、FCF 年数和估值倍数由“更新财务”按钮维护；研究 JSON 不重复录入这些字段，除非网站导出显示缺失或财务源无法捕捉特殊少数股东分流。
 `
 }
 

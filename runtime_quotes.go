@@ -18,6 +18,8 @@ type RuntimeQuote struct {
 	Symbol             string   `json:"symbol"`
 	CurrentPrice       float64  `json:"currentPrice,omitempty"`
 	PreviousClose      float64  `json:"previousClose,omitempty"`
+	MarketCap          *float64 `json:"marketCap,omitempty"`
+	MarketCapCurrency  string   `json:"marketCapCurrency,omitempty"`
 	CurrentPriceDate   string   `json:"currentPriceDate,omitempty"`
 	PreviousCloseDate  string   `json:"previousCloseDate,omitempty"`
 	Currency           string   `json:"currency,omitempty"`
@@ -119,6 +121,10 @@ func applyRuntimeQuoteToHolding(holding *Holding, record RuntimeQuote) {
 	if record.PreviousClose > 0 {
 		holding.PreviousClose = record.PreviousClose
 	}
+	if record.MarketCap != nil && *record.MarketCap > 0 {
+		holding.MarketCap = record.MarketCap
+		holding.MarketCapCurrency = strings.ToUpper(firstNonEmpty(record.MarketCapCurrency, record.Currency, holding.Currency))
+	}
 	holding.CurrentPriceDate = firstNonEmpty(record.CurrentPriceDate, holding.CurrentPriceDate)
 	holding.PreviousCloseDate = firstNonEmpty(record.PreviousCloseDate, holding.PreviousCloseDate)
 	if strings.TrimSpace(holding.Currency) == "" {
@@ -138,6 +144,10 @@ func applyRuntimeQuoteToCandidate(candidate *Candidate, record RuntimeQuote) {
 	if record.PreviousClose > 0 {
 		candidate.PreviousClose = record.PreviousClose
 	}
+	if record.MarketCap != nil && *record.MarketCap > 0 {
+		candidate.MarketCap = record.MarketCap
+		candidate.MarketCapCurrency = strings.ToUpper(firstNonEmpty(record.MarketCapCurrency, record.Currency, candidate.Currency))
+	}
 	candidate.CurrentPriceDate = firstNonEmpty(record.CurrentPriceDate, candidate.CurrentPriceDate)
 	candidate.PreviousCloseDate = firstNonEmpty(record.PreviousCloseDate, candidate.PreviousCloseDate)
 	if strings.TrimSpace(candidate.Currency) == "" {
@@ -154,6 +164,8 @@ func runtimeQuoteFromQuote(symbol string, quote quote, updateLabel string) Runti
 		Symbol:             normalizeSymbol(symbol),
 		CurrentPrice:       quote.Price,
 		PreviousClose:      quote.PreviousClose,
+		MarketCap:          quote.MarketCap,
+		MarketCapCurrency:  strings.ToUpper(strings.TrimSpace(quote.MarketCapCurrency)),
 		CurrentPriceDate:   quote.PriceDate,
 		PreviousCloseDate:  quote.PreviousCloseDate,
 		Currency:           strings.ToUpper(strings.TrimSpace(quote.Currency)),
@@ -170,6 +182,8 @@ func runtimeRecordAsQuote(record RuntimeQuote) quote {
 	return quote{
 		Price:              record.CurrentPrice,
 		PreviousClose:      record.PreviousClose,
+		MarketCap:          record.MarketCap,
+		MarketCapCurrency:  record.MarketCapCurrency,
 		PriceDate:          record.CurrentPriceDate,
 		PreviousCloseDate:  record.PreviousCloseDate,
 		Currency:           record.Currency,
@@ -209,6 +223,8 @@ func persistentState(state AppState) AppState {
 func clearHoldingRuntimeQuote(holding *Holding) {
 	holding.CurrentPrice = 0
 	holding.PreviousClose = 0
+	holding.MarketCap = nil
+	holding.MarketCapCurrency = ""
 	holding.CurrentPriceDate = ""
 	holding.PreviousCloseDate = ""
 	if strings.Contains(holding.UpdatedAt, "行情源") {
@@ -219,6 +235,8 @@ func clearHoldingRuntimeQuote(holding *Holding) {
 func clearCandidateRuntimeQuote(candidate *Candidate) {
 	candidate.CurrentPrice = 0
 	candidate.PreviousClose = 0
+	candidate.MarketCap = nil
+	candidate.MarketCapCurrency = ""
 	candidate.CurrentPriceDate = ""
 	candidate.PreviousCloseDate = ""
 	if strings.Contains(candidate.UpdatedAt, "行情源") {

@@ -52,6 +52,8 @@ type yahooChartResponse struct {
 type quote struct {
 	Price              float64
 	PreviousClose      float64
+	MarketCap          *float64
+	MarketCapCurrency  string
 	PriceDate          string
 	PreviousCloseDate  string
 	Currency           string
@@ -160,17 +162,18 @@ func quoteSymbols(state *AppState) []string {
 }
 
 func fetchFallbackQuotes(client *http.Client, symbols []string) (map[string]quote, error) {
-	quotes, err := fetchTencentQuotes(client, symbols)
-	if err == nil {
-		return quotes, nil
+	tencentQuotes, tencentErr := fetchTencentQuotes(client, symbols)
+	eastmoneyQuotes, eastmoneyErr := fetchEastmoneyQuotes(client, symbols)
+	if tencentErr == nil {
+		mergeQuoteSupplements(tencentQuotes, eastmoneyQuotes)
+		return tencentQuotes, nil
 	}
 
-	eastmoneyQuotes, eastmoneyErr := fetchEastmoneyQuotes(client, symbols)
 	if eastmoneyErr == nil {
 		return eastmoneyQuotes, nil
 	}
 
-	return nil, fmt.Errorf("tencent: %v; eastmoney: %v", err, eastmoneyErr)
+	return nil, fmt.Errorf("tencent: %v; eastmoney: %v", tencentErr, eastmoneyErr)
 }
 
 func fetchQuoteCached(client *http.Client, cache map[string]quote, fallbackCache map[string]quote, fallbackErr error, symbol string) (quote, error) {
@@ -190,6 +193,10 @@ func fetchQuoteCached(client *http.Client, cache map[string]quote, fallbackCache
 func applyHoldingQuote(holding *Holding, quote quote, updateLabel string) {
 	holding.CurrentPrice = quote.Price
 	holding.PreviousClose = quote.PreviousClose
+	if quote.MarketCap != nil && *quote.MarketCap > 0 {
+		holding.MarketCap = quote.MarketCap
+		holding.MarketCapCurrency = strings.ToUpper(firstNonEmpty(quote.MarketCapCurrency, quote.Currency, holding.Currency))
+	}
 	holding.CurrentPriceDate = quote.PriceDate
 	holding.PreviousCloseDate = quote.PreviousCloseDate
 	holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, holding.MarginOfSafety)
@@ -203,6 +210,10 @@ func applyHoldingQuote(holding *Holding, quote quote, updateLabel string) {
 func applyCandidateQuote(candidate *Candidate, quote quote, updateLabel string) {
 	candidate.CurrentPrice = quote.Price
 	candidate.PreviousClose = quote.PreviousClose
+	if quote.MarketCap != nil && *quote.MarketCap > 0 {
+		candidate.MarketCap = quote.MarketCap
+		candidate.MarketCapCurrency = strings.ToUpper(firstNonEmpty(quote.MarketCapCurrency, quote.Currency, candidate.Currency))
+	}
 	candidate.CurrentPriceDate = quote.PriceDate
 	candidate.PreviousCloseDate = quote.PreviousCloseDate
 	candidate.MarginOfSafety = marginOfSafetyFromPrice(candidate.IntrinsicValue, candidate.CurrentPrice, candidate.MarginOfSafety)
@@ -322,9 +333,36 @@ func shouldPreserveDividendQuote(dividend *Dividend) bool {
 		!strings.HasPrefix(fiscalYear, "TTM")
 }
 
+func mergeQuoteSupplements(primary map[string]quote, supplements map[string]quote) {
+	if len(primary) == 0 || len(supplements) == 0 {
+		return
+	}
+	for symbol, supplement := range supplements {
+		item, ok := primary[symbol]
+		if !ok {
+			continue
+		}
+		mergeQuoteSupplement(&item, supplement)
+		primary[symbol] = item
+	}
+}
+
+func mergeQuoteSupplement(item *quote, supplement quote) {
+	if item == nil {
+		return
+	}
+	if (item.MarketCap == nil || *item.MarketCap <= 0) && supplement.MarketCap != nil && *supplement.MarketCap > 0 {
+		item.MarketCap = supplement.MarketCap
+		item.MarketCapCurrency = supplement.MarketCapCurrency
+	}
+}
+
 func fetchQuote(client *http.Client, symbol string, fallbackCache map[string]quote, fallbackErr error) (quote, error) {
 	quote, yahooErr := fetchYahooQuote(client, symbol)
 	if yahooErr == nil {
+		if fallback, ok := fallbackCache[normalizeSymbol(symbol)]; ok {
+			mergeQuoteSupplement(&quote, fallback)
+		}
 		return quote, nil
 	}
 
@@ -447,7 +485,7 @@ func fetchEastmoneyQuote(client *http.Client, symbol string) (quote, error) {
 		return quote{}, err
 	}
 
-	endpoint := "https://push2.eastmoney.com/api/qt/stock/get?secid=" + url.QueryEscape(sourceSymbol) + "&fields=f43,f57,f58,f60,f86,f107"
+	endpoint := "https://push2.eastmoney.com/api/qt/stock/get?secid=" + url.QueryEscape(sourceSymbol) + "&fields=f43,f57,f58,f60,f86,f107,f116"
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return quote{}, err
@@ -491,9 +529,12 @@ func fetchEastmoneyQuote(client *http.Client, symbol string) (quote, error) {
 	}
 
 	priceDate := eastmoneyQuoteDate(payload.Data)
+	marketCap := optionalQuoteNumber(payload.Data, "f116")
 	return quote{
 		Price:             rawPrice / scale,
 		PreviousClose:     rawPreviousClose / scale,
+		MarketCap:         marketCap,
+		MarketCapCurrency: currencyForSymbol(symbol),
 		PriceDate:         priceDate,
 		PreviousCloseDate: priceDate,
 		Currency:          currencyForSymbol(symbol),
@@ -560,9 +601,12 @@ func fetchTencentQuotes(client *http.Client, symbols []string) (map[string]quote
 			continue
 		}
 		priceDate := tencentQuoteDate(fields[30])
+		marketCap := tencentMarketCap(fields)
 		quotes[normalized] = quote{
 			Price:             price,
 			PreviousClose:     previousClose,
+			MarketCap:         marketCap,
+			MarketCapCurrency: currencyForSymbol(normalized),
 			PriceDate:         priceDate,
 			PreviousCloseDate: priceDate,
 			Currency:          currencyForSymbol(normalized),
@@ -592,6 +636,18 @@ func parseTencentLine(line string) (string, []string, bool) {
 		return "", nil, false
 	}
 	return querySymbol, strings.Split(payload, "~"), true
+}
+
+func tencentMarketCap(fields []string) *float64 {
+	if len(fields) <= 45 {
+		return nil
+	}
+	value, err := strconv.ParseFloat(strings.TrimSpace(fields[45]), 64)
+	if err != nil || value <= 0 {
+		return nil
+	}
+	// Tencent returns total market capitalization in units of 100 million.
+	return ptr(value * 100000000)
 }
 
 func tencentQuoteDate(value string) string {
@@ -639,7 +695,7 @@ func fetchEastmoneyQuotes(client *http.Client, symbols []string) (map[string]quo
 		return map[string]quote{}, errors.New("no supported eastmoney symbols")
 	}
 
-	endpoint := "https://push2.eastmoney.com/api/qt/ulist.np/get?secids=" + strings.Join(secIDs, ",") + "&fields=f2,f12,f13,f14,f18,f124"
+	endpoint := "https://push2.eastmoney.com/api/qt/ulist.np/get?secids=" + strings.Join(secIDs, ",") + "&fields=f2,f12,f13,f14,f18,f124,f116"
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -693,6 +749,8 @@ func fetchEastmoneyQuotes(client *http.Client, symbols []string) (map[string]quo
 		quotes[normalized] = quote{
 			Price:             rawPrice / scale,
 			PreviousClose:     rawPreviousClose / scale,
+			MarketCap:         optionalQuoteNumber(item, "f116"),
+			MarketCapCurrency: currencyForSymbol(normalized),
 			PriceDate:         priceDate,
 			PreviousCloseDate: priceDate,
 			Currency:          currencyForSymbol(normalized),
@@ -723,6 +781,14 @@ func numberField(data map[string]any, key string) (float64, error) {
 	default:
 		return 0, fmt.Errorf("invalid %s", key)
 	}
+}
+
+func optionalQuoteNumber(data map[string]any, key string) *float64 {
+	value, err := numberField(data, key)
+	if err != nil || value <= 0 {
+		return nil
+	}
+	return ptr(value)
 }
 
 func eastmoneyQuoteDate(data map[string]any) string {
