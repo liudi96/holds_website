@@ -27,8 +27,8 @@ Requirements:
 - Do not add extra fields. Unknown fields are rejected by the importer.
 - Use decimal ratios for percentages, for example 0.09 means 9%.
 - Use null when a numeric field is unknown.
-- Main strategy: self-selected blue chips, A-share dividend yield >= 6% or H-share dividend yield >= 8%, DCF margin >= 15%, no major risk, no low-confidence valuation, no clearly unsustainable dividend.
-- Main strategy also requires `ownerCashFlowAudit` pass. Use `review` when evidence is incomplete; do not guess `pass`.
+- Main strategy: self-selected blue chips, A-share comprehensive shareholder return yield >= 6% or H-share comprehensive shareholder return yield >= 8%, DCF margin >= 15%, no major risk, no low-confidence valuation, no clearly unsustainable dividend.
+- The website converts `ownerCashFlowAudit` into a 100-point long-owner cash-flow score. Main strategy requires >= 75/100; `review` receives partial credit, so the audit is no longer an all-or-nothing hard gate.
 - Side strategy: net-cash cigar butts, adjusted net cash after haircut, A-share ex-cash PE <= 10 or H-share ex-cash PE <= 8, with positive/free-cash-flow support.
 - Existing holdings that fail the new thresholds should usually be marked as transition observation, not forced sale, unless major risk is present.
 - `valuation.marginOfSafety` is the analysis-time estimate. For existing holdings, the website recalculates displayed safety margin from `intrinsicValue` and the latest close price.
@@ -126,12 +126,12 @@ JSON schema:
 - `valuation.intrinsicValue` is the core DCF estimate from ChatGPT. The main strategy requires displayed DCF margin >= 15%.
 - `valuationConfidence` and `killCriteria` are optional. If omitted, the website derives valuation confidence from quality score and risk text, and derives the detail-page bear case from existing risk/status fields.
 - The site computes the first-buy price as `intrinsicValue * 75%`, watch price as `firstBuyPrice * 105%`, and aggressive buy price as `firstBuyPrice * 90%`.
-- Dividend data is fetched by the quote update flow when the data source provides it, but research may also provide `dividend.forecastFiscalYear`, `forecastPerShare`, `forecastCurrency`, and `forecastYield`. Main-strategy dividend shield passes if either latest fiscal-year yield or next-year forecast yield reaches A-share 6% / H-share 8%.
-- `ownerCashFlowAudit` is required for a main-strategy buy. Each item uses `status: pass|review|fail` plus `note`; core items are `tenYearDemand`, `dividendFcfSupport`, and `valuationSystemRisk`. Missing audit defaults to review and blocks new main-strategy buys.
-- If `valuationSystemRisk.status` is `fail`, the website treats the stock as risk exclusion. Other review/fail audit items block main-strategy buying but do not force old holdings to sell.
+- Dividend data is fetched by the quote update flow when the data source provides it, but research may also provide `dividend.forecastFiscalYear`, `forecastPerShare`, `forecastCurrency`, and `forecastYield` for reference. Main-strategy return shield passes only when latest full fiscal-year comprehensive shareholder return yield reaches A-share 6% / H-share 8%.
+- `ownerCashFlowAudit` is required for a main-strategy buy. Each item uses `status: pass|review|fail` plus `note`; the website scores the seven items with weights: ten-year demand 18, asset durability 14, light reinvestment 12, dividend FCF support 18, reinvestment efficiency 12, ROE/ROIC durability 14, valuation-system risk 12. Missing fields default to review only when some audit evidence exists.
+- If `valuationSystemRisk.status` is `fail`, the website treats the stock as risk exclusion. Other review/fail items reduce the long-owner score but no longer automatically block main-strategy buying when the total score still reaches 75/100.
 - Dividend yield is calculated as latest full fiscal-year cash dividend total divided by company market capitalization; comprehensive shareholder return is calculated as cash dividends plus buybacks divided by market capitalization.
 - `dividend.reliability` is optional. If omitted, the website derives `stable/review/risk` from dividend data completeness, valuation confidence, and major risk text.
-- `netCash.cashAndShortInvestments`, `interestBearingDebt`, `netCash`, `currency`, `haircut`, `haircutReason`, `adjustedNetCash`, `exCashPe`, `exCashPfcf`, `fcfYield`, and `fcfPositiveYears` are optional but should be supplied for cigar-butt candidates.
+- `netCash.cashAndShortInvestments`, `interestBearingDebt`, `netCash`, `currency`, `haircut`, `haircutReason`, `adjustedNetCash`, `exCashPe`, `exCashPfcf`, `fcfYield`, `shareholderFcf`, `shareholderFcfCurrency`, `shareholderFcfBasis`, `consolidatedFcf`, `minorityFcfAdjustment`, and `fcfPositiveYears` are optional but should be supplied for cigar-butt candidates. For companies with material minority interests, `shareholderFcf` should be the ordinary-shareholder free cash flow after minority-interest leakage.
 - Net-cash haircut convention: stable dividend 100%, normal 70%, weak/cyclical 40%, major risk 0%. If `haircut` is omitted, the website estimates it from dividend reliability and risk text.
 - The website computes dual-strategy grouping locally: main strategy, side-strategy cigar butt, transition observation, or risk exclusion.
 - Future optional analysis fields may be useful but are not required: `circleOfCompetence`, `ownerEarnings`, `roeHistory`, `debtRatio`, `dividendCoverage`, and capital allocation notes. Missing fields should not block import.

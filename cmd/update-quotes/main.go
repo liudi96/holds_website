@@ -129,6 +129,11 @@ type NetCashProfile struct {
 	ExCashPE                *float64 `json:"exCashPe,omitempty"`
 	ExCashPFCF              *float64 `json:"exCashPfcf,omitempty"`
 	FCFYield                *float64 `json:"fcfYield,omitempty"`
+	ShareholderFCF          *float64 `json:"shareholderFcf,omitempty"`
+	ShareholderFCFCurrency  string   `json:"shareholderFcfCurrency,omitempty"`
+	ShareholderFCFBasis     string   `json:"shareholderFcfBasis,omitempty"`
+	ConsolidatedFCF         *float64 `json:"consolidatedFcf,omitempty"`
+	MinorityFCFAdjustment   *float64 `json:"minorityFcfAdjustment,omitempty"`
 	FCFPositiveYears        *int     `json:"fcfPositiveYears,omitempty"`
 	Note                    string   `json:"note,omitempty"`
 }

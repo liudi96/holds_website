@@ -525,27 +525,29 @@ h2 {
 
 .master-vote-head h3 {
   margin: 2px 0 0;
-  font-size: 16px;
+  font-size: 18px;
+  line-height: 1.25;
 }
 
-.master-vote-card dl {
+.strategy-vote-body {
   display: grid;
-  gap: 8px;
-  margin: 0;
+  gap: 10px;
 }
 
-.master-vote-card dl div {
+.strategy-vote-body div {
   display: grid;
-  gap: 3px;
+  gap: 4px;
+  min-width: 0;
 }
 
-.master-vote-card dt {
+.strategy-vote-body span {
   color: var(--muted);
   font-size: 11px;
   font-weight: 800;
+  line-height: 1.2;
 }
 
-.master-vote-card dd {
+.strategy-vote-body p {
   margin: 0;
   color: var(--ink);
   font-size: 12px;
@@ -2148,13 +2150,27 @@ tbody tr:hover {
 
 .master-vote-card {
   display: grid;
-  gap: 10px;
+  gap: 14px;
   min-width: 0;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid var(--line);
   border-top: 4px solid #94a3b8;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.master-vote-card.strong,
+.master-vote-card.buy {
+  border-top-color: var(--green);
+}
+
+.master-vote-card.watch,
+.master-vote-card.wait {
+  border-top-color: var(--blue);
+}
+
+.master-vote-card.safe {
+  border-top-color: #a16207;
 }
 
 .master-vote-card.marks {

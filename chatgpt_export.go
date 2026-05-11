@@ -308,9 +308,9 @@ func renderProjectInstructions(meta string) string {
 
 - 优先读取 ` + "`00_reference_tables.md`" + ` 建立横向比较视图，再读取 ` + "`01_portfolio_snapshot.md`" + ` 理解当前现金、仓位、汇率、持仓和候选池。
 - 做个股分析时读取 ` + "`05_master_lens_tables.md`" + `，先按“双策略”判断主策略、辅策略、过渡观察或风险排除。
-- 做仓位和风险判断时读取 ` + "`06_risk_committee_memo.md`" + `，优先检查 70% 股息蓝筹主策略、30% 净现金烟蒂辅策略的偏离度。
+- 做仓位和风险判断时读取 ` + "`06_risk_committee_memo.md`" + `，优先检查 70% 回报蓝筹主策略、30% 净现金烟蒂辅策略的偏离度。
 - 深度研究单只股票前，先读取 ` + "`stocks/`" + ` 下对应股票档案，避免重复询问已经存在的成本、目标价、风险和历史决策。
-- 所有建议必须同时考虑股息盾、DCF安全边际、长期股东现金流审计、净现金保护、自由现金流、仓位和既有投资纪律。
+- 所有建议必须同时考虑综合回报盾、DCF安全边际、长期股东现金流评分、净现金保护、自由现金流、仓位和既有投资纪律。
 - 如果研究结论需要回写网站，请输出符合 ` + "`import_schema.md`" + ` 的 JSON；不要输出散乱字段。
 - 遇到价格、财报或新闻这类会变化的信息时，先说明信息时点，再给出结论。
 - 不把短期波动当成买卖理由，除非它改变了估值、安全边际或基本面判断。
@@ -559,10 +559,10 @@ func renderDecisionRules(meta string, state AppState) string {
 	builder.WriteString("| 财务质量 | 关注利润率、资产负债表、现金流、ROE/ROIC 和周期波动。 |\n")
 
 	builder.WriteString("\n## 买入纪律\n\n")
-	builder.WriteString("- 主策略固定为 70% 目标仓位：自选池大盘蓝筹，A股股息率≥6%或H股股息率≥8%，最近财年或预估下一年满足其一，DCF安全边际≥15%。\n")
-	builder.WriteString("- 主策略买入前必须通过长期股东现金流审计；缺审计或审计待复核时进入过渡观察，不使用新增资金。\n")
+	builder.WriteString("- 主策略固定为 70% 目标仓位：自选池大盘蓝筹，A股综合回报率≥6%或H股综合回报率≥8%，最近完整财年口径达标，DCF安全边际≥15%。\n")
+	builder.WriteString("- 主策略买入前长期股东现金流评分需达到 75/100；review 项按部分分计入，不再要求七项全部通过。\n")
 	builder.WriteString("- 辅策略固定为 30% 目标仓位：账上净现金保护、折扣后净现金可验证，A股 ex-cash PE≤10，H股 ex-cash PE≤8，并优先看 ex-cash P/FCF、FCF yield 和FCF连续性。\n")
-	builder.WriteString("- 买入前必须同时检查策略归属、股息盾、DCF边际、长期需求、资产耐久、再投资需求、分红FCF支持、净现金折扣、自由现金流和现有仓位。\n")
+	builder.WriteString("- 买入前必须同时检查策略归属、综合回报盾、DCF边际、长期需求、资产耐久、再投资需求、分红FCF支持、净现金折扣、自由现金流和现有仓位。\n")
 	builder.WriteString("- 对已经持仓的股票，新增买入必须证明风险收益比优于候选池替代项。\n")
 	builder.WriteString("- 旧持仓未达新阈值时默认过渡观察，不自动触发卖出；新资金只进入主策略达标或辅策略烟蒂达标标的。\n")
 	builder.WriteString("- 如果最新价格、财报或重大新闻缺失，先补研究，不直接给交易建议。\n")
@@ -627,17 +627,18 @@ func renderMasterLensTables(meta string, records []chatGPTStockRecord) string {
 	var builder strings.Builder
 	builder.WriteString(meta)
 	builder.WriteString("# 双策略评分表\n\n")
-	builder.WriteString("本文件用于让 ChatGPT 先按股息蓝筹主策略与净现金烟蒂辅策略审查标的，再回到单股档案补证据。\n\n")
+	builder.WriteString("本文件用于让 ChatGPT 先按回报蓝筹主策略与净现金烟蒂辅策略审查标的，再回到单股档案补证据。\n\n")
 
-	builder.WriteString("## 主策略：股息蓝筹\n\n")
-	builder.WriteString("| 状态 | 档案 | 市场 | 最新价 | 股息率 | 预估股息率 | 股息门槛 | DCF边际 | 长期审计 | 当前动作 |\n")
-	builder.WriteString("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |\n")
+	builder.WriteString("## 主策略：回报蓝筹\n\n")
+	builder.WriteString("| 状态 | 档案 | 市场 | 最新价 | 综合回报率 | 股息率 | 预估股息率 | 回报门槛 | DCF边际 | 长期评分 | 当前动作 |\n")
+	builder.WriteString("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |\n")
 	for _, record := range records {
-		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
 			mdCell(record.Status),
 			mdCell(chatGPTStockLink(record)),
 			mdCell(recordMarketKind(record)),
 			formatNumber(record.CurrentPrice),
+			formatShareholderReturnYield(record),
 			formatStockDividendYield(record),
 			formatForecastDividendYield(record.Dividend),
 			formatPercent(recordDividendTarget(record)),
@@ -815,6 +816,11 @@ func renderImportSchema(meta string) string {
     "exCashPe": 13.5,
     "exCashPfcf": 14.2,
     "fcfYield": 0.065,
+    "shareholderFcf": 9000000000,
+    "shareholderFcfCurrency": "HKD",
+    "shareholderFcfBasis": "普通股东 FCF：合并FCF扣除少数股东分流后口径",
+    "consolidatedFcf": 12000000000,
+    "minorityFcfAdjustment": 3000000000,
     "fcfPositiveYears": 5,
     "note": "净现金、FCF 和估值口径使用 FY2025 年报与当前市值。"
   },
@@ -838,12 +844,12 @@ func renderImportSchema(meta string) string {
 - valuation.intrinsicValue 是核心 DCF 估值输入；主策略要求显示 DCF 安全边际≥15%。
 - marginOfSafety 使用小数，例如 0.25 表示 25%。
 - 首买价默认按 intrinsicValue × 75% 计算，观察价为首买价 × 105%，重仓价为首买价 × 90%。
-- 主策略股息盾：A股股息率≥6%，H股股息率≥8%；最近财年或预估下一年满足其一即可。
-- 主策略还必须通过 ownerCashFlowAudit；资料不足写 review，不要猜 pass。valuationSystemRisk=fail 会进入风险排除。
-- 股息数据由“更新行情”尽量从行情源抓取；研究也可以提供 dividend.forecastFiscalYear、forecastPerShare、forecastCurrency、forecastYield。
+- 主策略综合回报盾：A股综合回报率≥6%，H股综合回报率≥8%；使用最近完整财年现金分红加回购相对总市值计算。
+- ownerCashFlowAudit 会被网站折算成 100 分长期股东评分；主策略要求评分≥75。review 项给部分分，不再要求七项全部 pass。valuationSystemRisk=fail 仍会进入风险排除。
+- 股息数据由“更新行情”尽量从行情源抓取；研究也可以提供 dividend.forecastFiscalYear、forecastPerShare、forecastCurrency、forecastYield 作为参考，但预估股息率不替代综合回报硬门槛。
 - 辅策略烟蒂：提供 netCash 结构化字段，重点说明净现金折扣、折扣后净现金、ex-cash PE、ex-cash P/FCF、FCF yield 和 FCF 连续性。
 - 净现金折扣约定：稳定分红100%，一般70%，弱/周期40%，重大风险0%。如果 haircut 为空，网站会按股息可靠性和风险文本自动分档。
-- ownerCashFlowAudit 七项 status 只能是 pass、review、fail；核心项为 tenYearDemand、dividendFcfSupport、valuationSystemRisk。
+- ownerCashFlowAudit 七项 status 只能是 pass、review、fail；评分权重为十年需求18、资产耐久14、轻再投资12、分红FCF18、再投资效率12、ROE/ROIC14、估值体系12。
 - quality.totalScore 应等于 businessModel + moat + governance + financialQuality。
 - asOf 必须为 YYYY-MM-DD。
 - plan 不要写 symbol；网站会用顶层 symbol 关联执行计划。
@@ -883,10 +889,11 @@ func renderStockMarkdown(meta string, record chatGPTStockRecord) string {
 	builder.WriteString(fmt.Sprintf("| 重仓价 | %s |\n", formatPriceLevel(record.PriceLevels, "aggressive")))
 	builder.WriteString(fmt.Sprintf("| 安全边际 | %s |\n", formatPercentPtr(record.MarginOfSafety)))
 
-	builder.WriteString("\n## 长期股东现金流审计\n\n")
-	builder.WriteString("| 项目 | 状态 | 说明 |\n| --- | --- | --- |\n")
+	builder.WriteString("\n## 长期股东现金流评分\n\n")
+	builder.WriteString(fmt.Sprintf("总评：%s\n\n", mdText(formatOwnerAuditConclusion(record.OwnerCashFlowAudit))))
+	builder.WriteString("| 项目 | 状态 | 分数 | 说明 |\n| --- | --- | ---: | --- |\n")
 	for _, item := range ownerAuditRows(record.OwnerCashFlowAudit) {
-		builder.WriteString(fmt.Sprintf("| %s | %s | %s |\n", mdCell(item.Label), mdCell(item.Status), mdCell(item.Note)))
+		builder.WriteString(fmt.Sprintf("| %s | %s | %d/%d | %s |\n", mdCell(item.Label), mdCell(item.Status), item.Points, item.MaxPoints, mdCell(item.Note)))
 	}
 
 	builder.WriteString("\n## 股息与现金流\n\n")
@@ -894,7 +901,7 @@ func renderStockMarkdown(meta string, record chatGPTStockRecord) string {
 	builder.WriteString(fmt.Sprintf("| 财年 | %s |\n", mdCell(dividendFiscalYear(record.Dividend))))
 	builder.WriteString(fmt.Sprintf("| 每股分红 | %s |\n", formatDividendPerShare(record.Dividend)))
 	builder.WriteString(fmt.Sprintf("| 股息率 | %s |\n", formatStockDividendYield(record)))
-	builder.WriteString(fmt.Sprintf("| 股息门槛 | %s |\n", formatPercent(recordDividendTarget(record))))
+	builder.WriteString(fmt.Sprintf("| 回报门槛 | %s |\n", formatPercent(recordDividendTarget(record))))
 	builder.WriteString(fmt.Sprintf("| 预估财年 | %s |\n", mdCell(dividendForecastFiscalYear(record.Dividend))))
 	builder.WriteString(fmt.Sprintf("| 预估每股 | %s |\n", formatForecastDividendPerShare(record.Dividend)))
 	builder.WriteString(fmt.Sprintf("| 预估股息率 | %s |\n", formatForecastDividendYield(record.Dividend)))
@@ -911,6 +918,7 @@ func renderStockMarkdown(meta string, record chatGPTStockRecord) string {
 	builder.WriteString(fmt.Sprintf("| 调整后净现金 | %s |\n", formatNetCashAmount(record.NetCash, "adjusted")))
 	builder.WriteString(fmt.Sprintf("| ex-cash PE | %s |\n", formatFloatPtr(netCashFloat(record.NetCash, "pe"))))
 	builder.WriteString(fmt.Sprintf("| ex-cash P/FCF | %s |\n", formatFloatPtr(netCashFloat(record.NetCash, "pfcf"))))
+	builder.WriteString(fmt.Sprintf("| 普通股东 FCF | %s |\n", formatNetCashShareholderFCF(record.NetCash)))
 	builder.WriteString(fmt.Sprintf("| FCF yield | %s |\n", formatPercentPtr(netCashFloat(record.NetCash, "fcfYield"))))
 	builder.WriteString(fmt.Sprintf("| FCF为正年数 | %s |\n", formatIntPtr(netCashInt(record.NetCash, "fcfYears"))))
 
@@ -1564,6 +1572,8 @@ func netCashFloat(netCash *NetCashProfile, field string) *float64 {
 		return netCash.ExCashPFCF
 	case "fcfYield":
 		return netCash.FCFYield
+	case "shareholderFcf":
+		return netCash.ShareholderFCF
 	default:
 		return nil
 	}
@@ -1595,6 +1605,17 @@ func formatNetCashHaircut(netCash *NetCashProfile) string {
 	return formatPercentPtr(netCashFloat(netCash, "haircut"))
 }
 
+func formatNetCashShareholderFCF(netCash *NetCashProfile) string {
+	if netCash == nil || netCash.ShareholderFCF == nil {
+		return "-"
+	}
+	currency := strings.ToUpper(strings.TrimSpace(netCash.ShareholderFCFCurrency))
+	if currency == "" {
+		currency = netCashCurrencyCode(netCash)
+	}
+	return fmt.Sprintf("%s %s", currency, formatFloatPtr(netCash.ShareholderFCF))
+}
+
 func formatNetCashReason(netCash *NetCashProfile) string {
 	if netCash == nil {
 		return "-"
@@ -1603,30 +1624,43 @@ func formatNetCashReason(netCash *NetCashProfile) string {
 }
 
 type ownerAuditRow struct {
+	Label     string
+	Status    string
+	Points    int
+	MaxPoints int
+	Note      string
+}
+
+type ownerAuditField struct {
+	Key    string
 	Label  string
-	Status string
-	Note   string
+	Weight int
+}
+
+func ownerAuditFields() []ownerAuditField {
+	return []ownerAuditField{
+		{Key: "tenYearDemand", Label: "十年需求", Weight: 18},
+		{Key: "assetDurability", Label: "资产耐久", Weight: 14},
+		{Key: "maintenanceCapexLight", Label: "轻再投资", Weight: 12},
+		{Key: "dividendFcfSupport", Label: "分红FCF", Weight: 18},
+		{Key: "dividendReinvestmentEfficiency", Label: "再投资效率", Weight: 12},
+		{Key: "roeRoicDurability", Label: "ROE/ROIC", Weight: 14},
+		{Key: "valuationSystemRisk", Label: "估值体系", Weight: 12},
+	}
 }
 
 func ownerAuditRows(audit *OwnerCashFlowAudit) []ownerAuditRow {
-	rows := []struct {
-		label string
-		item  OwnerAuditItem
-	}{
-		{"十年需求", ownerAuditItem(audit, "tenYearDemand")},
-		{"资产耐久", ownerAuditItem(audit, "assetDurability")},
-		{"轻再投资", ownerAuditItem(audit, "maintenanceCapexLight")},
-		{"分红FCF", ownerAuditItem(audit, "dividendFcfSupport")},
-		{"再投资效率", ownerAuditItem(audit, "dividendReinvestmentEfficiency")},
-		{"ROE/ROIC", ownerAuditItem(audit, "roeRoicDurability")},
-		{"估值体系", ownerAuditItem(audit, "valuationSystemRisk")},
-	}
-	result := make([]ownerAuditRow, 0, len(rows))
-	for _, row := range rows {
+	fields := ownerAuditFields()
+	result := make([]ownerAuditRow, 0, len(fields))
+	_, hasAudit := ownerAuditScore(audit)
+	for _, field := range fields {
+		item := ownerAuditItem(audit, field.Key)
 		result = append(result, ownerAuditRow{
-			Label:  row.label,
-			Status: formatOwnerAuditStatus(row.item.Status),
-			Note:   firstNonEmpty(strings.TrimSpace(row.item.Note), "待补充"),
+			Label:     field.Label,
+			Status:    formatOwnerAuditStatus(item.Status),
+			Points:    ownerAuditItemPoints(item.Status, field.Weight, hasAudit),
+			MaxPoints: field.Weight,
+			Note:      firstNonEmpty(strings.TrimSpace(item.Note), "待补充"),
 		})
 	}
 	return result
@@ -1657,29 +1691,52 @@ func ownerAuditItem(audit *OwnerCashFlowAudit, key string) OwnerAuditItem {
 }
 
 func formatOwnerAuditConclusion(audit *OwnerCashFlowAudit) string {
+	score, hasAudit := ownerAuditScore(audit)
+	if !hasAudit {
+		return "待评分"
+	}
+	if score >= 85 {
+		return fmt.Sprintf("%d/100 长期股东强", score)
+	}
+	if score >= 75 {
+		return fmt.Sprintf("%d/100 长期股东达标", score)
+	}
+	if score >= 60 {
+		return fmt.Sprintf("%d/100 长期股东观察", score)
+	}
+	return fmt.Sprintf("%d/100 长期股东偏弱", score)
+}
+
+func ownerAuditScore(audit *OwnerCashFlowAudit) (int, bool) {
 	hasAudit := false
-	hasFail := false
-	hasReview := false
-	for _, row := range ownerAuditRows(audit) {
-		status := strings.TrimSpace(row.Status)
-		note := strings.TrimSpace(row.Note)
-		if status != "复核" || note != "待补充" {
+	points := 0
+	maxPoints := 0
+	for _, field := range ownerAuditFields() {
+		item := ownerAuditItem(audit, field.Key)
+		if strings.TrimSpace(item.Status) != "" || strings.TrimSpace(item.Note) != "" {
 			hasAudit = true
 		}
-		if status == "失败" {
-			hasFail = true
-		}
-		if status == "复核" {
-			hasReview = true
-		}
+		points += ownerAuditItemPoints(item.Status, field.Weight, audit != nil)
+		maxPoints += field.Weight
 	}
-	if hasFail {
-		return "长期股东失败"
+	if !hasAudit || maxPoints <= 0 {
+		return 0, false
 	}
-	if !hasAudit || hasReview {
-		return "长期股东复核"
+	return (points*100 + maxPoints/2) / maxPoints, true
+}
+
+func ownerAuditItemPoints(status string, weight int, hasAudit bool) int {
+	if !hasAudit {
+		return 0
 	}
-	return "长期股东通过"
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "pass":
+		return weight
+	case "fail":
+		return 0
+	default:
+		return (weight*60 + 50) / 100
+	}
 }
 
 func formatOwnerAuditStatus(status string) string {

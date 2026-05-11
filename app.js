@@ -199,25 +199,31 @@ const SAFETY_MARGIN_TARGET = 0.25;
 const MAIN_DCF_MARGIN_TARGET = 0.15;
 const MAIN_ALLOCATION_TARGET = 0.7;
 const CIGAR_ALLOCATION_TARGET = 0.3;
-const A_SHARE_DIVIDEND_TARGET = 0.06;
-const HK_SHARE_DIVIDEND_TARGET = 0.08;
+const A_SHARE_SHAREHOLDER_RETURN_TARGET = 0.06;
+const HK_SHARE_SHAREHOLDER_RETURN_TARGET = 0.08;
 const A_SHARE_EX_CASH_PE_MAX = 10;
 const HK_SHARE_EX_CASH_PE_MAX = 8;
 const AGGRESSIVE_BUY_DISCOUNT = 0.1;
+const OWNER_AUDIT_SCORE_TARGET = 75;
 const MAJOR_RISK_PATTERN = /停牌|重大风险|否决|调查|内控|退市|财报可信|风险暴露|治理风险|治理与财务可靠性|质量分<75|低于75/;
 const OWNER_AUDIT_FIELDS = [
-  { key: "tenYearDemand", label: "十年需求", core: true },
-  { key: "assetDurability", label: "资产耐久", core: false },
-  { key: "maintenanceCapexLight", label: "轻再投资", core: false },
-  { key: "dividendFcfSupport", label: "分红FCF", core: true },
-  { key: "dividendReinvestmentEfficiency", label: "再投资效率", core: false },
-  { key: "roeRoicDurability", label: "ROE/ROIC", core: false },
-  { key: "valuationSystemRisk", label: "估值体系", core: true }
+  { key: "tenYearDemand", label: "十年需求", core: true, weight: 18, evidence: "十年后需求是否仍稳定，是否受替代品或政策永久削弱" },
+  { key: "assetDurability", label: "资产耐久", core: false, weight: 14, evidence: "品牌、网络、牌照、资源或渠道资产是否能长期保持价值" },
+  { key: "maintenanceCapexLight", label: "轻再投资", core: false, weight: 12, evidence: "维持竞争力所需资本开支是否轻，扩张是否吞噬自由现金流" },
+  { key: "dividendFcfSupport", label: "分红FCF", core: true, weight: 18, evidence: "分红和回购是否由真实自由现金流覆盖，而非靠借债或卖资产" },
+  { key: "dividendReinvestmentEfficiency", label: "再投资效率", core: false, weight: 12, evidence: "留存利润、分红和回购哪种资本配置对股东更有效" },
+  { key: "roeRoicDurability", label: "ROE/ROIC", core: false, weight: 14, evidence: "ROE/ROIC 是否可持续，是否依赖高杠杆或周期高点" },
+  { key: "valuationSystemRisk", label: "估值体系", core: true, weight: 12, evidence: "行业估值锚是否发生永久变化，当前估值假设是否仍成立" }
 ];
 const OWNER_AUDIT_STATUS = {
   pass: { text: "通过", tone: "strong" },
   review: { text: "复核", tone: "watch" },
   fail: { text: "失败", tone: "risk" }
+};
+const OWNER_AUDIT_STATUS_SCORE = {
+  pass: 1,
+  review: 0.6,
+  fail: 0
 };
 
 let state = loadState();
@@ -378,6 +384,7 @@ function percent(value, signed = true) {
 }
 
 function finiteNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -691,8 +698,8 @@ function marketKind(stock) {
   return String(stock?.currency ?? "").toUpperCase() === "HKD" ? "HK" : "A";
 }
 
-function dividendYieldTarget(stock) {
-  return marketKind(stock) === "HK" ? HK_SHARE_DIVIDEND_TARGET : A_SHARE_DIVIDEND_TARGET;
+function shareholderReturnTarget(stock) {
+  return marketKind(stock) === "HK" ? HK_SHARE_SHAREHOLDER_RETURN_TARGET : A_SHARE_SHAREHOLDER_RETURN_TARGET;
 }
 
 function forecastDividendYield(stock) {
@@ -708,13 +715,14 @@ function forecastDividendYield(stock) {
 
 function dividendShield(stock) {
   const trailing = calculatedDividendYield(stock);
+  const shareholderReturn = calculatedShareholderReturnYield(stock);
   const forecast = forecastDividendYield(stock);
-  const best = Math.max(Number.isFinite(trailing) ? trailing : -Infinity, Number.isFinite(forecast) ? forecast : -Infinity);
-  const value = Number.isFinite(best) ? best : null;
-  const source = Number.isFinite(forecast) && (!Number.isFinite(trailing) || forecast >= trailing) ? "预估下一年" : "最近财年/TTM";
-  const target = dividendYieldTarget(stock);
+  const value = Number.isFinite(shareholderReturn) ? shareholderReturn : null;
+  const source = Number.isFinite(shareholderReturn) ? "最近财年综合回报" : "未记录综合回报";
+  const target = shareholderReturnTarget(stock);
   return {
     trailing,
+    shareholderReturn,
     forecast,
     value,
     source,
@@ -776,7 +784,11 @@ function netCashProfile(stock) {
   const latest = latestAnnualFinancial(stock);
   const financialCurrency = latestFinancialCurrency(stock);
   const netProfitCny = toCnyAmount(latest.netProfit, financialCurrency);
-  const fcfCny = toCnyAmount(latest.freeCashFlow, financialCurrency);
+  const shareholderFcf = finiteNumber(profile.shareholderFcf);
+  const shareholderFcfCurrency = String(profile.shareholderFcfCurrency || profile.currency || financialCurrency).toUpperCase();
+  const fcfCurrency = Number.isFinite(shareholderFcf) ? shareholderFcfCurrency : financialCurrency;
+  const fcfLocal = Number.isFinite(shareholderFcf) ? shareholderFcf : finiteNumber(latest.freeCashFlow);
+  const fcfCny = toCnyAmount(fcfLocal, fcfCurrency);
   const exCashMarketCapCny = Number.isFinite(marketCapCny) && Number.isFinite(adjustedCny)
     ? Math.max(marketCapCny - Math.max(adjustedCny, 0), 0)
     : null;
@@ -786,6 +798,11 @@ function netCashProfile(stock) {
   const computedExCashPfcf = Number.isFinite(exCashMarketCapCny) && Number.isFinite(fcfCny) && fcfCny > 0
     ? exCashMarketCapCny / fcfCny
     : null;
+  const computedPfcf = Number.isFinite(marketCapCny) && marketCapCny > 0 && Number.isFinite(fcfCny) && fcfCny > 0
+    ? marketCapCny / fcfCny
+    : null;
+  const exCashPfcf = finiteNumber(profile.exCashPfcf) ?? computedExCashPfcf;
+  const pfcf = finiteNumber(profile.pfcf) ?? computedPfcf;
   const computedFcfYield = Number.isFinite(marketCapCny) && marketCapCny > 0 && Number.isFinite(fcfCny)
     ? fcfCny / marketCapCny
     : null;
@@ -799,8 +816,16 @@ function netCashProfile(stock) {
     adjustedCny,
     marketCapCny,
     exCashPe: finiteNumber(profile.exCashPe) ?? computedExCashPe,
-    exCashPfcf: finiteNumber(profile.exCashPfcf) ?? computedExCashPfcf,
+    exCashPfcf,
+    pfcf,
+    fcfMultiple: exCashPfcf ?? pfcf,
     fcfYield: finiteNumber(profile.fcfYield) ?? computedFcfYield,
+    fcfLocal,
+    fcfCurrency,
+    fcfBasis: String(profile.shareholderFcfBasis || (Number.isFinite(shareholderFcf) ? "普通股东 FCF" : "合并 FCF")).trim(),
+    shareholderFcf,
+    consolidatedFcf: finiteNumber(profile.consolidatedFcf),
+    minorityFcfAdjustment: finiteNumber(profile.minorityFcfAdjustment),
     fcfRecord: positiveRecordRatio(stock, "freeCashFlow"),
     fcfPositiveYears: finiteNumber(profile.fcfPositiveYears),
     reason: String(profile.haircutReason || profile.note || "").trim()
@@ -811,9 +836,22 @@ function ownerAuditStatusMeta(status) {
   return OWNER_AUDIT_STATUS[status] ?? OWNER_AUDIT_STATUS.review;
 }
 
+function ownerAuditScoreMeta(score, hasAudit) {
+  if (!hasAudit) return { status: "review", text: "长期股东待评分", tone: "watch", grade: "待补充" };
+  if (score >= 85) return { status: "pass", text: "长期股东强", tone: "strong", grade: "优秀" };
+  if (score >= OWNER_AUDIT_SCORE_TARGET) return { status: "pass", text: "长期股东达标", tone: "strong", grade: "达标" };
+  if (score >= 60) return { status: "review", text: "长期股东观察", tone: "watch", grade: "观察" };
+  return { status: "fail", text: "长期股东偏弱", tone: "risk", grade: "偏弱" };
+}
+
 function normalizeOwnerAuditStatus(status) {
   const value = String(status ?? "").trim().toLowerCase();
   return ["pass", "review", "fail"].includes(value) ? value : "review";
+}
+
+function isCorruptedAuditNote(note) {
+  const text = String(note ?? "").trim();
+  return /\?{3,}/.test(text) && !/[\u4e00-\u9fa5]/.test(text);
 }
 
 function ownerAuditProfile(stock) {
@@ -825,27 +863,47 @@ function ownerAuditProfile(stock) {
   const items = OWNER_AUDIT_FIELDS.map((field) => {
     const source = raw?.[field.key] ?? {};
     const status = hasAudit ? normalizeOwnerAuditStatus(source.status) : "review";
-    const note = String(source.note ?? "").trim();
-    return { ...field, status, note, ...ownerAuditStatusMeta(status) };
+    const rawNote = String(source.note ?? "").trim();
+    const noteCorrupted = isCorruptedAuditNote(rawNote);
+    const note = noteCorrupted ? "" : rawNote;
+    const weight = finiteNumber(field.weight) ?? 0;
+    const statusScore = hasAudit ? OWNER_AUDIT_STATUS_SCORE[status] ?? OWNER_AUDIT_STATUS_SCORE.review : 0;
+    const score = Math.round(weight * statusScore);
+    return { ...field, status, note, rawNote, noteCorrupted, score, maxScore: weight, ...ownerAuditStatusMeta(status) };
   });
+  const maxScore = items.reduce((sum, item) => sum + item.maxScore, 0);
+  const rawScore = items.reduce((sum, item) => sum + item.score, 0);
+  const score = maxScore > 0 ? Math.round((rawScore / maxScore) * 100) : 0;
   const failItems = items.filter((item) => item.status === "fail");
   const reviewItems = items.filter((item) => item.status === "review");
   const valuationSystem = items.find((item) => item.key === "valuationSystemRisk");
-  let status = "pass";
-  if (!hasAudit || reviewItems.length) status = "review";
-  if (failItems.length) status = "fail";
-  const meta = ownerAuditStatusMeta(status);
+  const corruptedNotes = items.filter((item) => item.noteCorrupted).length;
+  const meta = ownerAuditScoreMeta(score, hasAudit);
   const blockers = [];
-  if (!hasAudit) blockers.push("长期股东审计待补充");
-  blockers.push(...failItems.map((item) => `${item.label}失败`));
-  if (!failItems.length) {
-    blockers.push(...reviewItems.filter((item) => item.core).map((item) => `${item.label}待复核`));
+  if (!hasAudit) {
+    blockers.push("长期股东评分待补充");
+  } else if (score < OWNER_AUDIT_SCORE_TARGET) {
+    blockers.push(`长期股东评分 ${score}/100，低于${OWNER_AUDIT_SCORE_TARGET}`);
+  }
+  if (valuationSystem?.status === "fail") {
+    blockers.push("估值体系失败");
+  }
+  if (score < OWNER_AUDIT_SCORE_TARGET) {
+    blockers.push(...failItems.slice(0, 2).map((item) => `${item.label}0分`));
+    if (!failItems.length) {
+      blockers.push(...reviewItems.filter((item) => item.core).slice(0, 2).map((item) => `${item.label}待复核`));
+    }
   }
   return {
-    status,
-    text: status === "pass" ? "长期股东通过" : status === "fail" ? "长期股东失败" : "长期股东复核",
+    status: meta.status,
+    text: meta.text,
     tone: meta.tone,
+    grade: meta.grade,
+    score,
+    rawScore,
+    maxScore,
     hasAudit,
+    corruptedNotes,
     items,
     blockers,
     valuationSystemFailed: valuationSystem?.status === "fail"
@@ -892,9 +950,9 @@ function strategyProfile(stock) {
   }
 
   const blockers = [];
-  if (!shield.passed) blockers.push(`股息未达 ${percent(shield.target * 100, false)}`);
-  if (!dcfPassed) blockers.push(`DCF边际未达 ${percent(MAIN_DCF_MARGIN_TARGET * 100, false)}`);
   if (ownerAudit.status !== "pass") blockers.push(...ownerAudit.blockers.slice(0, 2));
+  if (!shield.passed) blockers.push(`综合回报未达 ${percent(shield.target * 100, false)}`);
+  if (!dcfPassed) blockers.push(`安全边际未达 ${percent(MAIN_DCF_MARGIN_TARGET * 100, false)}`);
   if (majorRisk) blockers.push("重大风险未解除");
   if (structuralRisk) blockers.push("估值体系改变风险");
   if (confidence === "low") blockers.push("估值低可信");
@@ -959,6 +1017,33 @@ function setResearchStatus(message, tone = "") {
 function setQuoteUpdateStatus(message, tone = "") {
   elements.quoteUpdateStatus.textContent = message;
   elements.quoteUpdateStatus.className = tone;
+}
+
+function renderQuoteUpdateStatus(positions) {
+  const stocks = auditUniverse(positions);
+  const referenceDate = quoteReferenceDate(stocks);
+  if (!referenceDate) {
+    setQuoteUpdateStatus("行情待更新");
+    return;
+  }
+
+  const missingQuotes = stocks.filter((stock) => !stock.currentPriceDate || !Number.isFinite(finiteNumber(stock.currentPrice)) || finiteNumber(stock.currentPrice) <= 0);
+  const staleQuotes = stocks.filter((stock) => {
+    const lagDays = dateDiffDays(stock.currentPriceDate, referenceDate);
+    return Number.isFinite(lagDays) && lagDays > 2;
+  });
+  const missingPreviousClose = stocks.filter((stock) => !stock.previousCloseDate || !Number.isFinite(finiteNumber(stock.previousClose)) || finiteNumber(stock.previousClose) <= 0);
+
+  if (missingQuotes.length || staleQuotes.length || missingPreviousClose.length) {
+    const issues = [];
+    if (missingQuotes.length) issues.push(`${missingQuotes.length} 个缺行情`);
+    if (staleQuotes.length) issues.push(`${staleQuotes.length} 个行情落后`);
+    if (missingPreviousClose.length) issues.push(`${missingPreviousClose.length} 个缺昨收`);
+    setQuoteUpdateStatus(`行情已至 ${referenceDate}，${issues.join("，")}`, "error");
+    return;
+  }
+
+  setQuoteUpdateStatus(`行情已更新至 ${referenceDate}`, "success");
 }
 
 function appendClientDecisionLog(entry) {
@@ -1060,8 +1145,8 @@ function renderResearchPreview(result, imported = false) {
       <div><span>质量总分</span><strong>${numberText(quality.totalScore)}</strong><small>${numberText(quality.businessModel)}/${numberText(quality.moat)}/${numberText(quality.governance)}/${numberText(quality.financialQuality)}</small></div>
       <div><span>执行排序</span><strong>${targetPlan ? targetPlan.rank : "-"}</strong><small>${escapeHTML(targetPlan ? targetPlan.priority : "未列入 Plan")}</small></div>
       <div><span>买入分层</span><strong>${Number.isFinite(levels.initialBuyPrice) ? currency(levels.initialBuyPrice, research.currency || "CNY") : "-"}</strong><small>观察 ${Number.isFinite(levels.watchPrice) ? currency(levels.watchPrice, research.currency || "CNY") : "-"} · 重仓 ${Number.isFinite(levels.aggressiveBuyPrice) ? currency(levels.aggressiveBuyPrice, research.currency || "CNY") : "-"}</small></div>
-      <div><span>股息</span><strong>${Number.isFinite(dividend.dividendPerShare) ? currency(dividend.dividendPerShare, dividend.dividendCurrency || research.currency || "CNY") : "-"}</strong><small>${dividend.fiscalYear ? `${escapeHTML(dividend.fiscalYear)} · ` : ""}股息率按总分红/总市值计算</small></div>
-      <div><span>长期审计</span><strong>${badge(audit.text, audit.tone)}</strong><small>${escapeHTML(audit.blockers.length ? audit.blockers.join("；") : "七项通过")}</small></div>
+      <div><span>股东回报</span><strong>${Number.isFinite(dividend.dividendPerShare) ? currency(dividend.dividendPerShare, dividend.dividendCurrency || research.currency || "CNY") : "-"}</strong><small>${dividend.fiscalYear ? `${escapeHTML(dividend.fiscalYear)} · ` : ""}综合回报按分红+回购/总市值计算</small></div>
+      <div><span>长期评分</span><strong>${badge(audit.text, audit.tone)}</strong><small>${escapeHTML(audit.hasAudit ? `${audit.score}/100 · ${audit.grade}` : "待补评分")}</small></div>
     </div>
     ${warnings.length ? `
       <div class="research-warnings">
@@ -1732,8 +1817,8 @@ function renderPositions(positions) {
           <td data-label="策略">
             <div class="position-committee">
               <span class="master-mini ${strategy.tone}">${escapeHTML(strategy.status)}</span>
-              <span class="master-mini ${strategy.shield.passed ? "strong" : "watch"}">息 ${displayDividendRatio(strategy.shield.value)}</span>
-              <span class="master-mini ${Number.isFinite(strategy.margin) && strategy.margin >= MAIN_DCF_MARGIN_TARGET ? "strong" : "watch"}">DCF ${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</span>
+              <span class="master-mini ${strategy.shield.passed ? "strong" : "watch"}">回 ${displayDividendRatio(strategy.shield.value)}</span>
+              <span class="master-mini ${Number.isFinite(strategy.margin) && strategy.margin >= MAIN_DCF_MARGIN_TARGET ? "strong" : "watch"}">安全边际 ${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</span>
               <span class="master-mini ${strategy.ownerAudit.tone}">${escapeHTML(strategy.ownerAudit.text)}</span>
             </div>
           </td>
@@ -1858,12 +1943,12 @@ function renderPlanAndCandidates() {
             <em>${escapeHTML(strategy.status)}</em>
           </div>
           <div class="candidate-metrics">
-            <span>股息 <strong>${displayDividendRatio(strategy.shield.value)}</strong></span>
+            <span>综合回报 <strong>${displayDividendRatio(strategy.shield.value)}</strong></span>
             <span>门槛 <strong>${displayDividendRatio(strategy.shield.target)}</strong></span>
             <span>可信度 <strong>${escapeHTML(confidenceMeta(item).text)}</strong></span>
             <span>最新价 <strong>${Number.isFinite(item.currentPrice) && item.currentPrice > 0 ? currency(item.currentPrice, item.currency) : "-"}</strong></span>
-            <span>DCF边际 <strong>${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</strong></span>
-            <span>长期审计 <strong>${escapeHTML(strategy.ownerAudit.text)}</strong></span>
+            <span>安全边际 <strong>${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</strong></span>
+            <span>长期评分 <strong>${strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "-"}</strong></span>
             <span>ex-cash PE <strong>${financialMultiple(strategy.netCash.exCashPe)}</strong></span>
             <span>ex-cash P/FCF <strong>${financialMultiple(strategy.netCash.exCashPfcf)}</strong></span>
           </div>
@@ -1940,7 +2025,7 @@ function candidateMatchesFilter(candidate, totalValue) {
   }
   if (candidateFilter === "dividend") {
     const yieldValue = strategy.shield.value;
-    return Number.isFinite(yieldValue) && yieldValue >= 0.04;
+    return Number.isFinite(yieldValue) && yieldValue >= strategy.shield.target;
   }
   if (candidateFilter === "lowConfidence") return strategy.bucket === "excluded";
   return true;
@@ -1998,8 +2083,8 @@ function buildOpportunitySignals(positions) {
         priority = 1;
       } else if (strategy.bucket === "main") {
         reasons.push("主策略买点");
-        reasons.push(`${strategy.shield.source}股息 ${displayDividendRatio(strategy.shield.value)}`);
-        reasons.push("长期股东审计通过");
+        reasons.push(`${strategy.shield.source} ${displayDividendRatio(strategy.shield.value)}`);
+        reasons.push(`长期股东 ${strategy.ownerAudit.score}/100`);
         priority = 1;
       } else if (strategy.bucket === "cigar") {
         reasons.push("辅策略烟蒂");
@@ -2038,10 +2123,10 @@ function renderDecisionItem(signal) {
       </div>
       <div class="decision-metrics">
         <span>现价 <strong>${localPrice(stock, "currentPrice")}</strong></span>
-        <span>股息率 <strong>${displayDividendRatio(signal.strategy?.shield.value)}</strong></span>
-        <span>股息门槛 <strong>${displayDividendRatio(signal.strategy?.shield.target)}</strong></span>
-        <span>DCF边际 <strong>${Number.isFinite(marginOfSafety) ? percent(marginOfSafety * 100, false) : "-"}</strong></span>
-        <span>长期审计 <strong>${escapeHTML(signal.strategy?.ownerAudit.text || "-")}</strong></span>
+        <span>综合回报率 <strong>${displayDividendRatio(signal.strategy?.shield.value)}</strong></span>
+        <span>回报门槛 <strong>${displayDividendRatio(signal.strategy?.shield.target)}</strong></span>
+        <span>安全边际 <strong>${Number.isFinite(marginOfSafety) ? percent(marginOfSafety * 100, false) : "-"}</strong></span>
+        <span>长期评分 <strong>${signal.strategy?.ownerAudit.hasAudit ? `${signal.strategy.ownerAudit.score}/100` : "-"}</strong></span>
         <span>ex-cash PE <strong>${financialMultiple(signal.strategy?.netCash.exCashPe)}</strong></span>
         <span>ex-cash P/FCF <strong>${financialMultiple(signal.strategy?.netCash.exCashPfcf)}</strong></span>
       </div>
@@ -2112,7 +2197,7 @@ function buildActionConclusion(positions) {
     return {
       tone: "watch",
       status: "过渡观察",
-      detail: "旧仓不强制卖出，新资金只等股息/DCF或烟蒂条件达标",
+      detail: "旧仓不强制卖出，新资金只等综合回报/安全边际或烟蒂条件达标",
       reasons: [signals[0].reasons[0], ...reasons].slice(0, 3)
     };
   }
@@ -2252,7 +2337,7 @@ function renderCommitteeOverview(positions) {
       type: strategyBucketLabel(signal.strategy.bucket),
       symbol: signal.stock.symbol,
       name: signal.stock.name,
-      meta: `${displayDividendRatio(signal.strategy.shield.value)}股息 · DCF ${Number.isFinite(signal.strategy.margin) ? percent(signal.strategy.margin * 100, false) : "-"} · ${signal.strategy.ownerAudit.text}`,
+        meta: `${displayDividendRatio(signal.strategy.shield.value)}综合回报 · 安全边际 ${Number.isFinite(signal.strategy.margin) ? percent(signal.strategy.margin * 100, false) : "-"} · ${signal.strategy.ownerAudit.text}`,
       detail: signal.strategy.blockers.length ? signal.strategy.blockers.join("；") : displayText(signal.stock.action, signal.stock.status)
     }));
   elements.committeeConsensus.innerHTML = actions.length
@@ -2324,16 +2409,16 @@ function renderMasterVotesPanel(stock, totalValue) {
         </div>
       </div>
       <div class="master-vote-grid">
+        ${renderStrategyVoteCard("长期股东", strategy.ownerAudit.text, strategy.ownerAudit.tone, [
+          strategy.ownerAudit.hasAudit ? `评分 ${strategy.ownerAudit.score}/100，门槛 ${OWNER_AUDIT_SCORE_TARGET}/100` : "评分字段待补充",
+          `核心项权重更高：十年需求 / 分红FCF / 估值体系`
+        ], strategy.ownerAudit.blockers)}
         ${renderStrategyVoteCard("主策略", strategy.mainPassed ? "达标" : "未达标", strategy.mainPassed ? "buy" : "watch", [
-          `股息 ${displayDividendRatio(strategy.shield.value)} / 门槛 ${displayDividendRatio(strategy.shield.target)}`,
-          `DCF安全边际 ${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}`,
-          `长期股东审计 ${strategy.ownerAudit.text}`,
+          `综合回报 ${displayDividendRatio(strategy.shield.value)} / 门槛 ${displayDividendRatio(strategy.shield.target)}`,
+          `安全边际 ${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}`,
+          `长期股东评分 ${strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "待补"}`,
           `口径 ${strategy.shield.source}`
         ], strategy.blockers)}
-        ${renderStrategyVoteCard("长期股东", strategy.ownerAudit.text, strategy.ownerAudit.tone, [
-          strategy.ownerAudit.hasAudit ? "七项审计已导入" : "审计字段待补充",
-          `核心项：十年需求 / 分红FCF / 估值体系`
-        ], strategy.ownerAudit.blockers)}
         ${renderStrategyVoteCard("辅策略", strategy.cigarPassed ? "烟蒂达标" : "未达标", strategy.cigarPassed ? "safe" : "watch", [
           `调整后净现金 ${financialAmount(strategy.netCash.adjustedCny, "CNY")}`,
           `ex-cash PE ${financialMultiple(strategy.netCash.exCashPe)}`,
@@ -2354,6 +2439,7 @@ function renderMasterVotesPanel(stock, totalValue) {
 }
 
 function renderStrategyVoteCard(name, status, tone, support, against) {
+  const blockerText = shortReasonText(against, "无主要阻碍");
   return `
     <article class="master-vote-card ${tone}">
       <div class="master-vote-head">
@@ -2361,12 +2447,18 @@ function renderStrategyVoteCard(name, status, tone, support, against) {
           <p class="eyebrow">${escapeHTML(name)}</p>
           <h3>${escapeHTML(status)}</h3>
         </div>
+        ${badge(against.length ? "需处理" : "顺畅", against.length ? "watch" : "strong")}
       </div>
-      <strong>${escapeHTML(status)}</strong>
-      <dl>
-        <div><dt>依据</dt><dd>${escapeHTML(shortReasonText(support, "暂无依据"))}</dd></div>
-        <div><dt>阻碍</dt><dd>${escapeHTML(shortReasonText(against, "无主要阻碍"))}</dd></div>
-      </dl>
+      <div class="strategy-vote-body">
+        <div>
+          <span>依据</span>
+          <p>${escapeHTML(shortReasonText(support, "暂无依据"))}</p>
+        </div>
+        <div>
+          <span>阻碍</span>
+          <p>${escapeHTML(blockerText)}</p>
+        </div>
+      </div>
     </article>
   `;
 }
@@ -2510,13 +2602,13 @@ function renderStrategySummary(items, label) {
     .map((item) => item.strategy.shield.value)
     .filter(Number.isFinite);
   const yieldText = avgYield.length ? percent((avgYield.reduce((sum, value) => sum + value, 0) / avgYield.length) * 100, false) : "-";
-  const auditPassed = items.filter((item) => item.strategy.ownerAudit.status === "pass").length;
+  const auditPassed = items.filter((item) => item.strategy.ownerAudit.score >= OWNER_AUDIT_SCORE_TARGET).length;
   return `
     <div class="master-summary-grid">
       <div><span>${escapeHTML(label)}</span><strong>${items.length} 只</strong></div>
       <div><span>其中持仓</span><strong>${holdings.length} 只</strong></div>
-      <div><span>审计通过</span><strong>${auditPassed} 只</strong></div>
-      <div><span>平均股息</span><strong>${yieldText}</strong></div>
+      <div><span>评分达标</span><strong>${auditPassed} 只</strong></div>
+      <div><span>平均回报</span><strong>${yieldText}</strong></div>
       <div><span>当前重点</span><strong>${top ? escapeHTML(top.stock.name) : "-"}</strong></div>
     </div>
   `;
@@ -2541,14 +2633,14 @@ function renderStrategyStockCard(item) {
         <em>${escapeHTML(strategy.status)}</em>
       </div>
       <div class="master-stock-metrics">
-        <span>股息 <strong>${displayDividendRatio(strategy.shield.value)}</strong></span>
+        <span>综合回报 <strong>${displayDividendRatio(strategy.shield.value)}</strong></span>
         <span>门槛 <strong>${displayDividendRatio(strategy.shield.target)}</strong></span>
-        <span>DCF <strong>${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</strong></span>
-        <span>长期审计 <strong>${escapeHTML(strategy.ownerAudit.text)}</strong></span>
+        <span>安全边际 <strong>${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</strong></span>
+        <span>长期评分 <strong>${strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "-"}</strong></span>
         <span>ex-cash PE <strong>${financialMultiple(strategy.netCash.exCashPe)}</strong></span>
       </div>
       <p>${escapeHTML(strategy.blockers.length ? strategy.blockers.join("；") : displayText(stock.action, stock.status))}</p>
-      <small>${escapeHTML(strategy.netCash.reason || `${strategy.shield.source}股息口径`)}</small>
+      <small>${escapeHTML(strategy.netCash.reason || `${strategy.shield.source}口径`)}</small>
     </a>
   `;
 }
@@ -2562,9 +2654,9 @@ function renderMasterMatrix(positions) {
       <div class="master-matrix-head">
         <span>标的</span>
         <span>策略归属</span>
-        <span>股息盾</span>
-        <span>DCF</span>
-        <span>长期审计</span>
+        <span>回报盾</span>
+        <span>安全边际</span>
+        <span>长期评分</span>
         <span>净现金</span>
         <span>FCF估值</span>
       </div>
@@ -2576,14 +2668,40 @@ function renderMasterMatrix(positions) {
           </div>
           <span class="master-mini ${strategy.tone}">${escapeHTML(strategy.status)}</span>
           <span class="master-mini ${strategy.shield.passed ? "strong" : "watch"}">${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}</span>
-          <span class="master-mini ${Number.isFinite(strategy.margin) && strategy.margin >= MAIN_DCF_MARGIN_TARGET ? "strong" : "watch"}">${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</span>
-          <span class="master-mini ${strategy.ownerAudit.tone}">${escapeHTML(strategy.ownerAudit.text)}</span>
-          <span class="master-mini ${Number.isFinite(strategy.netCash.adjustedCny) && strategy.netCash.adjustedCny > 0 ? "strong" : "watch"}">${financialAmount(strategy.netCash.adjustedCny, "CNY")}</span>
-          <em>${financialMultiple(strategy.netCash.exCashPfcf)}</em>
+          <span class="master-mini ${Number.isFinite(strategy.margin) && strategy.margin >= MAIN_DCF_MARGIN_TARGET ? "strong" : "watch"}">${dcfMatrixText(stock, strategy.margin)}</span>
+          <span class="master-mini ${strategy.ownerAudit.tone}">${strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "待评分"}</span>
+          <span class="master-mini ${netCashMatrixTone(stock, strategy.netCash)}">${netCashMatrixText(stock, strategy.netCash)}</span>
+          <em>${fcfMatrixText(stock, strategy.netCash)}</em>
         </a>
       `).join("")}
     `
     : `<div class="empty-state compact-empty">暂无可对照标的</div>`;
+}
+
+function dcfMatrixText(stock, margin) {
+  if (!Number.isFinite(margin)) return "-";
+  return percent(margin * 100, false);
+}
+
+function netCashMatrixTone(stock, netCash) {
+  if (!netCashApplicable(stock)) return "watch";
+  return Number.isFinite(netCash?.adjustedCny) && netCash.adjustedCny > 0 ? "strong" : "watch";
+}
+
+function netCashApplicable(stock) {
+  return !/(^|\/)(银行|保险|券商|证券|信托|财富管理)(\/|$)/.test(String(stock?.industry ?? ""));
+}
+
+function netCashMatrixText(stock, netCash) {
+  if (!netCashApplicable(stock)) return "不适用";
+  if (!Number.isFinite(netCash?.adjustedCny)) return "未录入";
+  if ((Number.isFinite(netCash?.netCashCny) && netCash.netCashCny <= 0) || netCash.adjustedCny <= 0) return "无净现金";
+  return financialAmount(netCash.adjustedCny, "CNY");
+}
+
+function fcfMatrixText(stock, netCash) {
+  if (!netCashApplicable(stock)) return "不适用";
+  return financialMultiple(netCash?.fcfMultiple);
 }
 
 function firstIndustry(industry) {
@@ -2717,7 +2835,7 @@ function buildDataQualityIssues(positions) {
       pushIssue("warn", stock, "候选池重复持仓", "该标的已有持仓，候选池展示会被过滤；建议只保留一处维护。");
     }
     if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
-      pushIssue("warn", stock, "缺最新价", "会影响市值、安全边际、机会雷达和股息率计算。");
+      pushIssue("warn", stock, "缺最新价", "会影响市值、安全边际、机会雷达和综合回报率计算。");
     }
     if (!stock.currentPriceDate) {
       pushIssue("warn", stock, "缺收盘日期", "无法判断行情是否为最新收盘价。");
@@ -2735,6 +2853,12 @@ function buildDataQualityIssues(positions) {
     }
     if (!displayText(stock.action, "")) {
       pushIssue("info", stock, "缺执行动作", "详情页和决策日志会缺少可复盘结论。");
+    }
+    const audit = ownerAuditProfile(stock);
+    if (!audit.hasAudit) {
+      pushIssue("info", stock, "缺长期股东评分", "主策略评分无法计算；需要补充七项现金流证据。");
+    } else if (audit.corruptedNotes > 0) {
+      pushIssue("warn", stock, "长期评分说明乱码", `${audit.corruptedNotes} 项说明已损坏，需要从研究材料重建。`);
     }
 
     if (!dividend) {
@@ -3113,12 +3237,12 @@ function renderDividendPanel(stock, isHolding) {
           <div><span>财年</span><strong>${escapeHTML(displayText(dividend.fiscalYear, "-"))}</strong></div>
           <div><span>每股分红</span><strong>${Number.isFinite(perShare) ? currency(perShare, currencyCode) : "-"}</strong></div>
           <div><span>股息率</span><strong>${displayDividendRatio(dividendYield)}</strong></div>
-          <div><span>股息门槛</span><strong>${displayDividendRatio(shield.target)}</strong><small>${marketKind(stock) === "HK" ? "H股主策略" : "A股主策略"}</small></div>
+          <div><span>回报门槛</span><strong>${displayDividendRatio(shield.target)}</strong><small>${marketKind(stock) === "HK" ? "H股主策略" : "A股主策略"}</small></div>
           <div><span>综合回报率</span><strong>${displayDividendRatio(shareholderReturnYield)}</strong></div>
           <div><span>股息可靠性</span><strong>${badge(reliability.text, reliability.tone)}</strong></div>
           <div><span>预估财年</span><strong>${escapeHTML(displayText(dividend.forecastFiscalYear, "-"))}</strong></div>
           <div><span>预估每股</span><strong>${Number.isFinite(forecastPerShare) ? currency(forecastPerShare, forecastCurrency) : "-"}</strong></div>
-          <div><span>预估股息率</span><strong>${displayDividendRatio(forecastYield)}</strong><small>${shield.source === "预估下一年" ? "主策略采用此口径" : ""}</small></div>
+          <div><span>预估股息率</span><strong>${displayDividendRatio(forecastYield)}</strong><small>参考，不作为主策略门槛</small></div>
           <div><span>预估年现金</span><strong>${Number.isFinite(annualLocal) ? currency(annualLocal, currencyCode) : Number.isFinite(estimatedCash) ? currency(estimatedCash, currencyCode) : "-"}</strong><small>${isHolding && annualCny > 0 ? `折人民币 ${currency(annualCny)}` : ""}</small></div>
         </div>
       </div>
@@ -3175,12 +3299,17 @@ function renderNetCashPanel(stock) {
         <div>
           <span>ex-cash P/FCF</span>
           <strong>${financialMultiple(netCash.exCashPfcf)}</strong>
-          <small>自由现金流为主排序口径</small>
+          <small>${escapeHTML(netCash.fcfBasis || "普通股东 FCF")}</small>
         </div>
         <div>
           <span>FCF yield</span>
           <strong>${financialRatio(netCash.fcfYield)}</strong>
-          <small>自由现金流 / 总市值</small>
+          <small>${escapeHTML(netCash.fcfBasis || "普通股东 FCF")} / 总市值</small>
+        </div>
+        <div>
+          <span>普通股东 FCF</span>
+          <strong>${financialAmount(netCash.fcfLocal, netCash.fcfCurrency)}</strong>
+          <small>${Number.isFinite(netCash.minorityFcfAdjustment) ? `少数股东分流 ${financialAmount(netCash.minorityFcfAdjustment, netCash.fcfCurrency)}` : "用于 P/FCF 和 FCF yield"}</small>
         </div>
         <div>
           <span>FCF连续性</span>
@@ -3194,30 +3323,45 @@ function renderNetCashPanel(stock) {
 
 function renderOwnerAuditPanel(stock) {
   const audit = strategyProfile(stock).ownerAudit;
+  const auditSummary = audit.blockers.length
+    ? audit.blockers.join("；")
+    : audit.corruptedNotes
+      ? `${audit.corruptedNotes} 项说明乱码，需重建证据`
+      : `评分达到 ${OWNER_AUDIT_SCORE_TARGET}/100 门槛`;
   return `
     <section class="panel source-panel">
       <div class="panel-head compact">
         <div>
           <p class="eyebrow">Owner Cash Flow</p>
-          <h2>长期股东现金流审计</h2>
+          <h2>长期股东现金流评分</h2>
         </div>
       </div>
       <div class="source-grid">
         <div>
-          <span>审计结论</span>
+          <span>总评分</span>
           <strong>${badge(audit.text, audit.tone)}</strong>
-          <small>${escapeHTML(audit.blockers.length ? audit.blockers.join("；") : "主策略前置门槛已通过")}</small>
+          <small>${escapeHTML(audit.hasAudit ? `${audit.score}/100 · ${audit.grade}；${auditSummary}` : auditSummary)}</small>
         </div>
         ${audit.items.map((item) => `
           <div>
             <span>${escapeHTML(item.label)}</span>
-            <strong>${badge(item.text, item.tone)}</strong>
-            <small>${escapeHTML(displayText(item.note, item.core ? "核心项待补证" : "待补证"))}</small>
+            <strong>${badge(`${item.score}/${item.maxScore}`, item.tone)}</strong>
+            <small>${escapeHTML(`${item.text}；${ownerAuditEvidenceText(item, audit.hasAudit)}`)}</small>
           </div>
         `).join("")}
       </div>
     </section>
   `;
+}
+
+function ownerAuditEvidenceText(item, hasAudit) {
+  if (displayText(item.note, "")) return item.note;
+  const evidence = item.evidence || "补充可验证证据";
+  if (item.noteCorrupted) return `原说明乱码，需重建：${evidence}`;
+  if (!hasAudit) return `未导入评分证据：${evidence}`;
+  if (item.status === "pass") return `已标通过，但缺少证据说明：${evidence}`;
+  if (item.status === "fail") return `已标失败，需补失败依据：${evidence}`;
+  return `${item.core ? "核心项待复核" : "待复核"}：${evidence}`;
 }
 
 function renderDataSourcePanel(stock) {
@@ -3229,7 +3373,7 @@ function renderDataSourcePanel(stock) {
     : dividend.dividendPerShare
       ? "每股分红 / 最新价"
       : "暂无";
-  const returnFormula = hasBuyback ? "现金分红总额 + 回购金额 / 总市值" : "同股息率";
+  const returnFormula = hasBuyback ? "(现金分红总额 + 回购金额) / 总市值" : "同股息率";
 
   return `
     <section class="panel source-panel">
@@ -3258,12 +3402,12 @@ function renderDataSourcePanel(stock) {
         <div>
           <span>买入分层</span>
           <strong>${displayPriceLevel(stock, "initialBuyPrice")}</strong>
-          <small>旧分层保留为参考；主策略另需 DCF 边际≥15%</small>
+          <small>旧分层保留为参考；主策略另需安全边际≥15%</small>
         </div>
         <div>
           <span>双策略门槛</span>
           <strong>A股6% / H股8%</strong>
-          <small>最近财年或预估下一年股息率满足其一</small>
+          <small>最近完整财年综合回报率达标</small>
         </div>
         <div>
           <span>烟蒂门槛</span>
@@ -3295,7 +3439,7 @@ function financialMetricCard(label, value, detail = "") {
   `;
 }
 
-function renderFinancialTable(annual, currencyCode) {
+function renderFinancialTable(stock, annual, currencyCode) {
   return `
     <div class="financial-table-wrap">
       <table class="financial-table">
@@ -3314,7 +3458,7 @@ function renderFinancialTable(annual, currencyCode) {
           </tr>
         </thead>
         <tbody>
-          ${annual.map((item) => `
+          ${annual.map((item, index) => `
             <tr>
               <td>
                 <strong>${escapeHTML(displayText(item.fiscalYear, item.reportDate || "-"))}</strong>
@@ -3329,7 +3473,7 @@ function renderFinancialTable(annual, currencyCode) {
                 <small>${financialRatio(item.netProfitYoY, "")}</small>
               </td>
               <td>${financialAmount(item.operatingCashFlow, item.currency || currencyCode)}</td>
-              <td>${financialAmount(item.freeCashFlow, item.currency || currencyCode)}</td>
+              <td>${financialFcfCell(stock, item, index, currencyCode)}</td>
               <td>
                 ${financialRatio(item.roe)}
                 <small>${financialRatio(item.roic, "")}</small>
@@ -3355,6 +3499,15 @@ function renderFinancialTable(annual, currencyCode) {
   `;
 }
 
+function financialFcfCell(stock, item, index, currencyCode) {
+  const profile = netCashProfile(stock);
+  if (index === 0 && Number.isFinite(profile.shareholderFcf)) {
+    const basis = profile.fcfBasis || "普通股东 FCF";
+    return `${financialAmount(profile.shareholderFcf, profile.fcfCurrency)}<small>${escapeHTML(basis)}</small>`;
+  }
+  return financialAmount(item.freeCashFlow, item.currency || currencyCode);
+}
+
 function renderFinancialsPanel(stock) {
   const financials = stock.financials ?? {};
   const annual = financialAnnuals(stock);
@@ -3375,6 +3528,10 @@ function renderFinancialsPanel(stock) {
   const latest = annual[0] ?? {};
   const valuation = financialValuation(stock);
   const currencyCode = financials.currency || latest.currency || stock.currency;
+  const netCash = netCashProfile(stock);
+  const latestFcfDetail = Number.isFinite(netCash.shareholderFcf)
+    ? `普通股东 FCF ${financialAmount(netCash.shareholderFcf, netCash.fcfCurrency)}`
+    : `FCF ${financialAmount(latest.freeCashFlow, currencyCode)}`;
   const avgRoe = recentAverage(stock, "roe");
   const avgRoic = recentAverage(stock, "roic");
   const fcfRecord = positiveRecordRatio(stock, "freeCashFlow");
@@ -3395,12 +3552,12 @@ function renderFinancialsPanel(stock) {
         <div class="financial-summary-grid">
           ${financialMetricCard("最新年收入", financialAmount(latest.revenue, currencyCode), `${displayText(latest.fiscalYear, "最新年")} · ${financialRatio(latest.revenueYoY, "同比未知")}`)}
           ${financialMetricCard("最新年利润", financialAmount(latest.netProfit, currencyCode), financialRatio(latest.netProfitYoY, "同比未知"))}
-          ${financialMetricCard("经营现金流", financialAmount(latest.operatingCashFlow, currencyCode), `FCF ${financialAmount(latest.freeCashFlow, currencyCode)}`)}
+          ${financialMetricCard("经营现金流", financialAmount(latest.operatingCashFlow, currencyCode), latestFcfDetail)}
           ${financialMetricCard("ROE / ROIC", `${financialRatio(latest.roe)} / ${financialRatio(latest.roic)}`, `近年均值 ${financialRatio(avgRoe)} / ${financialRatio(avgRoic)}`)}
           ${financialMetricCard("负债率", financialRatio(latest.debtRatio), `FCF 为正 ${Number.isFinite(fcfRecord) ? `${Math.round(fcfRecord * 100)}%` : "未知"}`)}
           ${financialMetricCard("PE / PB / PEG", `${financialMultiple(valuation.pe)} / ${financialMultiple(valuation.pb)} / ${Number.isFinite(finiteNumber(valuation.peg)) ? finiteNumber(valuation.peg).toFixed(2) : "-"}`, `PE低/中/高 ${rangeText(valuation.peRange)}`)}
         </div>
-        ${renderFinancialTable(annual, currencyCode)}
+        ${renderFinancialTable(stock, annual, currencyCode)}
         <p class="financial-source-note">${escapeHTML(displayText(valuation.sourceNote, "财务指标来自数据源披露口径；缺失字段会留空，不参与打分。"))}</p>
       </div>
     </section>
@@ -3509,7 +3666,7 @@ function renderStockDetail(positions, symbol) {
 
     <nav class="detail-section-nav" aria-label="详情分段导航">
       <button type="button" data-detail-section="detailValuation">估值质量</button>
-      <button type="button" data-detail-section="detailOwnerAudit">长期审计</button>
+      <button type="button" data-detail-section="detailOwnerAudit">长期评分</button>
       <button type="button" data-detail-section="detailFinancials">多年财务</button>
       <button type="button" data-detail-section="detailIncome">股息/净现金</button>
       <button type="button" data-detail-section="detailRisk">风险反证</button>
@@ -3550,9 +3707,9 @@ function renderStockDetail(positions, symbol) {
         <div class="detail-content">
           <div class="valuation-grid">
             <div><span>安全边际</span><strong>${marginText}</strong></div>
-            <div><span>主策略DCF门槛</span><strong>${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"} / ${percent(MAIN_DCF_MARGIN_TARGET * 100, false)}</strong></div>
-            <div><span>股息盾</span><strong>${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}</strong><small>${escapeHTML(strategy.shield.source)}</small></div>
-            <div><span>长期审计</span><strong>${badge(strategy.ownerAudit.text, strategy.ownerAudit.tone)}</strong></div>
+            <div><span>主策略安全边际</span><strong>${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"} / ${percent(MAIN_DCF_MARGIN_TARGET * 100, false)}</strong></div>
+            <div><span>回报盾</span><strong>${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}</strong><small>${escapeHTML(strategy.shield.source)}</small></div>
+            <div><span>长期评分</span><strong>${badge(`${strategy.ownerAudit.hasAudit ? strategy.ownerAudit.score : "-"} / 100`, strategy.ownerAudit.tone)}</strong><small>${escapeHTML(strategy.ownerAudit.text)}</small></div>
             <div><span>烟蒂PE</span><strong>${financialMultiple(strategy.netCash.exCashPe)} / ≤${strategy.peLimit}x</strong></div>
             <div><span>估值可信度</span><strong>${badge(confidence.text, confidence.tone)}</strong></div>
             <div><span>质量总分</span><strong>${qualityText}</strong></div>
@@ -3579,7 +3736,7 @@ function renderStockDetail(positions, symbol) {
     <section class="detail-section" id="detailOwnerAudit">
       <div class="detail-section-head">
         <p class="eyebrow">Owner Cash Flow</p>
-        <h2>长期股东现金流审计</h2>
+        <h2>长期股东现金流评分</h2>
       </div>
     ${renderOwnerAuditPanel(stock)}
     </section>
@@ -3662,6 +3819,7 @@ function renderStockDetail(positions, symbol) {
 
 function render() {
   const positions = computePositions();
+  renderQuoteUpdateStatus(positions);
   renderMetrics(positions);
   renderPositions(positions);
   renderDecisionArea(positions);

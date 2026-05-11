@@ -127,6 +127,11 @@ type NetCashProfile struct {
 	ExCashPE                *float64 `json:"exCashPe,omitempty"`
 	ExCashPFCF              *float64 `json:"exCashPfcf,omitempty"`
 	FCFYield                *float64 `json:"fcfYield,omitempty"`
+	ShareholderFCF          *float64 `json:"shareholderFcf,omitempty"`
+	ShareholderFCFCurrency  string   `json:"shareholderFcfCurrency,omitempty"`
+	ShareholderFCFBasis     string   `json:"shareholderFcfBasis,omitempty"`
+	ConsolidatedFCF         *float64 `json:"consolidatedFcf,omitempty"`
+	MinorityFCFAdjustment   *float64 `json:"minorityFcfAdjustment,omitempty"`
 	FCFPositiveYears        *int     `json:"fcfPositiveYears,omitempty"`
 	Note                    string   `json:"note,omitempty"`
 }
@@ -393,6 +398,15 @@ func validateNetCash(netCash *NetCashProfile) error {
 		return err
 	}
 	if err := validateNonNegativeAmount("netCash.exCashPfcf", netCash.ExCashPFCF); err != nil {
+		return err
+	}
+	if err := validateNonNegativeAmount("netCash.shareholderFcf", netCash.ShareholderFCF); err != nil {
+		return err
+	}
+	if err := validateNonNegativeAmount("netCash.consolidatedFcf", netCash.ConsolidatedFCF); err != nil {
+		return err
+	}
+	if err := validateNonNegativeAmount("netCash.minorityFcfAdjustment", netCash.MinorityFCFAdjustment); err != nil {
 		return err
 	}
 	return validateRatio("netCash.fcfYield", netCash.FCFYield, 5)
@@ -728,11 +742,19 @@ func normalizeNetCash(netCash *NetCashProfile, fallbackCurrency string) *NetCash
 		ExCashPE:                cloneFloat(netCash.ExCashPE),
 		ExCashPFCF:              cloneFloat(netCash.ExCashPFCF),
 		FCFYield:                cloneFloat(netCash.FCFYield),
+		ShareholderFCF:          cloneFloat(netCash.ShareholderFCF),
+		ShareholderFCFCurrency:  strings.ToUpper(strings.TrimSpace(netCash.ShareholderFCFCurrency)),
+		ShareholderFCFBasis:     strings.TrimSpace(netCash.ShareholderFCFBasis),
+		ConsolidatedFCF:         cloneFloat(netCash.ConsolidatedFCF),
+		MinorityFCFAdjustment:   cloneFloat(netCash.MinorityFCFAdjustment),
 		FCFPositiveYears:        cloneInt(netCash.FCFPositiveYears),
 		Note:                    strings.TrimSpace(netCash.Note),
 	}
 	if next.Currency == "" {
 		next.Currency = strings.ToUpper(strings.TrimSpace(fallbackCurrency))
+	}
+	if next.ShareholderFCFCurrency == "" {
+		next.ShareholderFCFCurrency = next.Currency
 	}
 	if next.NetCash == nil && next.CashAndShortInvestments != nil && next.InterestBearingDebt != nil {
 		value := *next.CashAndShortInvestments - *next.InterestBearingDebt

@@ -72,7 +72,7 @@ func TestNormalizeResearchKeepsDividendForecastAndComputesNetCash(t *testing.T) 
 		Currency: "CNY",
 		Industry: "家电",
 		Status:   "主策略候选",
-		Action:   "等待A股股息率和DCF边际同时达标",
+		Action:   "等待A股综合回报率和DCF边际同时达标",
 		Risk:     "原材料和海外需求波动",
 		Valuation: Valuation{
 			IntrinsicValue: floatPtr(100),
@@ -88,8 +88,8 @@ func TestNormalizeResearchKeepsDividendForecastAndComputesNetCash(t *testing.T) 
 		Plan: PlanInput{
 			Rank:       1,
 			Priority:   "主策略复核",
-			Advice:     "仅在股息率达标后新增",
-			Discipline: "A股股息率≥6%，DCF边际≥15%",
+			Advice:     "仅在综合回报率达标后新增",
+			Discipline: "A股综合回报率≥6%，DCF边际≥15%",
 		},
 		Dividend: &Dividend{
 			FiscalYear:         "FY2025",
