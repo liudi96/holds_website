@@ -172,7 +172,7 @@ const seedState = {
   candidates: [
     {
       symbol: "600690.SH",
-      name: "海尔智家A",
+      name: "海尔智家",
       status: "候选池",
       action: "放入普通候选池观察；A股暂不追，H股赔率更优",
       marginOfSafety: 0.17,
@@ -233,6 +233,7 @@ let pendingResearch = null;
 let candidateSort = "consensus";
 let candidateFilter = "all";
 let decisionLogFilter = "all";
+let masterMatrixSort = { key: "margin", direction: "desc" };
 const pageTitles = {
   overview: "总览",
   positions: "当前持仓",
@@ -258,17 +259,12 @@ const elements = {
   decisionLogFilters: document.querySelector("#decisionLogFilters"),
   clearDecisionLogs: document.querySelector("#clearDecisionLogs"),
   masterMatrix: document.querySelector("#masterMatrix"),
-  marksSummary: document.querySelector("#marksSummary"),
-  marksList: document.querySelector("#marksList"),
   grahamSummary: document.querySelector("#grahamSummary"),
   grahamList: document.querySelector("#grahamList"),
   buffettSummary: document.querySelector("#buffettSummary"),
   buffettList: document.querySelector("#buffettList"),
-  lynchSummary: document.querySelector("#lynchSummary"),
-  lynchList: document.querySelector("#lynchList"),
   candidateList: document.querySelector("#candidateList"),
   candidateSort: document.querySelector("#candidateSort"),
-  candidateFilters: document.querySelector("#candidateFilters"),
   stockDetail: document.querySelector("#stockDetail"),
   totalValue: document.querySelector("#totalValue"),
   totalPnl: document.querySelector("#totalPnl"),
@@ -283,7 +279,6 @@ const elements = {
   actionConclusion: document.querySelector("#actionConclusion"),
   actionConclusionStatus: document.querySelector("#actionConclusionStatus"),
   actionConclusionDetail: document.querySelector("#actionConclusionDetail"),
-  actionConclusionReasons: document.querySelector("#actionConclusionReasons"),
   positionCount: document.querySelector("#positionCount"),
   recordCount: document.querySelector("#recordCount"),
   searchInput: document.querySelector("#searchInput"),
@@ -1774,7 +1769,7 @@ function renderPositions(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
 
   if (!filtered.length) {
-    elements.positionsBody.innerHTML = `<tr><td colspan="7" class="empty-state">暂无符合条件的持仓</td></tr>`;
+    elements.positionsBody.innerHTML = `<tr><td colspan="6" class="empty-state">暂无符合条件的持仓</td></tr>`;
     return;
   }
 
@@ -1785,7 +1780,6 @@ function renderPositions(positions) {
       const marginText = displayMarginOfSafety(position);
       const qualityText = Number.isFinite(position.qualityScore) ? position.qualityScore : "-";
       const health = holdingHealth(position, totalValue);
-      const strategy = strategyProfile(position);
 
       return `
         <tr>
@@ -1813,14 +1807,6 @@ function renderPositions(positions) {
             <span class="health-pill ${health.tone}" title="${escapeHTML(health.detail)}">${health.status}</span>
             <br />
             <small class="health-score">${health.score} 分 · 仓位 ${weight.toFixed(1)}% · 质量 ${qualityText}</small>
-          </td>
-          <td data-label="策略">
-            <div class="position-committee">
-              <span class="master-mini ${strategy.tone}">${escapeHTML(strategy.status)}</span>
-              <span class="master-mini ${strategy.shield.passed ? "strong" : "watch"}">回 ${displayDividendRatio(strategy.shield.value)}</span>
-              <span class="master-mini ${Number.isFinite(strategy.margin) && strategy.margin >= MAIN_DCF_MARGIN_TARGET ? "strong" : "watch"}">安全边际 ${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</span>
-              <span class="master-mini ${strategy.ownerAudit.tone}">${escapeHTML(strategy.ownerAudit.text)}</span>
-            </div>
           </td>
           <td data-label="操作">
             <button class="icon-button edit-holding" data-symbol="${position.symbol}" title="编辑 Excel 信息">✎</button>
@@ -2214,9 +2200,6 @@ function renderActionConclusion(positions) {
   elements.actionConclusion.className = `executive-hero panel ${conclusion.tone}`;
   elements.actionConclusionStatus.textContent = conclusion.status;
   elements.actionConclusionDetail.textContent = conclusion.detail;
-  elements.actionConclusionReasons.innerHTML = conclusion.reasons.length
-    ? conclusion.reasons.map((reason) => `<span>${escapeHTML(reason)}</span>`).join("")
-    : `<span>纪律优先，等待价格给出更好补偿</span>`;
 }
 
 function committeeUniverse(positions) {
@@ -2578,20 +2561,14 @@ function renderMasterStockList(items) {
 }
 
 function renderMastersPage(positions) {
-  if (!elements.marksSummary || !elements.marksList || !elements.grahamSummary || !elements.grahamList || !elements.buffettSummary || !elements.buffettList || !elements.lynchSummary || !elements.lynchList) return;
+  if (!elements.grahamSummary || !elements.grahamList || !elements.buffettSummary || !elements.buffettList) return;
   const items = strategyUniverseItems(positions);
   const mainItems = items.filter((item) => item.strategy.bucket === "main");
   const cigarItems = items.filter((item) => item.strategy.bucket === "cigar");
-  const transitionItems = items.filter((item) => item.strategy.bucket === "transition");
-  const excludedItems = items.filter((item) => item.strategy.bucket === "excluded");
   elements.grahamSummary.innerHTML = renderStrategySummary(mainItems, "主策略达标");
   elements.grahamList.innerHTML = renderStrategyStockList(mainItems, "暂无主策略达标标的");
   elements.buffettSummary.innerHTML = renderStrategySummary(cigarItems, "辅策略烟蒂");
   elements.buffettList.innerHTML = renderStrategyStockList(cigarItems, "暂无辅策略烟蒂标的");
-  elements.lynchSummary.innerHTML = renderStrategySummary(transitionItems, "过渡观察");
-  elements.lynchList.innerHTML = renderStrategyStockList(transitionItems, "暂无过渡观察标的");
-  elements.marksSummary.innerHTML = renderStrategySummary(excludedItems, "风险排除");
-  elements.marksList.innerHTML = renderStrategyStockList(excludedItems, "暂无风险排除标的");
   renderMasterMatrix(positions);
 }
 
@@ -2647,16 +2624,18 @@ function renderStrategyStockCard(item) {
 
 function renderMasterMatrix(positions) {
   if (!elements.masterMatrix) return;
-  const rows = strategyUniverseItems(positions);
+  const rows = strategyUniverseItems(positions)
+    .slice()
+    .sort(compareMasterMatrixRows);
 
   elements.masterMatrix.innerHTML = rows.length
     ? `
       <div class="master-matrix-head">
         <span>标的</span>
         <span>策略归属</span>
-        <span>回报盾</span>
-        <span>安全边际</span>
-        <span>长期评分</span>
+        <span>${renderMatrixSortButton("return", "综合回报率")}</span>
+        <span>${renderMatrixSortButton("margin", "安全边际")}</span>
+        <span>${renderMatrixSortButton("owner", "长期评分")}</span>
         <span>净现金</span>
         <span>FCF估值</span>
       </div>
@@ -2676,6 +2655,37 @@ function renderMasterMatrix(positions) {
       `).join("")}
     `
     : `<div class="empty-state compact-empty">暂无可对照标的</div>`;
+}
+
+function matrixSortValue(item, key) {
+  if (key === "return") return finiteNumber(item.strategy?.shield?.value);
+  if (key === "owner") return finiteNumber(item.strategy?.ownerAudit?.score);
+  return finiteNumber(item.strategy?.margin);
+}
+
+function compareMasterMatrixRows(a, b) {
+  const valueA = matrixSortValue(a, masterMatrixSort.key);
+  const valueB = matrixSortValue(b, masterMatrixSort.key);
+  const hasA = Number.isFinite(valueA);
+  const hasB = Number.isFinite(valueB);
+  if (hasA && hasB && valueA !== valueB) {
+    return masterMatrixSort.direction === "asc" ? valueA - valueB : valueB - valueA;
+  }
+  if (hasA !== hasB) return hasA ? -1 : 1;
+  return a.stock.name.localeCompare(b.stock.name, "zh-CN");
+}
+
+function renderMatrixSortButton(key, label) {
+  const active = masterMatrixSort.key === key;
+  const direction = active ? masterMatrixSort.direction : "desc";
+  const arrow = active ? (direction === "asc" ? "↑" : "↓") : "↕";
+  const nextDirection = active && direction === "desc" ? "asc" : "desc";
+  return `
+    <button class="matrix-sort-button ${active ? "active" : ""}" type="button" data-master-matrix-sort="${key}" data-next-direction="${nextDirection}" aria-label="${escapeHTML(label)}${direction === "asc" ? "升序" : "降序"}">
+      <span>${escapeHTML(label)}</span>
+      <strong>${arrow}</strong>
+    </button>
+  `;
 }
 
 function dcfMatrixText(stock, margin) {
@@ -2721,6 +2731,7 @@ function topGroups(items, keyGetter, valueGetter, limit = 3) {
 }
 
 function renderDisciplineDashboard(positions) {
+  if (!elements.disciplineDashboard) return;
   const investedValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   const cashValue = finiteNumber(state.cash) ?? 0;
   const totalAssets = investedValue + cashValue;
@@ -3708,7 +3719,7 @@ function renderStockDetail(positions, symbol) {
           <div class="valuation-grid">
             <div><span>安全边际</span><strong>${marginText}</strong></div>
             <div><span>主策略安全边际</span><strong>${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"} / ${percent(MAIN_DCF_MARGIN_TARGET * 100, false)}</strong></div>
-            <div><span>回报盾</span><strong>${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}</strong><small>${escapeHTML(strategy.shield.source)}</small></div>
+            <div><span>综合回报率</span><strong>${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}</strong><small>${escapeHTML(strategy.shield.source)}</small></div>
             <div><span>长期评分</span><strong>${badge(`${strategy.ownerAudit.hasAudit ? strategy.ownerAudit.score : "-"} / 100`, strategy.ownerAudit.tone)}</strong><small>${escapeHTML(strategy.ownerAudit.text)}</small></div>
             <div><span>烟蒂PE</span><strong>${financialMultiple(strategy.netCash.exCashPe)} / ≤${strategy.peLimit}x</strong></div>
             <div><span>估值可信度</span><strong>${badge(confidence.text, confidence.tone)}</strong></div>
@@ -4189,13 +4200,14 @@ elements.candidateSort.addEventListener("change", (event) => {
   renderPlanAndCandidates();
 });
 
-elements.candidateFilters?.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-candidate-filter]");
+elements.masterMatrix?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-master-matrix-sort]");
   if (!button) return;
-  elements.candidateFilters.querySelector(".active")?.classList.remove("active");
-  button.classList.add("active");
-  candidateFilter = button.dataset.candidateFilter;
-  renderPlanAndCandidates();
+  masterMatrixSort = {
+    key: button.dataset.masterMatrixSort,
+    direction: button.dataset.nextDirection === "asc" ? "asc" : "desc"
+  };
+  renderMasterMatrix(computePositions());
 });
 
 elements.decisionLogFilters?.addEventListener("click", (event) => {

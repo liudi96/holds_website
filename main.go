@@ -728,7 +728,7 @@ func defaultState() AppState {
 			{Rank: 99, Name: "岚图汽车", Priority: "普通候选池/低优先级", Advice: "HK$4.2-4.8才接近可观察买入区；若2026H1扣非利润和自由现金流转正，可重新上修估值", Discipline: "质量分低于75原则上不进入核心资产池；安全边际不足时不试仓"},
 		},
 		Candidates: []Candidate{
-			{Symbol: "600690.SH", Name: "海尔智家A", Status: "候选池", Action: "放入普通候选池观察；A股暂不追，H股赔率更优", MarginOfSafety: ptr(0.17), QualityScore: ptr(83), Industry: "家电/全球化白电/智慧家庭", Currency: "CNY", IntrinsicValue: ptr(26), FairValueRange: "¥24-28", TargetBuyPrice: ptr(19.5)},
+			{Symbol: "600690.SH", Name: "海尔智家", Status: "候选池", Action: "放入普通候选池观察；A股暂不追，H股赔率更优", MarginOfSafety: ptr(0.17), QualityScore: ptr(83), Industry: "家电/全球化白电/智慧家庭", Currency: "CNY", IntrinsicValue: ptr(26), FairValueRange: "¥24-28", TargetBuyPrice: ptr(19.5)},
 		},
 		Rules: []Rule{
 			{Dimension: "商业模式", Score: 30, Standard: "需求刚性、收入可重复、定价权、资本开支、行业空间"},
