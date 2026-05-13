@@ -211,6 +211,7 @@ func runtimeQuoteList(records map[string]RuntimeQuote) []RuntimeQuote {
 func persistentState(state AppState) AppState {
 	state.Holdings = append([]Holding(nil), state.Holdings...)
 	state.Candidates = append([]Candidate(nil), state.Candidates...)
+	state.Industries = nil
 	for i := range state.Holdings {
 		clearHoldingRuntimeQuote(&state.Holdings[i])
 	}

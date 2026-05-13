@@ -70,6 +70,10 @@ go run ./cmd/import-research data/research/0700.HK.json
 go run ./cmd/import-research -dry-run data/research/0700.HK.json
 ```
 
+## 研究台
+
+研究台读取 `data/industries/*.json`。第一版用于展示行业档案、关键研究问题、指标追踪占位和相关标的，不会把行业档案写入 `data/portfolio.json`。
+
 ## 检查
 
 ```bash

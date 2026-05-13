@@ -604,8 +604,8 @@ h2 {
   margin-top: 12px;
 }
 
-.overview-embedded-masters {
-  margin-top: 18px;
+.portfolio-masters {
+  margin-bottom: 18px;
   scroll-margin-top: 24px;
 }
 
@@ -820,18 +820,14 @@ h2 {
   margin-bottom: 12px;
 }
 
-.decision-list,
-.data-quality-list,
-.dividend-cash-list {
+.data-quality-list {
   display: grid;
   gap: 10px;
   padding: 14px 16px 16px;
 }
 
-.decision-list,
 .discipline-grid,
 .data-quality-list,
-.dividend-cash-list,
 .committee-consensus,
 .master-stock-list,
 .allocation-chart,
@@ -848,10 +844,8 @@ h2 {
   max-height: 390px;
 }
 
-.decision-list::-webkit-scrollbar,
 .discipline-grid::-webkit-scrollbar,
 .data-quality-list::-webkit-scrollbar,
-.dividend-cash-list::-webkit-scrollbar,
 .committee-consensus::-webkit-scrollbar,
 .master-stock-list::-webkit-scrollbar,
 .allocation-chart::-webkit-scrollbar,
@@ -860,10 +854,8 @@ h2 {
   width: 8px;
 }
 
-.decision-list::-webkit-scrollbar-thumb,
 .discipline-grid::-webkit-scrollbar-thumb,
 .data-quality-list::-webkit-scrollbar-thumb,
-.dividend-cash-list::-webkit-scrollbar-thumb,
 .committee-consensus::-webkit-scrollbar-thumb,
 .master-stock-list::-webkit-scrollbar-thumb,
 .allocation-chart::-webkit-scrollbar-thumb,
@@ -871,105 +863,6 @@ h2 {
 .page[data-page="overview"] .decision-log-list::-webkit-scrollbar-thumb {
   border-radius: 99px;
   background: #d8dfdc;
-}
-
-.decision-item,
-.dividend-cash-item {
-  color: inherit;
-  text-decoration: none;
-  background: #ffffff;
-}
-
-.decision-item {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-left: 4px solid #94a3b8;
-  border-radius: 8px;
-}
-
-.decision-item:hover,
-.dividend-cash-item:hover {
-  border-color: rgba(8, 127, 91, 0.34);
-  background: #fbfefd;
-}
-
-.decision-item.buy {
-  border-left-color: var(--green);
-}
-
-.decision-item.safe {
-  border-left-color: var(--blue);
-}
-
-.decision-item.reduce {
-  border-left-color: var(--red);
-}
-
-.decision-title {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.decision-title strong {
-  font-size: 14px;
-}
-
-.decision-title span {
-  flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.decision-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.decision-tags span {
-  padding: 4px 7px;
-  border-radius: 999px;
-  background: #eef7f3;
-  color: var(--green);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.decision-tags .status-badge {
-  padding: 4px 7px;
-}
-
-.decision-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.decision-metrics span {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.decision-metrics strong {
-  overflow: hidden;
-  color: var(--ink);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.decision-item p {
-  margin: 0;
-  color: var(--ink);
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 .discipline-grid {
@@ -1052,60 +945,6 @@ h2 {
 .data-quality-symbol {
   color: var(--ink);
   font-weight: 800;
-}
-
-.dividend-cash-item {
-  display: grid;
-  gap: 8px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.dividend-cash-item:first-child {
-  padding-top: 0;
-}
-
-.dividend-cash-item:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.dividend-cash-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.dividend-cash-head strong {
-  font-size: 13px;
-}
-
-.dividend-cash-head span,
-.dividend-cash-item small {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.dividend-cash-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.dividend-cash-metrics span {
-  display: grid;
-  gap: 3px;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.dividend-cash-metrics strong {
-  overflow: hidden;
-  color: var(--ink);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .compact-empty {
@@ -1660,18 +1499,6 @@ h2 {
   padding: 8px 0;
 }
 
-.positions-tool-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: start;
-  gap: 14px;
-  margin: 14px 0;
-}
-
-.positions-tool-grid .panel {
-  min-width: 0;
-}
-
 .main-panel,
 .panel {
   min-width: 0;
@@ -2111,6 +1938,383 @@ tbody tr:hover {
 
 .candidate-card p {
   margin: 0;
+}
+
+.portfolio-candidates-panel {
+  margin-top: 14px;
+}
+
+.industry-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  padding: 16px 18px 18px;
+}
+
+.industry-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+  background: #ffffff;
+}
+
+.industry-card:hover {
+  border-color: rgba(8, 127, 91, 0.34);
+  background: #fbfefd;
+}
+
+.industry-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.industry-card-head div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.industry-card-head span,
+.industry-card small,
+.industry-metric span,
+.industry-metric small,
+.industry-stock-chip span,
+.industry-note span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.industry-card-head strong {
+  overflow: hidden;
+  font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.industry-card-head em {
+  flex: 0 0 auto;
+  max-width: 132px;
+  overflow: hidden;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef4fb;
+  color: var(--blue);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.industry-card p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.industry-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.industry-card-metrics span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px;
+  border-radius: 8px;
+  background: #f8faf9;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.industry-card-metrics strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.industry-detail-hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.industry-detail-hero h2 {
+  font-size: 26px;
+}
+
+.industry-metrics-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.industry-summary-panel {
+  margin-bottom: 18px;
+}
+
+.industry-company-panel {
+  margin-bottom: 18px;
+}
+
+.industry-summary-body {
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px 18px;
+}
+
+.industry-summary-body p {
+  margin: 0;
+  line-height: 1.65;
+}
+
+.industry-question-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.industry-question-list span {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f8faf9;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.industry-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.industry-metric-list,
+.industry-stock-list,
+.industry-note-list {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+
+.industry-metric {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.industry-metric strong {
+  font-size: 16px;
+}
+
+.industry-metric p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.industry-stock-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.industry-stock-chip {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+  background: #ffffff;
+}
+
+.industry-stock-chip:hover {
+  border-color: rgba(8, 127, 91, 0.34);
+  background: #fbfefd;
+}
+
+.industry-company-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 14px 16px 16px;
+}
+
+.industry-company-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.industry-company-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.industry-company-head div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.industry-company-head span,
+.industry-company-block span,
+.industry-trend span,
+.industry-trend small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.industry-company-head a,
+.industry-company-head strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 900;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.industry-company-head a:hover {
+  color: var(--blue);
+}
+
+.industry-company-head em {
+  flex: 0 0 auto;
+  max-width: 160px;
+  overflow: hidden;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef4fb;
+  color: var(--blue);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.industry-company-card > p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.industry-trend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.industry-trend {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--muted);
+  border-radius: 8px;
+  background: #f8faf9;
+}
+
+.industry-trend.strong {
+  border-left-color: var(--green);
+}
+
+.industry-trend.watch {
+  border-left-color: var(--amber);
+}
+
+.industry-trend.risk {
+  border-left-color: var(--red);
+}
+
+.industry-trend strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.industry-company-block {
+  display: grid;
+  gap: 6px;
+}
+
+.industry-company-block ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.industry-company-block.watchpoints {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.industry-stock-chip strong,
+.industry-note strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.industry-note {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.industry-note p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .detail-hero {
@@ -2839,11 +3043,13 @@ label textarea {
 @media (max-width: 1320px) {
   .overview-grid,
   .candidate-page,
+  .industry-list,
   .detail-grid {
     grid-template-columns: 1fr;
   }
 
   .decision-grid,
+  .industry-detail-grid,
   .master-vote-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2867,7 +3073,7 @@ label textarea {
 
 @media (max-width: 980px) {
   .masters-layout,
-  .positions-tool-grid {
+  .industry-detail-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2922,6 +3128,7 @@ label textarea {
   .panel-head,
   .action-conclusion,
   .executive-hero,
+  .industry-detail-hero,
   .masters-hero,
   .overview-toolbar {
     align-items: stretch;
@@ -2969,8 +3176,11 @@ label textarea {
 
   .metrics-grid,
   .decision-grid,
-  .decision-metrics,
-  .dividend-cash-metrics,
+  .industry-card-metrics,
+  .industry-company-grid,
+  .industry-trend-grid,
+  .industry-metrics-summary,
+  .industry-stock-list,
   .master-summary-grid,
   .master-stock-metrics,
   .master-vote-grid,
@@ -3082,10 +3292,8 @@ label textarea {
     white-space: normal;
   }
 
-  .decision-list,
   .discipline-grid,
   .data-quality-list,
-  .dividend-cash-list,
   .committee-consensus,
   .master-stock-list,
   .allocation-chart,
