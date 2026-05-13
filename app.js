@@ -184,6 +184,59 @@ const seedState = {
       targetBuyPrice: 19.5
     }
   ],
+  industries: [
+    {
+      id: "coal",
+      name: "煤炭",
+      category: "周期资源",
+      status: "待建立行业框架",
+      updatedAt: "2026-05-12",
+      summary: "行业研究档案占位。后续补充煤价、供需、库存、进口、政策和代表公司跟踪。",
+      keywords: ["煤炭", "动力煤", "焦煤"],
+      linkedSymbols: [],
+      keyQuestions: ["煤价中枢是否上移或下移", "供给约束是否仍有效", "高分红可持续性是否被资本开支侵蚀"],
+      metrics: [
+        { name: "动力煤价格", unit: "元/吨", latestValue: null, asOf: "", source: "", comment: "预留煤价追踪" }
+      ],
+      notes: [
+        { date: "2026-05-12", title: "行业页占位", summary: "后续按煤炭行业具体研究设计指标和内容。" }
+      ]
+    },
+    {
+      id: "oil",
+      name: "石油",
+      category: "周期资源",
+      status: "待建立行业框架",
+      updatedAt: "2026-05-12",
+      summary: "行业研究档案占位。后续补充油价、资本开支、储量、桶油成本和分红纪律跟踪。",
+      keywords: ["石油", "油气", "海上油气"],
+      linkedSymbols: ["0883.HK"],
+      keyQuestions: ["油价假设是否足够保守", "桶油成本和储量替代率是否稳定", "分红与回购是否穿越周期"],
+      metrics: [
+        { name: "Brent 原油", unit: "美元/桶", latestValue: null, asOf: "", source: "", comment: "预留油价追踪" }
+      ],
+      notes: [
+        { date: "2026-05-12", title: "行业页占位", summary: "后续按石油行业具体研究设计指标和内容。" }
+      ]
+    },
+    {
+      id: "paper",
+      name: "造纸",
+      category: "周期制造",
+      status: "待建立行业框架",
+      updatedAt: "2026-05-12",
+      summary: "行业研究档案占位。后续补充纸价、木浆、废纸、库存、开工率和下游需求跟踪。",
+      keywords: ["造纸", "纸浆", "箱板纸", "文化纸"],
+      linkedSymbols: [],
+      keyQuestions: ["纸价和浆价剪刀差是否改善", "库存周期处于哪个阶段", "行业新增产能是否压制盈利"],
+      metrics: [
+        { name: "纸浆价格", unit: "元/吨", latestValue: null, asOf: "", source: "", comment: "预留纸价/浆价追踪" }
+      ],
+      notes: [
+        { date: "2026-05-12", title: "行业页占位", summary: "后续按造纸行业具体研究设计指标和内容。" }
+      ]
+    }
+  ],
   rules: [
     { dimension: "商业模式", score: 30, standard: "需求刚性、收入可重复、定价权、资本开支、行业空间" },
     { dimension: "护城河", score: 25, standard: "品牌/规模/网络效应/牌照/成本优势、份额稳定、利润率优于同行" },
@@ -236,9 +289,10 @@ let decisionLogFilter = "all";
 let masterMatrixSort = { key: "margin", direction: "desc" };
 const pageTitles = {
   overview: "总览",
-  positions: "当前持仓",
-  trades: "交易流水",
-  candidates: "候选池",
+  portfolio: "持仓",
+  industry: "研究台",
+  trades: "交易页",
+  "industry-detail": "行业分析",
   "stock-detail": "股票分析详情"
 };
 
@@ -249,10 +303,8 @@ const elements = {
   allocationChart: document.querySelector("#allocationChart"),
   overviewPlanList: document.querySelector("#overviewPlanList"),
   committeeConsensus: document.querySelector("#committeeConsensus"),
-  opportunityRadar: document.querySelector("#opportunityRadar"),
   disciplineDashboard: document.querySelector("#disciplineDashboard"),
   dataQualityList: document.querySelector("#dataQualityList"),
-  dividendCashList: document.querySelector("#dividendCashList"),
   decisionLogList: document.querySelector("#decisionLogList"),
   decisionLogPanel: document.querySelector("#decisionLogPanel"),
   decisionLogToggle: document.querySelector("#decisionLogToggle"),
@@ -265,6 +317,8 @@ const elements = {
   buffettList: document.querySelector("#buffettList"),
   candidateList: document.querySelector("#candidateList"),
   candidateSort: document.querySelector("#candidateSort"),
+  industryList: document.querySelector("#industryList"),
+  industryDetail: document.querySelector("#industryDetail"),
   stockDetail: document.querySelector("#stockDetail"),
   totalFunds: document.querySelector("#totalFunds"),
   totalValue: document.querySelector("#totalValue"),
@@ -320,6 +374,7 @@ function saveState() {
 
 async function requestJSON(path, options = {}) {
   const response = await fetch(path, {
+    cache: "no-store",
     headers: { "Content-Type": "application/json", ...(options.headers ?? {}) },
     ...options
   });
@@ -402,6 +457,10 @@ function clamp(value, min, max) {
 
 function stockHash(symbol) {
   return `#stock=${encodeURIComponent(symbol)}`;
+}
+
+function industryHash(id) {
+  return `#industry=${encodeURIComponent(id)}`;
 }
 
 function normalizeSymbol(symbol) {
@@ -784,6 +843,7 @@ function netCashProfile(stock) {
     : Number.isFinite(cash) && Number.isFinite(debt)
       ? cash - debt
       : null;
+  const netCashCny = toCnyAmount(netCash, profileCurrency);
   const haircut = netCashHaircut(stock);
   const adjustedLocal = finiteNumber(profile.adjustedNetCash) ?? (Number.isFinite(netCash) ? netCash * haircut : null);
   const adjustedCny = toCnyAmount(adjustedLocal, profileCurrency);
@@ -817,6 +877,7 @@ function netCashProfile(stock) {
     cash,
     debt,
     netCash,
+    netCashCny,
     currency: profileCurrency,
     haircut,
     adjustedLocal,
@@ -2146,42 +2207,6 @@ function buildOpportunitySignals(positions) {
       a.stock.name.localeCompare(b.stock.name, "zh-CN"));
 }
 
-function renderDecisionItem(signal) {
-  const { stock, reasons, tone, marginOfSafety } = signal;
-  const sourceText = stock.sourceType === "holding" ? "持仓" : "候选";
-  const confidence = confidenceMeta(stock);
-
-  return `
-    <a class="decision-item ${tone}" href="${stockHash(stock.symbol)}">
-      <div class="decision-title">
-        <strong>${escapeHTML(stock.name)}</strong>
-        <span>${escapeHTML(sourceText)} · ${escapeHTML(stock.symbol)}</span>
-      </div>
-      <div class="decision-tags">
-        ${reasons.map((reason) => `<span>${escapeHTML(reason)}</span>`).join("")}
-        ${badge(confidence.text, confidence.tone)}
-      </div>
-      <div class="decision-metrics">
-        <span>现价 <strong>${localPrice(stock, "currentPrice")}</strong></span>
-        <span>综合回报率 <strong>${displayDividendRatio(signal.strategy?.shield.value)}</strong></span>
-        <span>回报门槛 <strong>${displayDividendRatio(signal.strategy?.shield.target)}</strong></span>
-        <span>安全边际 <strong>${Number.isFinite(marginOfSafety) ? percent(marginOfSafety * 100, false) : "-"}</strong></span>
-        <span>长期评分 <strong>${signal.strategy?.ownerAudit.hasAudit ? `${signal.strategy.ownerAudit.score}/100` : "-"}</strong></span>
-        <span>ex-cash PE <strong>${financialMultiple(signal.strategy?.netCash.exCashPe)}</strong></span>
-        <span>ex-cash P/FCF <strong>${financialMultiple(signal.strategy?.netCash.exCashPfcf)}</strong></span>
-      </div>
-      <p>${escapeHTML(displayText(stock.action, stock.status))}</p>
-    </a>
-  `;
-}
-
-function renderOpportunityRadar(positions) {
-  const signals = buildOpportunitySignals(positions);
-  elements.opportunityRadar.innerHTML = signals.length
-    ? signals.map(renderDecisionItem).join("")
-    : `<div class="empty-state compact-empty">暂无进入买点的标的</div>`;
-}
-
 function buildActionConclusion(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   const totalAssets = totalValue + (finiteNumber(state.cash) ?? 0);
@@ -2615,14 +2640,6 @@ function renderMasterStockList(items) {
 }
 
 function renderMastersPage(positions) {
-  if (!elements.grahamSummary || !elements.grahamList || !elements.buffettSummary || !elements.buffettList) return;
-  const items = strategyUniverseItems(positions);
-  const mainItems = items.filter((item) => item.strategy.bucket === "main");
-  const cigarItems = items.filter((item) => item.strategy.bucket === "cigar");
-  elements.grahamSummary.innerHTML = renderStrategySummary(mainItems, "主策略达标");
-  elements.grahamList.innerHTML = renderStrategyStockList(mainItems, "暂无主策略达标标的");
-  elements.buffettSummary.innerHTML = renderStrategySummary(cigarItems, "辅策略烟蒂");
-  elements.buffettList.innerHTML = renderStrategyStockList(cigarItems, "暂无辅策略烟蒂标的");
   renderMasterMatrix(positions);
 }
 
@@ -2690,7 +2707,7 @@ function renderMasterMatrix(positions) {
         <span>${renderMatrixSortButton("return", "综合回报率")}</span>
         <span>${renderMatrixSortButton("margin", "安全边际")}</span>
         <span>${renderMatrixSortButton("owner", "长期评分")}</span>
-        <span>净现金</span>
+        <span>净现比</span>
         <span>FCF估值</span>
       </div>
       ${rows.map(({ stock, strategy }) => `
@@ -2749,18 +2766,29 @@ function dcfMatrixText(stock, margin) {
 
 function netCashMatrixTone(stock, netCash) {
   if (!netCashApplicable(stock)) return "watch";
-  return Number.isFinite(netCash?.adjustedCny) && netCash.adjustedCny > 0 ? "strong" : "watch";
+  const ratio = netCashMarketCapRatio(netCash);
+  if (!Number.isFinite(ratio)) return "watch";
+  if (ratio <= 0) return "risk";
+  return ratio >= 0.2 ? "strong" : "watch";
 }
 
 function netCashApplicable(stock) {
   return !/(^|\/)(银行|保险|券商|证券|信托|财富管理)(\/|$)/.test(String(stock?.industry ?? ""));
 }
 
+function netCashMarketCapRatio(netCash) {
+  const netCashCny = finiteNumber(netCash?.netCashCny);
+  const marketCapCny = finiteNumber(netCash?.marketCapCny);
+  if (!Number.isFinite(netCashCny) || !Number.isFinite(marketCapCny) || marketCapCny <= 0) return null;
+  return netCashCny / marketCapCny;
+}
+
 function netCashMatrixText(stock, netCash) {
   if (!netCashApplicable(stock)) return "不适用";
-  if (!Number.isFinite(netCash?.adjustedCny)) return "未录入";
-  if ((Number.isFinite(netCash?.netCashCny) && netCash.netCashCny <= 0) || netCash.adjustedCny <= 0) return "无净现金";
-  return financialAmount(netCash.adjustedCny, "CNY");
+  const ratio = netCashMarketCapRatio(netCash);
+  if (!Number.isFinite(finiteNumber(netCash?.netCashCny))) return "未录入";
+  if (!Number.isFinite(finiteNumber(netCash?.marketCapCny))) return "缺市值";
+  return Number.isFinite(ratio) ? percent(ratio * 100, false) : "-";
 }
 
 function fcfMatrixText(stock, netCash) {
@@ -2770,6 +2798,247 @@ function fcfMatrixText(stock, netCash) {
 
 function firstIndustry(industry) {
   return String(industry ?? "").split("/").map((item) => item.trim()).find(Boolean) || "未分类";
+}
+
+function normalizeIndustryId(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function industryRecords() {
+  return Array.isArray(state.industries) ? state.industries : [];
+}
+
+function findIndustryRecord(id) {
+  const normalized = normalizeIndustryId(id);
+  return industryRecords().find((item) => normalizeIndustryId(item.id || item.name) === normalized) ?? null;
+}
+
+function industryMetricText(metric) {
+  const value = finiteNumber(metric?.latestValue);
+  if (Number.isFinite(value)) {
+    return `${value}${metric?.unit ? ` ${metric.unit}` : ""}`;
+  }
+  return displayText(metric?.valueText, "待录入");
+}
+
+function stockMatchesIndustry(stock, industry) {
+  const explicitSymbols = new Set((industry.linkedSymbols ?? []).map(normalizeSymbol).filter(Boolean));
+  if (explicitSymbols.has(normalizeSymbol(stock.symbol))) return true;
+
+  const keywords = [industry.name, ...(industry.keywords ?? [])]
+    .map((item) => String(item ?? "").trim())
+    .filter(Boolean);
+  if (!keywords.length) return false;
+
+  const haystack = [stock.industry, stock.name, stock.symbol].filter(Boolean).join(" ");
+  return keywords.some((keyword) => haystack.includes(keyword));
+}
+
+function industryStocks(industry, positions) {
+  return decisionUniverse(positions)
+    .filter((stock) => stockMatchesIndustry(stock, industry))
+    .sort((a, b) => {
+      const valueA = finiteNumber(a.marketValueCny) ?? 0;
+      const valueB = finiteNumber(b.marketValueCny) ?? 0;
+      return valueB - valueA || a.name.localeCompare(b.name, "zh-CN");
+    });
+}
+
+function industryExposure(stocks) {
+  return stocks
+    .filter((stock) => stock.sourceType === "holding")
+    .reduce((sum, stock) => sum + (finiteNumber(stock.marketValueCny) ?? 0), 0);
+}
+
+function renderIndustryMetric(metric) {
+  return `
+    <div class="industry-metric">
+      <span>${escapeHTML(displayText(metric?.name, "未命名指标"))}</span>
+      <strong>${escapeHTML(industryMetricText(metric))}</strong>
+      <small>${escapeHTML([metric?.asOf, metric?.source].filter(Boolean).join(" · ") || "来源待补充")}</small>
+      ${metric?.comment ? `<p>${escapeHTML(metric.comment)}</p>` : ""}
+    </div>
+  `;
+}
+
+function renderIndustryStockChip(stock) {
+  const sourceText = stock.sourceType === "holding" ? "持仓" : "候选";
+  return `
+    <a class="industry-stock-chip" href="${stockHash(stock.symbol)}">
+      <strong>${escapeHTML(stock.name)}</strong>
+      <span>${escapeHTML(stock.symbol)} · ${escapeHTML(sourceText)}</span>
+    </a>
+  `;
+}
+
+function industryTrendTone(direction) {
+  const value = String(direction ?? "").trim().toLowerCase();
+  if (!value) return "neutral";
+  if (/strong|positive|improve|改善|扩张|增长|净现金|稳定/.test(value)) return "strong";
+  if (/risk|negative|down|下降|承压|恶化|风险/.test(value)) return "risk";
+  if (/watch|review|mixed|分化|观察|放缓|待验证/.test(value)) return "watch";
+  return "neutral";
+}
+
+function renderIndustryCompanyAnalysis(analysis, stocks) {
+  const symbol = normalizeSymbol(analysis?.symbol);
+  const stock = stocks.find((item) => normalizeSymbol(item.symbol) === symbol);
+  const name = displayText(analysis?.name, stock?.name || symbol || "未命名标的");
+  const trends = Array.isArray(analysis?.trends) ? analysis.trends : [];
+  const judgments = Array.isArray(analysis?.judgments) ? analysis.judgments : [];
+  const watchpoints = Array.isArray(analysis?.watchpoints) ? analysis.watchpoints : [];
+  const sourceText = stock?.sourceType === "holding" ? "持仓" : stock?.sourceType === "candidate" ? "候选" : "未关联持仓";
+
+  return `
+    <article class="industry-company-card">
+      <div class="industry-company-head">
+        <div>
+          <span>${escapeHTML([symbol, sourceText].filter(Boolean).join(" · "))}</span>
+          ${symbol ? `<a href="${stockHash(symbol)}">${escapeHTML(name)}</a>` : `<strong>${escapeHTML(name)}</strong>`}
+        </div>
+        <em>${escapeHTML(displayText(analysis?.stance, stock?.status || "待判断"))}</em>
+      </div>
+      <p>${escapeHTML(displayText(analysis?.summary, "后续补充该标的趋势和定性判断。"))}</p>
+      ${trends.length ? `
+        <div class="industry-trend-grid">
+          ${trends.map((trend) => `
+            <div class="industry-trend ${industryTrendTone(trend?.direction)}">
+              <span>${escapeHTML(displayText(trend?.label, "趋势"))}</span>
+              <strong>${escapeHTML(displayText(trend?.value, "-"))}</strong>
+              ${trend?.note ? `<small>${escapeHTML(trend.note)}</small>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+      ${judgments.length ? `
+        <div class="industry-company-block">
+          <span>定性判断</span>
+          <ul>
+            ${judgments.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}
+          </ul>
+        </div>
+      ` : ""}
+      ${watchpoints.length ? `
+        <div class="industry-company-block watchpoints">
+          <span>后续观察</span>
+          <ul>
+            ${watchpoints.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}
+          </ul>
+        </div>
+      ` : ""}
+    </article>
+  `;
+}
+
+function renderIndustryDesk(positions) {
+  if (!elements.industryList) return;
+  const industries = industryRecords()
+    .slice()
+    .sort((a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")) || String(a.name ?? "").localeCompare(String(b.name ?? ""), "zh-CN"));
+
+  elements.industryList.innerHTML = industries.length
+    ? industries.map((industry) => {
+      const id = normalizeIndustryId(industry.id || industry.name);
+      const stocks = industryStocks(industry, positions);
+      const exposure = industryExposure(stocks);
+      const metrics = Array.isArray(industry.metrics) ? industry.metrics : [];
+      const companyAnalyses = Array.isArray(industry.companyAnalyses) ? industry.companyAnalyses : [];
+      const latestNote = Array.isArray(industry.notes) ? industry.notes[0] : null;
+      return `
+        <a class="industry-card" href="${industryHash(id)}">
+          <div class="industry-card-head">
+            <div>
+              <span>${escapeHTML(displayText(industry.category, "行业档案"))}</span>
+              <strong>${escapeHTML(displayText(industry.name, id))}</strong>
+            </div>
+            <em>${escapeHTML(displayText(industry.status, "待完善"))}</em>
+          </div>
+          <p>${escapeHTML(displayText(industry.summary, "后续补充行业分析、关键指标和跟踪记录。"))}</p>
+          <div class="industry-card-metrics">
+            <span>相关标的 <strong>${stocks.length}</strong></span>
+            <span>持仓暴露 <strong>${currency(exposure)}</strong></span>
+            <span>追踪指标 <strong>${metrics.length}</strong></span>
+            <span>标的分析 <strong>${companyAnalyses.length}</strong></span>
+          </div>
+          <small>${escapeHTML(latestNote ? `${latestNote.date || "未记录日期"} · ${latestNote.title || latestNote.summary || "研究记录"}` : "暂无研究记录")}</small>
+        </a>
+      `;
+    }).join("")
+    : `<div class="empty-state compact-empty">暂无行业档案。可在 data/industries/ 下新增行业 JSON。</div>`;
+}
+
+function renderIndustryDetail(positions, id) {
+  if (!elements.industryDetail) return;
+  const industry = findIndustryRecord(id);
+  if (!industry) {
+    elements.industryDetail.innerHTML = `
+      <section class="panel">
+        <div class="empty-state">未找到该行业档案</div>
+      </section>
+    `;
+    return;
+  }
+
+  const stocks = industryStocks(industry, positions);
+  const keyQuestions = Array.isArray(industry.keyQuestions) ? industry.keyQuestions : [];
+  const companyAnalyses = Array.isArray(industry.companyAnalyses) ? industry.companyAnalyses : [];
+  const exposure = industryExposure(stocks);
+
+  elements.industryDetail.innerHTML = `
+    <section class="industry-detail-hero">
+      <a class="ghost-button detail-back" href="#industry">返回研究台</a>
+      <div>
+        <p class="eyebrow">${escapeHTML(displayText(industry.category, "Industry"))}</p>
+        <h2>${escapeHTML(displayText(industry.name, "未命名行业"))}</h2>
+      </div>
+      <div class="detail-hero-meta">
+        <span>${escapeHTML(displayText(industry.status, "待完善"))}</span>
+        <small>${escapeHTML(industry.updatedAt ? `更新 ${industry.updatedAt}` : "更新时间待补充")}</small>
+      </div>
+    </section>
+
+    <section class="metrics-grid industry-metrics-summary">
+      ${metricCard("持仓暴露", currency(exposure), "按当前市值折人民币")}
+      ${metricCard("标的分析", `${companyAnalyses.length}`, "趋势与定性判断")}
+      ${metricCard("覆盖公司", stocks.map((stock) => stock.name).join(" / ") || "-", "行业内当前关注对象")}
+      ${metricCard("更新日期", industry.updatedAt || "-", "本地行业档案")}
+    </section>
+
+    <section class="panel industry-summary-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">Thesis</p>
+          <h2>行业分析框架</h2>
+        </div>
+      </div>
+      <div class="industry-summary-body">
+        <p>${escapeHTML(displayText(industry.summary, "后续补充行业景气、供需、成本、政策、估值和代表公司分析。"))}</p>
+        <div class="industry-question-list">
+          ${keyQuestions.length
+            ? keyQuestions.map((item) => `<span>${escapeHTML(item)}</span>`).join("")
+            : `<span>后续补充关键研究问题</span>`}
+        </div>
+      </div>
+    </section>
+
+    ${companyAnalyses.length ? `
+      <section class="panel industry-company-panel">
+        <div class="panel-head compact">
+          <div>
+            <p class="eyebrow">Company Trends</p>
+            <h2>标的趋势分析</h2>
+          </div>
+        </div>
+        <div class="industry-company-grid">
+          ${companyAnalyses.map((analysis) => renderIndustryCompanyAnalysis(analysis, stocks)).join("")}
+        </div>
+      </section>
+    ` : ""}
+  `;
 }
 
 function topGroups(items, keyGetter, valueGetter, limit = 3) {
@@ -2900,7 +3169,7 @@ function buildDataQualityIssues(positions) {
       pushIssue("warn", stock, "候选池重复持仓", "该标的已有持仓，候选池展示会被过滤；建议只保留一处维护。");
     }
     if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
-      pushIssue("warn", stock, "缺最新价", "会影响市值、安全边际、机会雷达和综合回报率计算。");
+      pushIssue("warn", stock, "缺最新价", "会影响市值、安全边际、行动列表和综合回报率计算。");
     }
     if (!stock.currentPriceDate) {
       pushIssue("warn", stock, "缺收盘日期", "无法判断行情是否为最新收盘价。");
@@ -2928,7 +3197,7 @@ function buildDataQualityIssues(positions) {
 
     if (!dividend) {
       if (stock.sourceType === "holding") {
-        pushIssue("info", stock, "缺股息数据", "股息现金流不会计入该持仓。");
+        pushIssue("info", stock, "缺股息数据", "预计年股息不会计入该持仓。");
       }
       return;
     }
@@ -2986,49 +3255,6 @@ function renderDataQuality(positions) {
         : `<div class="data-quality-item ${issue.tone}">${content}</div>`;
     }).join("")
     : `<div class="empty-state compact-empty">关键数据完整</div>`;
-}
-
-function dividendCashItems(positions) {
-  return positions
-    .map((position) => {
-      const dividend = position.dividend;
-      const perShare = finiteNumber(dividend?.dividendPerShare);
-      const annualLocal = dividendAnnualCashLocal(position);
-      const annualCny = dividendAnnualCashCny(position);
-      const dividendYield = calculatedDividendYield(position);
-      return {
-        position,
-        perShare,
-        annualLocal,
-        annualCny,
-        dividendYield,
-        reliability: dividendReliability(position),
-        currencyCode: dividendCurrency(position),
-        fiscalYear: dividend?.fiscalYear
-      };
-    })
-    .filter((item) => Number.isFinite(item.perShare) && item.perShare > 0 && Number.isFinite(item.annualLocal) && item.annualLocal > 0)
-    .sort((a, b) => b.annualCny - a.annualCny || a.position.name.localeCompare(b.position.name, "zh-CN"));
-}
-
-function renderDividendCashList(positions) {
-  const items = dividendCashItems(positions);
-  elements.dividendCashList.innerHTML = items.length
-    ? items.map((item) => `
-      <a class="dividend-cash-item" href="${stockHash(item.position.symbol)}">
-        <div class="dividend-cash-head">
-          <strong>${escapeHTML(item.position.name)}</strong>
-          <span>${escapeHTML(item.position.symbol)} · ${escapeHTML(item.reliability.text)}</span>
-        </div>
-        <div class="dividend-cash-metrics">
-          <span>每股股息 <strong>${currency(item.perShare, item.currencyCode)}</strong></span>
-          <span>股息率 <strong>${displayDividendRatio(item.dividendYield)}</strong></span>
-          <span>预期年现金 <strong>${currency(item.annualLocal, item.currencyCode)}</strong></span>
-        </div>
-        <small>${item.annualCny > 0 ? `折人民币 ${currency(item.annualCny)}` : "折人民币 -"}${item.fiscalYear ? ` · ${escapeHTML(item.fiscalYear)}` : ""}${item.reliability.value === "risk" ? " · 高股息不等于低风险" : ""}</small>
-      </a>
-    `).join("")
-    : `<div class="empty-state compact-empty">暂无股息现金流数据，点击更新行情后获取</div>`;
 }
 
 function decisionLogTypeText(type) {
@@ -3142,10 +3368,8 @@ function renderResearchUpdatesPanel(stock) {
 
 function renderDecisionArea(positions) {
   renderActionConclusion(positions);
-  renderOpportunityRadar(positions);
   renderDisciplineDashboard(positions);
   renderDataQuality(positions);
-  renderDividendCashList(positions);
 }
 
 function findSymbolForPlan(item) {
@@ -3732,7 +3956,7 @@ function renderStockDetail(positions, symbol) {
 
   elements.stockDetail.innerHTML = `
     <section class="detail-hero">
-      <a class="ghost-button detail-back" href="#positions">返回持仓</a>
+      <a class="ghost-button detail-back" href="#portfolio">返回持仓</a>
       <div>
         <p class="eyebrow">${escapeHTML(stock.symbol)} · ${escapeHTML(displayText(stock.industry, "未分类"))}</p>
         <h2>${escapeHTML(stock.name)}</h2>
@@ -3935,6 +4159,10 @@ function render() {
   renderAllocation(positions);
   renderTrades();
   renderPlanAndCandidates();
+  renderIndustryDesk(positions);
+  if (window.location.hash.startsWith("#industry=")) {
+    renderIndustryDetail(positions, decodeURIComponent(window.location.hash.slice("#industry=".length)));
+  }
   if (window.location.hash.startsWith("#stock=")) {
     renderStockDetail(positions, decodeURIComponent(window.location.hash.slice("#stock=".length)));
   }
@@ -4075,9 +4303,9 @@ async function updateQuotes() {
     const skipped = result.skipped ?? [];
     if (skipped.length) {
       const preview = skipped.slice(0, 3).map((item) => `${item.symbol} ${item.error}`).join("；");
-      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，股息现金流已刷新，${skipped.length} 个失败：${preview}`, "error");
+      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，股息数据已刷新，${skipped.length} 个失败：${preview}`, "error");
     } else {
-      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，股息现金流已刷新`, "success");
+      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，股息数据已刷新`, "success");
     }
   } finally {
     elements.updateQuotesButton.disabled = false;
@@ -4221,14 +4449,8 @@ document.querySelectorAll(".nav-item").forEach((button) => {
   });
 });
 
-document.querySelectorAll("[data-master-scroll]").forEach((button) => {
-  button.addEventListener("click", () => {
-    showEmbeddedMasters(button.dataset.masterScroll);
-  });
-});
-
 function showEmbeddedMasters(target = "masters") {
-  showPage("overview");
+  showPage("portfolio");
   requestAnimationFrame(() => {
     document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -4236,7 +4458,8 @@ function showEmbeddedMasters(target = "masters") {
 
 function showPage(view) {
   const isStockDetail = view.startsWith("stock=");
-  let nextView = isStockDetail ? "stock-detail" : pageTitles[view] ? view : "overview";
+  const isIndustryDetail = view.startsWith("industry=");
+  let nextView = isStockDetail ? "stock-detail" : isIndustryDetail ? "industry-detail" : pageTitles[view] ? view : "overview";
   if (!document.querySelector(`[data-page="${nextView}"]`)) {
     nextView = "overview";
   }
@@ -4244,9 +4467,13 @@ function showPage(view) {
   if (isStockDetail) {
     renderStockDetail(computePositions(), decodeURIComponent(view.slice("stock=".length)));
   }
+  if (isIndustryDetail) {
+    renderIndustryDetail(computePositions(), decodeURIComponent(view.slice("industry=".length)));
+  }
 
   document.querySelector(".nav-item.active")?.classList.remove("active");
-  document.querySelector(`.nav-item[data-view="${nextView}"]`)?.classList.add("active");
+  const activeNavView = isIndustryDetail ? "industry" : nextView;
+  document.querySelector(`.nav-item[data-view="${activeNavView}"]`)?.classList.add("active");
   document.querySelector(".page.active")?.classList.remove("active");
   document.querySelector(`[data-page="${nextView}"]`)?.classList.add("active");
   elements.pageTitle.textContent = pageTitles[nextView];
@@ -4256,6 +4483,10 @@ function handleRoute(rawHash) {
   const view = rawHash || "overview";
   if (view === "masters") {
     showEmbeddedMasters("masters");
+    return;
+  }
+  if (view === "positions" || view === "candidates") {
+    showPage("portfolio");
     return;
   }
   showPage(view);

@@ -26,6 +26,7 @@ type AppState struct {
 	Holdings     []Holding          `json:"holdings"`
 	Plan         []PlanItem         `json:"plan"`
 	Candidates   []Candidate        `json:"candidates"`
+	Industries   []IndustryResearch `json:"industries,omitempty"`
 	Rules        []Rule             `json:"rules"`
 }
 
@@ -698,7 +699,13 @@ func firstNonEmpty(values ...string) string {
 func loadState() (AppState, error) {
 	if _, err := os.Stat(dataFile); errors.Is(err, os.ErrNotExist) {
 		state := defaultState()
-		return state, saveState(state)
+		if err := saveState(state); err != nil {
+			return AppState{}, err
+		}
+		if err := hydrateState(&state); err != nil {
+			return AppState{}, err
+		}
+		return state, nil
 	}
 
 	body, err := os.ReadFile(dataFile)
@@ -710,10 +717,22 @@ func loadState() (AppState, error) {
 	if err := json.Unmarshal(body, &state); err != nil {
 		return AppState{}, err
 	}
-	if err := mergeRuntimeQuotes(&state); err != nil {
+	if err := hydrateState(&state); err != nil {
 		return AppState{}, err
 	}
 	return state, nil
+}
+
+func hydrateState(state *AppState) error {
+	if err := mergeRuntimeQuotes(state); err != nil {
+		return err
+	}
+	industries, err := loadIndustries()
+	if err != nil {
+		return err
+	}
+	state.Industries = industries
+	return nil
 }
 
 func saveState(state AppState) error {
