@@ -489,7 +489,7 @@ h2 {
 }
 
 .executive-metrics {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .executive-metric {
@@ -1562,6 +1562,38 @@ th {
   font-weight: 700;
 }
 
+.position-sort-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+}
+
+.position-sort-button:hover,
+.position-sort-button.active {
+  color: var(--green);
+}
+
+.position-sort-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.position-sort-button strong {
+  color: currentColor;
+  font-size: 12px;
+  line-height: 1;
+}
+
 th:first-child,
 td:first-child {
   text-align: left;
@@ -2073,6 +2105,10 @@ tbody tr:hover {
   margin-bottom: 18px;
 }
 
+.industry-trend-panel {
+  margin-bottom: 18px;
+}
+
 .industry-company-panel {
   margin-bottom: 18px;
 }
@@ -2104,6 +2140,30 @@ tbody tr:hover {
   font-weight: 800;
 }
 
+.industry-discipline {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--gold);
+  border-radius: 8px;
+  background: #fffdf8;
+}
+
+.industry-discipline span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.industry-discipline p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .industry-detail-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
@@ -2116,6 +2176,13 @@ tbody tr:hover {
 .industry-note-list {
   display: grid;
   gap: 10px;
+  padding: 14px 16px 16px;
+}
+
+.industry-line-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
   padding: 14px 16px 16px;
 }
 
@@ -2138,6 +2205,137 @@ tbody tr:hover {
   color: var(--ink);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.industry-line-metric {
+  --chart-line: var(--blue);
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.industry-line-metric.strong {
+  --chart-line: var(--green);
+  border-left-color: var(--green);
+}
+
+.industry-line-metric.watch {
+  --chart-line: var(--gold);
+  border-left-color: var(--gold);
+}
+
+.industry-line-metric.risk {
+  --chart-line: var(--red);
+  border-left-color: var(--red);
+}
+
+.industry-line-metric span,
+.industry-line-metric small,
+.chart-caption,
+.line-chart-empty {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.industry-line-metric strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.industry-line-metric p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.industry-line-chart {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faf9;
+}
+
+.industry-line-chart svg,
+.industry-sparkline svg {
+  width: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.industry-line-chart svg {
+  height: 138px;
+}
+
+.industry-line-chart .grid-line,
+.industry-sparkline .grid-line {
+  stroke: #dce3df;
+  stroke-width: 1;
+}
+
+.industry-line-chart .chart-area,
+.industry-sparkline .chart-area {
+  fill: rgba(8, 127, 91, 0.12);
+}
+
+.industry-line-chart .chart-line,
+.industry-sparkline .chart-line {
+  fill: none;
+  stroke: var(--chart-line);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.industry-line-chart .chart-dot,
+.industry-sparkline .chart-dot {
+  fill: #ffffff;
+  stroke: var(--chart-line);
+  stroke-width: 2.5;
+}
+
+.industry-line-chart .chart-label,
+.industry-line-chart .chart-value {
+  fill: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.industry-line-chart .chart-value {
+  fill: var(--ink);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.chart-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.line-chart-empty {
+  min-height: 96px;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: #f8faf9;
+  text-align: center;
 }
 
 .industry-stock-list {
@@ -2245,6 +2443,7 @@ tbody tr:hover {
 }
 
 .industry-trend {
+  --chart-line: var(--muted);
   display: grid;
   gap: 5px;
   min-width: 0;
@@ -2256,14 +2455,17 @@ tbody tr:hover {
 }
 
 .industry-trend.strong {
+  --chart-line: var(--green);
   border-left-color: var(--green);
 }
 
 .industry-trend.watch {
-  border-left-color: var(--amber);
+  --chart-line: var(--gold);
+  border-left-color: var(--gold);
 }
 
 .industry-trend.risk {
+  --chart-line: var(--red);
   border-left-color: var(--red);
 }
 
@@ -2271,6 +2473,11 @@ tbody tr:hover {
   color: var(--ink);
   font-size: 14px;
   line-height: 1.35;
+}
+
+.industry-sparkline {
+  min-width: 0;
+  padding: 4px 0;
 }
 
 .industry-company-block {
@@ -3050,6 +3257,7 @@ label textarea {
 
   .decision-grid,
   .industry-detail-grid,
+  .industry-line-metric-grid,
   .master-vote-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3059,7 +3267,7 @@ label textarea {
   }
 
   .executive-metrics {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .master-matrix {
@@ -3178,6 +3386,7 @@ label textarea {
   .decision-grid,
   .industry-card-metrics,
   .industry-company-grid,
+  .industry-line-metric-grid,
   .industry-trend-grid,
   .industry-metrics-summary,
   .industry-stock-list,

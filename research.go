@@ -1414,6 +1414,12 @@ func normalizeSymbol(symbol string) string {
 
 func normalizeDisplaySymbol(symbol string) string {
 	symbol = strings.ToUpper(strings.TrimSpace(symbol))
+	if strings.HasPrefix(symbol, "HK") {
+		code := strings.TrimPrefix(symbol, "HK")
+		if value, err := strconv.Atoi(code); err == nil {
+			return fmt.Sprintf("%04d.HK", value)
+		}
+	}
 	if strings.HasSuffix(symbol, ".HK") {
 		code := strings.TrimSuffix(symbol, ".HK")
 		if value, err := strconv.Atoi(code); err == nil {

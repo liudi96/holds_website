@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>纸牌屋</title>
-    <link rel="stylesheet" href="./styles.css?v=top-nav-1" />
+    <link rel="stylesheet" href="./styles.css?v=position-sort" />
   </head>
   <body>
     <aside class="sidebar">
@@ -94,6 +94,11 @@
             <small id="positionCount">0 只股票</small>
           </article>
           <article class="metric executive-metric">
+            <span>持仓总盈亏</span>
+            <strong id="totalPositionPnl">¥0.00</strong>
+            <small id="totalPositionPnlRate">相对成本 0.00%</small>
+          </article>
+          <article class="metric executive-metric">
             <span>今日盈亏</span>
             <strong id="dayChange">¥0.00</strong>
             <small id="dayChangeRate">0.00%</small>
@@ -123,29 +128,6 @@
       </section>
 
       <section class="page" data-page="portfolio">
-        <section class="portfolio-masters" id="masters">
-          <section class="masters-hero panel">
-          <div class="masters-hero-copy">
-            <p class="masters-hero-line">
-              <span class="eyebrow">Dual Strategy</span>
-              <strong>回报蓝筹 + 净现金烟蒂</strong>
-              <span>主策略用 A股6% / H股8% 综合回报与15%安全边际筛蓝筹；辅策略用净现金保护、低估值和自由现金流筛烟蒂。</span>
-            </p>
-          </div>
-        </section>
-
-        <section class="panel master-matrix-panel">
-          <div class="panel-head compact">
-            <div>
-              <p class="eyebrow">Compare</p>
-              <h2>标的评分表</h2>
-            </div>
-          </div>
-          <div class="master-matrix" id="masterMatrix"></div>
-        </section>
-
-        </section>
-
         <div class="main-panel">
           <div class="panel-head">
             <div>
@@ -164,9 +146,24 @@
               <thead>
                 <tr>
                   <th>股票</th>
-                  <th>市值/现价</th>
-                  <th>盈亏</th>
-                  <th>安全边际</th>
+                  <th>
+                    <button class="position-sort-button" type="button" data-position-sort="marketValue" aria-label="按市值排序">
+                      <span>市值/现价</span>
+                      <strong>↕</strong>
+                    </button>
+                  </th>
+                  <th>
+                    <button class="position-sort-button" type="button" data-position-sort="pnl" aria-label="按盈亏排序">
+                      <span>盈亏</span>
+                      <strong>↕</strong>
+                    </button>
+                  </th>
+                  <th>
+                    <button class="position-sort-button" type="button" data-position-sort="margin" aria-label="按安全边际排序">
+                      <span>安全边际</span>
+                      <strong>↕</strong>
+                    </button>
+                  </th>
                   <th>健康</th>
                   <th></th>
                 </tr>
@@ -175,6 +172,28 @@
             </table>
           </div>
         </div>
+
+        <section class="portfolio-masters" id="masters">
+          <section class="masters-hero panel">
+            <div class="masters-hero-copy">
+              <p class="masters-hero-line">
+                <span class="eyebrow">Dual Strategy</span>
+                <strong>回报蓝筹 + 净现金烟蒂</strong>
+                <span>主策略用 A股6% / H股8% 综合回报与15%安全边际筛蓝筹；辅策略用净现金保护、低估值和自由现金流筛烟蒂。</span>
+              </p>
+            </div>
+          </section>
+
+          <section class="panel master-matrix-panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Compare</p>
+                <h2>标的评分表</h2>
+              </div>
+            </div>
+            <div class="master-matrix" id="masterMatrix"></div>
+          </section>
+        </section>
 
         <section class="panel portfolio-candidates-panel">
           <div class="panel-head compact">
@@ -268,39 +287,17 @@
 
         <div class="form-grid">
           <label>
-            股票代码
-            <input name="symbol" placeholder="AAPL" required />
-          </label>
-          <label>
             股票名称
-            <input name="name" placeholder="Apple" required />
-          </label>
-          <label>
-            交易方向
-            <select name="side" required>
-              <option value="buy">买入</option>
-              <option value="sell">卖出</option>
-            </select>
-          </label>
-          <label>
-            币种
-            <select name="currency" required>
-              <option value="CNY">CNY</option>
-              <option value="HKD">HKD</option>
-              <option value="USD">USD</option>
-            </select>
-          </label>
-          <label>
-            数量
-            <input name="shares" type="number" min="1" step="1" required />
+            <input name="name" list="tradeStockNames" placeholder="中海物业" required />
+            <datalist id="tradeStockNames"></datalist>
           </label>
           <label>
             成交价
             <input name="price" type="number" min="0.01" step="0.01" required />
           </label>
           <label>
-            最新价
-            <input name="currentPrice" type="number" min="0.01" step="0.01" required />
+            股数
+            <input name="shares" type="number" step="1" placeholder="买入填正数，卖出填负数" required />
           </label>
         </div>
 
@@ -386,6 +383,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=top-nav-1"></script>
+    <script src="./app.js?v=position-sort"></script>
   </body>
 </html>
