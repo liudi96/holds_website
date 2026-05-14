@@ -257,6 +257,7 @@ const HK_SHARE_SHAREHOLDER_RETURN_TARGET = 0.08;
 const A_SHARE_EX_CASH_PE_MAX = 10;
 const HK_SHARE_EX_CASH_PE_MAX = 8;
 const AGGRESSIVE_BUY_DISCOUNT = 0.1;
+const HK_STOCK_CONNECT_DIVIDEND_TAX_RATE = 0.2;
 const OWNER_AUDIT_SCORE_TARGET = 75;
 const MAJOR_RISK_PATTERN = /停牌|重大风险|否决|调查|内控|退市|财报可信|风险暴露|治理风险|治理与财务可靠性|质量分<75|低于75/;
 const OWNER_AUDIT_FIELDS = [
@@ -278,15 +279,22 @@ const OWNER_AUDIT_STATUS_SCORE = {
   review: 0.6,
   fail: 0
 };
+const MASTER_MATRIX_FILTERS = [
+  { key: "all", label: "全部" },
+  { key: "holding", label: "持仓" },
+  { key: "candidate", label: "候选" }
+];
 
 let state = loadState();
 let activeFilter = "all";
+let positionSort = { key: "", direction: "desc" };
 let searchTerm = "";
 let pendingResearch = null;
 let candidateSort = "consensus";
 let candidateFilter = "all";
 let decisionLogFilter = "all";
 let masterMatrixSort = { key: "margin", direction: "desc" };
+let masterMatrixFilter = "all";
 const pageTitles = {
   overview: "总览",
   portfolio: "持仓",
@@ -311,6 +319,7 @@ const elements = {
   decisionLogFilters: document.querySelector("#decisionLogFilters"),
   clearDecisionLogs: document.querySelector("#clearDecisionLogs"),
   masterMatrix: document.querySelector("#masterMatrix"),
+  masterMatrixFilters: document.querySelector("#masterMatrixFilters"),
   grahamSummary: document.querySelector("#grahamSummary"),
   grahamList: document.querySelector("#grahamList"),
   buffettSummary: document.querySelector("#buffettSummary"),
@@ -322,6 +331,8 @@ const elements = {
   stockDetail: document.querySelector("#stockDetail"),
   totalFunds: document.querySelector("#totalFunds"),
   totalValue: document.querySelector("#totalValue"),
+  totalPositionPnl: document.querySelector("#totalPositionPnl"),
+  totalPositionPnlRate: document.querySelector("#totalPositionPnlRate"),
   dayChange: document.querySelector("#dayChange"),
   dayChangeRate: document.querySelector("#dayChangeRate"),
   annualDividend: document.querySelector("#annualDividend"),
@@ -340,6 +351,7 @@ const elements = {
   quoteUpdateStatus: document.querySelector("#quoteUpdateStatus"),
   tradeDialog: document.querySelector("#tradeDialog"),
   tradeForm: document.querySelector("#tradeForm"),
+  tradeStockNames: document.querySelector("#tradeStockNames"),
   holdingDialog: document.querySelector("#holdingDialog"),
   holdingForm: document.querySelector("#holdingForm"),
   researchDialog: document.querySelector("#researchDialog"),
@@ -465,6 +477,10 @@ function industryHash(id) {
 
 function normalizeSymbol(symbol) {
   const text = String(symbol ?? "").trim().toUpperCase();
+  if (/^HK\d+$/.test(text)) {
+    const code = text.slice(2);
+    return `${String(Number(code)).padStart(4, "0")}.HK`;
+  }
   if (text.endsWith(".HK")) {
     const code = text.slice(0, -3);
     if (/^\d+$/.test(code)) {
@@ -586,13 +602,77 @@ function marketCapCurrency(stock) {
   return String(stock?.marketCapCurrency || stock?.currency || "CNY").toUpperCase();
 }
 
+function normalizeRate(value, fallback = 0) {
+  const number = finiteNumber(value);
+  if (!Number.isFinite(number)) return fallback;
+  if (number > 1 && number <= 100) return clamp(number / 100, 0, 1);
+  return clamp(number, 0, 1);
+}
+
+function dividendTaxProfile(stock) {
+  const dividend = stock?.dividend ?? {};
+  const stockConnectRate = marketKind(stock) === "HK"
+    ? normalizeRate(
+        dividend.stockConnectDividendTaxRate ??
+        dividend.stockConnectTaxRate ??
+        dividend.personalDividendTaxRate,
+        HK_STOCK_CONNECT_DIVIDEND_TAX_RATE
+      )
+    : 0;
+  const nonResidentRate = normalizeRate(
+    dividend.nonResidentWithholdingTaxRate ??
+    dividend.foreignWithholdingTaxRate ??
+    dividend.withholdingTaxRate,
+    0
+  );
+  const creditable = Boolean(dividend.withholdingTaxCreditable);
+  const factor = creditable
+    ? 1 - Math.max(stockConnectRate, nonResidentRate)
+    : (1 - nonResidentRate) * (1 - stockConnectRate);
+  return {
+    stockConnectRate,
+    nonResidentRate,
+    creditable,
+    factor: clamp(factor, 0, 1),
+    effectiveTaxRate: 1 - clamp(factor, 0, 1)
+  };
+}
+
+function dividendTaxRate(stock) {
+  return dividendTaxProfile(stock).effectiveTaxRate;
+}
+
+function dividendTaxFactor(stock) {
+  return dividendTaxProfile(stock).factor;
+}
+
+function dividendTaxText(stock) {
+  const profile = dividendTaxProfile(stock);
+  const note = displayText(stock?.dividend?.taxNote, "");
+  if (profile.stockConnectRate <= 0 && profile.nonResidentRate <= 0) return note || "未折扣分红税";
+  const parts = [];
+  if (profile.stockConnectRate > 0) parts.push(`港股通个税 ${percent(profile.stockConnectRate * 100, false)}`);
+  if (profile.nonResidentRate > 0) parts.push(`非居民预提 ${percent(profile.nonResidentRate * 100, false)}`);
+  parts.push(`${profile.creditable ? "抵免后" : "到账"}税负 ${percent(profile.effectiveTaxRate * 100, false)}`);
+  if (note) parts.push(note);
+  return parts.join(" · ");
+}
+
+function afterTaxDividendCny(stock, grossCny) {
+  const amount = finiteNumber(grossCny);
+  if (!Number.isFinite(amount)) return null;
+  return amount * dividendTaxFactor(stock);
+}
+
 function dividendYieldInputs(stock) {
   const dividend = stock?.dividend;
   const cashDividendTotal = finiteNumber(dividend?.cashDividendTotal);
   const marketCap = finiteNumber(stock?.marketCap);
   if (Number.isFinite(cashDividendTotal) && cashDividendTotal > 0 && Number.isFinite(marketCap) && marketCap > 0) {
+    const grossCashDividendTotalCny = cashDividendTotal * fx(cashDividendTotalCurrency(stock));
     return {
-      cashDividendTotalCny: cashDividendTotal * fx(cashDividendTotalCurrency(stock)),
+      cashDividendTotalCny: afterTaxDividendCny(stock, grossCashDividendTotalCny),
+      grossCashDividendTotalCny,
       marketCapCny: marketCap * fx(marketCapCurrency(stock))
     };
   }
@@ -605,7 +685,8 @@ function dividendYieldInputs(stock) {
   }
 
   return {
-    cashDividendTotalCny: perShare * fx(dividendCurrency(stock)),
+    cashDividendTotalCny: afterTaxDividendCny(stock, perShare * fx(dividendCurrency(stock))),
+    grossCashDividendTotalCny: perShare * fx(dividendCurrency(stock)),
     marketCapCny: currentPrice * fx(stock?.currency || dividendCurrency(stock))
   };
 }
@@ -639,7 +720,7 @@ function dividendAnnualCashLocal(stock) {
 function dividendAnnualCashCny(stock) {
   const localCash = dividendAnnualCashLocal(stock);
   if (!Number.isFinite(localCash)) return 0;
-  return localCash * fx(dividendCurrency(stock));
+  return afterTaxDividendCny(stock, localCash * fx(dividendCurrency(stock))) ?? 0;
 }
 
 function dividendSummary(positions) {
@@ -771,12 +852,12 @@ function shareholderReturnTarget(stock) {
 function forecastDividendYield(stock) {
   const dividend = stock?.dividend;
   const explicit = finiteNumber(dividend?.forecastYield);
-  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  if (Number.isFinite(explicit) && explicit > 0) return explicit * dividendTaxFactor(stock);
   const perShare = finiteNumber(dividend?.forecastPerShare);
   const currentPrice = finiteNumber(stock?.currentPrice);
   if (!Number.isFinite(perShare) || perShare <= 0 || !Number.isFinite(currentPrice) || currentPrice <= 0) return null;
   const forecastCurrency = String(dividend?.forecastCurrency || dividendCurrency(stock)).toUpperCase();
-  return (perShare * fx(forecastCurrency)) / (currentPrice * fx(stock?.currency || forecastCurrency));
+  return (perShare * fx(forecastCurrency) * dividendTaxFactor(stock)) / (currentPrice * fx(stock?.currency || forecastCurrency));
 }
 
 function dividendShield(stock) {
@@ -784,7 +865,9 @@ function dividendShield(stock) {
   const shareholderReturn = calculatedShareholderReturnYield(stock);
   const forecast = forecastDividendYield(stock);
   const value = Number.isFinite(shareholderReturn) ? shareholderReturn : null;
-  const source = Number.isFinite(shareholderReturn) ? "最近财年综合回报" : "未记录综合回报";
+  const source = Number.isFinite(shareholderReturn)
+    ? marketKind(stock) === "HK" ? "最近财年综合回报（港股通股息税后）" : "最近财年综合回报"
+    : "未记录综合回报";
   const target = shareholderReturnTarget(stock);
   return {
     trailing,
@@ -1328,21 +1411,71 @@ function syncCash() {
 }
 
 function getFilteredPositions(positions) {
-  return positions.filter((position) => {
+  return decisionUniverse(positions)
+    .map((stock) => ({ stock, strategy: strategyProfile(stock) }))
+    .filter(({ stock, strategy }) => {
     const haystack = [
-      position.symbol,
-      position.name,
-      position.action,
-      position.status,
-      position.industry
+      stock.symbol,
+      stock.name,
+      stock.action,
+      stock.status,
+      stock.industry,
+      strategy.status,
+      strategyBucketLabel(strategy.bucket)
     ].join(" ").toLowerCase();
     const matchesSearch = haystack.includes(searchTerm);
     const matchesFilter =
       activeFilter === "all" ||
-      (activeFilter === "profit" && position.pnlCny >= 0) ||
-      (activeFilter === "loss" && position.pnlCny < 0);
+      stock.sourceType === activeFilter;
 
     return matchesSearch && matchesFilter;
+  });
+}
+
+function positionSortValue(item, key) {
+  const { stock, strategy } = item;
+  if (key === "marketValue") return finiteNumber(stock.marketValueCny);
+  if (key === "pnl") return finiteNumber(stock.pnlCny);
+  if (key === "return") return finiteNumber(strategy?.shield?.value);
+  if (key === "owner") return strategy?.ownerAudit?.hasAudit ? finiteNumber(strategy.ownerAudit.score) : null;
+  if (key === "margin") return finiteNumber(strategy?.margin);
+  return null;
+}
+
+function compareNullableNumbers(a, b, direction = "desc") {
+  const aNumber = finiteNumber(a);
+  const bNumber = finiteNumber(b);
+  const aValid = Number.isFinite(aNumber);
+  const bValid = Number.isFinite(bNumber);
+  if (!aValid && !bValid) return 0;
+  if (!aValid) return 1;
+  if (!bValid) return -1;
+  return direction === "asc" ? aNumber - bNumber : bNumber - aNumber;
+}
+
+function sortedPositions(positions) {
+  const filtered = getFilteredPositions(positions);
+  if (!positionSort.key) return filtered;
+  return [...filtered].sort((a, b) => {
+    const result = compareNullableNumbers(positionSortValue(a, positionSort.key), positionSortValue(b, positionSort.key), positionSort.direction);
+    return result || String(a.stock?.name ?? "").localeCompare(String(b.stock?.name ?? ""), "zh-CN");
+  });
+}
+
+function updatePositionSortControls() {
+  document.querySelectorAll("[data-position-sort]").forEach((button) => {
+    const key = button.dataset.positionSort;
+    const active = positionSort.key === key;
+    const directionText = positionSort.direction === "asc" ? "升序" : "降序";
+    const label = button.querySelector("span")?.textContent?.trim() || "当前列";
+    button.classList.toggle("active", active);
+    button.dataset.nextDirection = active && positionSort.direction === "desc" ? "asc" : "desc";
+    button.setAttribute("aria-label", active ? `${label}${directionText}` : `按${label}排序`);
+    button.closest("th")?.setAttribute("aria-sort", active ? (positionSort.direction === "asc" ? "ascending" : "descending") : "none");
+    const indicator = button.querySelector("strong");
+    if (indicator) {
+      indicator.textContent = active ? (positionSort.direction === "asc" ? "↑" : "↓") : "↕";
+    }
   });
 }
 
@@ -1360,7 +1493,7 @@ function holdingHealth(position, totalValue) {
   const riskScore = highRisk ? 0 : reduceSignal ? 35 : 100;
   const score = Math.round(qualityScore * 0.35 + marginScore * 0.3 + pnlScore * 0.15 + weightScore * 0.1 + riskScore * 0.1);
 
-  if (highRisk || (Number.isFinite(quality) && quality < 75)) {
+  if (highRisk || (Number.isFinite(quality) && quality < 70)) {
     return {
       status: "风险暴露",
       tone: "risk",
@@ -1855,6 +1988,9 @@ function consensusLabel(stock, totalValue = 0) {
 
 function renderMetrics(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const totalCost = positions.reduce((sum, item) => sum + (finiteNumber(item.costValueCny) ?? 0), 0);
+  const totalPositionPnl = positions.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
+  const totalPositionPnlRate = totalCost ? (totalPositionPnl / totalCost) * 100 : 0;
   const cashValue = finiteNumber(state.cash) ?? 0;
   const totalFunds = totalValue + cashValue;
   const dayChange = positions.reduce((sum, item) => sum + item.dayChange, 0);
@@ -1863,6 +1999,14 @@ function renderMetrics(positions) {
 
   elements.totalFunds.textContent = wholeCurrency(totalFunds);
   elements.totalValue.textContent = wholeCurrency(totalValue);
+  if (elements.totalPositionPnl) {
+    elements.totalPositionPnl.textContent = wholeCurrency(totalPositionPnl);
+    elements.totalPositionPnl.className = totalPositionPnl >= 0 ? "positive" : "negative";
+  }
+  if (elements.totalPositionPnlRate) {
+    elements.totalPositionPnlRate.textContent = `相对成本 ${percent(totalPositionPnlRate)}`;
+    elements.totalPositionPnlRate.className = totalPositionPnl >= 0 ? "positive" : "negative";
+  }
   if (elements.dayChange) {
     elements.dayChange.textContent = wholeCurrency(dayChange);
     elements.dayChange.className = dayChange >= 0 ? "positive" : "negative";
@@ -1873,58 +2017,125 @@ function renderMetrics(positions) {
   }
   elements.annualDividend.textContent = wholeCurrency(dividends.annualCashCny);
   elements.portfolioDividendYield.textContent = dividends.topContributor
-    ? `组合股息率 ${percent(dividendYield * 100, false)} · 高风险 ${percent(dividends.annualCashCny ? (dividends.highRiskCashCny / dividends.annualCashCny) * 100 : 0, false)}`
-    : "组合股息率 0.00%";
+    ? `组合税后股息率 ${percent(dividendYield * 100, false)} · 高风险 ${percent(dividends.annualCashCny ? (dividends.highRiskCashCny / dividends.annualCashCny) * 100 : 0, false)}`
+    : "组合税后股息率 0.00%";
   elements.positionCount.textContent = `${positions.length} 只股票`;
   elements.recordCount.textContent = `${state.holdings.length} 条持仓 · ${state.trades.length} 条交易`;
 }
 
+function decisionToneClass(tone) {
+  if (tone === "strong" || tone === "safe" || tone === "buy") return "core";
+  if (tone === "risk" || tone === "reduce") return "risk";
+  if (tone === "watch" || tone === "wait") return "reduce";
+  return "watch";
+}
+
+function decisionMarginTone(value) {
+  if (!Number.isFinite(value)) return "watch";
+  if (value >= MAIN_DCF_MARGIN_TARGET) return "core";
+  if (value < 0.1) return "risk";
+  return "reduce";
+}
+
+function decisionStockMeta(stock) {
+  if (stock.sourceType === "holding") {
+    return `${stock.symbol} · ${stock.shares} 股 · 成本 ${currency(stock.cost, stock.currency)}`;
+  }
+  return `${stock.symbol} · 候选 · ${displayText(firstIndustry(stock.industry), "未分类")}`;
+}
+
+function decisionMarketCell(stock) {
+  const currentPrice = finiteNumber(stock.currentPrice);
+  const priceText = Number.isFinite(currentPrice) && currentPrice > 0
+    ? currency(currentPrice, stock.currency)
+    : "-";
+  const dateText = stock.currentPriceDate || "收盘日未知";
+  if (stock.sourceType !== "holding") {
+    return `<strong>-</strong><br /><small class="quote-date">${priceText} · ${escapeHTML(dateText)}</small>`;
+  }
+  return `<strong>${currency(stock.marketValueCny)}</strong><br /><small class="quote-date">${priceText} · ${escapeHTML(dateText)}</small>`;
+}
+
+function decisionPnlCell(stock) {
+  if (stock.sourceType !== "holding") {
+    return { className: "", html: `<strong>-</strong><br /><small>未持仓</small>` };
+  }
+  return {
+    className: stock.pnlCny >= 0 ? "positive" : "negative",
+    html: `${currency(stock.pnlCny)}<br /><small>${percent(stock.pnlRate)}</small>`
+  };
+}
+
+function decisionHealthCell(stock, totalValue) {
+  if (stock.sourceType !== "holding") {
+    const qualityText = Number.isFinite(stock.qualityScore) ? `质量${stock.qualityScore}` : "质量待补";
+    return {
+      tone: "watch",
+      scoreText: qualityText,
+      weightText: "未持仓",
+      title: displayText(stock.status, "候选池")
+    };
+  }
+  const health = holdingHealth(stock, totalValue);
+  const weight = totalValue ? (stock.marketValueCny / totalValue) * 100 : 0;
+  return {
+    tone: health.tone,
+    scoreText: `${health.score}分`,
+    weightText: `仓位${weight.toFixed(1)}%`,
+    title: health.detail
+  };
+}
+
 function renderPositions(positions) {
-  const filtered = getFilteredPositions(positions);
+  const filtered = sortedPositions(positions);
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  updatePositionSortControls();
 
   if (!filtered.length) {
-    elements.positionsBody.innerHTML = `<tr><td colspan="6" class="empty-state">暂无符合条件的持仓</td></tr>`;
+    elements.positionsBody.innerHTML = `<tr><td colspan="7" class="empty-state">暂无符合条件的标的</td></tr>`;
     return;
   }
 
   elements.positionsBody.innerHTML = filtered
-    .map((position) => {
-      const weight = totalValue ? (position.marketValueCny / totalValue) * 100 : 0;
-      const pnlClass = position.pnlCny >= 0 ? "positive" : "negative";
-      const marginText = displayMarginOfSafety(position);
-      const qualityText = Number.isFinite(position.qualityScore) ? position.qualityScore : "-";
-      const health = holdingHealth(position, totalValue);
+    .map(({ stock, strategy }) => {
+      const pnl = decisionPnlCell(stock);
+      const health = decisionHealthCell(stock, totalValue);
+      const sourceClass = marketKind(stock) === "HK" ? "hk" : "";
+      const marginTone = decisionMarginTone(strategy.margin);
+      const returnTone = strategy.shield.passed ? "core" : "reduce";
+      const ownerTone = decisionToneClass(strategy.ownerAudit.tone);
 
       return `
         <tr>
           <td>
             <div class="stock-cell">
-              <span class="ticker">${position.symbol.slice(0, 4)}</span>
-              <a class="stock-name stock-link" href="${stockHash(position.symbol)}">
-                <strong>${escapeHTML(position.name)}</strong>
-                <span>${escapeHTML(position.symbol)} · ${position.shares} 股 · 成本 ${currency(position.cost, position.currency)}</span>
+              <span class="ticker ${sourceClass}">${escapeHTML(stock.symbol.slice(0, 4))}</span>
+              <a class="stock-name stock-link" href="${stockHash(stock.symbol)}">
+                <strong>${escapeHTML(stock.name)}</strong>
+                <span>${escapeHTML(decisionStockMeta(stock))}</span>
               </a>
             </div>
           </td>
           <td data-label="市值/现价">
-            <strong>${currency(position.marketValueCny)}</strong>
-            <br />
-            <small class="quote-date">${currency(position.currentPrice, position.currency)} · ${position.currentPriceDate || "收盘日未知"}</small>
+            ${decisionMarketCell(stock)}
           </td>
-          <td data-label="盈亏" class="${pnlClass}">
-            ${currency(position.pnlCny)}
-            <br />
-            <small>${percent(position.pnlRate)}</small>
+          <td data-label="盈亏" class="${pnl.className}">
+            ${pnl.html}
           </td>
-          <td data-label="安全边际">${marginText}</td>
-          <td data-label="健康">
-            <span class="health-pill ${health.tone}" title="${escapeHTML(health.detail)}">${health.status}</span>
-            <br />
-            <small class="health-score">${health.score} 分 · 仓位 ${weight.toFixed(1)}% · 质量 ${qualityText}</small>
+          <td data-label="综合回报率">
+            <span class="health-pill ${returnTone}">${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}</span>
           </td>
-          <td data-label="操作">
-            <button class="icon-button edit-holding" data-symbol="${position.symbol}" title="编辑 Excel 信息">✎</button>
+          <td data-label="安全边际">
+            <span class="health-pill ${marginTone}">${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</span>
+          </td>
+          <td data-label="长期评分">
+            <span class="health-pill ${ownerTone}">${strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "待评分"}</span>
+          </td>
+          <td data-label="健康状态">
+            <div class="health-status-cell" title="${escapeHTML(health.title)}">
+              <strong class="health-status-score ${health.tone}">${escapeHTML(health.scoreText)}</strong>
+              <small class="health-status-weight">${escapeHTML(health.weightText)}</small>
+            </div>
           </td>
         </tr>
       `;
@@ -2693,9 +2904,36 @@ function renderStrategyStockCard(item) {
   `;
 }
 
+function masterMatrixFilterCount(items, key) {
+  if (key === "holding") return items.filter((item) => item.stock.sourceType === "holding").length;
+  if (key === "candidate") return items.filter((item) => item.stock.sourceType === "candidate").length;
+  return items.length;
+}
+
+function renderMasterMatrixFilters(items) {
+  if (!elements.masterMatrixFilters) return;
+  elements.masterMatrixFilters.innerHTML = MASTER_MATRIX_FILTERS.map((filter) => {
+    const active = masterMatrixFilter === filter.key;
+    return `
+      <button class="${active ? "active" : ""}" type="button" data-master-matrix-filter="${filter.key}" aria-pressed="${active ? "true" : "false"}">
+        <span>${escapeHTML(filter.label)}</span>
+        <strong>${masterMatrixFilterCount(items, filter.key)}</strong>
+      </button>
+    `;
+  }).join("");
+}
+
+function filterMasterMatrixRows(items) {
+  if (masterMatrixFilter === "holding") return items.filter((item) => item.stock.sourceType === "holding");
+  if (masterMatrixFilter === "candidate") return items.filter((item) => item.stock.sourceType === "candidate");
+  return items;
+}
+
 function renderMasterMatrix(positions) {
   if (!elements.masterMatrix) return;
-  const rows = strategyUniverseItems(positions)
+  const universe = strategyUniverseItems(positions);
+  renderMasterMatrixFilters(universe);
+  const rows = filterMasterMatrixRows(universe)
     .slice()
     .sort(compareMasterMatrixRows);
 
@@ -2725,7 +2963,7 @@ function renderMasterMatrix(positions) {
         </a>
       `).join("")}
     `
-    : `<div class="empty-state compact-empty">暂无可对照标的</div>`;
+    : `<div class="empty-state compact-empty">当前索引下暂无可对照标的</div>`;
 }
 
 function matrixSortValue(item, key) {
@@ -2818,11 +3056,97 @@ function findIndustryRecord(id) {
 }
 
 function industryMetricText(metric) {
+  if (metric?.valueText) return metric.valueText;
   const value = finiteNumber(metric?.latestValue);
   if (Number.isFinite(value)) {
     return `${value}${metric?.unit ? ` ${metric.unit}` : ""}`;
   }
   return displayText(metric?.valueText, "待录入");
+}
+
+function industryMetricTone(metric) {
+  const value = String(metric?.tone ?? "").trim().toLowerCase();
+  if (/strong|positive|good|improve|up|改善|向好|增长/.test(value)) return "strong";
+  if (/risk|negative|bad|down|下降|承压|恶化|风险/.test(value)) return "risk";
+  if (/watch|mixed|neutral|观察|分化|待验证/.test(value)) return "watch";
+  return "watch";
+}
+
+function metricSeries(metric) {
+  return Array.isArray(metric?.series)
+    ? metric.series
+      .map((point) => ({
+        date: String(point?.date ?? "").trim(),
+        value: finiteNumber(point?.value)
+      }))
+      .filter((point) => point.date && Number.isFinite(point.value))
+      .sort((a, b) => a.date.localeCompare(b.date))
+    : [];
+}
+
+function chartValue(value) {
+  const number = finiteNumber(value);
+  if (!Number.isFinite(number)) return "-";
+  const abs = Math.abs(number);
+  if (abs >= 1000) return number.toFixed(0);
+  if (abs >= 100) return number.toFixed(1);
+  if (abs >= 10) return number.toFixed(1);
+  return number.toFixed(2);
+}
+
+function renderLineChart(series, options = {}) {
+  const points = series.filter((point) => Number.isFinite(point.value));
+  if (points.length < 2) {
+    return `
+      <div class="line-chart-empty">
+        ${escapeHTML(points.length === 1 ? `近24个月只有 1 个有效点：${points[0].date} ${chartValue(points[0].value)}` : "近24个月趋势数据不足，等待更新。")}
+      </div>
+    `;
+  }
+  const width = options.width ?? 320;
+  const height = options.height ?? 138;
+  const left = options.left ?? 34;
+  const right = options.right ?? 10;
+  const top = options.top ?? 12;
+  const bottom = options.bottom ?? 24;
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || Math.max(1, Math.abs(max) * 0.1);
+  const yMin = min - span * 0.12;
+  const yMax = max + span * 0.12;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const coords = points.map((point, index) => {
+    const x = left + (plotWidth * index) / (points.length - 1);
+    const y = top + ((yMax - point.value) / (yMax - yMin)) * plotHeight;
+    return { ...point, x, y };
+  });
+  const line = coords.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" ");
+  const area = `${line} L ${coords[coords.length - 1].x.toFixed(1)} ${top + plotHeight} L ${coords[0].x.toFixed(1)} ${top + plotHeight} Z`;
+  const first = coords[0];
+  const last = coords[coords.length - 1];
+  const midY = top + plotHeight / 2;
+  return `
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHTML(options.label || "趋势折线图")}">
+      <line class="grid-line" x1="${left}" x2="${width - right}" y1="${top}" y2="${top}" />
+      <line class="grid-line" x1="${left}" x2="${width - right}" y1="${midY}" y2="${midY}" />
+      <line class="grid-line" x1="${left}" x2="${width - right}" y1="${top + plotHeight}" y2="${top + plotHeight}" />
+      ${options.hideAxis ? "" : `
+        <text class="chart-label" x="0" y="${top + 4}">${escapeHTML(chartValue(yMax))}</text>
+        <text class="chart-label" x="0" y="${top + plotHeight + 3}">${escapeHTML(chartValue(yMin))}</text>
+      `}
+      <path class="chart-area" d="${area}" />
+      <path class="chart-line" d="${line}" />
+      <circle class="chart-dot" cx="${first.x.toFixed(1)}" cy="${first.y.toFixed(1)}" r="${options.dotRadius ?? 4}" />
+      <circle class="chart-dot" cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="${options.lastDotRadius ?? 4.5}" />
+      ${options.hideLabels ? "" : `
+        <text class="chart-value" x="${Math.max(left, last.x - 42).toFixed(1)}" y="${Math.max(14, last.y - 9).toFixed(1)}">${escapeHTML(chartValue(last.value))}</text>
+        <text class="chart-label" x="${left}" y="${height - 4}">${escapeHTML(first.date)}</text>
+        <text class="chart-label" text-anchor="end" x="${width - right}" y="${height - 4}">${escapeHTML(last.date)}</text>
+      `}
+    </svg>
+  `;
 }
 
 function stockMatchesIndustry(stock, industry) {
@@ -2854,14 +3178,34 @@ function industryExposure(stocks) {
     .reduce((sum, stock) => sum + (finiteNumber(stock.marketValueCny) ?? 0), 0);
 }
 
+function industryCompanyAnalyses(industry, stocks) {
+  const analyses = Array.isArray(industry?.companyAnalyses) ? industry.companyAnalyses : [];
+  if (analyses.length) return analyses;
+  return stocks.map((stock) => ({
+    symbol: stock.symbol,
+    name: stock.name,
+    stance: stock.status,
+    summary: stock.action || stock.notes || "由当前持仓/候选标的自动生成财报趋势卡。"
+  }));
+}
+
 function renderIndustryMetric(metric) {
+  const series = metricSeries(metric);
+  const latest = series[series.length - 1] ?? null;
   return `
-    <div class="industry-metric">
+    <article class="industry-line-metric ${industryMetricTone(metric)}">
       <span>${escapeHTML(displayText(metric?.name, "未命名指标"))}</span>
       <strong>${escapeHTML(industryMetricText(metric))}</strong>
+      <div class="industry-line-chart">
+        ${renderLineChart(series, { label: displayText(metric?.name, "行业趋势折线图") })}
+        <div class="chart-caption">
+          <span>${escapeHTML(series.length >= 2 ? `近24个月 · ${series.length} 个有效点` : "近24个月 · 等待更多数据")}</span>
+          <span>${escapeHTML(latest ? `最新 ${chartValue(latest.value)}${metric?.unit || ""}` : "最新值待更新")}</span>
+        </div>
+      </div>
+      ${metric?.trendText ? `<p>${escapeHTML(metric.trendText)}</p>` : metric?.comment ? `<p>${escapeHTML(metric.comment)}</p>` : ""}
       <small>${escapeHTML([metric?.asOf, metric?.source].filter(Boolean).join(" · ") || "来源待补充")}</small>
-      ${metric?.comment ? `<p>${escapeHTML(metric.comment)}</p>` : ""}
-    </div>
+    </article>
   `;
 }
 
@@ -2884,11 +3228,141 @@ function industryTrendTone(direction) {
   return "neutral";
 }
 
+function annualFinancialSeries(stock, key) {
+  return financialAnnuals(stock)
+    .map((item) => ({
+      date: String(item?.fiscalYear || item?.reportDate || "").slice(0, 4),
+      value: finiteNumber(item?.[key])
+    }))
+    .filter((point) => point.date && Number.isFinite(point.value))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function latestAndPreviousAnnual(stock) {
+  const annual = financialAnnuals(stock);
+  return {
+    latest: annual[0] ?? {},
+    previous: annual[1] ?? {},
+    oldest: annual[annual.length - 1] ?? {}
+  };
+}
+
+function yoyText(value, label = "同比") {
+  const number = finiteNumber(value);
+  return Number.isFinite(number) ? `${label}${number >= 0 ? "+" : ""}${financialRatio(number)}` : "";
+}
+
+function directionFromChange(current, previous, strong = 0.03, risk = -0.03) {
+  const now = finiteNumber(current);
+  const before = finiteNumber(previous);
+  if (!Number.isFinite(now) || !Number.isFinite(before) || before === 0) return "watch";
+  const change = (now - before) / Math.abs(before);
+  if (change >= strong) return "strong";
+  if (change <= risk) return "risk";
+  return "watch";
+}
+
+function directionFromValue(value, strong, risk) {
+  const number = finiteNumber(value);
+  if (!Number.isFinite(number)) return "watch";
+  if (number >= strong) return "strong";
+  if (number <= risk) return "risk";
+  return "watch";
+}
+
+function computedCompanyTrends(stock) {
+  if (!stock || !financialAnnuals(stock).length) return [];
+  const { latest, previous, oldest } = latestAndPreviousAnnual(stock);
+  const currencyCode = latestFinancialCurrency(stock);
+  const dividendYield = calculatedDividendYield(stock);
+  const margin = calculatedMarginOfSafety(stock) ?? finiteNumber(stock.marginOfSafety);
+  const trends = [];
+
+  const revenueSeries = annualFinancialSeries(stock, "revenue");
+  trends.push({
+    label: "收入",
+    value: `${financialAmount(oldest.revenue, currencyCode)} → ${financialAmount(latest.revenue, currencyCode)}`,
+    direction: Number.isFinite(finiteNumber(latest.revenueYoY)) ? directionFromValue(latest.revenueYoY, 0.05, 0) : directionFromChange(latest.revenue, previous.revenue),
+    note: yoyText(latest.revenueYoY) || "多年财报口径自动生成。",
+    series: revenueSeries
+  });
+
+  trends.push({
+    label: "归母利润",
+    value: `${financialAmount(oldest.netProfit, currencyCode)} → ${financialAmount(latest.netProfit, currencyCode)}`,
+    direction: Number.isFinite(finiteNumber(latest.netProfitYoY)) ? directionFromValue(latest.netProfitYoY, 0.05, 0) : directionFromChange(latest.netProfit, previous.netProfit),
+    note: yoyText(latest.netProfitYoY) || "对比最新年度和上年利润变化。",
+    series: annualFinancialSeries(stock, "netProfit")
+  });
+
+  trends.push({
+    label: "OCF / 收入",
+    value: financialRatio(latest.operatingCashFlowToRevenue),
+    direction: directionFromValue(latest.operatingCashFlowToRevenue, 0.15, 0.08),
+    note: previous.operatingCashFlowToRevenue
+      ? `上年 ${financialRatio(previous.operatingCashFlowToRevenue)}，观察现金转化。`
+      : "观察收入是否真实转化为经营现金流。",
+    series: annualFinancialSeries(stock, "operatingCashFlowToRevenue")
+  });
+
+  trends.push({
+    label: "自由现金流",
+    value: financialAmount(latest.freeCashFlow, currencyCode),
+    direction: directionFromValue(latest.freeCashFlow, 0, -1),
+    note: previous.freeCashFlow ? `上年 ${financialAmount(previous.freeCashFlow, currencyCode)}。` : "用于验证分红和防守属性。",
+    series: annualFinancialSeries(stock, "freeCashFlow")
+  });
+
+  trends.push({
+    label: "毛利率",
+    value: financialRatio(latest.grossMargin),
+    direction: directionFromChange(latest.grossMargin, previous.grossMargin, 0.02, -0.02),
+    note: previous.grossMargin ? `上年 ${financialRatio(previous.grossMargin)}，观察价格、成本和结构。` : "观察价格、成本和产品结构变化。",
+    series: annualFinancialSeries(stock, "grossMargin")
+  });
+
+  trends.push({
+    label: "ROE / ROIC",
+    value: `${financialRatio(latest.roe)} / ${financialRatio(latest.roic)}`,
+    direction: directionFromValue(Math.min(finiteNumber(latest.roe) ?? 0, finiteNumber(latest.roic) ?? 0), 0.12, 0.06),
+    note: "资本回报用于判断是否仍是高质量资产。",
+    series: annualFinancialSeries(stock, "roic")
+  });
+
+  trends.push({
+    label: "净现金",
+    value: financialAmount(latest.netCash, currencyCode),
+    direction: directionFromValue(latest.netCash, 0, -1),
+    note: "狭义现金及短投减有息债务，需结合行业属性折价。",
+    series: annualFinancialSeries(stock, "netCash")
+  });
+
+  trends.push({
+    label: "股息率 / 安全边际",
+    value: `${displayDividendRatio(dividendYield)} / ${Number.isFinite(margin) ? percent(margin * 100, false) : "-"}`,
+    direction: Number.isFinite(margin) && margin >= 0.15 ? "strong" : Number.isFinite(margin) && margin < 0.05 ? "risk" : "watch",
+    note: "回报和买点纪律由当前价格、分红和内在价值实时计算。",
+    series: []
+  });
+
+  return trends;
+}
+
+function renderCompanySparkline(series) {
+  const points = Array.isArray(series) ? series.filter((point) => Number.isFinite(point.value)) : [];
+  if (points.length < 2) return "";
+  return `
+    <div class="industry-sparkline">
+      ${renderLineChart(points, { width: 180, height: 46, left: 4, right: 4, top: 5, bottom: 5, hideAxis: true, hideLabels: true, dotRadius: 2.5, lastDotRadius: 3, label: "年度趋势" })}
+    </div>
+  `;
+}
+
 function renderIndustryCompanyAnalysis(analysis, stocks) {
   const symbol = normalizeSymbol(analysis?.symbol);
   const stock = stocks.find((item) => normalizeSymbol(item.symbol) === symbol);
   const name = displayText(analysis?.name, stock?.name || symbol || "未命名标的");
-  const trends = Array.isArray(analysis?.trends) ? analysis.trends : [];
+  const trends = computedCompanyTrends(stock);
   const judgments = Array.isArray(analysis?.judgments) ? analysis.judgments : [];
   const watchpoints = Array.isArray(analysis?.watchpoints) ? analysis.watchpoints : [];
   const sourceText = stock?.sourceType === "holding" ? "持仓" : stock?.sourceType === "candidate" ? "候选" : "未关联持仓";
@@ -2909,11 +3383,12 @@ function renderIndustryCompanyAnalysis(analysis, stocks) {
             <div class="industry-trend ${industryTrendTone(trend?.direction)}">
               <span>${escapeHTML(displayText(trend?.label, "趋势"))}</span>
               <strong>${escapeHTML(displayText(trend?.value, "-"))}</strong>
+              ${renderCompanySparkline(trend?.series)}
               ${trend?.note ? `<small>${escapeHTML(trend.note)}</small>` : ""}
             </div>
           `).join("")}
         </div>
-      ` : ""}
+      ` : `<div class="line-chart-empty">未找到多年财报数据，先保留定性判断。</div>`}
       ${judgments.length ? `
         <div class="industry-company-block">
           <span>定性判断</span>
@@ -2946,7 +3421,7 @@ function renderIndustryDesk(positions) {
       const stocks = industryStocks(industry, positions);
       const exposure = industryExposure(stocks);
       const metrics = Array.isArray(industry.metrics) ? industry.metrics : [];
-      const companyAnalyses = Array.isArray(industry.companyAnalyses) ? industry.companyAnalyses : [];
+      const companyAnalyses = industryCompanyAnalyses(industry, stocks);
       const latestNote = Array.isArray(industry.notes) ? industry.notes[0] : null;
       return `
         <a class="industry-card" href="${industryHash(id)}">
@@ -2961,7 +3436,7 @@ function renderIndustryDesk(positions) {
           <div class="industry-card-metrics">
             <span>相关标的 <strong>${stocks.length}</strong></span>
             <span>持仓暴露 <strong>${currency(exposure)}</strong></span>
-            <span>追踪指标 <strong>${metrics.length}</strong></span>
+            <span>趋势指标 <strong>${metrics.length}</strong></span>
             <span>标的分析 <strong>${companyAnalyses.length}</strong></span>
           </div>
           <small>${escapeHTML(latestNote ? `${latestNote.date || "未记录日期"} · ${latestNote.title || latestNote.summary || "研究记录"}` : "暂无研究记录")}</small>
@@ -2985,8 +3460,10 @@ function renderIndustryDetail(positions, id) {
 
   const stocks = industryStocks(industry, positions);
   const keyQuestions = Array.isArray(industry.keyQuestions) ? industry.keyQuestions : [];
-  const companyAnalyses = Array.isArray(industry.companyAnalyses) ? industry.companyAnalyses : [];
+  const companyAnalyses = industryCompanyAnalyses(industry, stocks);
+  const metrics = Array.isArray(industry.metrics) ? industry.metrics : [];
   const exposure = industryExposure(stocks);
+  const updateText = [industry.metricsUpdatedAt, industry.updatedAt].map((item) => String(item ?? "").trim()).find(Boolean) || "";
 
   elements.industryDetail.innerHTML = `
     <section class="industry-detail-hero">
@@ -2997,7 +3474,7 @@ function renderIndustryDetail(positions, id) {
       </div>
       <div class="detail-hero-meta">
         <span>${escapeHTML(displayText(industry.status, "待完善"))}</span>
-        <small>${escapeHTML(industry.updatedAt ? `更新 ${industry.updatedAt}` : "更新时间待补充")}</small>
+        <small>${escapeHTML(updateText ? `更新 ${updateText}` : "更新时间待补充")}</small>
       </div>
     </section>
 
@@ -3005,15 +3482,19 @@ function renderIndustryDetail(positions, id) {
       ${metricCard("持仓暴露", currency(exposure), "按当前市值折人民币")}
       ${metricCard("标的分析", `${companyAnalyses.length}`, "趋势与定性判断")}
       ${metricCard("覆盖公司", stocks.map((stock) => stock.name).join(" / ") || "-", "行业内当前关注对象")}
-      ${metricCard("更新日期", industry.updatedAt || "-", "本地行业档案")}
+      ${metricCard("趋势指标", `${metrics.length}`, industry.metricsUpdatedAt ? "runtime 行业数据" : "等待行业数据更新")}
     </section>
 
     <section class="panel industry-summary-panel">
       <div class="panel-head compact">
         <div>
           <p class="eyebrow">Thesis</p>
-          <h2>行业分析框架</h2>
+          <h2>行业结论</h2>
         </div>
+        <button class="primary-button" type="button" data-update-industries>
+          <span>↻</span>
+          更新行业数据
+        </button>
       </div>
       <div class="industry-summary-body">
         <p>${escapeHTML(displayText(industry.summary, "后续补充行业景气、供需、成本、政策、估值和代表公司分析。"))}</p>
@@ -3022,6 +3503,27 @@ function renderIndustryDetail(positions, id) {
             ? keyQuestions.map((item) => `<span>${escapeHTML(item)}</span>`).join("")
             : `<span>后续补充关键研究问题</span>`}
         </div>
+        ${industry.discipline ? `
+          <div class="industry-discipline">
+            <span>执行纪律</span>
+            <p>${escapeHTML(industry.discipline)}</p>
+          </div>
+        ` : ""}
+      </div>
+    </section>
+
+    <section class="panel industry-trend-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">External Metrics</p>
+          <h2>行业趋势数据</h2>
+        </div>
+        <small>${escapeHTML(industry.metricsUpdatedAt ? `runtime 更新 ${industry.metricsUpdatedAt}` : "尚未生成 runtime 行业数据")}</small>
+      </div>
+      <div class="industry-line-metric-grid">
+        ${metrics.length
+          ? metrics.map(renderIndustryMetric).join("")
+          : `<div class="empty-state compact-empty">暂无行业趋势数据。点击“更新行业数据”后写入 data/runtime/industry_metrics.json。</div>`}
       </div>
     </section>
 
@@ -3551,6 +4053,8 @@ function renderDividendPanel(stock, isHolding) {
   const forecastPerShare = finiteNumber(dividend.forecastPerShare);
   const forecastYield = forecastDividendYield(stock);
   const forecastCurrency = String(dividend.forecastCurrency || currencyCode).toUpperCase();
+  const taxNote = dividendTaxText(stock);
+  const taxAdjusted = dividendTaxRate(stock) > 0;
 
   return `
     <section class="panel dividend-panel">
@@ -3563,15 +4067,15 @@ function renderDividendPanel(stock, isHolding) {
       <div class="detail-content">
         <div class="dividend-grid">
           <div><span>财年</span><strong>${escapeHTML(displayText(dividend.fiscalYear, "-"))}</strong></div>
-          <div><span>每股分红</span><strong>${Number.isFinite(perShare) ? currency(perShare, currencyCode) : "-"}</strong></div>
-          <div><span>股息率</span><strong>${displayDividendRatio(dividendYield)}</strong></div>
+          <div><span>每股分红</span><strong>${Number.isFinite(perShare) ? currency(perShare, currencyCode) : "-"}</strong><small>${taxAdjusted ? "税前公告口径" : ""}</small></div>
+          <div><span>${taxAdjusted ? "税后股息率" : "股息率"}</span><strong>${displayDividendRatio(dividendYield)}</strong><small>${escapeHTML(taxNote)}</small></div>
           <div><span>回报门槛</span><strong>${displayDividendRatio(shield.target)}</strong><small>${marketKind(stock) === "HK" ? "H股主策略" : "A股主策略"}</small></div>
-          <div><span>综合回报率</span><strong>${displayDividendRatio(shareholderReturnYield)}</strong></div>
+          <div><span>${taxAdjusted ? "税后综合回报率" : "综合回报率"}</span><strong>${displayDividendRatio(shareholderReturnYield)}</strong><small>${taxAdjusted ? "回购不折税" : ""}</small></div>
           <div><span>股息可靠性</span><strong>${badge(reliability.text, reliability.tone)}</strong></div>
           <div><span>预估财年</span><strong>${escapeHTML(displayText(dividend.forecastFiscalYear, "-"))}</strong></div>
           <div><span>预估每股</span><strong>${Number.isFinite(forecastPerShare) ? currency(forecastPerShare, forecastCurrency) : "-"}</strong></div>
-          <div><span>预估股息率</span><strong>${displayDividendRatio(forecastYield)}</strong><small>参考，不作为主策略门槛</small></div>
-          <div><span>预估年现金</span><strong>${Number.isFinite(annualLocal) ? currency(annualLocal, currencyCode) : Number.isFinite(estimatedCash) ? currency(estimatedCash, currencyCode) : "-"}</strong><small>${isHolding && annualCny > 0 ? `折人民币 ${currency(annualCny)}` : ""}</small></div>
+          <div><span>${taxAdjusted ? "预估税后股息率" : "预估股息率"}</span><strong>${displayDividendRatio(forecastYield)}</strong><small>参考，不作为主策略门槛</small></div>
+          <div><span>${taxAdjusted ? "预估年现金（税前）" : "预估年现金"}</span><strong>${Number.isFinite(annualLocal) ? currency(annualLocal, currencyCode) : Number.isFinite(estimatedCash) ? currency(estimatedCash, currencyCode) : "-"}</strong><small>${isHolding && annualCny > 0 ? `折人民币税后 ${currency(annualCny)}` : ""}</small></div>
         </div>
       </div>
     </section>
@@ -3696,12 +4200,14 @@ function renderDataSourcePanel(stock) {
   const dividend = stock.dividend ?? {};
   const hasCashDividendFormula = Number.isFinite(finiteNumber(dividend.cashDividendTotal)) && Number.isFinite(finiteNumber(stock.marketCap));
   const hasBuyback = Number.isFinite(finiteNumber(dividend.buybackAmount)) && finiteNumber(dividend.buybackAmount) > 0;
+  const taxAdjusted = dividendTaxRate(stock) > 0;
+  const taxText = taxAdjusted ? dividendTaxText(stock) : displayText(dividend.taxNote, "未折扣分红税");
   const dividendFormula = hasCashDividendFormula
-    ? "现金分红总额 / 总市值"
+    ? `${taxAdjusted ? "税后" : ""}现金分红总额 / 总市值`
     : dividend.dividendPerShare
-      ? "每股分红 / 最新价"
+      ? `${taxAdjusted ? "税后" : ""}每股分红 / 最新价`
       : "暂无";
-  const returnFormula = hasBuyback ? "(现金分红总额 + 回购金额) / 总市值" : "同股息率";
+  const returnFormula = hasBuyback ? `(${taxAdjusted ? "税后" : ""}现金分红总额 + 回购金额) / 总市值` : "同股息率";
 
   return `
     <section class="panel source-panel">
@@ -3745,7 +4251,7 @@ function renderDataSourcePanel(stock) {
         <div>
           <span>股息率</span>
           <strong>${escapeHTML(dividendFormula)}</strong>
-          <small>${escapeHTML(displayText(dividend.fiscalYear, "财年未知"))}</small>
+          <small>${escapeHTML(`${displayText(dividend.fiscalYear, "财年未知")} · ${taxText}`)}</small>
         </div>
         <div>
           <span>综合回报率</span>
@@ -4147,8 +4653,25 @@ function renderStockDetail(positions, symbol) {
   `;
 }
 
+function renderTradeStockNames() {
+  if (!elements.tradeStockNames) return;
+  const seen = new Set();
+  const stocks = [...(state.holdings ?? []), ...(state.candidates ?? [])]
+    .filter((stock) => stock?.name && stock?.symbol)
+    .filter((stock) => {
+      const key = normalizeSymbol(stock.symbol);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  elements.tradeStockNames.innerHTML = stocks
+    .map((stock) => `<option value="${escapeHTML(stock.name)}" label="${escapeHTML(normalizeSymbol(stock.symbol))}"></option>`)
+    .join("");
+}
+
 function render() {
   const positions = computePositions();
+  renderTradeStockNames();
   renderQuoteUpdateStatus(positions);
   renderMetrics(positions);
   renderPositions(positions);
@@ -4168,23 +4691,101 @@ function render() {
   }
 }
 
-async function addTrade(formData) {
-  const side = formData.get("side");
-  const shares = Number(formData.get("shares"));
+function findTradeStock(input) {
+  const text = String(input ?? "").trim();
+  if (!text) return null;
+  const normalized = normalizeSymbol(text);
+  const stocks = [...(state.holdings ?? []), ...(state.candidates ?? [])];
+  return (
+    stocks.find((stock) => normalizeSymbol(stock.symbol) === normalized) ||
+    stocks.find((stock) => String(stock.name ?? "").trim() === text) ||
+    stocks.find((stock) => {
+      const name = String(stock.name ?? "").trim();
+      return name && (name.includes(text) || text.includes(name));
+    }) ||
+    null
+  );
+}
+
+function inferTradeCurrency(stock) {
+  const currencyCode = String(stock?.currency ?? "").trim().toUpperCase();
+  if (currencyCode) return currencyCode;
+  const symbol = normalizeSymbol(stock?.symbol);
+  if (symbol.endsWith(".HK")) return "HKD";
+  if (symbol.endsWith(".SH") || symbol.endsWith(".SZ")) return "CNY";
+  return "CNY";
+}
+
+function candidateFromHolding(holding) {
+  const { shares, cost, ...candidate } = holding;
+  return candidate;
+}
+
+function clearedCandidateFromHolding(holding) {
+  const candidate = candidateFromHolding(holding);
+  const status = String(candidate.status ?? "").trim();
+  const action = String(candidate.action ?? "").trim();
+  if (!status || status.includes("持仓")) {
+    candidate.status = "候选池观察（清仓后跟踪）";
+  }
+  if (!action) {
+    candidate.action = "清仓后放回候选池观察；等待重新达到买入纪律";
+  } else if (action.includes("继续持有")) {
+    candidate.action = action.replace("继续持有", "清仓后放回候选池观察");
+  } else if (!action.includes("清仓后")) {
+    candidate.action = `清仓后放回候选池观察；${action}`;
+  }
+  return candidate;
+}
+
+function upsertCandidate(candidate) {
+  const symbol = normalizeSymbol(candidate?.symbol);
+  const index = state.candidates.findIndex((item) => normalizeSymbol(item.symbol) === symbol);
+  if (index >= 0) {
+    state.candidates[index] = candidate;
+  } else {
+    state.candidates.push(candidate);
+  }
+}
+
+function removeCandidate(symbol) {
+  const normalized = normalizeSymbol(symbol);
+  state.candidates = state.candidates.filter((item) => normalizeSymbol(item.symbol) !== normalized);
+}
+
+function tradeFromSimpleForm(formData) {
+  const nameInput = String(formData.get("name") ?? "").trim();
+  const signedShares = Number(formData.get("shares"));
   const price = Number(formData.get("price"));
-  const symbol = String(formData.get("symbol")).trim().toUpperCase();
-  const currencyCode = String(formData.get("currency"));
-  const trade = {
+  if (!nameInput) throw new Error("请填写股票名称");
+  if (!Number.isFinite(signedShares) || signedShares === 0) throw new Error("股数不能为 0；买入填正数，卖出填负数");
+  if (!Number.isFinite(price) || price <= 0) throw new Error("成交价必须大于 0");
+
+  const stock = findTradeStock(nameInput);
+  if (!stock) throw new Error(`未找到“${nameInput}”，请先把它加入持仓或候选池`);
+
+  const symbol = normalizeSymbol(stock.symbol);
+  const currencyCode = inferTradeCurrency(stock);
+  const currentPrice = Number(stock.currentPrice) > 0 ? Number(stock.currentPrice) : price;
+  const side = signedShares < 0 ? "sell" : "buy";
+  const shares = Math.abs(signedShares);
+  return {
     id: Date.now(),
     date: new Date().toISOString().slice(0, 10),
     symbol,
-    name: String(formData.get("name")).trim(),
+    name: stock.name || nameInput,
     side,
     shares,
     price,
     currency: currencyCode,
-    currentPrice: Number(formData.get("currentPrice"))
+    currentPrice
   };
+}
+
+async function addTrade(formData) {
+  const trade = tradeFromSimpleForm(formData);
+  const { side, shares, price, symbol } = trade;
+  const currencyCode = trade.currency;
 
   if (USE_BACKEND) {
     state = await requestJSON("/api/trades", {
@@ -4196,29 +4797,35 @@ async function addTrade(formData) {
     return;
   }
 
-  let holding = state.holdings.find((item) => item.symbol.toUpperCase() === symbol);
+  let holding = state.holdings.find((item) => normalizeSymbol(item.symbol) === symbol);
   if (!holding) {
-    holding = {
-      symbol,
-      name: trade.name,
-      shares: 0,
-      cost: price,
-      currentPrice: trade.currentPrice,
-      previousClose: trade.currentPrice,
-      currentPriceDate: new Date().toISOString().slice(0, 10),
-      previousCloseDate: new Date().toISOString().slice(0, 10),
-      currency: currencyCode,
-      action: "",
-      status: "",
-      marginOfSafety: null,
-      qualityScore: null,
-      industry: "",
-      notes: ""
-    };
+    if (side === "sell") throw new Error("未找到可卖出的持仓");
+    const candidate = state.candidates.find((item) => normalizeSymbol(item.symbol) === symbol);
+    holding = candidate
+      ? { ...candidate, shares: 0, cost: price }
+      : {
+          symbol,
+          name: trade.name,
+          shares: 0,
+          cost: price,
+          currentPrice: trade.currentPrice,
+          previousClose: trade.currentPrice,
+          currentPriceDate: new Date().toISOString().slice(0, 10),
+          previousCloseDate: new Date().toISOString().slice(0, 10),
+          currency: currencyCode,
+          action: "",
+          status: "",
+          marginOfSafety: null,
+          qualityScore: null,
+          industry: "",
+          notes: ""
+        };
+    removeCandidate(symbol);
     state.holdings.push(holding);
   }
 
   if (side === "buy") {
+    removeCandidate(symbol);
     const totalCost = holding.shares * holding.cost + shares * price;
     holding.shares += shares;
     holding.cost = totalCost / holding.shares;
@@ -4246,6 +4853,10 @@ async function addTrade(formData) {
     discipline: plan?.discipline || holding.status || "未记录纪律",
     detail: `${sideText} ${shares} 股；成交价 ${currencyCode} ${price.toFixed(4)}；录入最新价 ${currencyCode} ${trade.currentPrice.toFixed(4)}`
   });
+  if (side === "sell" && holding.shares === 0) {
+    upsertCandidate(clearedCandidateFromHolding(holding));
+    state.holdings = state.holdings.filter((item) => normalizeSymbol(item.symbol) !== symbol);
+  }
   saveState();
   render();
 }
@@ -4310,6 +4921,37 @@ async function updateQuotes() {
   } finally {
     elements.updateQuotesButton.disabled = false;
     elements.updateQuotesButton.innerHTML = "<span>↻</span> 更新行情";
+  }
+}
+
+async function updateIndustryMetrics(button) {
+  if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能更新行业数据");
+
+  const originalHTML = button?.innerHTML;
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = "<span>↻</span> 更新中";
+  }
+  setQuoteUpdateStatus("正在更新行业外部趋势数据...");
+
+  try {
+    const result = await requestJSON("/api/industries/update", { method: "POST" });
+    state = result.state;
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+
+    const skipped = result.skipped ?? [];
+    if (skipped.length) {
+      const preview = skipped.slice(0, 2).map((item) => `${item.industryId || item.source} ${item.error}`).join("；");
+      setQuoteUpdateStatus(`已更新 ${result.updated} 个行业趋势指标，${skipped.length} 个来源失败：${preview}`, "error");
+    } else {
+      setQuoteUpdateStatus(`已更新 ${result.updated} 个行业趋势指标`, "success");
+    }
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = originalHTML;
+    }
   }
 }
 
@@ -4526,6 +5168,17 @@ elements.candidateSort.addEventListener("change", (event) => {
   renderPlanAndCandidates();
 });
 
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-position-sort]");
+  if (!button) return;
+  const key = button.dataset.positionSort;
+  positionSort = {
+    key,
+    direction: positionSort.key === key && positionSort.direction === "desc" ? "asc" : "desc"
+  };
+  renderPositions(computePositions());
+});
+
 elements.masterMatrix?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-master-matrix-sort]");
   if (!button) return;
@@ -4533,6 +5186,13 @@ elements.masterMatrix?.addEventListener("click", (event) => {
     key: button.dataset.masterMatrixSort,
     direction: button.dataset.nextDirection === "asc" ? "asc" : "desc"
   };
+  renderMasterMatrix(computePositions());
+});
+
+elements.masterMatrixFilters?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-master-matrix-filter]");
+  if (!button) return;
+  masterMatrixFilter = button.dataset.masterMatrixFilter || "all";
   renderMasterMatrix(computePositions());
 });
 
@@ -4571,6 +5231,16 @@ document.addEventListener("click", async (event) => {
     await updateFinancials(button.dataset.updateFinancials, button);
   } catch (error) {
     window.alert(error.message);
+  }
+});
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-update-industries]");
+  if (!button) return;
+  try {
+    await updateIndustryMetrics(button);
+  } catch (error) {
+    setQuoteUpdateStatus(error.message, "error");
   }
 });
 
@@ -4628,9 +5298,13 @@ document.querySelector("#cancelResearch").addEventListener("click", () => {
 
 elements.tradeForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  await addTrade(new FormData(elements.tradeForm));
-  elements.tradeForm.reset();
-  elements.tradeDialog.close();
+  try {
+    await addTrade(new FormData(elements.tradeForm));
+    elements.tradeForm.reset();
+    elements.tradeDialog.close();
+  } catch (error) {
+    window.alert(error.message);
+  }
 });
 
 elements.holdingForm.addEventListener("submit", async (event) => {

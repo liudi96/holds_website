@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"portfolio-desk/internal/industrymetrics"
 	"sort"
 	"strings"
 )
@@ -12,30 +13,26 @@ import (
 const industriesDir = "data/industries"
 
 type IndustryResearch struct {
-	ID              string                    `json:"id"`
-	Name            string                    `json:"name"`
-	Category        string                    `json:"category,omitempty"`
-	Status          string                    `json:"status,omitempty"`
-	UpdatedAt       string                    `json:"updatedAt,omitempty"`
-	Summary         string                    `json:"summary,omitempty"`
-	Keywords        []string                  `json:"keywords,omitempty"`
-	LinkedSymbols   []string                  `json:"linkedSymbols,omitempty"`
-	KeyQuestions    []string                  `json:"keyQuestions,omitempty"`
-	Metrics         []IndustryMetric          `json:"metrics,omitempty"`
-	CompanyAnalyses []IndustryCompanyAnalysis `json:"companyAnalyses,omitempty"`
-	Notes           []IndustryNote            `json:"notes,omitempty"`
+	ID               string                    `json:"id"`
+	Name             string                    `json:"name"`
+	Category         string                    `json:"category,omitempty"`
+	Status           string                    `json:"status,omitempty"`
+	UpdatedAt        string                    `json:"updatedAt,omitempty"`
+	MetricsUpdatedAt string                    `json:"metricsUpdatedAt,omitempty"`
+	Summary          string                    `json:"summary,omitempty"`
+	Discipline       string                    `json:"discipline,omitempty"`
+	Keywords         []string                  `json:"keywords,omitempty"`
+	LinkedSymbols    []string                  `json:"linkedSymbols,omitempty"`
+	KeyQuestions     []string                  `json:"keyQuestions,omitempty"`
+	MetricSourceIDs  []string                  `json:"metricSourceIds,omitempty"`
+	Metrics          []IndustryMetric          `json:"metrics,omitempty"`
+	CompanyAnalyses  []IndustryCompanyAnalysis `json:"companyAnalyses,omitempty"`
+	Notes            []IndustryNote            `json:"notes,omitempty"`
 }
 
-type IndustryMetric struct {
-	Name        string   `json:"name"`
-	Unit        string   `json:"unit,omitempty"`
-	LatestValue *float64 `json:"latestValue,omitempty"`
-	ValueText   string   `json:"valueText,omitempty"`
-	AsOf        string   `json:"asOf,omitempty"`
-	Source      string   `json:"source,omitempty"`
-	SourceURL   string   `json:"sourceUrl,omitempty"`
-	Comment     string   `json:"comment,omitempty"`
-}
+type IndustryMetric = industrymetrics.Metric
+
+type IndustryMetricPoint = industrymetrics.Point
 
 type IndustryNote struct {
 	Date    string `json:"date,omitempty"`
@@ -108,10 +105,14 @@ func normalizeIndustryResearch(industry IndustryResearch, filename string) Indus
 	industry.Category = strings.TrimSpace(industry.Category)
 	industry.Status = strings.TrimSpace(industry.Status)
 	industry.UpdatedAt = strings.TrimSpace(industry.UpdatedAt)
+	industry.MetricsUpdatedAt = strings.TrimSpace(industry.MetricsUpdatedAt)
 	industry.Summary = strings.TrimSpace(industry.Summary)
+	industry.Discipline = strings.TrimSpace(industry.Discipline)
 	industry.LinkedSymbols = normalizeIndustrySymbols(industry.LinkedSymbols)
 	industry.Keywords = normalizeStringList(industry.Keywords)
 	industry.KeyQuestions = normalizeStringList(industry.KeyQuestions)
+	industry.MetricSourceIDs = normalizeStringList(industry.MetricSourceIDs)
+	industry.Metrics = industrymetrics.NormalizeMetrics(industry.Metrics)
 	industry.CompanyAnalyses = normalizeIndustryCompanyAnalyses(industry.CompanyAnalyses)
 	return industry
 }

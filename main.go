@@ -15,6 +15,7 @@ import (
 
 const dataFile = "data/portfolio.json"
 const runtimeQuotesFile = "data/runtime/quotes.json"
+const runtimeIndustryMetricsFile = "data/runtime/industry_metrics.json"
 const decisionLogLimit = 500
 
 type AppState struct {
@@ -100,21 +101,29 @@ type PriceLevels struct {
 }
 
 type Dividend struct {
-	FiscalYear           string   `json:"fiscalYear,omitempty"`
-	DividendPerShare     *float64 `json:"dividendPerShare,omitempty"`
-	DividendCurrency     string   `json:"dividendCurrency,omitempty"`
-	CashDividendTotal    *float64 `json:"cashDividendTotal,omitempty"`
-	CashDividendCurrency string   `json:"cashDividendCurrency,omitempty"`
-	BuybackAmount        *float64 `json:"buybackAmount,omitempty"`
-	BuybackCurrency      string   `json:"buybackCurrency,omitempty"`
-	DividendYield        *float64 `json:"dividendYield,omitempty"`
-	PayoutRatio          *float64 `json:"payoutRatio,omitempty"`
-	EstimatedAnnualCash  *float64 `json:"estimatedAnnualCash,omitempty"`
-	Reliability          string   `json:"reliability,omitempty"`
-	ForecastFiscalYear   string   `json:"forecastFiscalYear,omitempty"`
-	ForecastPerShare     *float64 `json:"forecastPerShare,omitempty"`
-	ForecastCurrency     string   `json:"forecastCurrency,omitempty"`
-	ForecastYield        *float64 `json:"forecastYield,omitempty"`
+	FiscalYear                    string   `json:"fiscalYear,omitempty"`
+	DividendPerShare              *float64 `json:"dividendPerShare,omitempty"`
+	DividendCurrency              string   `json:"dividendCurrency,omitempty"`
+	CashDividendTotal             *float64 `json:"cashDividendTotal,omitempty"`
+	CashDividendCurrency          string   `json:"cashDividendCurrency,omitempty"`
+	BuybackAmount                 *float64 `json:"buybackAmount,omitempty"`
+	BuybackCurrency               string   `json:"buybackCurrency,omitempty"`
+	DividendYield                 *float64 `json:"dividendYield,omitempty"`
+	PayoutRatio                   *float64 `json:"payoutRatio,omitempty"`
+	EstimatedAnnualCash           *float64 `json:"estimatedAnnualCash,omitempty"`
+	Reliability                   string   `json:"reliability,omitempty"`
+	ForecastFiscalYear            string   `json:"forecastFiscalYear,omitempty"`
+	ForecastPerShare              *float64 `json:"forecastPerShare,omitempty"`
+	ForecastCurrency              string   `json:"forecastCurrency,omitempty"`
+	ForecastYield                 *float64 `json:"forecastYield,omitempty"`
+	StockConnectDividendTaxRate   *float64 `json:"stockConnectDividendTaxRate,omitempty"`
+	StockConnectTaxRate           *float64 `json:"stockConnectTaxRate,omitempty"`
+	PersonalDividendTaxRate       *float64 `json:"personalDividendTaxRate,omitempty"`
+	NonResidentWithholdingTaxRate *float64 `json:"nonResidentWithholdingTaxRate,omitempty"`
+	ForeignWithholdingTaxRate     *float64 `json:"foreignWithholdingTaxRate,omitempty"`
+	WithholdingTaxRate            *float64 `json:"withholdingTaxRate,omitempty"`
+	WithholdingTaxCreditable      *bool    `json:"withholdingTaxCreditable,omitempty"`
+	TaxNote                       string   `json:"taxNote,omitempty"`
 }
 
 type NetCashProfile struct {
@@ -261,6 +270,7 @@ func main() {
 	mux.HandleFunc("POST /api/research/import", server.handleImportResearch)
 	mux.HandleFunc("GET /api/chatgpt/export", server.handleExportChatGPTContext)
 	mux.HandleFunc("POST /api/quotes/update", server.handleUpdateQuotes)
+	mux.HandleFunc("POST /api/industries/update", server.handleUpdateIndustries)
 	mux.HandleFunc("POST /api/financials/update/", server.handleUpdateFinancials)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -349,19 +359,20 @@ func (s *Server) handleCreateTrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.resolveTradeInput(&trade); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := validateTrade(trade); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	trade.ID = time.Now().UnixMilli()
 	trade.Date = time.Now().Format("2006-01-02")
-	trade.Side = strings.ToLower(strings.TrimSpace(trade.Side))
-	trade.Symbol = strings.ToUpper(strings.TrimSpace(trade.Symbol))
-	trade.Currency = strings.ToUpper(strings.TrimSpace(trade.Currency))
 
 	s.applyTrade(trade)
 	appendTradeDecisionLog(&s.state, trade)
@@ -431,29 +442,288 @@ func (s *Server) handleUpdateHolding(w http.ResponseWriter, r *http.Request) {
 	writeError(w, http.StatusNotFound, "holding not found")
 }
 
-func (s *Server) applyTrade(trade Trade) {
-	idx := -1
-	for i := range s.state.Holdings {
-		if strings.EqualFold(s.state.Holdings[i].Symbol, trade.Symbol) {
-			idx = i
-			break
+type tradeStockRef struct {
+	Symbol       string
+	Name         string
+	Currency     string
+	CurrentPrice float64
+	Shares       float64
+}
+
+func (s *Server) resolveTradeInput(trade *Trade) error {
+	trade.Name = strings.TrimSpace(trade.Name)
+	trade.Symbol = normalizeSymbol(trade.Symbol)
+	trade.Side = strings.ToLower(strings.TrimSpace(trade.Side))
+	trade.Currency = strings.ToUpper(strings.TrimSpace(trade.Currency))
+
+	if trade.Shares < 0 {
+		trade.Side = "sell"
+		trade.Shares = -trade.Shares
+	}
+	if trade.Side == "" {
+		trade.Side = "buy"
+	}
+
+	input := firstNonEmpty(trade.Symbol, trade.Name)
+	if trade.Side == "sell" {
+		stock, ok := s.findTradeHolding(input)
+		if !ok || stock.Shares <= 0 {
+			return errors.New("未找到可卖出的持仓")
+		}
+		trade.Symbol = normalizeSymbol(stock.Symbol)
+		trade.Name = firstNonEmpty(stock.Name, trade.Name)
+		if trade.Currency == "" {
+			trade.Currency = stock.Currency
+		}
+		if trade.CurrentPrice <= 0 {
+			trade.CurrentPrice = stock.CurrentPrice
+		}
+	} else if stock, ok := s.findTradeStock(input); ok {
+		trade.Symbol = normalizeSymbol(stock.Symbol)
+		trade.Name = firstNonEmpty(stock.Name, trade.Name)
+		if trade.Currency == "" {
+			trade.Currency = stock.Currency
+		}
+		if trade.CurrentPrice <= 0 {
+			trade.CurrentPrice = stock.CurrentPrice
 		}
 	}
 
+	if trade.Symbol == "" {
+		return errors.New("未找到股票名称，请先加入持仓或候选池")
+	}
+	if trade.Name == "" {
+		trade.Name = trade.Symbol
+	}
+	if trade.Currency == "" {
+		trade.Currency = inferCurrencyFromSymbol(trade.Symbol)
+	}
+	if trade.CurrentPrice <= 0 {
+		trade.CurrentPrice = trade.Price
+	}
+	return nil
+}
+
+func (s *Server) findTradeHolding(input string) (tradeStockRef, bool) {
+	text := strings.TrimSpace(input)
+	if text == "" {
+		return tradeStockRef{}, false
+	}
+	normalized := normalizeSymbol(text)
+	for _, holding := range s.state.Holdings {
+		if normalizeSymbol(holding.Symbol) == normalized {
+			return tradeStockRef{Symbol: holding.Symbol, Name: holding.Name, Currency: holding.Currency, CurrentPrice: holding.CurrentPrice, Shares: holding.Shares}, true
+		}
+	}
+	for _, holding := range s.state.Holdings {
+		if tradeNameMatches(holding.Name, text) {
+			return tradeStockRef{Symbol: holding.Symbol, Name: holding.Name, Currency: holding.Currency, CurrentPrice: holding.CurrentPrice, Shares: holding.Shares}, true
+		}
+	}
+	return tradeStockRef{}, false
+}
+
+func (s *Server) findTradeStock(input string) (tradeStockRef, bool) {
+	text := strings.TrimSpace(input)
+	if text == "" {
+		return tradeStockRef{}, false
+	}
+	normalized := normalizeSymbol(text)
+	for _, holding := range s.state.Holdings {
+		if normalizeSymbol(holding.Symbol) == normalized {
+			return tradeStockRef{Symbol: holding.Symbol, Name: holding.Name, Currency: holding.Currency, CurrentPrice: holding.CurrentPrice, Shares: holding.Shares}, true
+		}
+	}
+	for _, candidate := range s.state.Candidates {
+		if normalizeSymbol(candidate.Symbol) == normalized {
+			return tradeStockRef{Symbol: candidate.Symbol, Name: candidate.Name, Currency: candidate.Currency, CurrentPrice: candidate.CurrentPrice}, true
+		}
+	}
+	for _, holding := range s.state.Holdings {
+		if tradeNameMatches(holding.Name, text) {
+			return tradeStockRef{Symbol: holding.Symbol, Name: holding.Name, Currency: holding.Currency, CurrentPrice: holding.CurrentPrice, Shares: holding.Shares}, true
+		}
+	}
+	for _, candidate := range s.state.Candidates {
+		if tradeNameMatches(candidate.Name, text) {
+			return tradeStockRef{Symbol: candidate.Symbol, Name: candidate.Name, Currency: candidate.Currency, CurrentPrice: candidate.CurrentPrice}, true
+		}
+	}
+	return tradeStockRef{}, false
+}
+
+func tradeNameMatches(name string, input string) bool {
+	name = strings.TrimSpace(name)
+	input = strings.TrimSpace(input)
+	return name != "" && input != "" && (strings.EqualFold(name, input) || strings.Contains(name, input) || strings.Contains(input, name))
+}
+
+func inferCurrencyFromSymbol(symbol string) string {
+	symbol = normalizeSymbol(symbol)
+	if strings.HasSuffix(symbol, ".HK") {
+		return "HKD"
+	}
+	if strings.HasSuffix(symbol, ".SH") || strings.HasSuffix(symbol, ".SZ") {
+		return "CNY"
+	}
+	return "CNY"
+}
+
+func candidateFromHolding(holding Holding) Candidate {
+	return Candidate{
+		Symbol:              holding.Symbol,
+		Name:                holding.Name,
+		Status:              holding.Status,
+		Action:              holding.Action,
+		CurrentPrice:        holding.CurrentPrice,
+		PreviousClose:       holding.PreviousClose,
+		MarketCap:           holding.MarketCap,
+		MarketCapCurrency:   holding.MarketCapCurrency,
+		CurrentPriceDate:    holding.CurrentPriceDate,
+		PreviousCloseDate:   holding.PreviousCloseDate,
+		MarginOfSafety:      holding.MarginOfSafety,
+		QualityScore:        holding.QualityScore,
+		Risk:                holding.Risk,
+		Industry:            holding.Industry,
+		Currency:            holding.Currency,
+		IntrinsicValue:      holding.IntrinsicValue,
+		FairValueRange:      holding.FairValueRange,
+		TargetBuyPrice:      holding.TargetBuyPrice,
+		PriceLevels:         holding.PriceLevels,
+		ValuationConfidence: holding.ValuationConfidence,
+		BusinessModel:       holding.BusinessModel,
+		Moat:                holding.Moat,
+		Governance:          holding.Governance,
+		FinancialQuality:    holding.FinancialQuality,
+		UpdatedAt:           holding.UpdatedAt,
+		Notes:               holding.Notes,
+		KillCriteria:        holding.KillCriteria,
+		Reports:             holding.Reports,
+		Dividend:            holding.Dividend,
+		NetCash:             holding.NetCash,
+		OwnerCashFlowAudit:  holding.OwnerCashFlowAudit,
+		ResearchUpdates:     holding.ResearchUpdates,
+		Financials:          holding.Financials,
+	}
+}
+
+func holdingFromCandidate(candidate Candidate, cost float64) Holding {
+	return Holding{
+		Symbol:              candidate.Symbol,
+		Name:                candidate.Name,
+		Shares:              0,
+		Cost:                cost,
+		CurrentPrice:        candidate.CurrentPrice,
+		PreviousClose:       candidate.PreviousClose,
+		MarketCap:           candidate.MarketCap,
+		MarketCapCurrency:   candidate.MarketCapCurrency,
+		CurrentPriceDate:    candidate.CurrentPriceDate,
+		PreviousCloseDate:   candidate.PreviousCloseDate,
+		Action:              candidate.Action,
+		Status:              candidate.Status,
+		MarginOfSafety:      candidate.MarginOfSafety,
+		QualityScore:        candidate.QualityScore,
+		Risk:                candidate.Risk,
+		Industry:            candidate.Industry,
+		Currency:            candidate.Currency,
+		IntrinsicValue:      candidate.IntrinsicValue,
+		FairValueRange:      candidate.FairValueRange,
+		TargetBuyPrice:      candidate.TargetBuyPrice,
+		PriceLevels:         candidate.PriceLevels,
+		ValuationConfidence: candidate.ValuationConfidence,
+		BusinessModel:       candidate.BusinessModel,
+		Moat:                candidate.Moat,
+		Governance:          candidate.Governance,
+		FinancialQuality:    candidate.FinancialQuality,
+		UpdatedAt:           candidate.UpdatedAt,
+		Notes:               candidate.Notes,
+		KillCriteria:        candidate.KillCriteria,
+		Reports:             candidate.Reports,
+		Dividend:            candidate.Dividend,
+		NetCash:             candidate.NetCash,
+		OwnerCashFlowAudit:  candidate.OwnerCashFlowAudit,
+		ResearchUpdates:     candidate.ResearchUpdates,
+		Financials:          candidate.Financials,
+	}
+}
+
+func clearedCandidateFromHolding(holding Holding) Candidate {
+	candidate := candidateFromHolding(holding)
+	if strings.TrimSpace(candidate.Status) == "" || strings.Contains(candidate.Status, "持仓") {
+		candidate.Status = "候选池观察（清仓后跟踪）"
+	}
+	if strings.TrimSpace(candidate.Action) == "" {
+		candidate.Action = "清仓后放回候选池观察；等待重新达到买入纪律"
+	} else if strings.Contains(candidate.Action, "继续持有") {
+		candidate.Action = strings.Replace(candidate.Action, "继续持有", "清仓后放回候选池观察", 1)
+	} else if !strings.Contains(candidate.Action, "清仓后") {
+		candidate.Action = "清仓后放回候选池观察；" + candidate.Action
+	}
+	return candidate
+}
+
+func findHoldingIndex(holdings []Holding, symbol string) int {
+	normalized := normalizeSymbol(symbol)
+	for i := range holdings {
+		if normalizeSymbol(holdings[i].Symbol) == normalized {
+			return i
+		}
+	}
+	return -1
+}
+
+func findCandidateIndex(candidates []Candidate, symbol string) int {
+	normalized := normalizeSymbol(symbol)
+	for i := range candidates {
+		if normalizeSymbol(candidates[i].Symbol) == normalized {
+			return i
+		}
+	}
+	return -1
+}
+
+func upsertCandidate(candidates []Candidate, candidate Candidate) []Candidate {
+	idx := findCandidateIndex(candidates, candidate.Symbol)
 	if idx == -1 {
-		s.state.Holdings = append(s.state.Holdings, Holding{
-			Symbol:       trade.Symbol,
-			Name:         trade.Name,
-			Shares:       0,
-			Cost:         trade.Price,
-			CurrentPrice: trade.CurrentPrice,
-			Currency:     trade.Currency,
-		})
+		return append(candidates, candidate)
+	}
+	candidates[idx] = candidate
+	return candidates
+}
+
+func removeCandidate(candidates []Candidate, symbol string) []Candidate {
+	idx := findCandidateIndex(candidates, symbol)
+	if idx == -1 {
+		return candidates
+	}
+	return append(candidates[:idx], candidates[idx+1:]...)
+}
+
+func (s *Server) applyTrade(trade Trade) {
+	idx := findHoldingIndex(s.state.Holdings, trade.Symbol)
+
+	if idx == -1 {
+		candidateIdx := findCandidateIndex(s.state.Candidates, trade.Symbol)
+		if trade.Side == "buy" && candidateIdx >= 0 {
+			holding := holdingFromCandidate(s.state.Candidates[candidateIdx], trade.Price)
+			s.state.Candidates = removeCandidate(s.state.Candidates, trade.Symbol)
+			s.state.Holdings = append(s.state.Holdings, holding)
+		} else {
+			s.state.Holdings = append(s.state.Holdings, Holding{
+				Symbol:       trade.Symbol,
+				Name:         trade.Name,
+				Shares:       0,
+				Cost:         trade.Price,
+				CurrentPrice: trade.CurrentPrice,
+				Currency:     trade.Currency,
+			})
+		}
 		idx = len(s.state.Holdings) - 1
 	}
 
 	holding := &s.state.Holdings[idx]
 	if trade.Side == "buy" {
+		s.state.Candidates = removeCandidate(s.state.Candidates, trade.Symbol)
 		totalCost := holding.Shares*holding.Cost + trade.Shares*trade.Price
 		holding.Shares += trade.Shares
 		if holding.Shares > 0 {
@@ -471,6 +741,11 @@ func (s *Server) applyTrade(trade Trade) {
 	}
 	holding.Currency = trade.Currency
 	holding.CurrentPrice = trade.CurrentPrice
+	if trade.Side == "sell" && holding.Shares == 0 {
+		candidate := clearedCandidateFromHolding(*holding)
+		s.state.Candidates = upsertCandidate(s.state.Candidates, candidate)
+		s.state.Holdings = append(s.state.Holdings[:idx], s.state.Holdings[idx+1:]...)
+	}
 	s.state.Trades = append(s.state.Trades, trade)
 
 	multiplier := s.state.FX[trade.Currency]
@@ -728,6 +1003,10 @@ func hydrateState(state *AppState) error {
 		return err
 	}
 	industries, err := loadIndustries()
+	if err != nil {
+		return err
+	}
+	industries, err = mergeRuntimeIndustryMetrics(industries)
 	if err != nil {
 		return err
 	}
