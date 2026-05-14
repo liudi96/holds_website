@@ -24,6 +24,7 @@ type IndustryResearch struct {
 	Keywords         []string                  `json:"keywords,omitempty"`
 	LinkedSymbols    []string                  `json:"linkedSymbols,omitempty"`
 	KeyQuestions     []string                  `json:"keyQuestions,omitempty"`
+	MetricSourceIDs  []string                  `json:"metricSourceIds,omitempty"`
 	Metrics          []IndustryMetric          `json:"metrics,omitempty"`
 	CompanyAnalyses  []IndustryCompanyAnalysis `json:"companyAnalyses,omitempty"`
 	Notes            []IndustryNote            `json:"notes,omitempty"`
@@ -110,6 +111,7 @@ func normalizeIndustryResearch(industry IndustryResearch, filename string) Indus
 	industry.LinkedSymbols = normalizeIndustrySymbols(industry.LinkedSymbols)
 	industry.Keywords = normalizeStringList(industry.Keywords)
 	industry.KeyQuestions = normalizeStringList(industry.KeyQuestions)
+	industry.MetricSourceIDs = normalizeStringList(industry.MetricSourceIDs)
 	industry.Metrics = industrymetrics.NormalizeMetrics(industry.Metrics)
 	industry.CompanyAnalyses = normalizeIndustryCompanyAnalyses(industry.CompanyAnalyses)
 	return industry

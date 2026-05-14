@@ -106,7 +106,7 @@
           <article class="metric executive-metric">
             <span>预计年股息</span>
             <strong id="annualDividend">¥0.00</strong>
-            <small id="portfolioDividendYield">组合股息率 0.00%</small>
+            <small id="portfolioDividendYield">组合税后股息率 0.00%</small>
           </article>
           <article class="metric executive-metric">
             <span>数据体检</span>
@@ -121,23 +121,23 @@
               <p class="eyebrow">Next Actions</p>
               <h2>下一步动作</h2>
             </div>
-            <a class="ghost-button compact-link" href="#masters">查看标的评分</a>
+            <a class="ghost-button compact-link" href="#masters">查看持仓决策</a>
           </div>
           <div class="next-actions-list" id="committeeConsensus"></div>
         </section>
       </section>
 
       <section class="page" data-page="portfolio">
-        <div class="main-panel">
+        <div class="main-panel" id="masters">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Positions</p>
-              <h2>当前持仓</h2>
+              <p class="eyebrow">Position Decisions</p>
+              <h2>持仓决策表</h2>
             </div>
             <div class="segmented">
               <button class="segment active" data-filter="all">全部</button>
-              <button class="segment" data-filter="profit">盈利</button>
-              <button class="segment" data-filter="loss">亏损</button>
+              <button class="segment" data-filter="holding">持仓</button>
+              <button class="segment" data-filter="candidate">候选</button>
             </div>
           </div>
 
@@ -159,41 +159,30 @@
                     </button>
                   </th>
                   <th>
+                    <button class="position-sort-button" type="button" data-position-sort="return" aria-label="按综合回报率排序">
+                      <span>综合回报率</span>
+                      <strong>↕</strong>
+                    </button>
+                  </th>
+                  <th>
                     <button class="position-sort-button" type="button" data-position-sort="margin" aria-label="按安全边际排序">
                       <span>安全边际</span>
                       <strong>↕</strong>
                     </button>
                   </th>
-                  <th>健康</th>
-                  <th></th>
+                  <th>
+                    <button class="position-sort-button" type="button" data-position-sort="owner" aria-label="按长期评分排序">
+                      <span>长期评分</span>
+                      <strong>↕</strong>
+                    </button>
+                  </th>
+                  <th>健康状态</th>
                 </tr>
               </thead>
               <tbody id="positionsBody"></tbody>
             </table>
           </div>
         </div>
-
-        <section class="portfolio-masters" id="masters">
-          <section class="masters-hero panel">
-            <div class="masters-hero-copy">
-              <p class="masters-hero-line">
-                <span class="eyebrow">Dual Strategy</span>
-                <strong>回报蓝筹 + 净现金烟蒂</strong>
-                <span>主策略用 A股6% / H股8% 综合回报与15%安全边际筛蓝筹；辅策略用净现金保护、低估值和自由现金流筛烟蒂。</span>
-              </p>
-            </div>
-          </section>
-
-          <section class="panel master-matrix-panel">
-            <div class="panel-head compact">
-              <div>
-                <p class="eyebrow">Compare</p>
-                <h2>标的评分表</h2>
-              </div>
-            </div>
-            <div class="master-matrix" id="masterMatrix"></div>
-          </section>
-        </section>
 
         <section class="panel portfolio-candidates-panel">
           <div class="panel-head compact">

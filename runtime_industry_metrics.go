@@ -22,13 +22,16 @@ func mergeRuntimeIndustryMetrics(industries []IndustryResearch) ([]IndustryResea
 		return industries, nil
 	}
 	for i := range industries {
-		id := industrymetrics.NormalizeID(industries[i].ID)
-		record, ok := book.Industries[id]
-		if !ok {
-			continue
+		sourceIDs := append([]string{industries[i].ID}, industries[i].MetricSourceIDs...)
+		for _, sourceID := range sourceIDs {
+			id := industrymetrics.NormalizeID(sourceID)
+			record, ok := book.Industries[id]
+			if !ok {
+				continue
+			}
+			industries[i].MetricsUpdatedAt = firstNonEmpty(record.UpdatedAt, book.UpdatedAt, industries[i].MetricsUpdatedAt)
+			industries[i].Metrics = mergeIndustryMetrics(industries[i].Metrics, record.Metrics)
 		}
-		industries[i].MetricsUpdatedAt = firstNonEmpty(record.UpdatedAt, book.UpdatedAt, industries[i].MetricsUpdatedAt)
-		industries[i].Metrics = mergeIndustryMetrics(industries[i].Metrics, record.Metrics)
 	}
 	return industries, nil
 }

@@ -101,21 +101,29 @@ type PriceLevels struct {
 }
 
 type Dividend struct {
-	FiscalYear           string   `json:"fiscalYear,omitempty"`
-	DividendPerShare     *float64 `json:"dividendPerShare,omitempty"`
-	DividendCurrency     string   `json:"dividendCurrency,omitempty"`
-	CashDividendTotal    *float64 `json:"cashDividendTotal,omitempty"`
-	CashDividendCurrency string   `json:"cashDividendCurrency,omitempty"`
-	BuybackAmount        *float64 `json:"buybackAmount,omitempty"`
-	BuybackCurrency      string   `json:"buybackCurrency,omitempty"`
-	DividendYield        *float64 `json:"dividendYield,omitempty"`
-	PayoutRatio          *float64 `json:"payoutRatio,omitempty"`
-	EstimatedAnnualCash  *float64 `json:"estimatedAnnualCash,omitempty"`
-	Reliability          string   `json:"reliability,omitempty"`
-	ForecastFiscalYear   string   `json:"forecastFiscalYear,omitempty"`
-	ForecastPerShare     *float64 `json:"forecastPerShare,omitempty"`
-	ForecastCurrency     string   `json:"forecastCurrency,omitempty"`
-	ForecastYield        *float64 `json:"forecastYield,omitempty"`
+	FiscalYear                    string   `json:"fiscalYear,omitempty"`
+	DividendPerShare              *float64 `json:"dividendPerShare,omitempty"`
+	DividendCurrency              string   `json:"dividendCurrency,omitempty"`
+	CashDividendTotal             *float64 `json:"cashDividendTotal,omitempty"`
+	CashDividendCurrency          string   `json:"cashDividendCurrency,omitempty"`
+	BuybackAmount                 *float64 `json:"buybackAmount,omitempty"`
+	BuybackCurrency               string   `json:"buybackCurrency,omitempty"`
+	DividendYield                 *float64 `json:"dividendYield,omitempty"`
+	PayoutRatio                   *float64 `json:"payoutRatio,omitempty"`
+	EstimatedAnnualCash           *float64 `json:"estimatedAnnualCash,omitempty"`
+	Reliability                   string   `json:"reliability,omitempty"`
+	ForecastFiscalYear            string   `json:"forecastFiscalYear,omitempty"`
+	ForecastPerShare              *float64 `json:"forecastPerShare,omitempty"`
+	ForecastCurrency              string   `json:"forecastCurrency,omitempty"`
+	ForecastYield                 *float64 `json:"forecastYield,omitempty"`
+	StockConnectDividendTaxRate   *float64 `json:"stockConnectDividendTaxRate,omitempty"`
+	StockConnectTaxRate           *float64 `json:"stockConnectTaxRate,omitempty"`
+	PersonalDividendTaxRate       *float64 `json:"personalDividendTaxRate,omitempty"`
+	NonResidentWithholdingTaxRate *float64 `json:"nonResidentWithholdingTaxRate,omitempty"`
+	ForeignWithholdingTaxRate     *float64 `json:"foreignWithholdingTaxRate,omitempty"`
+	WithholdingTaxRate            *float64 `json:"withholdingTaxRate,omitempty"`
+	WithholdingTaxCreditable      *bool    `json:"withholdingTaxCreditable,omitempty"`
+	TaxNote                       string   `json:"taxNote,omitempty"`
 }
 
 type NetCashProfile struct {
@@ -683,6 +691,14 @@ func upsertCandidate(candidates []Candidate, candidate Candidate) []Candidate {
 	return candidates
 }
 
+func removeCandidate(candidates []Candidate, symbol string) []Candidate {
+	idx := findCandidateIndex(candidates, symbol)
+	if idx == -1 {
+		return candidates
+	}
+	return append(candidates[:idx], candidates[idx+1:]...)
+}
+
 func (s *Server) applyTrade(trade Trade) {
 	idx := findHoldingIndex(s.state.Holdings, trade.Symbol)
 
@@ -690,7 +706,7 @@ func (s *Server) applyTrade(trade Trade) {
 		candidateIdx := findCandidateIndex(s.state.Candidates, trade.Symbol)
 		if trade.Side == "buy" && candidateIdx >= 0 {
 			holding := holdingFromCandidate(s.state.Candidates[candidateIdx], trade.Price)
-			s.state.Candidates = append(s.state.Candidates[:candidateIdx], s.state.Candidates[candidateIdx+1:]...)
+			s.state.Candidates = removeCandidate(s.state.Candidates, trade.Symbol)
 			s.state.Holdings = append(s.state.Holdings, holding)
 		} else {
 			s.state.Holdings = append(s.state.Holdings, Holding{
@@ -707,6 +723,7 @@ func (s *Server) applyTrade(trade Trade) {
 
 	holding := &s.state.Holdings[idx]
 	if trade.Side == "buy" {
+		s.state.Candidates = removeCandidate(s.state.Candidates, trade.Symbol)
 		totalCost := holding.Shares*holding.Cost + trade.Shares*trade.Price
 		holding.Shares += trade.Shares
 		if holding.Shares > 0 {

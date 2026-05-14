@@ -257,6 +257,7 @@ const HK_SHARE_SHAREHOLDER_RETURN_TARGET = 0.08;
 const A_SHARE_EX_CASH_PE_MAX = 10;
 const HK_SHARE_EX_CASH_PE_MAX = 8;
 const AGGRESSIVE_BUY_DISCOUNT = 0.1;
+const HK_STOCK_CONNECT_DIVIDEND_TAX_RATE = 0.2;
 const OWNER_AUDIT_SCORE_TARGET = 75;
 const MAJOR_RISK_PATTERN = /停牌|重大风险|否决|调查|内控|退市|财报可信|风险暴露|治理风险|治理与财务可靠性|质量分<75|低于75/;
 const OWNER_AUDIT_FIELDS = [
@@ -278,6 +279,11 @@ const OWNER_AUDIT_STATUS_SCORE = {
   review: 0.6,
   fail: 0
 };
+const MASTER_MATRIX_FILTERS = [
+  { key: "all", label: "全部" },
+  { key: "holding", label: "持仓" },
+  { key: "candidate", label: "候选" }
+];
 
 let state = loadState();
 let activeFilter = "all";
@@ -288,6 +294,7 @@ let candidateSort = "consensus";
 let candidateFilter = "all";
 let decisionLogFilter = "all";
 let masterMatrixSort = { key: "margin", direction: "desc" };
+let masterMatrixFilter = "all";
 const pageTitles = {
   overview: "总览",
   portfolio: "持仓",
@@ -312,6 +319,7 @@ const elements = {
   decisionLogFilters: document.querySelector("#decisionLogFilters"),
   clearDecisionLogs: document.querySelector("#clearDecisionLogs"),
   masterMatrix: document.querySelector("#masterMatrix"),
+  masterMatrixFilters: document.querySelector("#masterMatrixFilters"),
   grahamSummary: document.querySelector("#grahamSummary"),
   grahamList: document.querySelector("#grahamList"),
   buffettSummary: document.querySelector("#buffettSummary"),
@@ -594,13 +602,77 @@ function marketCapCurrency(stock) {
   return String(stock?.marketCapCurrency || stock?.currency || "CNY").toUpperCase();
 }
 
+function normalizeRate(value, fallback = 0) {
+  const number = finiteNumber(value);
+  if (!Number.isFinite(number)) return fallback;
+  if (number > 1 && number <= 100) return clamp(number / 100, 0, 1);
+  return clamp(number, 0, 1);
+}
+
+function dividendTaxProfile(stock) {
+  const dividend = stock?.dividend ?? {};
+  const stockConnectRate = marketKind(stock) === "HK"
+    ? normalizeRate(
+        dividend.stockConnectDividendTaxRate ??
+        dividend.stockConnectTaxRate ??
+        dividend.personalDividendTaxRate,
+        HK_STOCK_CONNECT_DIVIDEND_TAX_RATE
+      )
+    : 0;
+  const nonResidentRate = normalizeRate(
+    dividend.nonResidentWithholdingTaxRate ??
+    dividend.foreignWithholdingTaxRate ??
+    dividend.withholdingTaxRate,
+    0
+  );
+  const creditable = Boolean(dividend.withholdingTaxCreditable);
+  const factor = creditable
+    ? 1 - Math.max(stockConnectRate, nonResidentRate)
+    : (1 - nonResidentRate) * (1 - stockConnectRate);
+  return {
+    stockConnectRate,
+    nonResidentRate,
+    creditable,
+    factor: clamp(factor, 0, 1),
+    effectiveTaxRate: 1 - clamp(factor, 0, 1)
+  };
+}
+
+function dividendTaxRate(stock) {
+  return dividendTaxProfile(stock).effectiveTaxRate;
+}
+
+function dividendTaxFactor(stock) {
+  return dividendTaxProfile(stock).factor;
+}
+
+function dividendTaxText(stock) {
+  const profile = dividendTaxProfile(stock);
+  const note = displayText(stock?.dividend?.taxNote, "");
+  if (profile.stockConnectRate <= 0 && profile.nonResidentRate <= 0) return note || "未折扣分红税";
+  const parts = [];
+  if (profile.stockConnectRate > 0) parts.push(`港股通个税 ${percent(profile.stockConnectRate * 100, false)}`);
+  if (profile.nonResidentRate > 0) parts.push(`非居民预提 ${percent(profile.nonResidentRate * 100, false)}`);
+  parts.push(`${profile.creditable ? "抵免后" : "到账"}税负 ${percent(profile.effectiveTaxRate * 100, false)}`);
+  if (note) parts.push(note);
+  return parts.join(" · ");
+}
+
+function afterTaxDividendCny(stock, grossCny) {
+  const amount = finiteNumber(grossCny);
+  if (!Number.isFinite(amount)) return null;
+  return amount * dividendTaxFactor(stock);
+}
+
 function dividendYieldInputs(stock) {
   const dividend = stock?.dividend;
   const cashDividendTotal = finiteNumber(dividend?.cashDividendTotal);
   const marketCap = finiteNumber(stock?.marketCap);
   if (Number.isFinite(cashDividendTotal) && cashDividendTotal > 0 && Number.isFinite(marketCap) && marketCap > 0) {
+    const grossCashDividendTotalCny = cashDividendTotal * fx(cashDividendTotalCurrency(stock));
     return {
-      cashDividendTotalCny: cashDividendTotal * fx(cashDividendTotalCurrency(stock)),
+      cashDividendTotalCny: afterTaxDividendCny(stock, grossCashDividendTotalCny),
+      grossCashDividendTotalCny,
       marketCapCny: marketCap * fx(marketCapCurrency(stock))
     };
   }
@@ -613,7 +685,8 @@ function dividendYieldInputs(stock) {
   }
 
   return {
-    cashDividendTotalCny: perShare * fx(dividendCurrency(stock)),
+    cashDividendTotalCny: afterTaxDividendCny(stock, perShare * fx(dividendCurrency(stock))),
+    grossCashDividendTotalCny: perShare * fx(dividendCurrency(stock)),
     marketCapCny: currentPrice * fx(stock?.currency || dividendCurrency(stock))
   };
 }
@@ -647,7 +720,7 @@ function dividendAnnualCashLocal(stock) {
 function dividendAnnualCashCny(stock) {
   const localCash = dividendAnnualCashLocal(stock);
   if (!Number.isFinite(localCash)) return 0;
-  return localCash * fx(dividendCurrency(stock));
+  return afterTaxDividendCny(stock, localCash * fx(dividendCurrency(stock))) ?? 0;
 }
 
 function dividendSummary(positions) {
@@ -779,12 +852,12 @@ function shareholderReturnTarget(stock) {
 function forecastDividendYield(stock) {
   const dividend = stock?.dividend;
   const explicit = finiteNumber(dividend?.forecastYield);
-  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  if (Number.isFinite(explicit) && explicit > 0) return explicit * dividendTaxFactor(stock);
   const perShare = finiteNumber(dividend?.forecastPerShare);
   const currentPrice = finiteNumber(stock?.currentPrice);
   if (!Number.isFinite(perShare) || perShare <= 0 || !Number.isFinite(currentPrice) || currentPrice <= 0) return null;
   const forecastCurrency = String(dividend?.forecastCurrency || dividendCurrency(stock)).toUpperCase();
-  return (perShare * fx(forecastCurrency)) / (currentPrice * fx(stock?.currency || forecastCurrency));
+  return (perShare * fx(forecastCurrency) * dividendTaxFactor(stock)) / (currentPrice * fx(stock?.currency || forecastCurrency));
 }
 
 function dividendShield(stock) {
@@ -792,7 +865,9 @@ function dividendShield(stock) {
   const shareholderReturn = calculatedShareholderReturnYield(stock);
   const forecast = forecastDividendYield(stock);
   const value = Number.isFinite(shareholderReturn) ? shareholderReturn : null;
-  const source = Number.isFinite(shareholderReturn) ? "最近财年综合回报" : "未记录综合回报";
+  const source = Number.isFinite(shareholderReturn)
+    ? marketKind(stock) === "HK" ? "最近财年综合回报（港股通股息税后）" : "最近财年综合回报"
+    : "未记录综合回报";
   const target = shareholderReturnTarget(stock);
   return {
     trailing,
@@ -1336,28 +1411,34 @@ function syncCash() {
 }
 
 function getFilteredPositions(positions) {
-  return positions.filter((position) => {
+  return decisionUniverse(positions)
+    .map((stock) => ({ stock, strategy: strategyProfile(stock) }))
+    .filter(({ stock, strategy }) => {
     const haystack = [
-      position.symbol,
-      position.name,
-      position.action,
-      position.status,
-      position.industry
+      stock.symbol,
+      stock.name,
+      stock.action,
+      stock.status,
+      stock.industry,
+      strategy.status,
+      strategyBucketLabel(strategy.bucket)
     ].join(" ").toLowerCase();
     const matchesSearch = haystack.includes(searchTerm);
     const matchesFilter =
       activeFilter === "all" ||
-      (activeFilter === "profit" && position.pnlCny >= 0) ||
-      (activeFilter === "loss" && position.pnlCny < 0);
+      stock.sourceType === activeFilter;
 
     return matchesSearch && matchesFilter;
   });
 }
 
-function positionSortValue(position, key) {
-  if (key === "marketValue") return finiteNumber(position.marketValueCny);
-  if (key === "pnl") return finiteNumber(position.pnlCny);
-  if (key === "margin") return finiteNumber(position.marginOfSafety);
+function positionSortValue(item, key) {
+  const { stock, strategy } = item;
+  if (key === "marketValue") return finiteNumber(stock.marketValueCny);
+  if (key === "pnl") return finiteNumber(stock.pnlCny);
+  if (key === "return") return finiteNumber(strategy?.shield?.value);
+  if (key === "owner") return strategy?.ownerAudit?.hasAudit ? finiteNumber(strategy.ownerAudit.score) : null;
+  if (key === "margin") return finiteNumber(strategy?.margin);
   return null;
 }
 
@@ -1377,7 +1458,7 @@ function sortedPositions(positions) {
   if (!positionSort.key) return filtered;
   return [...filtered].sort((a, b) => {
     const result = compareNullableNumbers(positionSortValue(a, positionSort.key), positionSortValue(b, positionSort.key), positionSort.direction);
-    return result || String(a.name ?? "").localeCompare(String(b.name ?? ""), "zh-CN");
+    return result || String(a.stock?.name ?? "").localeCompare(String(b.stock?.name ?? ""), "zh-CN");
   });
 }
 
@@ -1412,7 +1493,7 @@ function holdingHealth(position, totalValue) {
   const riskScore = highRisk ? 0 : reduceSignal ? 35 : 100;
   const score = Math.round(qualityScore * 0.35 + marginScore * 0.3 + pnlScore * 0.15 + weightScore * 0.1 + riskScore * 0.1);
 
-  if (highRisk || (Number.isFinite(quality) && quality < 75)) {
+  if (highRisk || (Number.isFinite(quality) && quality < 70)) {
     return {
       status: "风险暴露",
       tone: "risk",
@@ -1936,10 +2017,73 @@ function renderMetrics(positions) {
   }
   elements.annualDividend.textContent = wholeCurrency(dividends.annualCashCny);
   elements.portfolioDividendYield.textContent = dividends.topContributor
-    ? `组合股息率 ${percent(dividendYield * 100, false)} · 高风险 ${percent(dividends.annualCashCny ? (dividends.highRiskCashCny / dividends.annualCashCny) * 100 : 0, false)}`
-    : "组合股息率 0.00%";
+    ? `组合税后股息率 ${percent(dividendYield * 100, false)} · 高风险 ${percent(dividends.annualCashCny ? (dividends.highRiskCashCny / dividends.annualCashCny) * 100 : 0, false)}`
+    : "组合税后股息率 0.00%";
   elements.positionCount.textContent = `${positions.length} 只股票`;
   elements.recordCount.textContent = `${state.holdings.length} 条持仓 · ${state.trades.length} 条交易`;
+}
+
+function decisionToneClass(tone) {
+  if (tone === "strong" || tone === "safe" || tone === "buy") return "core";
+  if (tone === "risk" || tone === "reduce") return "risk";
+  if (tone === "watch" || tone === "wait") return "reduce";
+  return "watch";
+}
+
+function decisionMarginTone(value) {
+  if (!Number.isFinite(value)) return "watch";
+  if (value >= MAIN_DCF_MARGIN_TARGET) return "core";
+  if (value < 0.1) return "risk";
+  return "reduce";
+}
+
+function decisionStockMeta(stock) {
+  if (stock.sourceType === "holding") {
+    return `${stock.symbol} · ${stock.shares} 股 · 成本 ${currency(stock.cost, stock.currency)}`;
+  }
+  return `${stock.symbol} · 候选 · ${displayText(firstIndustry(stock.industry), "未分类")}`;
+}
+
+function decisionMarketCell(stock) {
+  const currentPrice = finiteNumber(stock.currentPrice);
+  const priceText = Number.isFinite(currentPrice) && currentPrice > 0
+    ? currency(currentPrice, stock.currency)
+    : "-";
+  const dateText = stock.currentPriceDate || "收盘日未知";
+  if (stock.sourceType !== "holding") {
+    return `<strong>-</strong><br /><small class="quote-date">${priceText} · ${escapeHTML(dateText)}</small>`;
+  }
+  return `<strong>${currency(stock.marketValueCny)}</strong><br /><small class="quote-date">${priceText} · ${escapeHTML(dateText)}</small>`;
+}
+
+function decisionPnlCell(stock) {
+  if (stock.sourceType !== "holding") {
+    return { className: "", html: `<strong>-</strong><br /><small>未持仓</small>` };
+  }
+  return {
+    className: stock.pnlCny >= 0 ? "positive" : "negative",
+    html: `${currency(stock.pnlCny)}<br /><small>${percent(stock.pnlRate)}</small>`
+  };
+}
+
+function decisionHealthCell(stock, totalValue) {
+  if (stock.sourceType !== "holding") {
+    const qualityText = Number.isFinite(stock.qualityScore) ? `质量${stock.qualityScore}` : "质量待补";
+    return {
+      tone: "watch",
+      scoreText: qualityText,
+      weightText: "未持仓",
+      title: displayText(stock.status, "候选池")
+    };
+  }
+  const health = holdingHealth(stock, totalValue);
+  const weight = totalValue ? (stock.marketValueCny / totalValue) * 100 : 0;
+  return {
+    tone: health.tone,
+    scoreText: `${health.score}分`,
+    weightText: `仓位${weight.toFixed(1)}%`,
+    title: health.detail
+  };
 }
 
 function renderPositions(positions) {
@@ -1948,47 +2092,50 @@ function renderPositions(positions) {
   updatePositionSortControls();
 
   if (!filtered.length) {
-    elements.positionsBody.innerHTML = `<tr><td colspan="6" class="empty-state">暂无符合条件的持仓</td></tr>`;
+    elements.positionsBody.innerHTML = `<tr><td colspan="7" class="empty-state">暂无符合条件的标的</td></tr>`;
     return;
   }
 
   elements.positionsBody.innerHTML = filtered
-    .map((position) => {
-      const weight = totalValue ? (position.marketValueCny / totalValue) * 100 : 0;
-      const pnlClass = position.pnlCny >= 0 ? "positive" : "negative";
-      const marginText = displayMarginOfSafety(position);
-      const qualityText = Number.isFinite(position.qualityScore) ? position.qualityScore : "-";
-      const health = holdingHealth(position, totalValue);
+    .map(({ stock, strategy }) => {
+      const pnl = decisionPnlCell(stock);
+      const health = decisionHealthCell(stock, totalValue);
+      const sourceClass = marketKind(stock) === "HK" ? "hk" : "";
+      const marginTone = decisionMarginTone(strategy.margin);
+      const returnTone = strategy.shield.passed ? "core" : "reduce";
+      const ownerTone = decisionToneClass(strategy.ownerAudit.tone);
 
       return `
         <tr>
           <td>
             <div class="stock-cell">
-              <span class="ticker">${position.symbol.slice(0, 4)}</span>
-              <a class="stock-name stock-link" href="${stockHash(position.symbol)}">
-                <strong>${escapeHTML(position.name)}</strong>
-                <span>${escapeHTML(position.symbol)} · ${position.shares} 股 · 成本 ${currency(position.cost, position.currency)}</span>
+              <span class="ticker ${sourceClass}">${escapeHTML(stock.symbol.slice(0, 4))}</span>
+              <a class="stock-name stock-link" href="${stockHash(stock.symbol)}">
+                <strong>${escapeHTML(stock.name)}</strong>
+                <span>${escapeHTML(decisionStockMeta(stock))}</span>
               </a>
             </div>
           </td>
           <td data-label="市值/现价">
-            <strong>${currency(position.marketValueCny)}</strong>
-            <br />
-            <small class="quote-date">${currency(position.currentPrice, position.currency)} · ${position.currentPriceDate || "收盘日未知"}</small>
+            ${decisionMarketCell(stock)}
           </td>
-          <td data-label="盈亏" class="${pnlClass}">
-            ${currency(position.pnlCny)}
-            <br />
-            <small>${percent(position.pnlRate)}</small>
+          <td data-label="盈亏" class="${pnl.className}">
+            ${pnl.html}
           </td>
-          <td data-label="安全边际">${marginText}</td>
-          <td data-label="健康">
-            <span class="health-pill ${health.tone}" title="${escapeHTML(health.detail)}">${health.status}</span>
-            <br />
-            <small class="health-score">${health.score} 分 · 仓位 ${weight.toFixed(1)}% · 质量 ${qualityText}</small>
+          <td data-label="综合回报率">
+            <span class="health-pill ${returnTone}">${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}</span>
           </td>
-          <td data-label="操作">
-            <button class="icon-button edit-holding" data-symbol="${position.symbol}" title="编辑 Excel 信息">✎</button>
+          <td data-label="安全边际">
+            <span class="health-pill ${marginTone}">${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</span>
+          </td>
+          <td data-label="长期评分">
+            <span class="health-pill ${ownerTone}">${strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "待评分"}</span>
+          </td>
+          <td data-label="健康状态">
+            <div class="health-status-cell" title="${escapeHTML(health.title)}">
+              <strong class="health-status-score ${health.tone}">${escapeHTML(health.scoreText)}</strong>
+              <small class="health-status-weight">${escapeHTML(health.weightText)}</small>
+            </div>
           </td>
         </tr>
       `;
@@ -2757,9 +2904,36 @@ function renderStrategyStockCard(item) {
   `;
 }
 
+function masterMatrixFilterCount(items, key) {
+  if (key === "holding") return items.filter((item) => item.stock.sourceType === "holding").length;
+  if (key === "candidate") return items.filter((item) => item.stock.sourceType === "candidate").length;
+  return items.length;
+}
+
+function renderMasterMatrixFilters(items) {
+  if (!elements.masterMatrixFilters) return;
+  elements.masterMatrixFilters.innerHTML = MASTER_MATRIX_FILTERS.map((filter) => {
+    const active = masterMatrixFilter === filter.key;
+    return `
+      <button class="${active ? "active" : ""}" type="button" data-master-matrix-filter="${filter.key}" aria-pressed="${active ? "true" : "false"}">
+        <span>${escapeHTML(filter.label)}</span>
+        <strong>${masterMatrixFilterCount(items, filter.key)}</strong>
+      </button>
+    `;
+  }).join("");
+}
+
+function filterMasterMatrixRows(items) {
+  if (masterMatrixFilter === "holding") return items.filter((item) => item.stock.sourceType === "holding");
+  if (masterMatrixFilter === "candidate") return items.filter((item) => item.stock.sourceType === "candidate");
+  return items;
+}
+
 function renderMasterMatrix(positions) {
   if (!elements.masterMatrix) return;
-  const rows = strategyUniverseItems(positions)
+  const universe = strategyUniverseItems(positions);
+  renderMasterMatrixFilters(universe);
+  const rows = filterMasterMatrixRows(universe)
     .slice()
     .sort(compareMasterMatrixRows);
 
@@ -2789,7 +2963,7 @@ function renderMasterMatrix(positions) {
         </a>
       `).join("")}
     `
-    : `<div class="empty-state compact-empty">暂无可对照标的</div>`;
+    : `<div class="empty-state compact-empty">当前索引下暂无可对照标的</div>`;
 }
 
 function matrixSortValue(item, key) {
@@ -3879,6 +4053,8 @@ function renderDividendPanel(stock, isHolding) {
   const forecastPerShare = finiteNumber(dividend.forecastPerShare);
   const forecastYield = forecastDividendYield(stock);
   const forecastCurrency = String(dividend.forecastCurrency || currencyCode).toUpperCase();
+  const taxNote = dividendTaxText(stock);
+  const taxAdjusted = dividendTaxRate(stock) > 0;
 
   return `
     <section class="panel dividend-panel">
@@ -3891,15 +4067,15 @@ function renderDividendPanel(stock, isHolding) {
       <div class="detail-content">
         <div class="dividend-grid">
           <div><span>财年</span><strong>${escapeHTML(displayText(dividend.fiscalYear, "-"))}</strong></div>
-          <div><span>每股分红</span><strong>${Number.isFinite(perShare) ? currency(perShare, currencyCode) : "-"}</strong></div>
-          <div><span>股息率</span><strong>${displayDividendRatio(dividendYield)}</strong></div>
+          <div><span>每股分红</span><strong>${Number.isFinite(perShare) ? currency(perShare, currencyCode) : "-"}</strong><small>${taxAdjusted ? "税前公告口径" : ""}</small></div>
+          <div><span>${taxAdjusted ? "税后股息率" : "股息率"}</span><strong>${displayDividendRatio(dividendYield)}</strong><small>${escapeHTML(taxNote)}</small></div>
           <div><span>回报门槛</span><strong>${displayDividendRatio(shield.target)}</strong><small>${marketKind(stock) === "HK" ? "H股主策略" : "A股主策略"}</small></div>
-          <div><span>综合回报率</span><strong>${displayDividendRatio(shareholderReturnYield)}</strong></div>
+          <div><span>${taxAdjusted ? "税后综合回报率" : "综合回报率"}</span><strong>${displayDividendRatio(shareholderReturnYield)}</strong><small>${taxAdjusted ? "回购不折税" : ""}</small></div>
           <div><span>股息可靠性</span><strong>${badge(reliability.text, reliability.tone)}</strong></div>
           <div><span>预估财年</span><strong>${escapeHTML(displayText(dividend.forecastFiscalYear, "-"))}</strong></div>
           <div><span>预估每股</span><strong>${Number.isFinite(forecastPerShare) ? currency(forecastPerShare, forecastCurrency) : "-"}</strong></div>
-          <div><span>预估股息率</span><strong>${displayDividendRatio(forecastYield)}</strong><small>参考，不作为主策略门槛</small></div>
-          <div><span>预估年现金</span><strong>${Number.isFinite(annualLocal) ? currency(annualLocal, currencyCode) : Number.isFinite(estimatedCash) ? currency(estimatedCash, currencyCode) : "-"}</strong><small>${isHolding && annualCny > 0 ? `折人民币 ${currency(annualCny)}` : ""}</small></div>
+          <div><span>${taxAdjusted ? "预估税后股息率" : "预估股息率"}</span><strong>${displayDividendRatio(forecastYield)}</strong><small>参考，不作为主策略门槛</small></div>
+          <div><span>${taxAdjusted ? "预估年现金（税前）" : "预估年现金"}</span><strong>${Number.isFinite(annualLocal) ? currency(annualLocal, currencyCode) : Number.isFinite(estimatedCash) ? currency(estimatedCash, currencyCode) : "-"}</strong><small>${isHolding && annualCny > 0 ? `折人民币税后 ${currency(annualCny)}` : ""}</small></div>
         </div>
       </div>
     </section>
@@ -4024,12 +4200,14 @@ function renderDataSourcePanel(stock) {
   const dividend = stock.dividend ?? {};
   const hasCashDividendFormula = Number.isFinite(finiteNumber(dividend.cashDividendTotal)) && Number.isFinite(finiteNumber(stock.marketCap));
   const hasBuyback = Number.isFinite(finiteNumber(dividend.buybackAmount)) && finiteNumber(dividend.buybackAmount) > 0;
+  const taxAdjusted = dividendTaxRate(stock) > 0;
+  const taxText = taxAdjusted ? dividendTaxText(stock) : displayText(dividend.taxNote, "未折扣分红税");
   const dividendFormula = hasCashDividendFormula
-    ? "现金分红总额 / 总市值"
+    ? `${taxAdjusted ? "税后" : ""}现金分红总额 / 总市值`
     : dividend.dividendPerShare
-      ? "每股分红 / 最新价"
+      ? `${taxAdjusted ? "税后" : ""}每股分红 / 最新价`
       : "暂无";
-  const returnFormula = hasBuyback ? "(现金分红总额 + 回购金额) / 总市值" : "同股息率";
+  const returnFormula = hasBuyback ? `(${taxAdjusted ? "税后" : ""}现金分红总额 + 回购金额) / 总市值` : "同股息率";
 
   return `
     <section class="panel source-panel">
@@ -4073,7 +4251,7 @@ function renderDataSourcePanel(stock) {
         <div>
           <span>股息率</span>
           <strong>${escapeHTML(dividendFormula)}</strong>
-          <small>${escapeHTML(displayText(dividend.fiscalYear, "财年未知"))}</small>
+          <small>${escapeHTML(`${displayText(dividend.fiscalYear, "财年未知")} · ${taxText}`)}</small>
         </div>
         <div>
           <span>综合回报率</span>
@@ -4647,6 +4825,7 @@ async function addTrade(formData) {
   }
 
   if (side === "buy") {
+    removeCandidate(symbol);
     const totalCost = holding.shares * holding.cost + shares * price;
     holding.shares += shares;
     holding.cost = totalCost / holding.shares;
@@ -5007,6 +5186,13 @@ elements.masterMatrix?.addEventListener("click", (event) => {
     key: button.dataset.masterMatrixSort,
     direction: button.dataset.nextDirection === "asc" ? "asc" : "desc"
   };
+  renderMasterMatrix(computePositions());
+});
+
+elements.masterMatrixFilters?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-master-matrix-filter]");
+  if (!button) return;
+  masterMatrixFilter = button.dataset.masterMatrixFilter || "all";
   renderMasterMatrix(computePositions());
 });
 
