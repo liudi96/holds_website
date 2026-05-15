@@ -199,6 +199,29 @@
       "decision": "更新多年财务数据",
       "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
       "detail": "来源 东方财富财务分析；年度 10 年；最新期 2025；收入 458502407000；利润 43945411000；ROE 19.70%；ROIC 12.36%；FCF 42204041000"
+    },
+    {
+      "id": 1778834028979222000,
+      "date": "2026-05-15 16:33:48",
+      "type": "research",
+      "symbol": "002415.SZ",
+      "name": "海康威视",
+      "price": 33.119998931884766,
+      "currency": "CNY",
+      "decision": "继续持有；不新增买入，等待价格回落或2026H1经营现金流、收入恢复和毛利率改善进一步验证",
+      "discipline": "以DCF中性价值约¥32为锚，新增买入需约25%安全边际；综合回报率未达A股6%主策略门槛，不因Q1利润高增追买",
+      "detail": "holding；updated holding 002415.SZ (海康威视)"
+    },
+    {
+      "id": 1778834039984735000,
+      "date": "2026-05-15 16:33:59",
+      "type": "financials",
+      "symbol": "002415.SZ",
+      "name": "海康威视",
+      "currency": "CNY",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富财务分析；年度 10 年；最新期 2025；收入 92507796070；利润 14195371894；ROE 17.30%；ROIC 15.54%；FCF 21717364418"
     }
   ],
   "holdings": [
@@ -1294,23 +1317,23 @@
       "name": "海康威视",
       "shares": 1200,
       "cost": 34.54,
-      "action": "继续持有；当前¥35-37不加仓，等待≤¥31.5或2026H1经营现金流、毛利率和收入恢复进一步验证后再提高优先级",
-      "status": "持仓；重点预期差候选/核心替补边缘",
-      "marginOfSafety": 0.21142859685988652,
+      "action": "继续持有；不新增买入，等待价格回落或2026H1经营现金流、收入恢复和毛利率改善进一步验证",
+      "status": "持仓观察（DCF安全边际未达标）",
+      "marginOfSafety": -0.034999966621398926,
       "qualityScore": 84,
-      "risk": "地缘合规和美国FCC限制、国内政企数字化预算波动、SMBG渠道恢复不确定、创新业务毛利率低于主业、少数股东分流和Q1经营现金流为负需折价",
+      "risk": "地缘合规和FCC限制、国内政企数字化预算波动、SMBG渠道恢复不确定、创新业务毛利率低于主业、少数股东分流、存货和应收账款周转风险仍需折价",
       "industry": "AIoT/安防/机器视觉/科技制造平台",
       "currency": "CNY",
-      "intrinsicValue": 42,
-      "fairValueRange": "CNY34-48",
-      "targetBuyPrice": 31.5,
+      "intrinsicValue": 32,
+      "fairValueRange": "CNY26-42",
+      "targetBuyPrice": 24,
       "valuationConfidence": "medium",
       "businessModel": 25,
       "moat": 23,
       "governance": 16,
       "financialQuality": 20,
       "updatedAt": "",
-      "notes": "2026-05-11复核：持仓1200股，成本约¥34.54，组合口径最新价¥35.36，仓位约3.85%。2025年收入925.08亿元、归母净利润141.95亿元、经营现金流253.39亿元、粗略FCF约217.17亿元；2026Q1收入207.15亿元，同比+11.78%，归母净利润27.81亿元，同比+36.42%，扣非净利润26.48亿元，同比+37.44%，但经营现金流为-22.20亿元。维持内在价值¥42、目标买入价¥31.5，当前安全边际约15.8%，不达25%加仓纪律。",
+      "notes": "2026-05-15按DCF重估：中性内在价值由原¥42下修至约¥32，¥42改为乐观修复价值；截至2026-05-14收盘价¥33.45，DCF安全边际约-4.5%。继续持有，不新增买入；¥28-30为观察性复核区，¥24-26才是高确定性加仓区。",
       "reports": [
         {
           "period": "2026 Q1",
@@ -1379,12 +1402,11 @@
       ],
       "dividend": {
         "fiscalYear": "FY2025",
-        "dividendPerShare": 1.1,
+        "dividendPerShare": 1.15,
         "dividendCurrency": "CNY",
-        "cashDividendTotal": 10081362948.156797,
+        "cashDividendTotal": 10539618395.456732,
         "cashDividendCurrency": "CNY",
         "buybackCurrency": "CNY",
-        "payoutRatio": 0.74,
         "reliability": "stable",
         "forecastCurrency": "CNY"
       },
@@ -1394,7 +1416,7 @@
         "netCash": 38378027754.740005,
         "currency": "CNY",
         "haircut": 0.7,
-        "haircutReason": "货币资金充足，但需考虑地缘合规、海外业务、应收账款、渠道风险、创新业务再投资和少数股东分流，按一般优质制造业折价处理",
+        "haircutReason": "货币资金和净现金充足，但需考虑地缘合规、海外业务受限、应收账款、存货、创新业务再投资和少数股东分流，按一般优质制造业折价处理",
         "shareholderFcf": 19843950558.314934,
         "shareholderFcfCurrency": "CNY",
         "shareholderFcfBasis": "普通股东 FCF：合并 FCF 按归属普通股东权益比例扣除少数股东分流",
@@ -1410,7 +1432,7 @@
         },
         "assetDurability": {
           "status": "review",
-          "note": "渠道、算法、产品矩阵和工程能力仍有价值，但地缘合规和实体清单影响海外资产价值。"
+          "note": "渠道、算法、产品矩阵和工程能力仍有价值，但海外合规限制压低资产价值。"
         },
         "maintenanceCapexLight": {
           "status": "review",
@@ -1418,23 +1440,23 @@
         },
         "dividendFcfSupport": {
           "status": "pass",
-          "note": "FY2025自由现金流对现金分红和回购有覆盖能力。"
+          "note": "2025年自由现金流对现金分红和回购有覆盖能力。"
         },
         "dividendReinvestmentEfficiency": {
           "status": "review",
-          "note": "当前股息加回购综合回报约3.9%，低于A股6%门槛，回报盾不足以支持追买。"
+          "note": "分红和回购改善股东回报，但综合回报率仍不足以单独构成追买理由。"
         },
         "roeRoicDurability": {
           "status": "review",
-          "note": "FY2025 ROE约17.3%，2026Q1利润改善，但AIoT重估、海外限制和现金流季节性需继续验证。"
+          "note": "ROE和利润率修复已有迹象，但收入恢复、毛利率持续性和现金流季节性仍需验证。"
         },
         "valuationSystemRisk": {
           "status": "review",
-          "note": "美国FCC限制、地缘合规、数据安全和传统安防估值体系变化仍可能压低长期估值中枢。"
+          "note": "传统安防估值体系、美国限制、数据安全和地缘合规风险仍可能压制长期估值中枢。"
         }
       },
       "financials": {
-        "updatedAt": "2026-05-11 21:03:12",
+        "updatedAt": "2026-05-15 16:33:52",
         "source": "东方财富财务分析",
         "sourceSymbol": "002415.SZ",
         "currency": "CNY",
@@ -1454,6 +1476,9 @@
             "freeCashFlow": 21717364418.43,
             "eps": 1.546,
             "bookValuePerShare": 9.094310316397,
+            "dividendPerShare": 1.15,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "cashAndShortInvestments": 46513120901.840004,
             "interestBearingDebt": 8135093147.1,
             "netCash": 38378027754.740005,
@@ -1471,8 +1496,8 @@
             "inventoryTurnoverDays": 149.354005166495,
             "receivableTurnoverDays": 131.773233181318,
             "dividendPaid": 10565079386.24,
-            "peAtCurrentPrice": 22.87192794977462,
-            "pbAtCurrentPrice": 3.8881453766315457
+            "peAtCurrentPrice": 21.42302647599273,
+            "pbAtCurrentPrice": 3.6418373444074765
           },
           {
             "fiscalYear": "2024",
@@ -1489,6 +1514,10 @@
             "freeCashFlow": 8598349819.009998,
             "eps": 1.297,
             "bookValuePerShare": 8.736805840694,
+            "dividendPerShare": 0.7,
+            "dividendCurrency": "CNY",
+            "buybackAmount": 2028349444.12,
+            "buybackCurrency": "CNY",
             "cashAndShortInvestments": 36298264260.96,
             "interestBearingDebt": 7293544251.21,
             "netCash": 29004720009.75,
@@ -1506,8 +1535,8 @@
             "inventoryTurnoverDays": 140.251999656308,
             "receivableTurnoverDays": 143.475118255316,
             "dividendPaid": 8993845346.34,
-            "peAtCurrentPrice": 27.262914888474608,
-            "pbAtCurrentPrice": 4.0472457846840255
+            "peAtCurrentPrice": 25.535851142548008,
+            "pbAtCurrentPrice": 3.790858986200603
           },
           {
             "fiscalYear": "2023",
@@ -1524,6 +1553,9 @@
             "freeCashFlow": 12574393697,
             "eps": 1.52,
             "bookValuePerShare": 8.183209860199,
+            "dividendPerShare": 0.9,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "cashAndShortInvestments": 49638196042.54,
             "interestBearingDebt": 17217741068.16,
             "netCash": 32420454974.38,
@@ -1541,8 +1573,8 @@
             "inventoryTurnoverDays": 150.207132425814,
             "receivableTurnoverDays": 132.415046928536,
             "dividendPaid": 7083299395.46,
-            "peAtCurrentPrice": 23.263158296283923,
-            "pbAtCurrentPrice": 4.3210428688054785
+            "peAtCurrentPrice": 21.789472981503135,
+            "pbAtCurrentPrice": 4.0473114459610535
           },
           {
             "fiscalYear": "2022",
@@ -1559,6 +1591,10 @@
             "freeCashFlow": 6408454482.16,
             "eps": 1.37,
             "bookValuePerShare": 7.251588394745,
+            "dividendPerShare": 0.7,
+            "dividendCurrency": "CNY",
+            "buybackAmount": 2043476488.53,
+            "buybackCurrency": "CNY",
             "cashAndShortInvestments": 40011863999.94,
             "interestBearingDebt": 12010840511.78,
             "netCash": 28001023488.160004,
@@ -1576,8 +1612,8 @@
             "inventoryTurnoverDays": 151.8940952763,
             "receivableTurnoverDays": 121.378365038788,
             "dividendPaid": 8734449665.28,
-            "peAtCurrentPrice": 25.810219423614278,
-            "pbAtCurrentPrice": 4.876173147937609
+            "peAtCurrentPrice": 24.175181702105668,
+            "pbAtCurrentPrice": 4.567275075331881
           },
           {
             "fiscalYear": "2021",
@@ -1594,6 +1630,9 @@
             "freeCashFlow": 9610213831.6,
             "eps": 1.81,
             "bookValuePerShare": 6.797579758013,
+            "dividendPerShare": 0.9,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "cashAndShortInvestments": 34721870931.36,
             "interestBearingDebt": 8274201352.28,
             "netCash": 26447669579.08,
@@ -1611,8 +1650,8 @@
             "inventoryTurnoverDays": 123.532324805987,
             "receivableTurnoverDays": 106.457160248966,
             "dividendPaid": 7844017257.76,
-            "peAtCurrentPrice": 19.535911939420753,
-            "pbAtCurrentPrice": 5.2018515220316655
+            "peAtCurrentPrice": 18.29834195131755,
+            "pbAtCurrentPrice": 4.872322225104141
           },
           {
             "fiscalYear": "2020",
@@ -1629,6 +1668,9 @@
             "freeCashFlow": 14084528296.66,
             "eps": 1.445,
             "bookValuePerShare": 5.757455764645,
+            "dividendPerShare": 0.8,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "cashAndShortInvestments": 35459729108.27,
             "interestBearingDebt": 9468094735.67,
             "netCash": 25991634372.6,
@@ -1646,8 +1688,8 @@
             "inventoryTurnoverDays": 121.872117138253,
             "receivableTurnoverDays": 122.6975119567,
             "dividendPaid": 6704954160.69,
-            "peAtCurrentPrice": 24.47058865768274,
-            "pbAtCurrentPrice": 6.141601786589121
+            "peAtCurrentPrice": 22.9204144857334,
+            "pbAtCurrentPrice": 5.752540755113716
           },
           {
             "fiscalYear": "2019",
@@ -1664,6 +1706,9 @@
             "freeCashFlow": 5840441252.280001,
             "eps": 1.343,
             "bookValuePerShare": 4.805134561917,
+            "dividendPerShare": 0.7,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "cashAndShortInvestments": 27071948919.78,
             "interestBearingDebt": 7330374210.64,
             "netCash": 19741574709.14,
@@ -1681,8 +1726,8 @@
             "inventoryTurnoverDays": 98.225401906538,
             "receivableTurnoverDays": 118.403574431074,
             "dividendPaid": 5754605713.66,
-            "peAtCurrentPrice": 26.329114378519407,
-            "pbAtCurrentPrice": 7.358795087778926
+            "peAtCurrentPrice": 24.661205459333406,
+            "pbAtCurrentPrice": 6.892626731908128
           },
           {
             "fiscalYear": "2018",
@@ -1699,6 +1744,9 @@
             "freeCashFlow": 7057426720.55,
             "eps": 1.24,
             "bookValuePerShare": 4.07381085755,
+            "dividendPerShare": 0.6,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "cashAndShortInvestments": 26561535503.52,
             "interestBearingDebt": 7083826835.45,
             "netCash": 19477708668.07,
@@ -1716,8 +1764,8 @@
             "inventoryTurnoverDays": 69.852118192431,
             "receivableTurnoverDays": 113.137272610904,
             "dividendPaid": 4701738534.32,
-            "peAtCurrentPrice": 28.516129524477066,
-            "pbAtCurrentPrice": 8.679833661108448
+            "peAtCurrentPrice": 26.709676557971587,
+            "pbAtCurrentPrice": 8.129979542497273
           },
           {
             "fiscalYear": "2017",
@@ -1734,6 +1782,9 @@
             "freeCashFlow": 5680967046.690001,
             "eps": 1.03,
             "bookValuePerShare": 3.289469777618,
+            "dividendPerShare": 0.5,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "cashAndShortInvestments": 16472531360.18,
             "interestBearingDebt": 5254441926.8,
             "netCash": 11218089433.380001,
@@ -1751,8 +1802,8 @@
             "inventoryTurnoverDays": 67.270189645578,
             "receivableTurnoverDays": 111.4610784477,
             "dividendPaid": 3800451724.8,
-            "peAtCurrentPrice": 34.33009767995297,
-            "pbAtCurrentPrice": 10.749452951641574
+            "peAtCurrentPrice": 32.15533876882016,
+            "pbAtCurrentPrice": 10.068491632675194
           },
           {
             "fiscalYear": "2016",
@@ -1769,6 +1820,9 @@
             "freeCashFlow": 5304965396.18,
             "eps": 0.818,
             "bookValuePerShare": 3.97997730315,
+            "dividendPerShare": 0.6,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "cashAndShortInvestments": 13653625676.9,
             "interestBearingDebt": 4724289250.98,
             "netCash": 8929336425.92,
@@ -1786,27 +1840,27 @@
             "inventoryTurnoverDays": 64.159611820108,
             "receivableTurnoverDays": 109.178314320729,
             "dividendPaid": 2930913722.75,
-            "peAtCurrentPrice": 43.22738460923174,
-            "pbAtCurrentPrice": 8.88447292962336
+            "peAtCurrentPrice": 40.48899624924788,
+            "pbAtCurrentPrice": 8.321655227951062
           }
         ],
         "valuation": {
           "date": "2025-12-31",
-          "price": 35.36000061035156,
+          "price": 33.119998931884766,
           "currency": "CNY",
-          "pe": 22.87192794977462,
-          "pb": 3.8881453766315457,
-          "peg": 1.2350722219817514,
-          "dividendYield": 0.031108596748100095,
+          "pe": 21.42302647599273,
+          "pb": 3.6418373444074765,
+          "peg": 1.1568322954400947,
+          "dividendYield": 0.034722223342008925,
           "peRange": {
-            "min": 19.535911939420753,
-            "median": 26.069666901066842,
-            "max": 43.22738460923174
+            "min": 18.29834195131755,
+            "median": 24.41819358071954,
+            "max": 40.48899624924788
           },
           "pbRange": {
-            "min": 3.8881453766315457,
-            "median": 5.671726654310393,
-            "max": 10.749452951641574
+            "min": 3.6418373444074765,
+            "median": 5.312431490108929,
+            "max": 10.068491632675194
           },
           "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
         }
@@ -5690,7 +5744,6 @@
       }
     }
   ],
-  "funds": [],
   "plan": [
     {
       "rank": 1,
@@ -5744,9 +5797,9 @@
       "rank": 7,
       "symbol": "002415.SZ",
       "name": "海康威视",
-      "priority": "重点预期差候选/中优先级",
-      "advice": "现有1200股可继续持有；¥35-37不补仓，¥33-34仅复核，≤¥31.5进入正式加仓区，¥28-30为强安全边际区",
-      "discipline": "质量分84但长期股东现金流评分约73，新增买入仍要求约25%安全边际；综合回报率低于A股6%门槛，不因Q1利润高增而追买"
+      "priority": "观察/中低优先级",
+      "advice": "现有1200股可继续持有；当前价附近不加仓，¥28-30重新复核，¥24-26才进入高确定性加仓区",
+      "discipline": "以DCF中性价值约¥32为锚，新增买入需约25%安全边际；综合回报率未达A股6%主策略门槛，不因Q1利润高增追买"
     },
     {
       "rank": 8,
