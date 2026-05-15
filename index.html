@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>纸牌屋</title>
-    <link rel="stylesheet" href="./styles.css?v=position-sort" />
+    <link rel="stylesheet" href="./styles.css?v=funds" />
   </head>
   <body>
     <aside class="sidebar">
@@ -24,6 +24,10 @@
         <button class="nav-item" data-view="portfolio" title="持仓">
           <span class="nav-icon">▦</span>
           持仓
+        </button>
+        <button class="nav-item" data-view="funds" title="基金">
+          <span class="nav-icon">◌</span>
+          基金
         </button>
         <button class="nav-item" data-view="industry" title="研究台">
           <span class="nav-icon">○</span>
@@ -84,12 +88,12 @@
 
         <section class="metrics-grid executive-metrics" aria-label="核心指标">
           <article class="metric executive-metric">
-            <span>总资金</span>
+            <span>总资产</span>
             <strong id="totalFunds">¥0.00</strong>
-            <small>市值 + 现金</small>
+            <small>股票 + 基金 + 现金</small>
           </article>
           <article class="metric executive-metric">
-            <span>总市值</span>
+            <span>持仓市值</span>
             <strong id="totalValue">¥0.00</strong>
             <small id="positionCount">0 只股票</small>
           </article>
@@ -113,6 +117,26 @@
             <strong id="dataQualityMetric">0 项</strong>
             <small id="dataQualityDetail">关键数据完整</small>
           </article>
+        </section>
+
+        <section class="panel asset-allocation-panel" aria-label="资产配置">
+          <div class="allocation-donut-wrap" aria-label="股票基金现金占比饼图">
+            <svg class="allocation-donut" viewBox="0 0 190 190" role="img">
+              <title>股票、基金、现金资产占比</title>
+              <circle class="allocation-donut-bg" cx="95" cy="95" r="72"></circle>
+              <g id="assetAllocationDonut"></g>
+            </svg>
+            <div class="allocation-donut-center">
+              <span id="allocationCenterLabel">基金占比</span>
+              <strong id="allocationCenterValue">0.0%</strong>
+            </div>
+          </div>
+          <div class="asset-allocation-copy">
+            <p class="eyebrow">Asset Allocation</p>
+            <h2 id="assetAllocationTitle">股票、基金、现金配置</h2>
+            <p id="assetAllocationSummary">基金仓位会在这里展示，基金页负责具体净值、份额和交易流水管理。</p>
+            <div class="asset-allocation-legend" id="assetAllocationLegend"></div>
+          </div>
         </section>
 
         <section class="panel next-actions-panel">
@@ -142,7 +166,7 @@
           </div>
 
           <div class="table-wrap">
-            <table>
+            <table class="decision-table">
               <thead>
                 <tr>
                   <th>股票</th>
@@ -207,6 +231,37 @@
         </section>
       </section>
 
+      <section class="page" data-page="funds">
+        <section class="panel fund-management-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Fund Management</p>
+              <h2>基金管理</h2>
+            </div>
+          </div>
+
+          <div class="fund-summary-grid" id="fundSummary"></div>
+
+          <div class="table-wrap">
+            <table class="fund-table">
+              <thead>
+                <tr>
+                  <th>基金</th>
+                  <th>类型</th>
+                  <th>市值/净值</th>
+                  <th>份额/成本</th>
+                  <th>盈亏</th>
+                  <th>资产占比</th>
+                  <th>更新时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="fundsBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
       <section class="page" data-page="industry">
         <section class="panel">
           <div class="panel-head compact">
@@ -227,15 +282,29 @@
         <section class="panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Trades</p>
-              <h2>交易流水</h2>
+              <p class="eyebrow">Stock Trades</p>
+              <h2>股票交易流水</h2>
             </div>
             <button class="primary-button" id="openTradePanelSecondary">
               <span>＋</span>
-              新增交易
+              新增股票交易
             </button>
           </div>
           <div class="trade-list trade-list-page" id="tradeList"></div>
+        </section>
+
+        <section class="panel fund-trades-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Fund Trades</p>
+              <h2>基金交易流水</h2>
+            </div>
+            <button class="primary-button" id="openFundTradePanel" type="button">
+              <span>＋</span>
+              新增基金交易
+            </button>
+          </div>
+          <div class="trade-list trade-list-page" id="fundTradeList"></div>
         </section>
 
         <section class="panel decision-log-panel collapsed" id="decisionLogPanel">
@@ -274,25 +343,77 @@
           <button class="icon-button" type="button" id="closeTradePanel" title="关闭">×</button>
         </div>
 
+        <div class="asset-type-toggle" aria-label="交易类型">
+          <label>
+            <input type="radio" name="assetType" value="stock" checked />
+            <span>股票</span>
+          </label>
+          <label>
+            <input type="radio" name="assetType" value="fund" />
+            <span>基金</span>
+          </label>
+        </div>
+
         <div class="form-grid">
           <label>
-            股票名称
-            <input name="name" list="tradeStockNames" placeholder="中海物业" required />
+            <span id="tradeNameLabel">股票名称</span>
+            <input id="tradeNameInput" name="name" list="tradeStockNames" placeholder="中海物业" required />
             <datalist id="tradeStockNames"></datalist>
           </label>
           <label>
-            成交价
-            <input name="price" type="number" min="0.01" step="0.01" required />
+            <span id="tradePriceLabel">成交价</span>
+            <input name="price" type="number" min="0.01" step="0.0001" required />
           </label>
           <label>
-            股数
-            <input name="shares" type="number" step="1" placeholder="买入填正数，卖出填负数" required />
+            <span id="tradeSharesLabel">股数</span>
+            <input id="tradeSharesInput" name="shares" type="number" step="0.01" placeholder="买入填正数，卖出填负数" required />
           </label>
         </div>
 
         <div class="dialog-actions">
           <button type="button" class="ghost-button" id="cancelTrade">取消</button>
           <button type="submit" class="primary-button">保存交易</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="trade-dialog" id="fundDialog">
+      <form id="fundForm" method="dialog">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Fund NAV</p>
+            <h2>更新基金净值</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeFundPanel" title="关闭">×</button>
+        </div>
+
+        <input type="hidden" name="symbol" />
+        <div class="form-grid">
+          <label>
+            基金名称
+            <input name="name" required />
+          </label>
+          <label>
+            类型
+            <input name="category" placeholder="权益 / 债券 / 货币" />
+          </label>
+          <label>
+            当前净值
+            <input name="currentNav" type="number" min="0.0001" step="0.0001" required />
+          </label>
+          <label>
+            净值日期
+            <input name="currentNavDate" type="date" />
+          </label>
+          <label>
+            币种
+            <input name="currency" placeholder="CNY" />
+          </label>
+        </div>
+
+        <div class="dialog-actions">
+          <button type="button" class="ghost-button" id="cancelFund">取消</button>
+          <button type="submit" class="primary-button">保存净值</button>
         </div>
       </form>
     </dialog>
@@ -372,6 +493,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=position-sort"></script>
+    <script src="./app.js?v=funds"></script>
   </body>
 </html>
