@@ -1,0 +1,357 @@
+{
+  "updatedAt": "2026-05-14T20:13:31+08:00",
+  "industries": {
+    "beverage": {
+      "updatedAt": "2026-05-14T20:13:31+08:00",
+      "metrics": [
+        {
+          "key": "beverage-retail-sales",
+          "name": "饮料类零售额",
+          "unit": "亿元",
+          "latestValue": 553,
+          "valueText": "553亿元",
+          "asOf": "2026-03",
+          "source": "国家统计局社会消费品零售总额月度数据",
+          "sourceUrl": "https://www.stats.gov.cn/sj/zxfb/202601/t20260119_1962323.html",
+          "trendText": "近24个月窗口：从275亿元到553亿元，变化+101.1%。",
+          "tone": "strong",
+          "updatedAt": "2026-05-14T20:13:31+08:00",
+          "comment": "用限额以上单位饮料类月度零售额观察终端需求方向。",
+          "series": [
+            {
+              "date": "2026-01",
+              "value": 275
+            },
+            {
+              "date": "2026-03",
+              "value": 553
+            }
+          ]
+        },
+        {
+          "key": "beverage-retail-yoy",
+          "name": "饮料类零售额同比",
+          "unit": "%",
+          "latestValue": 6,
+          "valueText": "6.0%",
+          "asOf": "2026-03",
+          "source": "国家统计局社会消费品零售总额月度数据",
+          "sourceUrl": "https://www.stats.gov.cn/sj/zxfb/202601/t20260119_1962323.html",
+          "trendText": "近24个月窗口：从1.7%到6.0%，变化+4.3个百分点。",
+          "tone": "strong",
+          "updatedAt": "2026-05-14T20:13:31+08:00",
+          "comment": "同比方向用于判断饮料终端需求是否连续改善。",
+          "series": [
+            {
+              "date": "2026-01",
+              "value": 1.7
+            },
+            {
+              "date": "2026-03",
+              "value": 6
+            }
+          ]
+        }
+      ]
+    },
+    "dairy": {
+      "updatedAt": "2026-05-14T20:13:31+08:00",
+      "metrics": [
+        {
+          "key": "raw-milk-price",
+          "name": "生鲜乳均价",
+          "unit": "元/公斤",
+          "latestValue": 3.01,
+          "valueText": "3.01元/公斤",
+          "asOf": "2026-04",
+          "source": "农业农村部公开数据（含博亚和讯/中经百汇转载）",
+          "sourceUrl": "https://www.boyar.cn/article/1234651.html",
+          "trendText": "近24个月窗口：从3.39元/公斤到3.01元/公斤，变化-11.2%。",
+          "tone": "risk",
+          "updatedAt": "2026-05-14T20:13:31+08:00",
+          "comment": "原奶价格影响乳制品龙头毛利率，但价格低位也说明上游供需偏弱。",
+          "series": [
+            {
+              "date": "2024-05",
+              "value": 3.39
+            },
+            {
+              "date": "2024-06",
+              "value": 3.3
+            },
+            {
+              "date": "2024-07",
+              "value": 3.24
+            },
+            {
+              "date": "2024-08",
+              "value": 3.21
+            },
+            {
+              "date": "2024-09",
+              "value": 3.14
+            },
+            {
+              "date": "2024-10",
+              "value": 3.13
+            },
+            {
+              "date": "2024-11",
+              "value": 3.12
+            },
+            {
+              "date": "2024-12",
+              "value": 3.11
+            },
+            {
+              "date": "2025-01",
+              "value": 3.12
+            },
+            {
+              "date": "2025-02",
+              "value": 3.11
+            },
+            {
+              "date": "2025-03",
+              "value": 3.08
+            },
+            {
+              "date": "2025-04",
+              "value": 3.08
+            },
+            {
+              "date": "2025-05",
+              "value": 3.07
+            },
+            {
+              "date": "2025-06",
+              "value": 3.04
+            },
+            {
+              "date": "2025-07",
+              "value": 3.04
+            },
+            {
+              "date": "2025-08",
+              "value": 3.02
+            },
+            {
+              "date": "2025-09",
+              "value": 3.03
+            },
+            {
+              "date": "2025-10",
+              "value": 3.04
+            },
+            {
+              "date": "2025-11",
+              "value": 3.03
+            },
+            {
+              "date": "2025-12",
+              "value": 3.03
+            },
+            {
+              "date": "2026-01",
+              "value": 3.03
+            },
+            {
+              "date": "2026-02",
+              "value": 3.04
+            },
+            {
+              "date": "2026-03",
+              "value": 3.02
+            },
+            {
+              "date": "2026-04",
+              "value": 3.01
+            }
+          ]
+        }
+      ]
+    },
+    "oil": {
+      "updatedAt": "2026-05-14T20:13:31+08:00",
+      "metrics": [
+        {
+          "key": "brent-spot",
+          "name": "Brent 原油现货",
+          "unit": "美元/桶",
+          "latestValue": 117.29,
+          "valueText": "117.3美元/桶",
+          "asOf": "2026-04",
+          "source": "DataHub oil-prices / EIA Brent monthly",
+          "sourceUrl": "https://datahub.io/core/oil-prices/_r/-/data/brent-monthly.csv",
+          "trendText": "近24个月窗口：从81.8美元/桶到117.3美元/桶，变化+43.5%。",
+          "tone": "strong",
+          "updatedAt": "2026-05-14T20:13:31+08:00",
+          "comment": "油价是上游油气利润、自由现金流和分红能力的核心周期变量。",
+          "series": [
+            {
+              "date": "2024-05",
+              "value": 81.75
+            },
+            {
+              "date": "2024-06",
+              "value": 82.25
+            },
+            {
+              "date": "2024-07",
+              "value": 85.15
+            },
+            {
+              "date": "2024-08",
+              "value": 80.36
+            },
+            {
+              "date": "2024-09",
+              "value": 74.02
+            },
+            {
+              "date": "2024-10",
+              "value": 75.63
+            },
+            {
+              "date": "2024-11",
+              "value": 74.35
+            },
+            {
+              "date": "2024-12",
+              "value": 73.86
+            },
+            {
+              "date": "2025-01",
+              "value": 79.27
+            },
+            {
+              "date": "2025-02",
+              "value": 75.44
+            },
+            {
+              "date": "2025-03",
+              "value": 72.73
+            },
+            {
+              "date": "2025-04",
+              "value": 68.13
+            },
+            {
+              "date": "2025-05",
+              "value": 64.45
+            },
+            {
+              "date": "2025-06",
+              "value": 71.44
+            },
+            {
+              "date": "2025-07",
+              "value": 71.04
+            },
+            {
+              "date": "2025-08",
+              "value": 67.87
+            },
+            {
+              "date": "2025-09",
+              "value": 67.99
+            },
+            {
+              "date": "2025-10",
+              "value": 64.54
+            },
+            {
+              "date": "2025-11",
+              "value": 63.8
+            },
+            {
+              "date": "2025-12",
+              "value": 62.54
+            },
+            {
+              "date": "2026-01",
+              "value": 66.6
+            },
+            {
+              "date": "2026-02",
+              "value": 70.89
+            },
+            {
+              "date": "2026-03",
+              "value": 103.13
+            },
+            {
+              "date": "2026-04",
+              "value": 117.29
+            }
+          ]
+        }
+      ]
+    },
+    "property-services": {
+      "updatedAt": "2026-05-14T20:13:31+08:00",
+      "metrics": [
+        {
+          "key": "property-completion-yoy",
+          "name": "房屋竣工面积同比",
+          "unit": "%",
+          "latestValue": -18.1,
+          "valueText": "-18.1%",
+          "asOf": "2026-01",
+          "source": "国家统计局全国房地产市场基本情况",
+          "sourceUrl": "https://www.stats.gov.cn/sj/zxfb/202601/t20260119_1962324.html",
+          "trendText": "近24个月窗口内只有一个有效点，先展示最新值，等待更多历史数据形成趋势。",
+          "tone": "watch",
+          "updatedAt": "2026-05-14T20:13:31+08:00",
+          "comment": "竣工数据影响物管项目交付节奏，但项目质量比单纯面积更重要。",
+          "series": [
+            {
+              "date": "2026-01",
+              "value": -18.1
+            }
+          ]
+        },
+        {
+          "key": "property-funding-yoy",
+          "name": "房企到位资金同比",
+          "unit": "%",
+          "latestValue": -13.4,
+          "valueText": "-13.4%",
+          "asOf": "2026-01",
+          "source": "国家统计局全国房地产市场基本情况",
+          "sourceUrl": "https://www.stats.gov.cn/sj/zxfb/202601/t20260119_1962324.html",
+          "trendText": "近24个月窗口内只有一个有效点，先展示最新值，等待更多历史数据形成趋势。",
+          "tone": "watch",
+          "updatedAt": "2026-05-14T20:13:31+08:00",
+          "comment": "开发资金偏紧时，物管公司应收和关联方回款要重点观察。",
+          "series": [
+            {
+              "date": "2026-01",
+              "value": -13.4
+            }
+          ]
+        },
+        {
+          "key": "property-sales-area-yoy",
+          "name": "商品房销售面积同比",
+          "unit": "%",
+          "latestValue": -8.7,
+          "valueText": "-8.7%",
+          "asOf": "2026-01",
+          "source": "国家统计局全国房地产市场基本情况",
+          "sourceUrl": "https://www.stats.gov.cn/sj/zxfb/202601/t20260119_1962324.html",
+          "trendText": "近24个月窗口内只有一个有效点，先展示最新值，等待更多历史数据形成趋势。",
+          "tone": "watch",
+          "updatedAt": "2026-05-14T20:13:31+08:00",
+          "comment": "地产销售弱会间接影响物管新增项目和关联方回款压力。",
+          "series": [
+            {
+              "date": "2026-01",
+              "value": -8.7
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
