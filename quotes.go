@@ -69,6 +69,16 @@ type dailyClose struct {
 	Date  string
 }
 
+type fundNAV struct {
+	Symbol         string
+	Name           string
+	CurrentNAV     float64
+	Currency       string
+	CurrentNAVDate string
+	SourceSymbol   string
+	SourceName     string
+}
+
 func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -80,10 +90,16 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
-	updated, skipped, quoteRecords := updateQuotes(&state, &http.Client{Timeout: 12 * time.Second}, now)
-	if updated > 0 {
+	updated, fundUpdated, skipped, quoteRecords := updateQuotes(&state, &http.Client{Timeout: 12 * time.Second}, now)
+	if len(quoteRecords) > 0 {
 		if err := saveRuntimeQuoteRecords(quoteRecords, now.Format("2006-01-02 15:04:05")); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to save runtime quotes")
+			return
+		}
+	}
+	if fundUpdated > 0 {
+		if err := saveState(state); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to save fund nav")
 			return
 		}
 	}
@@ -96,8 +112,9 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []QuoteSkip, []RuntimeQuote) {
+func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, int, []QuoteSkip, []RuntimeQuote) {
 	updated := 0
+	fundUpdated := 0
 	skipped := []QuoteSkip{}
 	quoteRecords := map[string]RuntimeQuote{}
 	cache := make(map[string]quote)
@@ -138,7 +155,24 @@ func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []Q
 		updated++
 	}
 
-	return updated, skipped, runtimeQuoteList(quoteRecords)
+	for i := range state.Funds {
+		fund := &state.Funds[i]
+		if strings.TrimSpace(fund.Symbol) == "" {
+			continue
+		}
+
+		nav, err := fetchFundNAV(client, fund.Symbol)
+		if err != nil {
+			skipped = append(skipped, QuoteSkip{Type: "fund", Symbol: fund.Symbol, Name: fund.Name, Error: err.Error()})
+			continue
+		}
+
+		applyFundNAV(fund, nav, updateLabel)
+		updated++
+		fundUpdated++
+	}
+
+	return updated, fundUpdated, skipped, runtimeQuoteList(quoteRecords)
 }
 
 func quoteSymbols(state *AppState) []string {
@@ -224,9 +258,31 @@ func applyCandidateQuote(candidate *Candidate, quote quote, updateLabel string) 
 	candidate.UpdatedAt = quoteUpdateLabel(updateLabel, quote)
 }
 
+func applyFundNAV(fund *Fund, nav fundNAV, updateLabel string) {
+	if fund == nil || nav.CurrentNAV <= 0 {
+		return
+	}
+	fund.CurrentNAV = nav.CurrentNAV
+	if strings.TrimSpace(nav.CurrentNAVDate) != "" {
+		fund.CurrentNAVDate = strings.TrimSpace(nav.CurrentNAVDate)
+	}
+	if strings.TrimSpace(fund.Name) == "" && strings.TrimSpace(nav.Name) != "" {
+		fund.Name = strings.TrimSpace(nav.Name)
+	}
+	if strings.TrimSpace(fund.Currency) == "" {
+		fund.Currency = strings.ToUpper(firstNonEmpty(nav.Currency, "CNY"))
+	}
+	fund.UpdatedAt = fundNAVUpdateLabel(updateLabel, nav)
+}
+
 func quoteUpdateLabel(updateLabel string, quote quote) string {
 	sourceName := firstNonEmpty(quote.SourceName, "Yahoo Finance 日线收盘价")
 	return fmt.Sprintf("%s；行情源 %s；代码 %s；币种 %s；日期 %s/%s", updateLabel, sourceName, quote.SourceSymbol, quote.Currency, quote.PreviousCloseDate, quote.PriceDate)
+}
+
+func fundNAVUpdateLabel(updateLabel string, nav fundNAV) string {
+	sourceName := firstNonEmpty(nav.SourceName, "东方财富基金净值")
+	return fmt.Sprintf("%s；净值源 %s；代码 %s", updateLabel, sourceName, nav.SourceSymbol)
 }
 
 func quoteTriggerDecisionLog(state *AppState, symbol string, name string, currency string, beforePrice float64, currentPrice float64, intrinsicValue *float64, currentDate string, previousDate string, now time.Time) *DecisionLog {
@@ -477,6 +533,116 @@ func trailingDividendFromEvents(events map[string]struct {
 		labelDate = latest
 	}
 	return &total, "TTM " + labelDate.Format("2006-01-02")
+}
+
+func fetchFundNAV(client *http.Client, symbol string) (fundNAV, error) {
+	code, err := eastmoneyFundCode(symbol)
+	if err != nil {
+		return fundNAV{}, err
+	}
+
+	endpoint := "https://fundgz.1234567.com.cn/js/" + url.PathEscape(code) + ".js?rt=" + strconv.FormatInt(time.Now().UnixMilli(), 10)
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return fundNAV{}, err
+	}
+	req.Header.Set("Accept", "application/javascript,text/javascript,*/*")
+	req.Header.Set("Referer", "https://fund.eastmoney.com/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website quote updater)")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fundNAV{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return fundNAV{}, fmt.Errorf("fund nav request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return fundNAV{}, err
+	}
+	return parseEastmoneyFundNAV(symbol, string(body))
+}
+
+func parseEastmoneyFundNAV(symbol string, body string) (fundNAV, error) {
+	payloadText, err := jsonFromJSONP(body)
+	if err != nil {
+		return fundNAV{}, err
+	}
+	var payload struct {
+		FundCode    string `json:"fundcode"`
+		Name        string `json:"name"`
+		NetValueDay string `json:"jzrq"`
+		NetValue    string `json:"dwjz"`
+		Estimate    string `json:"gsz"`
+		EstimateAt  string `json:"gztime"`
+	}
+	if err := json.Unmarshal([]byte(payloadText), &payload); err != nil {
+		return fundNAV{}, err
+	}
+
+	nav, err := strconv.ParseFloat(strings.TrimSpace(payload.NetValue), 64)
+	if err != nil || nav <= 0 {
+		nav, err = strconv.ParseFloat(strings.TrimSpace(payload.Estimate), 64)
+		if err != nil || nav <= 0 {
+			return fundNAV{}, errors.New("missing fund net value")
+		}
+	}
+
+	code := firstNonEmpty(payload.FundCode, strings.TrimSuffix(normalizeFundSymbol(symbol), ".OF"))
+	navDate := firstNonEmpty(payload.NetValueDay, dateFromFundEstimateTime(payload.EstimateAt))
+	return fundNAV{
+		Symbol:         normalizeFundSymbol(symbol),
+		Name:           strings.TrimSpace(payload.Name),
+		CurrentNAV:     nav,
+		Currency:       "CNY",
+		CurrentNAVDate: navDate,
+		SourceSymbol:   code,
+		SourceName:     "东方财富基金净值",
+	}, nil
+}
+
+func jsonFromJSONP(body string) (string, error) {
+	body = strings.TrimSpace(body)
+	start := strings.Index(body, "(")
+	end := strings.LastIndex(body, ")")
+	if start < 0 || end <= start {
+		if strings.HasPrefix(body, "{") && strings.HasSuffix(body, "}") {
+			return body, nil
+		}
+		return "", errors.New("invalid jsonp fund nav response")
+	}
+	return strings.TrimSpace(body[start+1 : end]), nil
+}
+
+func dateFromFundEstimateTime(value string) string {
+	value = strings.TrimSpace(value)
+	if len(value) >= len("2006-01-02") {
+		if parsed, err := time.Parse("2006-01-02", value[:len("2006-01-02")]); err == nil {
+			return parsed.Format("2006-01-02")
+		}
+	}
+	return ""
+}
+
+func eastmoneyFundCode(symbol string) (string, error) {
+	symbol = normalizeFundSymbol(symbol)
+	if dot := strings.Index(symbol, "."); dot >= 0 {
+		symbol = symbol[:dot]
+	}
+	if len(symbol) != 6 {
+		return "", fmt.Errorf("unsupported fund symbol: %s", symbol)
+	}
+	for _, char := range symbol {
+		if char < '0' || char > '9' {
+			return "", fmt.Errorf("unsupported fund symbol: %s", symbol)
+		}
+	}
+	return symbol, nil
 }
 
 func fetchEastmoneyQuote(client *http.Client, symbol string) (quote, error) {

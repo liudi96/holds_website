@@ -6,6 +6,7 @@ const seedState = {
   fx: { CNY: 1, HKD: 0.8716, USD: 7.1 },
   trades: [],
   decisionLogs: [],
+  funds: [],
   holdings: [
     {
       symbol: "0700.HK",
@@ -298,6 +299,7 @@ let masterMatrixFilter = "all";
 const pageTitles = {
   overview: "总览",
   portfolio: "持仓",
+  funds: "基金",
   industry: "研究台",
   trades: "交易页",
   "industry-detail": "行业分析",
@@ -309,6 +311,15 @@ const elements = {
   positionsBody: document.querySelector("#positionsBody"),
   tradeList: document.querySelector("#tradeList"),
   allocationChart: document.querySelector("#allocationChart"),
+  assetAllocationDonut: document.querySelector("#assetAllocationDonut"),
+  allocationCenterLabel: document.querySelector("#allocationCenterLabel"),
+  allocationCenterValue: document.querySelector("#allocationCenterValue"),
+  assetAllocationTitle: document.querySelector("#assetAllocationTitle"),
+  assetAllocationSummary: document.querySelector("#assetAllocationSummary"),
+  assetAllocationLegend: document.querySelector("#assetAllocationLegend"),
+  fundSummary: document.querySelector("#fundSummary"),
+  fundsBody: document.querySelector("#fundsBody"),
+  fundTradeList: document.querySelector("#fundTradeList"),
   overviewPlanList: document.querySelector("#overviewPlanList"),
   committeeConsensus: document.querySelector("#committeeConsensus"),
   disciplineDashboard: document.querySelector("#disciplineDashboard"),
@@ -352,6 +363,13 @@ const elements = {
   tradeDialog: document.querySelector("#tradeDialog"),
   tradeForm: document.querySelector("#tradeForm"),
   tradeStockNames: document.querySelector("#tradeStockNames"),
+  tradeNameLabel: document.querySelector("#tradeNameLabel"),
+  tradePriceLabel: document.querySelector("#tradePriceLabel"),
+  tradeSharesLabel: document.querySelector("#tradeSharesLabel"),
+  tradeNameInput: document.querySelector("#tradeNameInput"),
+  tradeSharesInput: document.querySelector("#tradeSharesInput"),
+  fundDialog: document.querySelector("#fundDialog"),
+  fundForm: document.querySelector("#fundForm"),
   holdingDialog: document.querySelector("#holdingDialog"),
   holdingForm: document.querySelector("#holdingForm"),
   researchDialog: document.querySelector("#researchDialog"),
@@ -488,6 +506,10 @@ function normalizeSymbol(symbol) {
     }
   }
   return text;
+}
+
+function normalizeFundKey(value) {
+  return String(value ?? "").trim().toUpperCase();
 }
 
 function escapeHTML(value) {
@@ -1398,16 +1420,56 @@ function computePositions() {
     });
 }
 
+function computeFunds() {
+  return (state.funds ?? [])
+    .filter((fund) => (finiteNumber(fund.shares) ?? 0) > 0)
+    .map((fund) => {
+      const shares = finiteNumber(fund.shares) ?? 0;
+      const cost = finiteNumber(fund.cost) ?? 0;
+      const currentNav = finiteNumber(fund.currentNav);
+      const hasCurrentNav = Number.isFinite(currentNav) && currentNav > 0;
+      const marketValueLocal = hasCurrentNav ? shares * currentNav : 0;
+      const costValueLocal = shares * cost;
+      const marketValueCny = marketValueLocal * fx(fund.currency);
+      const costValueCny = costValueLocal * fx(fund.currency);
+      const pnlCny = hasCurrentNav ? marketValueCny - costValueCny : null;
+      return {
+        ...fund,
+        shares,
+        cost,
+        currentNav,
+        marketValueLocal,
+        marketValueCny,
+        costValueCny,
+        pnlCny,
+        pnlRate: costValueCny && Number.isFinite(pnlCny) ? (pnlCny / costValueCny) * 100 : null
+      };
+    });
+}
+
+function assetSummary(positions = computePositions(), funds = computeFunds()) {
+  const stockValue = positions.reduce((sum, item) => sum + (finiteNumber(item.marketValueCny) ?? 0), 0);
+  const fundValue = funds.reduce((sum, item) => sum + (finiteNumber(item.marketValueCny) ?? 0), 0);
+  const cashValue = finiteNumber(state.cash) ?? 0;
+  const totalAssets = stockValue + fundValue + cashValue;
+  return { stockValue, fundValue, cashValue, totalAssets };
+}
+
 function syncCash() {
   if (Number.isFinite(state.cash)) return;
 
-  const invested = state.holdings.reduce((sum, holding) => {
+  const investedStocks = state.holdings.reduce((sum, holding) => {
     const shares = finiteNumber(holding.shares) ?? 0;
     const currentPrice = finiteNumber(holding.currentPrice) ?? 0;
     return sum + shares * currentPrice * fx(holding.currency);
   }, 0);
+  const investedFunds = (state.funds ?? []).reduce((sum, fund) => {
+    const shares = finiteNumber(fund.shares) ?? 0;
+    const currentNav = finiteNumber(fund.currentNav) ?? 0;
+    return sum + shares * currentNav * fx(fund.currency);
+  }, 0);
 
-  state.cash = state.totalCapital - invested;
+  state.cash = state.totalCapital - investedStocks - investedFunds;
 }
 
 function getFilteredPositions(positions) {
@@ -1986,19 +2048,21 @@ function consensusLabel(stock, totalValue = 0) {
   return consensusText(consensusCount(stock, totalValue));
 }
 
-function renderMetrics(positions) {
+function renderMetrics(positions, funds = computeFunds()) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const fundValue = funds.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const holdingsValue = totalValue + fundValue;
   const totalCost = positions.reduce((sum, item) => sum + (finiteNumber(item.costValueCny) ?? 0), 0);
   const totalPositionPnl = positions.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
   const totalPositionPnlRate = totalCost ? (totalPositionPnl / totalCost) * 100 : 0;
   const cashValue = finiteNumber(state.cash) ?? 0;
-  const totalFunds = totalValue + cashValue;
+  const totalFunds = holdingsValue + cashValue;
   const dayChange = positions.reduce((sum, item) => sum + item.dayChange, 0);
   const dividends = dividendSummary(positions);
   const dividendYield = totalValue ? dividends.annualCashCny / totalValue : 0;
 
   elements.totalFunds.textContent = wholeCurrency(totalFunds);
-  elements.totalValue.textContent = wholeCurrency(totalValue);
+  elements.totalValue.textContent = wholeCurrency(holdingsValue);
   if (elements.totalPositionPnl) {
     elements.totalPositionPnl.textContent = wholeCurrency(totalPositionPnl);
     elements.totalPositionPnl.className = totalPositionPnl >= 0 ? "positive" : "negative";
@@ -2019,8 +2083,50 @@ function renderMetrics(positions) {
   elements.portfolioDividendYield.textContent = dividends.topContributor
     ? `组合税后股息率 ${percent(dividendYield * 100, false)} · 高风险 ${percent(dividends.annualCashCny ? (dividends.highRiskCashCny / dividends.annualCashCny) * 100 : 0, false)}`
     : "组合税后股息率 0.00%";
-  elements.positionCount.textContent = `${positions.length} 只股票`;
-  elements.recordCount.textContent = `${state.holdings.length} 条持仓 · ${state.trades.length} 条交易`;
+  elements.positionCount.textContent = `${positions.length} 只股票 · ${funds.length} 只基金`;
+  elements.recordCount.textContent = `${state.holdings.length} 条股票 · ${(state.funds ?? []).length} 只基金 · ${state.trades.length} 条交易`;
+}
+
+function renderAssetAllocation(positions, funds) {
+  if (!elements.assetAllocationDonut || !elements.assetAllocationLegend) return;
+  const { stockValue, fundValue, cashValue, totalAssets } = assetSummary(positions, funds);
+  const chartCash = Math.max(cashValue, 0);
+  const chartTotal = stockValue + fundValue + chartCash;
+  const circumference = 2 * Math.PI * 72;
+  const segments = [
+    { key: "stock", label: "股票", value: stockValue, chartValue: stockValue, color: "#087f5b" },
+    { key: "fund", label: "基金", value: fundValue, chartValue: fundValue, color: "#1c4f82" },
+    { key: "cash", label: "现金", value: cashValue, chartValue: chartCash, color: "#d69b2d" }
+  ];
+  let offset = 0;
+  elements.assetAllocationDonut.innerHTML = chartTotal > 0
+    ? segments.map((segment) => {
+        const length = (segment.chartValue / chartTotal) * circumference;
+        const html = `<circle cx="95" cy="95" r="72" stroke="${segment.color}" stroke-dasharray="${length} ${circumference}" stroke-dashoffset="${-offset}"></circle>`;
+        offset += length;
+        return html;
+      }).join("")
+    : "";
+
+  const fundShare = totalAssets > 0 ? (fundValue / totalAssets) * 100 : 0;
+  elements.allocationCenterLabel.textContent = "基金占比";
+  elements.allocationCenterValue.textContent = `${fundShare.toFixed(1)}%`;
+  elements.assetAllocationTitle.textContent = fundValue > 0 ? "股票 / 基金 / 现金配置" : "股票 / 现金配置";
+  elements.assetAllocationSummary.textContent = fundValue > 0
+    ? "按当前市值和现金余额拆分总资产，基金净值在基金页维护，交易记录统一进入交易页。"
+    : "按当前股票市值和现金余额拆分总资产；新增基金交易后，这里会同步展示基金占比。";
+  elements.assetAllocationLegend.innerHTML = segments.map((segment) => {
+    const share = totalAssets > 0 ? (segment.value / totalAssets) * 100 : 0;
+    const negativeNote = segment.key === "cash" && segment.value < 0 ? " · 现金为负" : "";
+    return `
+      <div class="asset-allocation-legend-item">
+        <span class="allocation-dot" style="background: ${segment.color}"></span>
+        <span>${escapeHTML(segment.label)}</span>
+        <span>${wholeCurrency(segment.value)}${negativeNote}</span>
+        <strong>${share.toFixed(1)}%</strong>
+      </div>
+    `;
+  }).join("");
 }
 
 function decisionToneClass(tone) {
@@ -2177,18 +2283,110 @@ function renderTrades() {
 
   elements.tradeList.innerHTML = recentTrades
     .map((trade) => {
+      const assetType = String(trade.assetType ?? "stock").toLowerCase();
       const sideClass = trade.side === "buy" ? "positive" : "negative";
       const sideText = trade.side === "buy" ? "买入" : "卖出";
+      const unit = assetType === "fund" ? "份额" : "股";
+      const priceLabel = assetType === "fund" ? "成交净值" : "最新价";
       return `
         <div class="trade-item">
-          <strong>${trade.symbol} · ${sideText}</strong>
+          <strong>${escapeHTML(assetType === "fund" ? trade.name : trade.symbol)} · ${sideText}</strong>
           <span class="${sideClass}">${currency(trade.price, trade.currency)}</span>
-          <small>${trade.date} · ${trade.name}</small>
-          <small>${trade.shares} 股 · 最新价 ${currency(trade.currentPrice, trade.currency)}</small>
+          <small>${trade.date} · ${escapeHTML(trade.name)}</small>
+          <small>${trade.shares} ${unit} · ${priceLabel} ${currency(trade.currentPrice, trade.currency)}</small>
         </div>
       `;
     })
     .join("");
+}
+
+function fundCategoryTone(category) {
+  const text = String(category ?? "").trim();
+  if (/债|固收/.test(text)) return "bond";
+  if (/货币|现金/.test(text)) return "cash";
+  if (/权益|股票|混合|红利/.test(text)) return "equity";
+  return "neutral";
+}
+
+function renderFunds(funds) {
+  if (!elements.fundSummary || !elements.fundsBody) return;
+  const { totalAssets } = assetSummary(computePositions(), funds);
+  const fundValue = funds.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const fundCost = funds.reduce((sum, item) => sum + item.costValueCny, 0);
+  const fundPnl = funds.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
+  const fundPnlRate = fundCost ? (fundPnl / fundCost) * 100 : 0;
+  elements.fundSummary.innerHTML = [
+    ["基金总市值", wholeCurrency(fundValue)],
+    ["基金总盈亏", wholeCurrency(fundPnl), fundPnl >= 0 ? "positive" : "negative"],
+    ["持有基金数", `${funds.length} 只`],
+    ["平均收益率", percent(fundPnlRate), fundPnl >= 0 ? "positive" : "negative"]
+  ].map(([label, value, className]) => `
+    <div class="fund-summary-cell">
+      <span>${label}</span>
+      <strong class="${className || ""}">${value}</strong>
+    </div>
+  `).join("");
+
+  if (!funds.length) {
+    elements.fundsBody.innerHTML = `<tr><td colspan="8" class="empty-state">暂无基金持仓；点击“新增基金交易”买入后自动生成基金持仓</td></tr>`;
+    return;
+  }
+
+  elements.fundsBody.innerHTML = funds
+    .slice()
+    .sort((a, b) => b.marketValueCny - a.marketValueCny)
+    .map((fund, index) => {
+      const pnlClass = fund.pnlCny >= 0 ? "positive" : "negative";
+      const assetShare = totalAssets > 0 ? (fund.marketValueCny / totalAssets) * 100 : 0;
+      const category = displayText(fund.category, "未分类");
+      return `
+        <tr>
+          <td>
+            <div class="fund-name-cell">
+              <span class="fund-code">F${String(index + 1).padStart(3, "0")}</span>
+              <div>
+                <strong>${escapeHTML(fund.name)}</strong>
+                <span>${escapeHTML(fund.symbol)}</span>
+              </div>
+            </div>
+          </td>
+          <td><span class="fund-pill ${fundCategoryTone(category)}">${escapeHTML(category)}</span></td>
+          <td data-label="市值/净值"><strong>${wholeCurrency(fund.marketValueCny)}</strong><br /><small>净值 ${currency(fund.currentNav, fund.currency)}</small></td>
+          <td data-label="份额/成本"><strong>${fund.shares.toLocaleString("zh-CN", { maximumFractionDigits: 2 })}</strong><br /><small>成本 ${currency(fund.cost, fund.currency)}</small></td>
+          <td data-label="盈亏" class="${pnlClass}"><strong>${wholeCurrency(fund.pnlCny)}</strong><br /><small>${percent(fund.pnlRate)}</small></td>
+          <td data-label="资产占比"><strong>${assetShare.toFixed(1)}%</strong><br /><small>总资产</small></td>
+          <td data-label="更新时间"><strong>${escapeHTML(displayText(fund.currentNavDate, "-"))}</strong><br /><small>${escapeHTML(displayText(fund.updatedAt, "手动维护"))}</small></td>
+          <td data-label="操作">
+            <button class="icon-button edit-fund" type="button" data-edit-fund="${escapeHTML(fund.symbol)}" title="更新净值">✎</button>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderFundTrades() {
+  if (!elements.fundTradeList) return;
+  const trades = [...(state.trades ?? [])]
+    .filter((trade) => String(trade.assetType ?? "stock").toLowerCase() === "fund")
+    .reverse();
+  if (!trades.length) {
+    elements.fundTradeList.innerHTML = `<div class="empty-state">暂无基金交易记录</div>`;
+    return;
+  }
+  elements.fundTradeList.innerHTML = trades.map((trade) => {
+    const sideClass = trade.side === "buy" ? "positive" : "negative";
+    const sideText = trade.side === "buy" ? "买入" : "卖出";
+    const amount = trade.shares * trade.price * fx(trade.currency);
+    return `
+      <div class="trade-item">
+        <strong>${escapeHTML(trade.name)} · ${sideText}</strong>
+        <span class="${sideClass}">${wholeCurrency(amount)}</span>
+        <small>${escapeHTML(trade.date)} · 成交净值 ${currency(trade.price, trade.currency)}</small>
+        <small>${Number(trade.shares).toLocaleString("zh-CN", { maximumFractionDigits: 2 })} 份额</small>
+      </div>
+    `;
+  }).join("");
 }
 
 function findStockForPlanItem(item) {
@@ -4656,24 +4854,30 @@ function renderStockDetail(positions, symbol) {
 function renderTradeStockNames() {
   if (!elements.tradeStockNames) return;
   const seen = new Set();
-  const stocks = [...(state.holdings ?? []), ...(state.candidates ?? [])]
-    .filter((stock) => stock?.name && stock?.symbol)
-    .filter((stock) => {
-      const key = normalizeSymbol(stock.symbol);
+  const items = [
+    ...(state.holdings ?? []).map((stock) => ({ ...stock, optionType: "股票" })),
+    ...(state.candidates ?? []).map((stock) => ({ ...stock, optionType: "候选" })),
+    ...(state.funds ?? []).map((fund) => ({ ...fund, optionType: "基金" }))
+  ]
+    .filter((item) => item?.name && item?.symbol)
+    .filter((item) => {
+      const key = `${item.optionType}:${item.optionType === "基金" ? normalizeFundKey(item.symbol) : normalizeSymbol(item.symbol)}`;
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
-  elements.tradeStockNames.innerHTML = stocks
-    .map((stock) => `<option value="${escapeHTML(stock.name)}" label="${escapeHTML(normalizeSymbol(stock.symbol))}"></option>`)
+  elements.tradeStockNames.innerHTML = items
+    .map((item) => `<option value="${escapeHTML(item.name)}" label="${escapeHTML(`${item.optionType} · ${item.symbol}`)}"></option>`)
     .join("");
 }
 
 function render() {
   const positions = computePositions();
+  const funds = computeFunds();
   renderTradeStockNames();
   renderQuoteUpdateStatus(positions);
-  renderMetrics(positions);
+  renderMetrics(positions, funds);
+  renderAssetAllocation(positions, funds);
   renderPositions(positions);
   renderDecisionArea(positions);
   renderCommitteeOverview(positions);
@@ -4681,6 +4885,8 @@ function render() {
   renderDecisionLogs();
   renderAllocation(positions);
   renderTrades();
+  renderFunds(funds);
+  renderFundTrades();
   renderPlanAndCandidates();
   renderIndustryDesk(positions);
   if (window.location.hash.startsWith("#industry=")) {
@@ -4701,6 +4907,22 @@ function findTradeStock(input) {
     stocks.find((stock) => String(stock.name ?? "").trim() === text) ||
     stocks.find((stock) => {
       const name = String(stock.name ?? "").trim();
+      return name && (name.includes(text) || text.includes(name));
+    }) ||
+    null
+  );
+}
+
+function findTradeFund(input) {
+  const text = String(input ?? "").trim();
+  if (!text) return null;
+  const normalized = normalizeFundKey(text);
+  const funds = state.funds ?? [];
+  return (
+    funds.find((fund) => normalizeFundKey(fund.symbol) === normalized) ||
+    funds.find((fund) => String(fund.name ?? "").trim() === text) ||
+    funds.find((fund) => {
+      const name = String(fund.name ?? "").trim();
       return name && (name.includes(text) || text.includes(name));
     }) ||
     null
@@ -4754,12 +4976,32 @@ function removeCandidate(symbol) {
 }
 
 function tradeFromSimpleForm(formData) {
+  const assetType = String(formData.get("assetType") ?? "stock").trim().toLowerCase() === "fund" ? "fund" : "stock";
   const nameInput = String(formData.get("name") ?? "").trim();
   const signedShares = Number(formData.get("shares"));
   const price = Number(formData.get("price"));
-  if (!nameInput) throw new Error("请填写股票名称");
-  if (!Number.isFinite(signedShares) || signedShares === 0) throw new Error("股数不能为 0；买入填正数，卖出填负数");
-  if (!Number.isFinite(price) || price <= 0) throw new Error("成交价必须大于 0");
+  if (!nameInput) throw new Error(assetType === "fund" ? "请填写基金名称" : "请填写股票名称");
+  if (!Number.isFinite(signedShares) || signedShares === 0) throw new Error(assetType === "fund" ? "份额不能为 0；买入填正数，卖出填负数" : "股数不能为 0；买入填正数，卖出填负数");
+  if (!Number.isFinite(price) || price <= 0) throw new Error(assetType === "fund" ? "成交净值必须大于 0" : "成交价必须大于 0");
+
+  if (assetType === "fund") {
+    const fund = findTradeFund(nameInput);
+    const side = signedShares < 0 ? "sell" : "buy";
+    if (!fund && side === "sell") throw new Error(`未找到“${nameInput}”对应的基金持仓`);
+    const shares = Math.abs(signedShares);
+    return {
+      id: Date.now(),
+      date: new Date().toISOString().slice(0, 10),
+      assetType: "fund",
+      symbol: fund?.symbol || nameInput,
+      name: fund?.name || nameInput,
+      side,
+      shares,
+      price,
+      currency: String(fund?.currency || "CNY").toUpperCase(),
+      currentPrice: Number(fund?.currentNav) > 0 ? Number(fund.currentNav) : price
+    };
+  }
 
   const stock = findTradeStock(nameInput);
   if (!stock) throw new Error(`未找到“${nameInput}”，请先把它加入持仓或候选池`);
@@ -4772,6 +5014,7 @@ function tradeFromSimpleForm(formData) {
   return {
     id: Date.now(),
     date: new Date().toISOString().slice(0, 10),
+    assetType: "stock",
     symbol,
     name: stock.name || nameInput,
     side,
@@ -4792,6 +5035,58 @@ async function addTrade(formData) {
       method: "POST",
       body: JSON.stringify(trade)
     });
+    saveState();
+    render();
+    return;
+  }
+
+  if (trade.assetType === "fund") {
+    state.funds ??= [];
+    let fund = state.funds.find((item) => normalizeFundKey(item.symbol) === normalizeFundKey(symbol));
+    if (!fund) {
+      if (side === "sell") throw new Error("未找到可卖出的基金持仓");
+      fund = {
+        symbol,
+        name: trade.name,
+        shares: 0,
+        cost: price,
+        currentNav: trade.currentPrice,
+        currentNavDate: trade.date,
+        currency: currencyCode,
+        category: "未分类",
+        updatedAt: trade.date
+      };
+      state.funds.push(fund);
+    }
+
+    if (side === "buy") {
+      const totalCost = fund.shares * fund.cost + shares * price;
+      fund.shares += shares;
+      fund.cost = totalCost / fund.shares;
+    } else {
+      fund.shares = Math.max(0, fund.shares - shares);
+    }
+
+    fund.name = trade.name || fund.name;
+    fund.currency = currencyCode;
+    fund.currentNav = trade.currentPrice;
+    fund.currentNavDate = trade.date;
+    fund.updatedAt = trade.date;
+    state.trades.push(trade);
+    state.cash += side === "sell" ? shares * price * fx(currencyCode) : -(shares * price * fx(currencyCode));
+    appendClientDecisionLog({
+      type: "trade",
+      symbol,
+      name: fund.name,
+      price,
+      currency: currencyCode,
+      decision: `${side === "buy" ? "买入" : "卖出"} ${fund.name}`,
+      discipline: fund.category || "基金持仓管理",
+      detail: `${side === "buy" ? "买入" : "卖出"} ${shares} 份额；成交净值 ${currencyCode} ${price.toFixed(4)}；录入净值 ${currencyCode} ${trade.currentPrice.toFixed(4)}`
+    });
+    if (side === "sell" && fund.shares === 0) {
+      state.funds = state.funds.filter((item) => normalizeFundKey(item.symbol) !== normalizeFundKey(symbol));
+    }
     saveState();
     render();
     return;
@@ -4902,7 +5197,7 @@ async function updateQuotes() {
 
   elements.updateQuotesButton.disabled = true;
   elements.updateQuotesButton.innerHTML = "<span>↻</span> 更新中";
-  setQuoteUpdateStatus("正在拉取持仓和候选池最新日线收盘价及股息数据...");
+  setQuoteUpdateStatus("正在拉取股票行情、股息数据和基金最新净值...");
 
   try {
     const result = await requestJSON("/api/quotes/update", { method: "POST" });
@@ -4914,9 +5209,9 @@ async function updateQuotes() {
     const skipped = result.skipped ?? [];
     if (skipped.length) {
       const preview = skipped.slice(0, 3).map((item) => `${item.symbol} ${item.error}`).join("；");
-      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，股息数据已刷新，${skipped.length} 个失败：${preview}`, "error");
+      setQuoteUpdateStatus(`已更新 ${result.updated} 项行情/净值，${skipped.length} 个失败：${preview}`, "error");
     } else {
-      setQuoteUpdateStatus(`已更新 ${result.updated} 个标的，股息数据已刷新`, "success");
+      setQuoteUpdateStatus(`已更新 ${result.updated} 项行情/净值`, "success");
     }
   } finally {
     elements.updateQuotesButton.disabled = false;
@@ -5040,6 +5335,57 @@ function openHoldingEditor(symbol) {
   elements.holdingDialog.showModal();
 }
 
+function openFundEditor(symbol) {
+  const fund = (state.funds ?? []).find((item) => normalizeFundKey(item.symbol) === normalizeFundKey(symbol));
+  if (!fund || !elements.fundForm) return;
+
+  const form = elements.fundForm;
+  form.symbol.value = fund.symbol;
+  form.name.value = fund.name ?? "";
+  form.category.value = fund.category ?? "";
+  form.currentNav.value = Number.isFinite(fund.currentNav) ? fund.currentNav : "";
+  form.currentNavDate.value = fund.currentNavDate ?? new Date().toISOString().slice(0, 10);
+  form.currency.value = fund.currency ?? "CNY";
+  elements.fundDialog.showModal();
+}
+
+async function saveFund(formData) {
+  const symbol = String(formData.get("symbol") ?? "").trim();
+  const fund = (state.funds ?? []).find((item) => normalizeFundKey(item.symbol) === normalizeFundKey(symbol));
+  if (!fund) return;
+
+  const patch = {
+    symbol,
+    name: String(formData.get("name") ?? "").trim(),
+    category: String(formData.get("category") ?? "").trim(),
+    currentNav: Number(formData.get("currentNav")),
+    currentNavDate: String(formData.get("currentNavDate") ?? "").trim(),
+    currency: String(formData.get("currency") ?? "CNY").trim().toUpperCase()
+  };
+  if (!Number.isFinite(patch.currentNav) || patch.currentNav <= 0) {
+    throw new Error("当前净值必须大于 0");
+  }
+
+  if (USE_BACKEND) {
+    state = await requestJSON(`/api/funds/${encodeURIComponent(symbol)}`, {
+      method: "PUT",
+      body: JSON.stringify(patch)
+    });
+    saveState();
+    render();
+    return;
+  }
+
+  fund.name = patch.name || fund.name;
+  fund.category = patch.category;
+  fund.currentNav = patch.currentNav;
+  fund.currentNavDate = patch.currentNavDate;
+  fund.currency = patch.currency || fund.currency || "CNY";
+  fund.updatedAt = new Date().toISOString().slice(0, 10);
+  saveState();
+  render();
+}
+
 async function saveHolding(formData) {
   const symbol = formData.get("symbol");
   const holding = state.holdings.find((item) => item.symbol === symbol);
@@ -5074,6 +5420,22 @@ async function saveHolding(formData) {
   holding.notes = patch.notes;
   saveState();
   render();
+}
+
+function setTradeAssetType(assetType = "stock") {
+  const isFund = assetType === "fund";
+  if (elements.tradeForm) {
+    const radio = elements.tradeForm.querySelector(`input[name="assetType"][value="${isFund ? "fund" : "stock"}"]`);
+    if (radio) radio.checked = true;
+  }
+  if (elements.tradeNameLabel) elements.tradeNameLabel.textContent = isFund ? "基金名称" : "股票名称";
+  if (elements.tradePriceLabel) elements.tradePriceLabel.textContent = isFund ? "成交净值" : "成交价";
+  if (elements.tradeSharesLabel) elements.tradeSharesLabel.textContent = isFund ? "份额" : "股数";
+  if (elements.tradeNameInput) elements.tradeNameInput.placeholder = isFund ? "中欧红利优享混合" : "中海物业";
+  if (elements.tradeSharesInput) {
+    elements.tradeSharesInput.placeholder = isFund ? "买入填正数，卖出填负数" : "买入填正数，卖出填负数";
+    elements.tradeSharesInput.step = isFund ? "0.01" : "1";
+  }
 }
 
 document.querySelectorAll(".segment").forEach((button) => {
@@ -5244,7 +5606,19 @@ document.addEventListener("click", async (event) => {
   }
 });
 
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-edit-fund]");
+  if (!button) return;
+  openFundEditor(button.dataset.editFund);
+});
+
 document.querySelector("#openTradePanelSecondary").addEventListener("click", () => {
+  setTradeAssetType("stock");
+  elements.tradeDialog.showModal();
+});
+
+document.querySelector("#openFundTradePanel")?.addEventListener("click", () => {
+  setTradeAssetType("fund");
   elements.tradeDialog.showModal();
 });
 
@@ -5288,6 +5662,14 @@ document.querySelector("#cancelHolding").addEventListener("click", () => {
   elements.holdingDialog.close();
 });
 
+document.querySelector("#closeFundPanel")?.addEventListener("click", () => {
+  elements.fundDialog.close();
+});
+
+document.querySelector("#cancelFund")?.addEventListener("click", () => {
+  elements.fundDialog.close();
+});
+
 document.querySelector("#closeResearchPanel").addEventListener("click", () => {
   elements.researchDialog.close();
 });
@@ -5307,10 +5689,25 @@ elements.tradeForm.addEventListener("submit", async (event) => {
   }
 });
 
+elements.tradeForm?.addEventListener("change", (event) => {
+  if (event.target?.name !== "assetType") return;
+  setTradeAssetType(event.target.value);
+});
+
 elements.holdingForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await saveHolding(new FormData(elements.holdingForm));
   elements.holdingDialog.close();
+});
+
+elements.fundForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    await saveFund(new FormData(elements.fundForm));
+    elements.fundDialog.close();
+  } catch (error) {
+    window.alert(error.message);
+  }
 });
 
 elements.researchForm.addEventListener("submit", async (event) => {
