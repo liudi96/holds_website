@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +18,9 @@ const dataFile = "data/portfolio.json"
 const runtimeQuotesFile = "data/runtime/quotes.json"
 const runtimeIndustryMetricsFile = "data/runtime/industry_metrics.json"
 const decisionLogLimit = 500
+
+//go:embed data/portfolio.json
+var bundledPortfolioJSON []byte
 
 type AppState struct {
 	TotalCapital float64            `json:"totalCapital"`
@@ -1220,7 +1224,10 @@ func firstNonEmpty(values ...string) string {
 
 func loadState() (AppState, error) {
 	if _, err := os.Stat(dataFile); errors.Is(err, os.ErrNotExist) {
-		state := defaultState()
+		state, err := bundledState()
+		if err != nil {
+			return AppState{}, err
+		}
 		if err := saveState(state); err != nil {
 			return AppState{}, err
 		}
@@ -1239,10 +1246,39 @@ func loadState() (AppState, error) {
 	if err := json.Unmarshal(body, &state); err != nil {
 		return AppState{}, err
 	}
+	if isEmptyPortfolioState(state) {
+		state, err = bundledState()
+		if err != nil {
+			return AppState{}, err
+		}
+		if err := saveState(state); err != nil {
+			return AppState{}, err
+		}
+	}
 	if err := hydrateState(&state); err != nil {
 		return AppState{}, err
 	}
 	return state, nil
+}
+
+func bundledState() (AppState, error) {
+	var state AppState
+	if err := json.Unmarshal(bundledPortfolioJSON, &state); err != nil {
+		return AppState{}, err
+	}
+	if isEmptyPortfolioState(state) {
+		return defaultState(), nil
+	}
+	return state, nil
+}
+
+func isEmptyPortfolioState(state AppState) bool {
+	return state.TotalCapital == 0 &&
+		state.Cash == 0 &&
+		len(state.Holdings) == 0 &&
+		len(state.Candidates) == 0 &&
+		len(state.Trades) == 0 &&
+		len(state.Plan) == 0
 }
 
 func hydrateState(state *AppState) error {
