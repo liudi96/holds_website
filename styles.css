@@ -3985,7 +3985,33 @@ label textarea {
     overflow-x: visible;
   }
 
+  .page[data-page="portfolio"] .main-panel {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .page[data-page="portfolio"] .main-panel > .panel-head {
+    margin-bottom: 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(23, 33, 29, 0.06);
+  }
+
+  .page[data-page="portfolio"] .segmented {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .page[data-page="portfolio"] .segment {
+    min-width: 0;
+    padding: 0 8px;
+  }
+
   .decision-table,
+  .decision-table thead,
   .decision-table tbody,
   .decision-table tr,
   .decision-table td,
@@ -3996,6 +4022,11 @@ label textarea {
     display: block;
     width: 100%;
     min-width: 0;
+  }
+
+  .decision-table {
+    border-collapse: separate;
+    border-spacing: 0;
   }
 
   .decision-table th:nth-child(n),
@@ -4013,11 +4044,13 @@ label textarea {
   .decision-table tbody,
   .fund-table tbody {
     display: grid;
-    gap: 10px;
+    gap: 12px;
   }
 
   .decision-table tbody tr,
   .fund-table tbody tr {
+    display: grid;
+    gap: 0;
     padding: 12px;
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -4027,9 +4060,9 @@ label textarea {
 
   .decision-table td,
   .fund-table td {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(84px, 0.42fr) minmax(0, 0.58fr);
+    align-items: start;
     gap: 12px;
     padding: 8px 0;
     border-bottom: 1px solid var(--line);
@@ -4040,7 +4073,7 @@ label textarea {
   .decision-table td:first-child,
   .fund-table td:first-child {
     display: block;
-    padding-top: 0;
+    padding: 0 0 10px;
     text-align: left;
   }
 
@@ -4053,31 +4086,61 @@ label textarea {
   .decision-table td[data-label]::before,
   .fund-table td[data-label]::before {
     content: attr(data-label);
-    flex: 0 0 auto;
     color: var(--muted);
     font-size: 12px;
     font-weight: 800;
+    line-height: 1.35;
+    text-align: left;
   }
 
   .decision-table .stock-cell,
   .fund-table .fund-name-cell {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
     align-items: center;
+    gap: 10px;
+  }
+
+  .decision-table .ticker {
+    width: 42px;
+    height: 34px;
+    font-size: 12px;
   }
 
   .decision-table .stock-name strong,
   .decision-table .stock-name span,
   .fund-name-cell strong,
   .fund-name-cell span {
+    overflow: visible;
+    text-overflow: clip;
     white-space: normal;
+  }
+
+  .decision-table td > strong,
+  .decision-table td > small,
+  .decision-table td > span,
+  .fund-table td > strong,
+  .fund-table td > small,
+  .fund-table td > span {
+    justify-self: end;
+    max-width: 100%;
+  }
+
+  .decision-table td small,
+  .fund-table td small {
+    line-height: 1.4;
   }
 
   .decision-table .health-pill,
   .fund-table .fund-pill {
+    min-width: 0;
+    max-width: 100%;
     white-space: nowrap;
   }
 
   .health-status-cell {
     justify-items: end;
+    max-width: 100%;
     text-align: right;
   }
 
