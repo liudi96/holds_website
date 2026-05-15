@@ -4010,11 +4010,11 @@ label textarea {
     padding: 0 8px;
   }
 
-  .decision-table,
-  .decision-table thead,
-  .decision-table tbody,
-  .decision-table tr,
-  .decision-table td,
+  .page[data-page="portfolio"] .decision-table,
+  .page[data-page="portfolio"] .decision-table thead,
+  .page[data-page="portfolio"] .decision-table tbody,
+  .page[data-page="portfolio"] .decision-table tr,
+  .page[data-page="portfolio"] .decision-table td,
   .fund-table,
   .fund-table tbody,
   .fund-table tr,
@@ -4024,30 +4024,32 @@ label textarea {
     min-width: 0;
   }
 
-  .decision-table {
+  .page[data-page="portfolio"] .decision-table {
     border-collapse: separate;
     border-spacing: 0;
+    table-layout: auto;
+    max-width: 100%;
   }
 
-  .decision-table th:nth-child(n),
-  .decision-table td:nth-child(n),
+  .page[data-page="portfolio"] .decision-table th:nth-child(n),
+  .page[data-page="portfolio"] .decision-table td:nth-child(n),
   .fund-table th:nth-child(n),
   .fund-table td:nth-child(n) {
     width: 100%;
   }
 
-  .decision-table thead,
+  .page[data-page="portfolio"] .decision-table thead,
   .fund-table thead {
     display: none;
   }
 
-  .decision-table tbody,
+  .page[data-page="portfolio"] .decision-table tbody,
   .fund-table tbody {
     display: grid;
     gap: 12px;
   }
 
-  .decision-table tbody tr,
+  .page[data-page="portfolio"] .decision-table tbody tr,
   .fund-table tbody tr {
     display: grid;
     gap: 0;
@@ -4058,7 +4060,7 @@ label textarea {
     box-shadow: 0 10px 24px rgba(23, 33, 29, 0.06);
   }
 
-  .decision-table td,
+  .page[data-page="portfolio"] .decision-table td,
   .fund-table td {
     display: grid;
     grid-template-columns: minmax(84px, 0.42fr) minmax(0, 0.58fr);
@@ -4070,22 +4072,25 @@ label textarea {
     white-space: normal;
   }
 
-  .decision-table td:first-child,
+  .page[data-page="portfolio"] .decision-table td:first-child,
   .fund-table td:first-child {
     display: block;
     padding: 0 0 10px;
     text-align: left;
   }
 
-  .decision-table td:last-child,
+  .page[data-page="portfolio"] .decision-table td:last-child,
   .fund-table td:last-child {
     padding-bottom: 0;
     border-bottom: 0;
   }
 
-  .decision-table td[data-label]::before,
+  .page[data-page="portfolio"] .decision-table td[data-label]::before,
   .fund-table td[data-label]::before {
     content: attr(data-label);
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: center;
     color: var(--muted);
     font-size: 12px;
     font-weight: 800;
@@ -4093,7 +4098,7 @@ label textarea {
     text-align: left;
   }
 
-  .decision-table .stock-cell,
+  .page[data-page="portfolio"] .decision-table .stock-cell,
   .fund-table .fund-name-cell {
     display: grid;
     grid-template-columns: 42px minmax(0, 1fr);
@@ -4101,14 +4106,14 @@ label textarea {
     gap: 10px;
   }
 
-  .decision-table .ticker {
+  .page[data-page="portfolio"] .decision-table .ticker {
     width: 42px;
     height: 34px;
     font-size: 12px;
   }
 
-  .decision-table .stock-name strong,
-  .decision-table .stock-name span,
+  .page[data-page="portfolio"] .decision-table .stock-name strong,
+  .page[data-page="portfolio"] .decision-table .stock-name span,
   .fund-name-cell strong,
   .fund-name-cell span {
     overflow: visible;
@@ -4116,22 +4121,32 @@ label textarea {
     white-space: normal;
   }
 
-  .decision-table td > strong,
-  .decision-table td > small,
-  .decision-table td > span,
+  .page[data-page="portfolio"] .decision-table td[data-label] > *,
   .fund-table td > strong,
   .fund-table td > small,
   .fund-table td > span {
+    grid-column: 2;
     justify-self: end;
     max-width: 100%;
+    text-align: right;
   }
 
-  .decision-table td small,
+  .page[data-page="portfolio"] .decision-table td[data-label] > br,
+  .fund-table td > br {
+    display: none;
+  }
+
+  .page[data-page="portfolio"] .decision-table .decision-primary,
+  .page[data-page="portfolio"] .decision-table td[data-label] > strong {
+    font-weight: 800;
+  }
+
+  .page[data-page="portfolio"] .decision-table td small,
   .fund-table td small {
     line-height: 1.4;
   }
 
-  .decision-table .health-pill,
+  .page[data-page="portfolio"] .decision-table .health-pill,
   .fund-table .fund-pill {
     min-width: 0;
     max-width: 100%;

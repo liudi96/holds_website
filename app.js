@@ -2168,7 +2168,7 @@ function decisionPnlCell(stock) {
   }
   return {
     className: stock.pnlCny >= 0 ? "positive" : "negative",
-    html: `${currency(stock.pnlCny)}<br /><small>${percent(stock.pnlRate)}</small>`
+    html: `<span class="decision-primary">${currency(stock.pnlCny)}</span><br /><small>${percent(stock.pnlRate)}</small>`
   };
 }
 
