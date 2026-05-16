@@ -1994,6 +1994,203 @@ tbody tr:hover {
   color: var(--red);
 }
 
+.stock-page-sunny30 {
+  margin-top: 14px;
+}
+
+.sunny30-summary-cell span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sunny30-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sunny30-summary-cell {
+  min-width: 0;
+  padding: 12px 18px;
+  border-right: 1px solid var(--line);
+}
+
+.sunny30-summary-cell:last-child {
+  border-right: 0;
+}
+
+.sunny30-summary-cell strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.sunny30-table {
+  min-width: 1196px;
+  table-layout: fixed;
+}
+
+.sunny30-table th,
+.sunny30-table td {
+  padding: 9px 10px;
+}
+
+.sunny30-table th:nth-child(1),
+.sunny30-table td:nth-child(1) {
+  width: 205px;
+}
+
+.sunny30-table th:nth-child(2),
+.sunny30-table td:nth-child(2) {
+  width: 108px;
+}
+
+.sunny30-table th:nth-child(3),
+.sunny30-table td:nth-child(3) {
+  width: 78px;
+}
+
+.sunny30-table th:nth-child(4),
+.sunny30-table td:nth-child(4) {
+  width: 78px;
+}
+
+.sunny30-table th:nth-child(5),
+.sunny30-table td:nth-child(5) {
+  width: 76px;
+}
+
+.sunny30-table th:nth-child(6),
+.sunny30-table td:nth-child(6) {
+  width: 76px;
+}
+
+.sunny30-table th:nth-child(7),
+.sunny30-table td:nth-child(7) {
+  width: 94px;
+}
+
+.sunny30-table th:nth-child(8),
+.sunny30-table td:nth-child(8) {
+  width: 86px;
+}
+
+.sunny30-table th:nth-child(9),
+.sunny30-table td:nth-child(9) {
+  width: 92px;
+}
+
+.sunny30-table th:nth-child(10),
+.sunny30-table td:nth-child(10),
+.sunny30-table th:nth-child(11),
+.sunny30-table td:nth-child(11) {
+  width: 84px;
+}
+
+.sunny30-table th:nth-child(12),
+.sunny30-table td:nth-child(12) {
+  width: 76px;
+}
+
+.sunny30-metric {
+  font-weight: 800;
+}
+
+.sunny30-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sunny30-pill.consumer {
+  background: #e6f4ef;
+  color: var(--green);
+}
+
+.sunny30-pill.optional {
+  background: #fff7ed;
+  color: var(--gold);
+}
+
+.sunny30-pill.media {
+  background: #eef2ff;
+  color: var(--blue);
+}
+
+.sunny30-pill.utility {
+  background: #ecfeff;
+  color: #0e7490;
+}
+
+.sunny30-pill.finance {
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.sunny30-pill.enterprise {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.sunny30-pill.energy {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.sunny30-pill.strong,
+.sunny30-pill.core {
+  background: #e6f4ef;
+  color: var(--green);
+}
+
+.sunny30-pill.watch,
+.sunny30-pill.reduce {
+  background: #fff7ed;
+  color: var(--gold);
+}
+
+.sunny30-pill.risk {
+  background: #fff1f2;
+  color: var(--red);
+}
+
+.sunny30-action-cell {
+  text-align: right;
+}
+
+.sunny30-delete-button {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid #fecdd3;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sunny30-delete-button:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+}
+
+.sunny30-holding-note {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .health-score {
   display: block;
   color: var(--muted);
@@ -3985,6 +4182,10 @@ label textarea {
     overflow-x: visible;
   }
 
+  .page[data-page="portfolio"] .sunny30-panel .table-wrap {
+    overflow-x: auto;
+  }
+
   .page[data-page="portfolio"] .main-panel {
     background: transparent;
     border: 0;
@@ -4489,11 +4690,11 @@ label textarea {
 
 .executive-hero {
   position: relative;
-  min-height: 210px;
+  min-height: 136px;
   overflow: hidden;
   align-items: stretch;
   margin-bottom: 12px;
-  padding: 20px 22px;
+  padding: 14px 18px;
   border-left: 0;
   background:
     radial-gradient(circle at 82% 23%, rgba(255, 190, 86, 0.34), transparent 22%),
@@ -4505,9 +4706,9 @@ label textarea {
   content: "";
   position: absolute;
   right: -16px;
-  top: 24px;
-  width: 214px;
-  height: 30px;
+  top: 14px;
+  width: 176px;
+  height: 24px;
   border-radius: 999px;
   background: linear-gradient(90deg, transparent, rgba(57, 174, 230, 0.34), rgba(255, 255, 255, 0.84), transparent);
   transform: rotate(-22deg);
@@ -4518,12 +4719,12 @@ label textarea {
   content: "";
   position: absolute;
   right: 30px;
-  bottom: 16px;
-  width: 132px;
-  height: 110px;
-  border-radius: 26px;
+  bottom: 12px;
+  width: 96px;
+  height: 78px;
+  border-radius: 20px;
   background:
-    radial-gradient(circle at 72% 34%, rgba(255, 190, 86, 0.70) 0 16px, transparent 17px),
+    radial-gradient(circle at 72% 34%, rgba(255, 190, 86, 0.70) 0 12px, transparent 13px),
     linear-gradient(135deg, rgba(57, 174, 230, 0.18), rgba(77, 174, 105, 0.24)),
     repeating-linear-gradient(115deg, transparent 0 16px, rgba(255, 255, 255, 0.38) 17px 19px);
   transform: rotate(-8deg);
@@ -4543,7 +4744,7 @@ label textarea {
 
 .executive-hero-main strong {
   color: var(--green);
-  font-size: 32px;
+  font-size: 28px;
   line-height: 1.08;
   text-shadow: 0 2px 0 rgba(255, 255, 255, 0.50);
 }
@@ -4619,6 +4820,70 @@ label textarea {
 
 .asset-allocation-panel {
   background: rgba(255, 255, 255, 0.30);
+}
+
+.fund-management-panel {
+  overflow: hidden;
+}
+
+.fund-management-panel .panel-head {
+  align-items: flex-start;
+}
+
+.fund-summary-grid {
+  border-bottom: 0;
+}
+
+.fund-summary-cell {
+  border: 0;
+  border-radius: 18px;
+  background: rgba(240, 250, 245, 0.46);
+  box-shadow: none;
+}
+
+.fund-summary-cell strong {
+  color: var(--ink);
+}
+
+.fund-summary-cell strong.positive {
+  color: var(--leaf);
+}
+
+.fund-summary-cell strong.negative {
+  color: var(--red);
+}
+
+.fund-empty-row:hover {
+  background: transparent;
+}
+
+.fund-empty-state {
+  padding: 26px 18px 30px;
+  text-align: center;
+  white-space: normal;
+}
+
+.fund-empty-state strong,
+.fund-empty-state span {
+  display: block;
+}
+
+.fund-empty-state strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.fund-empty-state span {
+  max-width: 520px;
+  margin: 8px auto 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.fund-empty-state .primary-button {
+  width: fit-content;
+  margin: 0 auto;
 }
 
 .allocation-donut-bg {
@@ -4842,9 +5107,11 @@ tbody tr:hover {
 @media (max-width: 1100px) {
   body {
     grid-template-columns: 1fr;
+    align-content: start;
   }
 
   .sidebar {
+    align-self: start;
     border-bottom: 0;
   }
 
@@ -4867,10 +5134,100 @@ tbody tr:hover {
   }
 
   .sidebar {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    min-height: 0;
+    height: auto;
     border-bottom: 0;
     background:
       linear-gradient(180deg, rgba(255, 252, 239, 0.76), rgba(222, 246, 222, 0.66)),
       #fff7df;
+  }
+
+  .fund-management-panel {
+    border-radius: 24px;
+  }
+
+  .fund-management-panel .panel-head {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 16px 16px 10px;
+  }
+
+  .fund-management-panel .panel-head .primary-button {
+    width: 100%;
+  }
+
+  .fund-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px 14px 12px;
+  }
+
+  .fund-summary-cell {
+    min-height: 82px;
+    padding: 12px;
+    background: rgba(236, 248, 241, 0.50);
+  }
+
+  .fund-summary-cell span {
+    font-size: 11px;
+  }
+
+  .fund-summary-cell strong {
+    margin-top: 7px;
+    font-size: 22px;
+  }
+
+  .page[data-page="funds"] .table-wrap {
+    padding: 0 14px 14px;
+  }
+
+  .fund-empty-row {
+    padding: 0;
+    background: transparent;
+  }
+
+  .fund-empty-state {
+    display: grid;
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 8px;
+    padding: 18px;
+    border-radius: 20px;
+    background:
+      linear-gradient(135deg, rgba(255, 247, 223, 0.46), rgba(229, 248, 239, 0.52)),
+      rgba(240, 250, 245, 0.50);
+    text-align: left;
+  }
+
+  .fund-table .fund-empty-state::before {
+    content: none;
+  }
+
+  .fund-table .fund-empty-state > strong,
+  .fund-table .fund-empty-state > span,
+  .fund-table .fund-empty-state > .primary-button {
+    grid-column: 1;
+    justify-self: stretch;
+    text-align: left;
+  }
+
+  .fund-empty-state strong {
+    font-size: 17px;
+  }
+
+  .fund-empty-state span {
+    max-width: none;
+    margin: 0 0 6px;
+    font-size: 13px;
+  }
+
+  .fund-empty-state .primary-button {
+    width: 100%;
+    margin: 0;
   }
 
   .topbar,
@@ -4884,19 +5241,36 @@ tbody tr:hover {
   }
 
   .executive-hero {
-    min-height: 360px;
-    padding: 18px;
+    min-height: 180px;
+    padding: 16px;
+  }
+
+  .executive-hero .overview-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .executive-hero .primary-button,
+  .executive-hero .ghost-button {
+    width: auto;
+    min-width: 0;
+    min-height: 34px;
+    padding: 0 8px;
+    border-radius: 14px;
+    font-size: 12px;
+    white-space: nowrap;
   }
 
   .executive-hero::after {
-    right: 18px;
-    bottom: 18px;
-    width: 130px;
-    height: 112px;
+    right: 16px;
+    bottom: 16px;
+    width: 104px;
+    height: 86px;
   }
 
   .executive-hero-main strong {
-    font-size: 34px;
+    font-size: 30px;
   }
 
   .executive-metrics {
@@ -4905,6 +5279,19 @@ tbody tr:hover {
 
   .executive-metrics .metric {
     padding: 12px 8px;
+  }
+
+  .sunny30-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .sunny30-summary-cell {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .sunny30-summary-cell:last-child {
+    border-bottom: 0;
   }
 
   .page[data-page="portfolio"] .main-panel > .panel-head,

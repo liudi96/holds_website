@@ -52,6 +52,9 @@ type yahooChartResponse struct {
 type quote struct {
 	Price              float64
 	PreviousClose      float64
+	TwentyDayClose     float64
+	TwentyDayCloseDate string
+	TwentyDayChange    *float64
 	MarketCap          *float64
 	MarketCapCurrency  string
 	PriceDate          string
@@ -231,6 +234,9 @@ func fetchQuoteCached(client *http.Client, cache map[string]quote, fallbackCache
 func applyHoldingQuote(holding *Holding, quote quote, updateLabel string) {
 	holding.CurrentPrice = quote.Price
 	holding.PreviousClose = quote.PreviousClose
+	holding.TwentyDayClose = quote.TwentyDayClose
+	holding.TwentyDayCloseDate = quote.TwentyDayCloseDate
+	holding.TwentyDayChange = quote.TwentyDayChange
 	if quote.MarketCap != nil && *quote.MarketCap > 0 {
 		holding.MarketCap = quote.MarketCap
 		holding.MarketCapCurrency = strings.ToUpper(firstNonEmpty(quote.MarketCapCurrency, quote.Currency, holding.Currency))
@@ -248,6 +254,9 @@ func applyHoldingQuote(holding *Holding, quote quote, updateLabel string) {
 func applyCandidateQuote(candidate *Candidate, quote quote, updateLabel string) {
 	candidate.CurrentPrice = quote.Price
 	candidate.PreviousClose = quote.PreviousClose
+	candidate.TwentyDayClose = quote.TwentyDayClose
+	candidate.TwentyDayCloseDate = quote.TwentyDayCloseDate
+	candidate.TwentyDayChange = quote.TwentyDayChange
 	if quote.MarketCap != nil && *quote.MarketCap > 0 {
 		candidate.MarketCap = quote.MarketCap
 		candidate.MarketCapCurrency = strings.ToUpper(firstNonEmpty(quote.MarketCapCurrency, quote.Currency, candidate.Currency))
@@ -427,6 +436,7 @@ func fetchQuote(client *http.Client, symbol string, fallbackCache map[string]quo
 	}
 
 	if quote, ok := fallbackCache[normalizeSymbol(symbol)]; ok {
+		supplementTwentyDayChange(client, symbol, &quote)
 		return quote, nil
 	}
 	if fallbackErr != nil {
@@ -487,10 +497,22 @@ func fetchYahooQuote(client *http.Client, symbol string) (quote, error) {
 
 	priceClose := validCloses[len(validCloses)-1]
 	previousClose := validCloses[len(validCloses)-2]
+	twentyDayClose := dailyClose{}
+	var twentyDayChange *float64
+	if len(validCloses) >= 21 {
+		twentyDayClose = validCloses[len(validCloses)-21]
+		if twentyDayClose.Price > 0 {
+			change := (priceClose.Price - twentyDayClose.Price) / twentyDayClose.Price
+			twentyDayChange = &change
+		}
+	}
 	dividendPerShare, dividendFiscalYear := trailingDividendFromEvents(result.Events.Dividends, priceClose.Date, location)
 	return quote{
 		Price:              priceClose.Price,
 		PreviousClose:      previousClose.Price,
+		TwentyDayClose:     twentyDayClose.Price,
+		TwentyDayCloseDate: twentyDayClose.Date,
+		TwentyDayChange:    twentyDayChange,
 		PriceDate:          priceClose.Date,
 		PreviousCloseDate:  previousClose.Date,
 		Currency:           result.Meta.Currency,
@@ -500,6 +522,225 @@ func fetchYahooQuote(client *http.Client, symbol string) (quote, error) {
 		DividendCurrency:   result.Meta.Currency,
 		DividendFiscalYear: dividendFiscalYear,
 	}, nil
+}
+
+func supplementTwentyDayChange(client *http.Client, symbol string, quote *quote) {
+	if quote == nil || quote.TwentyDayChange != nil {
+		return
+	}
+	closes, err := fetchTencentDailyCloses(client, symbol, 30)
+	if err != nil || len(closes) < 21 {
+		closes, err = fetchEastmoneyDailyCloses(client, symbol, 30)
+	}
+	if err != nil || len(closes) < 21 {
+		return
+	}
+	applyTwentyDayChangeFromCloses(quote, closes)
+}
+
+func applyTwentyDayChangeFromCloses(quote *quote, closes []dailyClose) {
+	if quote == nil || quote.TwentyDayChange != nil || len(closes) < 21 {
+		return
+	}
+	twentyDayClose := closes[len(closes)-21]
+	if twentyDayClose.Price <= 0 {
+		return
+	}
+	price := quote.Price
+	if price <= 0 {
+		price = closes[len(closes)-1].Price
+	}
+	if price <= 0 {
+		return
+	}
+	change := (price - twentyDayClose.Price) / twentyDayClose.Price
+	quote.TwentyDayClose = twentyDayClose.Price
+	quote.TwentyDayCloseDate = twentyDayClose.Date
+	quote.TwentyDayChange = &change
+}
+
+func fetchEastmoneyDailyCloses(client *http.Client, symbol string, limit int) ([]dailyClose, error) {
+	sourceSymbol, _, err := eastmoneySymbol(symbol)
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 {
+		limit = 30
+	}
+
+	values := url.Values{}
+	values.Set("secid", sourceSymbol)
+	values.Set("fields1", "f1,f2,f3,f4,f5,f6")
+	values.Set("fields2", "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61")
+	values.Set("klt", "101")
+	values.Set("fqt", "1")
+	values.Set("end", "20500101")
+	values.Set("lmt", strconv.Itoa(limit))
+	endpoint := "https://push2his.eastmoney.com/api/qt/stock/kline/get?" + values.Encode()
+
+	time.Sleep(220 * time.Millisecond)
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json,text/plain,*/*")
+	req.Header.Set("Referer", "https://quote.eastmoney.com/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website quote updater)")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("kline request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	var payload struct {
+		RC   int `json:"rc"`
+		Data struct {
+			KLines []string `json:"klines"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	if payload.RC != 0 || len(payload.Data.KLines) == 0 {
+		return nil, errors.New("empty kline response")
+	}
+
+	closes := make([]dailyClose, 0, len(payload.Data.KLines))
+	for _, line := range payload.Data.KLines {
+		close, err := parseEastmoneyDailyClose(line)
+		if err == nil && close.Price > 0 && close.Date != "" {
+			closes = append(closes, close)
+		}
+	}
+	if len(closes) == 0 {
+		return nil, errors.New("missing kline close prices")
+	}
+	return closes, nil
+}
+
+func fetchTencentDailyCloses(client *http.Client, symbol string, limit int) ([]dailyClose, error) {
+	sourceSymbol, _, err := tencentSymbol(symbol)
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 {
+		limit = 30
+	}
+
+	param := fmt.Sprintf("%s,day,,,%d,qfq", sourceSymbol, limit)
+	endpoint := "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=" + url.QueryEscape(param)
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json,text/plain,*/*")
+	req.Header.Set("Referer", "https://gu.qq.com/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website quote updater)")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("tencent kline request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	var payload struct {
+		Code int                        `json:"code"`
+		Data map[string]json.RawMessage `json:"data"`
+		Msg  string                     `json:"msg"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	if payload.Code != 0 || len(payload.Data) == 0 {
+		return nil, fmt.Errorf("empty tencent kline response: %s", payload.Msg)
+	}
+
+	raw, ok := payload.Data[sourceSymbol]
+	if !ok {
+		return nil, fmt.Errorf("missing tencent kline symbol: %s", sourceSymbol)
+	}
+	var symbolPayload map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &symbolPayload); err != nil {
+		return nil, err
+	}
+	for _, key := range []string{"qfqday", "day", "hfqday"} {
+		rows, err := parseTencentKlineRows(symbolPayload[key])
+		if err == nil && len(rows) > 0 {
+			return rows, nil
+		}
+	}
+	return nil, errors.New("missing tencent kline close prices")
+}
+
+func parseTencentKlineRows(raw json.RawMessage) ([]dailyClose, error) {
+	if len(raw) == 0 {
+		return nil, errors.New("missing kline rows")
+	}
+	var rows [][]any
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		return nil, err
+	}
+	closes := make([]dailyClose, 0, len(rows))
+	for _, row := range rows {
+		if len(row) < 3 {
+			continue
+		}
+		date, ok := row[0].(string)
+		if !ok {
+			continue
+		}
+		if _, err := time.Parse("2006-01-02", date); err != nil {
+			continue
+		}
+		closePrice, ok := numberFromTencentKlineValue(row[2])
+		if !ok || closePrice <= 0 {
+			continue
+		}
+		closes = append(closes, dailyClose{Price: closePrice, Date: date})
+	}
+	if len(closes) == 0 {
+		return nil, errors.New("missing kline close prices")
+	}
+	return closes, nil
+}
+
+func numberFromTencentKlineValue(value any) (float64, bool) {
+	switch typed := value.(type) {
+	case float64:
+		return typed, typed > 0
+	case string:
+		number, err := strconv.ParseFloat(strings.TrimSpace(typed), 64)
+		return number, err == nil && number > 0
+	default:
+		return 0, false
+	}
+}
+
+func parseEastmoneyDailyClose(line string) (dailyClose, error) {
+	fields := strings.Split(strings.TrimSpace(line), ",")
+	if len(fields) < 3 {
+		return dailyClose{}, errors.New("invalid kline row")
+	}
+	date := strings.TrimSpace(fields[0])
+	if _, err := time.Parse("2006-01-02", date); err != nil {
+		return dailyClose{}, err
+	}
+	closePrice, err := strconv.ParseFloat(strings.TrimSpace(fields[2]), 64)
+	if err != nil || closePrice <= 0 {
+		return dailyClose{}, errors.New("invalid kline close")
+	}
+	return dailyClose{Price: closePrice, Date: date}, nil
 }
 
 func trailingDividendFromEvents(events map[string]struct {

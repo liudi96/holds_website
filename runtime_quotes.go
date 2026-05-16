@@ -17,6 +17,9 @@ type RuntimeQuote struct {
 	Symbol             string   `json:"symbol"`
 	CurrentPrice       float64  `json:"currentPrice,omitempty"`
 	PreviousClose      float64  `json:"previousClose,omitempty"`
+	TwentyDayClose     float64  `json:"twentyDayClose,omitempty"`
+	TwentyDayCloseDate string   `json:"twentyDayCloseDate,omitempty"`
+	TwentyDayChange    *float64 `json:"twentyDayChange,omitempty"`
 	MarketCap          *float64 `json:"marketCap,omitempty"`
 	MarketCapCurrency  string   `json:"marketCapCurrency,omitempty"`
 	CurrentPriceDate   string   `json:"currentPriceDate,omitempty"`
@@ -72,9 +75,19 @@ func saveRuntimeQuoteRecords(records []RuntimeQuote, updatedAt string) error {
 			continue
 		}
 		record.Symbol = symbol
+		preserveRuntimeTwentyDayQuote(&record, book.Quotes[symbol])
 		book.Quotes[symbol] = record
 	}
 	return saveRuntimeQuoteBook(book)
+}
+
+func preserveRuntimeTwentyDayQuote(record *RuntimeQuote, existing RuntimeQuote) {
+	if record == nil || record.TwentyDayChange != nil || existing.TwentyDayChange == nil {
+		return
+	}
+	record.TwentyDayClose = existing.TwentyDayClose
+	record.TwentyDayCloseDate = existing.TwentyDayCloseDate
+	record.TwentyDayChange = existing.TwentyDayChange
 }
 
 func saveRuntimeQuoteBook(book RuntimeQuoteBook) error {
@@ -117,6 +130,15 @@ func applyRuntimeQuoteToHolding(holding *Holding, record RuntimeQuote) {
 	if record.PreviousClose > 0 {
 		holding.PreviousClose = record.PreviousClose
 	}
+	if record.TwentyDayClose > 0 {
+		holding.TwentyDayClose = record.TwentyDayClose
+	}
+	if strings.TrimSpace(record.TwentyDayCloseDate) != "" {
+		holding.TwentyDayCloseDate = record.TwentyDayCloseDate
+	}
+	if record.TwentyDayChange != nil {
+		holding.TwentyDayChange = record.TwentyDayChange
+	}
 	if record.MarketCap != nil && *record.MarketCap > 0 {
 		holding.MarketCap = record.MarketCap
 		holding.MarketCapCurrency = strings.ToUpper(firstNonEmpty(record.MarketCapCurrency, record.Currency, holding.Currency))
@@ -140,6 +162,15 @@ func applyRuntimeQuoteToCandidate(candidate *Candidate, record RuntimeQuote) {
 	if record.PreviousClose > 0 {
 		candidate.PreviousClose = record.PreviousClose
 	}
+	if record.TwentyDayClose > 0 {
+		candidate.TwentyDayClose = record.TwentyDayClose
+	}
+	if strings.TrimSpace(record.TwentyDayCloseDate) != "" {
+		candidate.TwentyDayCloseDate = record.TwentyDayCloseDate
+	}
+	if record.TwentyDayChange != nil {
+		candidate.TwentyDayChange = record.TwentyDayChange
+	}
 	if record.MarketCap != nil && *record.MarketCap > 0 {
 		candidate.MarketCap = record.MarketCap
 		candidate.MarketCapCurrency = strings.ToUpper(firstNonEmpty(record.MarketCapCurrency, record.Currency, candidate.Currency))
@@ -160,6 +191,9 @@ func runtimeQuoteFromQuote(symbol string, quote quote, updateLabel string) Runti
 		Symbol:             normalizeSymbol(symbol),
 		CurrentPrice:       quote.Price,
 		PreviousClose:      quote.PreviousClose,
+		TwentyDayClose:     quote.TwentyDayClose,
+		TwentyDayCloseDate: quote.TwentyDayCloseDate,
+		TwentyDayChange:    quote.TwentyDayChange,
 		MarketCap:          quote.MarketCap,
 		MarketCapCurrency:  strings.ToUpper(strings.TrimSpace(quote.MarketCapCurrency)),
 		CurrentPriceDate:   quote.PriceDate,
@@ -178,6 +212,9 @@ func runtimeRecordAsQuote(record RuntimeQuote) quote {
 	return quote{
 		Price:              record.CurrentPrice,
 		PreviousClose:      record.PreviousClose,
+		TwentyDayClose:     record.TwentyDayClose,
+		TwentyDayCloseDate: record.TwentyDayCloseDate,
+		TwentyDayChange:    record.TwentyDayChange,
 		MarketCap:          record.MarketCap,
 		MarketCapCurrency:  record.MarketCapCurrency,
 		PriceDate:          record.CurrentPriceDate,
@@ -222,6 +259,9 @@ func persistentState(state AppState) AppState {
 func clearHoldingRuntimeQuote(holding *Holding) {
 	holding.CurrentPrice = 0
 	holding.PreviousClose = 0
+	holding.TwentyDayClose = 0
+	holding.TwentyDayCloseDate = ""
+	holding.TwentyDayChange = nil
 	holding.MarketCap = nil
 	holding.MarketCapCurrency = ""
 	holding.CurrentPriceDate = ""
@@ -234,6 +274,9 @@ func clearHoldingRuntimeQuote(holding *Holding) {
 func clearCandidateRuntimeQuote(candidate *Candidate) {
 	candidate.CurrentPrice = 0
 	candidate.PreviousClose = 0
+	candidate.TwentyDayClose = 0
+	candidate.TwentyDayCloseDate = ""
+	candidate.TwentyDayChange = nil
 	candidate.MarketCap = nil
 	candidate.MarketCapCurrency = ""
 	candidate.CurrentPriceDate = ""

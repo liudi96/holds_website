@@ -118,6 +118,9 @@ type Holding struct {
 	Cost                float64             `json:"cost"`
 	CurrentPrice        float64             `json:"currentPrice,omitempty"`
 	PreviousClose       float64             `json:"previousClose,omitempty"`
+	TwentyDayClose      float64             `json:"twentyDayClose,omitempty"`
+	TwentyDayCloseDate  string              `json:"twentyDayCloseDate,omitempty"`
+	TwentyDayChange     *float64            `json:"twentyDayChange,omitempty"`
 	MarketCap           *float64            `json:"marketCap,omitempty"`
 	MarketCapCurrency   string              `json:"marketCapCurrency,omitempty"`
 	CurrentPriceDate    string              `json:"currentPriceDate,omitempty"`
@@ -268,6 +271,9 @@ type Candidate struct {
 	Action              string              `json:"action"`
 	CurrentPrice        float64             `json:"currentPrice,omitempty"`
 	PreviousClose       float64             `json:"previousClose,omitempty"`
+	TwentyDayClose      float64             `json:"twentyDayClose,omitempty"`
+	TwentyDayCloseDate  string              `json:"twentyDayCloseDate,omitempty"`
+	TwentyDayChange     *float64            `json:"twentyDayChange,omitempty"`
 	MarketCap           *float64            `json:"marketCap,omitempty"`
 	MarketCapCurrency   string              `json:"marketCapCurrency,omitempty"`
 	CurrentPriceDate    string              `json:"currentPriceDate,omitempty"`
@@ -328,6 +334,8 @@ func main() {
 	mux.HandleFunc("POST /api/reset", server.handleReset)
 	mux.HandleFunc("POST /api/trades", server.handleCreateTrade)
 	mux.HandleFunc("POST /api/decision-logs/clear", server.handleClearDecisionLogs)
+	mux.HandleFunc("POST /api/candidates", server.handleUpsertCandidate)
+	mux.HandleFunc("DELETE /api/candidates/", server.handleDeleteCandidate)
 	mux.HandleFunc("PUT /api/holdings/", server.handleUpdateHolding)
 	mux.HandleFunc("PUT /api/funds/", server.handleUpdateFund)
 	mux.HandleFunc("POST /api/research/preview", server.handlePreviewResearch)
@@ -506,6 +514,154 @@ func (s *Server) handleClearDecisionLogs(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, s.state)
 }
 
+func (s *Server) handleUpsertCandidate(w http.ResponseWriter, r *http.Request) {
+	var patch Candidate
+	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid candidate payload")
+		return
+	}
+
+	symbol := normalizeSymbol(patch.Symbol)
+	if symbol == "" {
+		writeError(w, http.StatusBadRequest, "symbol is required")
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	nextState, err := cloneAppState(s.state)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to prepare state")
+		return
+	}
+
+	candidate := Candidate{Symbol: symbol}
+	holdingIdx := findHoldingIndex(nextState.Holdings, symbol)
+	if holdingIdx >= 0 {
+		candidate = sunny30CandidateFromHolding(nextState.Holdings[holdingIdx])
+		if idx := findCandidateIndex(nextState.Candidates, symbol); idx >= 0 {
+			preserveSunny30CandidateText(&candidate, nextState.Candidates[idx])
+		}
+	} else if idx := findCandidateIndex(nextState.Candidates, symbol); idx >= 0 {
+		candidate = nextState.Candidates[idx]
+	}
+	candidate.Symbol = symbol
+	if name := strings.TrimSpace(patch.Name); name != "" {
+		candidate.Name = name
+	}
+	if candidate.Name == "" {
+		writeError(w, http.StatusBadRequest, "name is required")
+		return
+	}
+	if status := strings.TrimSpace(patch.Status); status != "" {
+		candidate.Status = status
+	} else if strings.TrimSpace(candidate.Status) == "" {
+		candidate.Status = "晴仓30跟踪"
+	}
+	if action := strings.TrimSpace(patch.Action); action != "" {
+		candidate.Action = action
+	} else if strings.TrimSpace(candidate.Action) == "" {
+		candidate.Action = "纳入晴仓30长期跟踪；等待质量和安全边际补充"
+	}
+	if industry := strings.TrimSpace(patch.Industry); industry != "" {
+		candidate.Industry = industry
+	}
+	if strings.TrimSpace(candidate.Industry) == "" {
+		candidate.Industry = "可选消费"
+	}
+	if currency := strings.ToUpper(strings.TrimSpace(patch.Currency)); currency != "" {
+		candidate.Currency = currency
+	} else if strings.TrimSpace(candidate.Currency) == "" {
+		candidate.Currency = inferCurrencyFromSymbol(symbol)
+	}
+	if patch.CurrentPrice > 0 {
+		candidate.CurrentPrice = patch.CurrentPrice
+		if candidate.PreviousClose <= 0 {
+			candidate.PreviousClose = patch.CurrentPrice
+		}
+		today := time.Now().Format("2006-01-02")
+		candidate.CurrentPriceDate = today
+		if strings.TrimSpace(candidate.PreviousCloseDate) == "" {
+			candidate.PreviousCloseDate = today
+		}
+	}
+	if patch.IntrinsicValue != nil {
+		candidate.IntrinsicValue = patch.IntrinsicValue
+	}
+	if patch.TargetBuyPrice != nil {
+		candidate.TargetBuyPrice = patch.TargetBuyPrice
+	}
+	if patch.QualityScore != nil {
+		candidate.QualityScore = patch.QualityScore
+	}
+	if patch.BusinessModel != nil {
+		candidate.BusinessModel = patch.BusinessModel
+	}
+	if patch.Moat != nil {
+		candidate.Moat = patch.Moat
+	}
+	if patch.Governance != nil {
+		candidate.Governance = patch.Governance
+	}
+	if patch.FinancialQuality != nil {
+		candidate.FinancialQuality = patch.FinancialQuality
+	}
+	if notes := strings.TrimSpace(patch.Notes); notes != "" {
+		candidate.Notes = notes
+	}
+	candidate.MarginOfSafety = marginOfSafetyFromPrice(candidate.IntrinsicValue, candidate.CurrentPrice, candidate.MarginOfSafety)
+	candidate.UpdatedAt = time.Now().Format("2006-01-02")
+
+	nextState.Candidates = upsertCandidate(nextState.Candidates, candidate)
+	if _, err := saveStateWithBackup(nextState); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save state")
+		return
+	}
+	if err := hydrateState(&nextState); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
+		return
+	}
+	s.state = nextState
+
+	writeJSON(w, http.StatusOK, s.state)
+}
+
+func (s *Server) handleDeleteCandidate(w http.ResponseWriter, r *http.Request) {
+	symbol := strings.TrimPrefix(r.URL.Path, "/api/candidates/")
+	symbol = normalizeSymbol(symbol)
+	if symbol == "" {
+		writeError(w, http.StatusBadRequest, "missing symbol")
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	nextState, err := cloneAppState(s.state)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to prepare state")
+		return
+	}
+	if findCandidateIndex(nextState.Candidates, symbol) == -1 {
+		writeError(w, http.StatusNotFound, "candidate not found")
+		return
+	}
+
+	nextState.Candidates = removeCandidate(nextState.Candidates, symbol)
+	if _, err := saveStateWithBackup(nextState); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save state")
+		return
+	}
+	if err := hydrateState(&nextState); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
+		return
+	}
+	s.state = nextState
+
+	writeJSON(w, http.StatusOK, s.state)
+}
+
 func (s *Server) handleUpdateHolding(w http.ResponseWriter, r *http.Request) {
 	symbol := strings.TrimPrefix(r.URL.Path, "/api/holdings/")
 	symbol = strings.ToUpper(strings.TrimSpace(symbol))
@@ -671,7 +827,7 @@ func (s *Server) resolveTradeInput(trade *Trade) error {
 	}
 
 	if trade.Symbol == "" {
-		return errors.New("未找到股票名称，请先加入持仓或候选池")
+		return errors.New("未找到股票名称，请先加入持仓或晴仓30")
 	}
 	if trade.Name == "" {
 		trade.Name = trade.Symbol
@@ -848,6 +1004,9 @@ func candidateFromHolding(holding Holding) Candidate {
 		Action:              holding.Action,
 		CurrentPrice:        holding.CurrentPrice,
 		PreviousClose:       holding.PreviousClose,
+		TwentyDayClose:      holding.TwentyDayClose,
+		TwentyDayCloseDate:  holding.TwentyDayCloseDate,
+		TwentyDayChange:     holding.TwentyDayChange,
 		MarketCap:           holding.MarketCap,
 		MarketCapCurrency:   holding.MarketCapCurrency,
 		CurrentPriceDate:    holding.CurrentPriceDate,
@@ -878,6 +1037,33 @@ func candidateFromHolding(holding Holding) Candidate {
 	}
 }
 
+func sunny30CandidateFromHolding(holding Holding) Candidate {
+	return Candidate{
+		Symbol:    holding.Symbol,
+		Name:      holding.Name,
+		Status:    "晴仓30跟踪",
+		Action:    "纳入晴仓30独立跟踪；持仓数据同步展示",
+		Industry:  holding.Industry,
+		Currency:  holding.Currency,
+		UpdatedAt: time.Now().Format("2006-01-02"),
+	}
+}
+
+func preserveSunny30CandidateText(candidate *Candidate, existing Candidate) {
+	if status := strings.TrimSpace(existing.Status); status != "" {
+		candidate.Status = status
+	}
+	if action := strings.TrimSpace(existing.Action); action != "" {
+		candidate.Action = action
+	}
+	if industry := strings.TrimSpace(existing.Industry); industry != "" {
+		candidate.Industry = industry
+	}
+	if currency := strings.TrimSpace(existing.Currency); currency != "" {
+		candidate.Currency = strings.ToUpper(currency)
+	}
+}
+
 func holdingFromCandidate(candidate Candidate, cost float64) Holding {
 	return Holding{
 		Symbol:              candidate.Symbol,
@@ -886,6 +1072,9 @@ func holdingFromCandidate(candidate Candidate, cost float64) Holding {
 		Cost:                cost,
 		CurrentPrice:        candidate.CurrentPrice,
 		PreviousClose:       candidate.PreviousClose,
+		TwentyDayClose:      candidate.TwentyDayClose,
+		TwentyDayCloseDate:  candidate.TwentyDayCloseDate,
+		TwentyDayChange:     candidate.TwentyDayChange,
 		MarketCap:           candidate.MarketCap,
 		MarketCapCurrency:   candidate.MarketCapCurrency,
 		CurrentPriceDate:    candidate.CurrentPriceDate,
@@ -921,14 +1110,14 @@ func holdingFromCandidate(candidate Candidate, cost float64) Holding {
 func clearedCandidateFromHolding(holding Holding) Candidate {
 	candidate := candidateFromHolding(holding)
 	if strings.TrimSpace(candidate.Status) == "" || strings.Contains(candidate.Status, "持仓") {
-		candidate.Status = "候选池观察（清仓后跟踪）"
+		candidate.Status = "晴仓30跟踪（清仓后）"
 	}
 	if strings.TrimSpace(candidate.Action) == "" {
-		candidate.Action = "清仓后放回候选池观察；等待重新达到买入纪律"
+		candidate.Action = "清仓后继续放在晴仓30跟踪；等待重新达到买入纪律"
 	} else if strings.Contains(candidate.Action, "继续持有") {
-		candidate.Action = strings.Replace(candidate.Action, "继续持有", "清仓后放回候选池观察", 1)
+		candidate.Action = strings.Replace(candidate.Action, "继续持有", "清仓后继续晴仓30跟踪", 1)
 	} else if !strings.Contains(candidate.Action, "清仓后") {
-		candidate.Action = "清仓后放回候选池观察；" + candidate.Action
+		candidate.Action = "清仓后继续晴仓30跟踪；" + candidate.Action
 	}
 	return candidate
 }
@@ -1660,17 +1849,17 @@ func defaultState() AppState {
 			{Symbol: "6049.HK", Name: "保利物业", Shares: 2600, Cost: 32.663, CurrentPrice: 32.663, PreviousClose: 32.663, Currency: "HKD"},
 			{Symbol: "0883.HK", Name: "中海油", Shares: 2000, Cost: 29.326, CurrentPrice: 29.326, PreviousClose: 29.326, Currency: "HKD"},
 			{Symbol: "1448.HK", Name: "福寿园", Shares: 11000, Cost: 2.521, CurrentPrice: 2.64, PreviousClose: 2.64, CurrentPriceDate: "2026-05-07", PreviousCloseDate: "2026-05-07", Action: "暂不行动；不买入；不纳入核心替补，等待2025年报、审计意见、法证调查结论和复牌后再重估", Status: "未达标（停牌、年报延迟、治理与财务可靠性风险未解除）", MarginOfSafety: ptr(0), QualityScore: ptr(62), Risk: "已触发重大风险否决项：停牌、业绩延迟、现金及采购付款事项调查、管理层/内控可信度下降、墓穴ASP大幅下滑、资产和商誉减值风险", Industry: "殡葬服务/墓园运营/生命服务", Currency: "HKD", IntrinsicValue: ptr(2.65), FairValueRange: "HK$1.6-3.1", TargetBuyPrice: ptr(2), BusinessModel: ptr(22), Moat: ptr(16), Governance: ptr(5), FinancialQuality: ptr(19), UpdatedAt: "2026-05-07；停牌前最后价约HK$2.64；用户更新分析", Notes: "计划：剔除/仅风险观察。复牌前不行动；复牌后若审计无保留、调查无重大重述且价格≤HK$2.0-2.2，才重新评估普通候选价值。纪律：质量分低于75且有重大风险否决项；不因低估值或净现金买入，先等风险解除。最新市场状态：股份自2026-03-20起停牌，停牌前最后价约HK$2.64。最新可用财务口径：2024收入约RMB20.77亿，归母净利约RMB3.73亿，EPS约RMB0.164；2025H1收入约RMB6.11亿，归母亏损约RMB2.61亿，EPS约-RMB0.115。核心判断：福寿园当前不是单纯估值杀，而是业绩杀、治理杀和财报可信度风险叠加；内在价值区间仅为压力测试，不作为可执行买入依据。"},
-			{Symbol: "07489.HK", Name: "岚图汽车", Shares: 2132, Cost: 0, CurrentPrice: 5.89, PreviousClose: 5.89, CurrentPriceDate: "2026-05-07", PreviousCloseDate: "2026-05-07", Action: "放入普通候选池观察；当前不买入，等待扣非利润和自由现金流验证", Status: "未达标（质量分<75且安全边际不足）", MarginOfSafety: ptr(0.16), QualityScore: ptr(72), Risk: "盈利质量受政府补助影响，梦想家单一车型依赖较高，新能源车价格战和智能化竞争可能压缩毛利率", Industry: "新能源乘用车/高端MPV/央企汽车", Currency: "HKD", IntrinsicValue: ptr(7), FairValueRange: "HK$4.5-8.5", TargetBuyPrice: ptr(4.8), BusinessModel: ptr(21), Moat: ptr(16), Governance: ptr(16), FinancialQuality: ptr(19), UpdatedAt: "2026-05-07；估值基于HK$5.89附近股价；用户更新分析", Notes: "2025年收入约人民币348.65亿元，毛利率约20.9%，净利润约人民币10.17亿元，首次年度盈利；2025年交付约150169辆，2026年1-4月交付约49038辆。估值基于HK$5.89附近股价、市值约HK$216.8亿、PE约16.9倍、PB约1.78倍。核心假设是2026年需验证扣非利润、经营现金流和自由现金流质量。"},
+			{Symbol: "07489.HK", Name: "岚图汽车", Shares: 2132, Cost: 0, CurrentPrice: 5.89, PreviousClose: 5.89, CurrentPriceDate: "2026-05-07", PreviousCloseDate: "2026-05-07", Action: "放入普通跟踪观察；当前不买入，等待扣非利润和自由现金流验证", Status: "未达标（质量分<75且安全边际不足）", MarginOfSafety: ptr(0.16), QualityScore: ptr(72), Risk: "盈利质量受政府补助影响，梦想家单一车型依赖较高，新能源车价格战和智能化竞争可能压缩毛利率", Industry: "新能源乘用车/高端MPV/央企汽车", Currency: "HKD", IntrinsicValue: ptr(7), FairValueRange: "HK$4.5-8.5", TargetBuyPrice: ptr(4.8), BusinessModel: ptr(21), Moat: ptr(16), Governance: ptr(16), FinancialQuality: ptr(19), UpdatedAt: "2026-05-07；估值基于HK$5.89附近股价；用户更新分析", Notes: "2025年收入约人民币348.65亿元，毛利率约20.9%，净利润约人民币10.17亿元，首次年度盈利；2025年交付约150169辆，2026年1-4月交付约49038辆。估值基于HK$5.89附近股价、市值约HK$216.8亿、PE约16.9倍、PB约1.78倍。核心假设是2026年需验证扣非利润、经营现金流和自由现金流质量。"},
 		},
 		Plan: []PlanItem{
 			{Rank: 1, Name: "腾讯控股", Priority: "观察/低优先级", Advice: "继续持有；新资金等待≤HK$432，HK$400-430可分批", Discipline: "优秀资产要求≥15%安全边际；当前约9%，未达标"},
 			{Rank: 2, Name: "美的集团", Priority: "核心替补/中优先级", Advice: "A股等待≤¥76分批；H股≤HK$86-87优先；当前不追买", Discipline: "优秀资产要求≥20%安全边际；A股当前约15.3%，未达标"},
 			{Rank: 3, Name: "海康威视", Priority: "重点预期差候选/中优先级", Advice: "不重仓；¥35-37仅适合小仓验证，¥30-32更从容；Q2验证后可升核心替补", Discipline: "质量分84，合格候选要求≥25%安全边际"},
 			{Rank: 4, Name: "伊利股份", Priority: "核心替补/中低优先级", Advice: "暂不追买；¥25-26开始关注，≤¥24可考虑分批", Discipline: "质量分83，合格候选要求≥25%安全边际"},
-			{Rank: 99, Name: "岚图汽车", Priority: "普通候选池/低优先级", Advice: "HK$4.2-4.8才接近可观察买入区；若2026H1扣非利润和自由现金流转正，可重新上修估值", Discipline: "质量分低于75原则上不进入核心资产池；安全边际不足时不试仓"},
+			{Rank: 99, Name: "岚图汽车", Priority: "普通跟踪/低优先级", Advice: "HK$4.2-4.8才接近可观察买入区；若2026H1扣非利润和自由现金流转正，可重新上修估值", Discipline: "质量分低于75原则上不进入核心资产池；安全边际不足时不试仓"},
 		},
 		Candidates: []Candidate{
-			{Symbol: "600690.SH", Name: "海尔智家", Status: "候选池", Action: "放入普通候选池观察；A股暂不追，H股赔率更优", MarginOfSafety: ptr(0.17), QualityScore: ptr(83), Industry: "家电/全球化白电/智慧家庭", Currency: "CNY", IntrinsicValue: ptr(26), FairValueRange: "¥24-28", TargetBuyPrice: ptr(19.5)},
+			{Symbol: "600690.SH", Name: "海尔智家", Status: "晴仓30跟踪", Action: "放入晴仓30跟踪；A股暂不追，H股赔率更优", MarginOfSafety: ptr(0.17), QualityScore: ptr(83), Industry: "家电/全球化白电/智慧家庭", Currency: "CNY", IntrinsicValue: ptr(26), FairValueRange: "¥24-28", TargetBuyPrice: ptr(19.5)},
 		},
 		Rules: []Rule{
 			{Dimension: "商业模式", Score: 30, Standard: "需求刚性、收入可重复、定价权、资本开支、行业空间"},

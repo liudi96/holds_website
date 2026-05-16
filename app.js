@@ -145,7 +145,7 @@ const seedState = {
       previousClose: 5.89,
       currentPriceDate: "2026-05-07",
       previousCloseDate: "2026-05-07",
-      action: "放入普通候选池观察；当前不买入，等待扣非利润和自由现金流验证",
+      action: "放入普通跟踪观察；当前不买入，等待扣非利润和自由现金流验证",
       status: "未达标（质量分<75且安全边际不足）",
       marginOfSafety: 0.16,
       qualityScore: 72,
@@ -168,14 +168,14 @@ const seedState = {
     { rank: 2, name: "美的集团", priority: "核心替补/中优先级", advice: "A股等待≤¥76分批；H股≤HK$86-87优先；当前不追买", discipline: "优秀资产要求≥20%安全边际；A股当前约15.3%，未达标" },
     { rank: 3, name: "海康威视", priority: "重点预期差候选/中优先级", advice: "不重仓；¥35-37仅适合小仓验证，¥30-32更从容；Q2验证后可升核心替补", discipline: "质量分84，合格候选要求≥25%安全边际" },
     { rank: 4, name: "伊利股份", priority: "核心替补/中低优先级", advice: "暂不追买；¥25-26开始关注，≤¥24可考虑分批", discipline: "质量分83，合格候选要求≥25%安全边际" },
-    { rank: 99, name: "岚图汽车", priority: "普通候选池/低优先级", advice: "HK$4.2-4.8才接近可观察买入区；若2026H1扣非利润和自由现金流转正，可重新上修估值", discipline: "质量分低于75原则上不进入核心资产池；安全边际不足时不试仓" }
+    { rank: 99, name: "岚图汽车", priority: "普通跟踪/低优先级", advice: "HK$4.2-4.8才接近可观察买入区；若2026H1扣非利润和自由现金流转正，可重新上修估值", discipline: "质量分低于75原则上不进入核心资产池；安全边际不足时不试仓" }
   ],
   candidates: [
     {
       symbol: "600690.SH",
       name: "海尔智家",
-      status: "候选池",
-      action: "放入普通候选池观察；A股暂不追，H股赔率更优",
+      status: "晴仓30跟踪",
+      action: "放入晴仓30跟踪；A股暂不追，H股赔率更优",
       marginOfSafety: 0.17,
       qualityScore: 83,
       industry: "家电/全球化白电/智慧家庭",
@@ -283,12 +283,13 @@ const OWNER_AUDIT_STATUS_SCORE = {
 const MASTER_MATRIX_FILTERS = [
   { key: "all", label: "全部" },
   { key: "holding", label: "持仓" },
-  { key: "candidate", label: "候选" }
+  { key: "candidate", label: "跟踪" }
 ];
 
 let state = loadState();
 let activeFilter = "all";
 let positionSort = { key: "", direction: "desc" };
+let sunny30Sort = { key: "quality", direction: "desc" };
 let searchTerm = "";
 let pendingResearch = null;
 let candidateSort = "consensus";
@@ -299,7 +300,7 @@ let masterMatrixFilter = "all";
 let backendStateError = "";
 const pageTitles = {
   overview: "晴仓记",
-  portfolio: "持仓冒险地图",
+  portfolio: "股票",
   funds: "基金背包",
   industry: "研究台",
   trades: "交易页",
@@ -309,6 +310,8 @@ const pageTitles = {
 
 const elements = {
   pageTitle: document.querySelector("#pageTitle"),
+  sunny30Summary: document.querySelector("#sunny30Summary"),
+  sunny30Body: document.querySelector("#sunny30Body"),
   positionsBody: document.querySelector("#positionsBody"),
   tradeList: document.querySelector("#tradeList"),
   allocationChart: document.querySelector("#allocationChart"),
@@ -371,6 +374,9 @@ const elements = {
   tradeSharesInput: document.querySelector("#tradeSharesInput"),
   fundDialog: document.querySelector("#fundDialog"),
   fundForm: document.querySelector("#fundForm"),
+  openSunny30CandidateButton: document.querySelector("#openSunny30Candidate"),
+  sunny30CandidateDialog: document.querySelector("#sunny30CandidateDialog"),
+  sunny30CandidateForm: document.querySelector("#sunny30CandidateForm"),
   holdingDialog: document.querySelector("#holdingDialog"),
   holdingForm: document.querySelector("#holdingForm"),
   researchDialog: document.querySelector("#researchDialog"),
@@ -1248,8 +1254,8 @@ function appendClientDecisionLog(entry) {
 
 function targetTypeText(type) {
   if (type === "holding") return "更新现有持仓";
-  if (type === "candidate") return "更新候选池";
-  if (type === "newCandidate") return "新增到候选池";
+  if (type === "candidate") return "更新跟踪标的";
+  if (type === "newCandidate") return "新增到晴仓30";
   return "准备导入";
 }
 
@@ -1483,7 +1489,8 @@ function syncCash() {
 }
 
 function getFilteredPositions(positions) {
-  return decisionUniverse(positions)
+  return positions
+    .map((stock) => ({ ...stock, sourceType: "holding" }))
     .map((stock) => ({ stock, strategy: strategyProfile(stock) }))
     .filter(({ stock, strategy }) => {
     const haystack = [
@@ -2157,7 +2164,7 @@ function decisionStockMeta(stock) {
   if (stock.sourceType === "holding") {
     return `${stock.symbol} · ${stock.shares} 股 · 成本 ${currency(stock.cost, stock.currency)}`;
   }
-  return `${stock.symbol} · 候选 · ${displayText(firstIndustry(stock.industry), "未分类")}`;
+  return `${stock.symbol} · 跟踪 · ${displayText(firstIndustry(stock.industry), "未分类")}`;
 }
 
 function decisionMarketCell(stock) {
@@ -2189,7 +2196,7 @@ function decisionHealthCell(stock, totalValue) {
       tone: "watch",
       scoreText: qualityText,
       weightText: "未持仓",
-      title: displayText(stock.status, "候选池")
+      title: displayText(stock.status, "跟踪标的")
     };
   }
   const health = holdingHealth(stock, totalValue);
@@ -2200,6 +2207,310 @@ function decisionHealthCell(stock, totalValue) {
     weightText: `仓位${weight.toFixed(1)}%`,
     title: health.detail
   };
+}
+
+function sunny30Universe(positions) {
+  const holdingsBySymbol = new Map(positions.map((position) => [normalizeSymbol(position.symbol), position]));
+  const seen = new Set();
+  const stocks = (state.candidates ?? [])
+    .map((candidate) => {
+      const symbol = normalizeSymbol(candidate.symbol);
+      if (!symbol || seen.has(symbol)) return null;
+      seen.add(symbol);
+      const holding = holdingsBySymbol.get(symbol);
+      const merged = mergeSunny30Stock(holding, candidate, symbol);
+      return {
+        ...merged,
+        currentPrice: finiteNumber(merged.currentPrice),
+        previousClose: finiteNumber(merged.previousClose),
+        marginOfSafety: calculatedMarginOfSafety(merged) ?? merged.marginOfSafety,
+        strategy: strategyProfile(merged)
+      };
+    })
+    .filter((stock) => stock?.symbol && stock?.name)
+    .sort((a, b) => {
+      const qualityA = finiteNumber(a.qualityScore) ?? 0;
+      const qualityB = finiteNumber(b.qualityScore) ?? 0;
+      const ownerA = a.strategy.ownerAudit.hasAudit ? a.strategy.ownerAudit.score : 0;
+      const ownerB = b.strategy.ownerAudit.hasAudit ? b.strategy.ownerAudit.score : 0;
+      return qualityB - qualityA || ownerB - ownerA || a.name.localeCompare(b.name, "zh-CN");
+    });
+  return sortedSunny30Stocks(stocks);
+}
+
+function mergeSunny30Stock(holding, candidate, symbol) {
+  if (!holding) {
+    return { ...candidate, symbol, sourceType: "candidate" };
+  }
+
+  const merged = { ...holding, symbol, sourceType: "holding" };
+  ["name", "industry", "status", "action", "currency", "notes"].forEach((key) => {
+    const value = String(candidate?.[key] ?? "").trim();
+    if (value) merged[key] = candidate[key];
+  });
+  ["currentPriceDate", "previousCloseDate", "twentyDayCloseDate", "updatedAt"].forEach((key) => {
+    const value = String(candidate?.[key] ?? "").trim();
+    if (value) merged[key] = candidate[key];
+  });
+  [
+    "currentPrice",
+    "previousClose",
+    "twentyDayClose",
+    "twentyDayChange",
+    "intrinsicValue",
+    "targetBuyPrice",
+    "marginOfSafety",
+    "qualityScore",
+    "businessModel",
+    "moat",
+    "governance",
+    "financialQuality"
+  ].forEach((key) => {
+    const value = finiteNumber(candidate?.[key]);
+    if (value !== null) merged[key] = value;
+  });
+  return merged;
+}
+
+function sunny30TypeOrder(type) {
+  return ["快消/餐饮", "可选消费", "互联网/媒体", "公用事业", "金融", "企业科技", "能源化工"].indexOf(type);
+}
+
+function sunny30Type(stock) {
+  const explicit = String(stock?.companyType ?? stock?.type ?? "").trim();
+  const categories = [
+    { text: "可选消费", tone: "optional", pattern: /可选消费|家电|白电|汽车|乘用车|新能源车|新能源乘用车|服饰|家居|旅游|酒店|免税|医药|中药|中成药|白酒|茅台|同仁堂|国药|美的|海尔|岚图/ },
+    { text: "快消/餐饮", tone: "consumer", pattern: /快消|餐饮|食品|饮料|乳制品|奶|茶饮|连锁|百胜|达势|伊利|中国食品/ },
+    { text: "企业科技", tone: "enterprise", pattern: /企业科技|科技制造|AIoT|安防|机器视觉|自动化|机器人|软件|云|SaaS|数字基础设施|海康/ },
+    { text: "互联网/媒体", tone: "media", pattern: /互联网|媒体|游戏|广告|社交|内容|平台|电商|腾讯|快手|网易|哔哩|微博/ },
+    { text: "公用事业", tone: "utility", pattern: /公用事业|公共事业|公用|电力|水务|燃气|环保|高速|铁路|机场|港口|物业|殡葬|民航信息|中国民航信息网络|民航信|中海物业|保利物业|福寿园/ },
+    { text: "金融", tone: "finance", pattern: /银行|保险|券商|证券|资管|财富管理|金融服务|金融现金流|招商银行|招行/ },
+    { text: "能源化工", tone: "energy", pattern: /能源|石油|油气|煤炭|天然气|化工|炼化|中海油|海油/ },
+  ];
+  const normalizedExplicit = explicit.toLowerCase();
+  const explicitMatch = categories.find((category) => category.text === explicit || category.text.toLowerCase() === normalizedExplicit);
+  if (explicitMatch) return explicitMatch;
+
+  const primaryText = [stock?.symbol, stock?.name, stock?.industry].filter(Boolean).join(" ");
+  const secondaryText = [stock?.status, stock?.action, stock?.notes].filter(Boolean).join(" ");
+  const primaryMatch = categories.find((category) => category.pattern.test(primaryText));
+  if (primaryMatch) return primaryMatch;
+  const secondaryMatch = categories
+    .filter((category) => category.text !== "金融")
+    .find((category) => category.pattern.test(secondaryText));
+  return secondaryMatch ?? { text: "可选消费", tone: "optional" };
+}
+
+function sunny30Quality(stock) {
+  const score = finiteNumber(stock?.qualityScore);
+  if (Number.isFinite(score)) {
+    if (score >= 85) return { text: "优秀", tone: "strong" };
+    if (score >= 75) return { text: "合格", tone: "watch" };
+    return { text: "待验证", tone: "risk" };
+  }
+  const audit = ownerAuditProfile(stock);
+  if (audit.hasAudit && audit.score >= 85) return { text: "优秀", tone: "strong" };
+  if (audit.hasAudit && audit.score >= OWNER_AUDIT_SCORE_TARGET) return { text: "合格", tone: "watch" };
+  return { text: "待验证", tone: "watch" };
+}
+
+function sunny30Moat(stock) {
+  const moat = finiteNumber(stock?.moat);
+  if (Number.isFinite(moat)) {
+    if (moat >= 23) return { text: "极强", tone: "strong" };
+    if (moat >= 20) return { text: "强", tone: "strong" };
+    if (moat >= 17) return { text: "稳固", tone: "watch" };
+    return { text: "形成中", tone: "watch" };
+  }
+  const text = [stock?.industry, stock?.notes].filter(Boolean).join(" ");
+  if (/品牌|平台|网络效应|牌照|规模|渠道/.test(text)) return { text: "待量化", tone: "watch" };
+  return { text: "待补充", tone: "watch" };
+}
+
+function sunny30Ratio(current, base) {
+  const currentValue = finiteNumber(current);
+  const baseValue = finiteNumber(base);
+  if (!Number.isFinite(currentValue) || !Number.isFinite(baseValue) || baseValue <= 0) return null;
+  return (currentValue - baseValue) / baseValue;
+}
+
+function sunny30DisplayRatio(value) {
+  const ratio = finiteNumber(value);
+  if (!Number.isFinite(ratio)) return { text: "-", className: "muted" };
+  return {
+    text: percent(ratio * 100),
+    className: ratio >= 0 ? "positive" : "negative"
+  };
+}
+
+function sunny30DayChange(stock) {
+  return sunny30DisplayRatio(sunny30Ratio(stock?.currentPrice, stock?.previousClose));
+}
+
+function sunny30TwentyDayChange(stock) {
+  const explicit = finiteNumber(stock?.twentyDayChange);
+  if (Number.isFinite(explicit)) return sunny30DisplayRatio(explicit);
+  return sunny30DisplayRatio(sunny30Ratio(stock?.currentPrice, stock?.twentyDayClose));
+}
+
+function sunny30Margin(stock) {
+  const margin = marginValue(stock);
+  return {
+    value: margin,
+    text: Number.isFinite(margin) ? percent(margin * 100, false) : "-",
+    tone: decisionMarginTone(margin)
+  };
+}
+
+function sunny30Pill(value, className) {
+  return `<span class="sunny30-pill ${className}">${escapeHTML(value)}</span>`;
+}
+
+function sunny30QualityValue(stock) {
+  const score = finiteNumber(stock?.qualityScore);
+  if (Number.isFinite(score)) return score;
+  const audit = ownerAuditProfile(stock);
+  return audit.hasAudit ? audit.score : null;
+}
+
+function sunny30TwentyDayRatio(stock) {
+  const explicit = finiteNumber(stock?.twentyDayChange);
+  if (Number.isFinite(explicit)) return explicit;
+  return sunny30Ratio(stock?.currentPrice, stock?.twentyDayClose);
+}
+
+function sunny30FinancialValue(stock, key) {
+  return finiteNumber(latestAnnualFinancial(stock)?.[key]);
+}
+
+function sunny30SortValue(stock, key) {
+  if (key === "name") return String(stock?.name ?? "");
+  if (key === "type") return sunny30TypeOrder(sunny30Type(stock).text);
+  if (["grossMargin", "netMargin", "roe", "roic"].includes(key)) return sunny30FinancialValue(stock, key);
+  if (key === "quality") return sunny30QualityValue(stock);
+  if (key === "moat") return finiteNumber(stock?.moat);
+  if (key === "margin") return marginValue(stock);
+  if (key === "dayChange") return sunny30Ratio(stock?.currentPrice, stock?.previousClose);
+  if (key === "twentyDayChange") return sunny30TwentyDayRatio(stock);
+  return null;
+}
+
+function compareNullableStrings(a, b, direction = "asc") {
+  const aText = String(a ?? "").trim();
+  const bText = String(b ?? "").trim();
+  if (!aText && !bText) return 0;
+  if (!aText) return 1;
+  if (!bText) return -1;
+  const result = aText.localeCompare(bText, "zh-CN");
+  return direction === "asc" ? result : -result;
+}
+
+function sortedSunny30Stocks(stocks) {
+  return [...stocks].sort((a, b) => {
+    const key = sunny30Sort.key || "quality";
+    const valueA = sunny30SortValue(a, key);
+    const valueB = sunny30SortValue(b, key);
+    const result = key === "name"
+      ? compareNullableStrings(valueA, valueB, sunny30Sort.direction)
+      : compareNullableNumbers(valueA, valueB, sunny30Sort.direction);
+    return result || compareNullableStrings(a.name, b.name, "asc");
+  });
+}
+
+function sunny30DefaultDirection(key) {
+  return key === "name" || key === "type" ? "asc" : "desc";
+}
+
+function updateSunny30SortControls() {
+  document.querySelectorAll("[data-sunny30-sort]").forEach((button) => {
+    const key = button.dataset.sunny30Sort;
+    const active = sunny30Sort.key === key;
+    const directionText = sunny30Sort.direction === "asc" ? "升序" : "降序";
+    const label = button.querySelector("span")?.textContent?.trim() || "当前列";
+    button.classList.toggle("active", active);
+    button.dataset.nextDirection = active && sunny30Sort.direction === "desc" ? "asc" : "desc";
+    button.setAttribute("aria-label", active ? `${label}${directionText}` : `按${label}排序`);
+    button.closest("th")?.setAttribute("aria-sort", active ? (sunny30Sort.direction === "asc" ? "ascending" : "descending") : "none");
+    const indicator = button.querySelector("strong");
+    if (indicator) {
+      indicator.textContent = active ? (sunny30Sort.direction === "asc" ? "↑" : "↓") : "↕";
+    }
+  });
+}
+
+function renderSunny30(positions) {
+  if (!elements.sunny30Body) return;
+  const stocks = sunny30Universe(positions);
+  updateSunny30SortControls();
+  const typeCounts = stocks.reduce((counts, stock) => {
+    const type = sunny30Type(stock).text;
+    counts[type] = (counts[type] ?? 0) + 1;
+    return counts;
+  }, {});
+  const buyableCount = stocks.filter((stock) => {
+    const margin = marginValue(stock);
+    return Number.isFinite(margin) && margin >= MAIN_DCF_MARGIN_TARGET;
+  }).length;
+
+  if (elements.sunny30Summary) {
+    elements.sunny30Summary.innerHTML = [
+      ["跟踪标的", `${stocks.length}/30`],
+      ["快消/餐饮", `${typeCounts["快消/餐饮"] ?? 0} 只`],
+      ["可选消费", `${typeCounts["可选消费"] ?? 0} 只`],
+      ["互联网/媒体", `${typeCounts["互联网/媒体"] ?? 0} 只`],
+      ["公用事业", `${typeCounts["公用事业"] ?? 0} 只`],
+      ["金融", `${typeCounts["金融"] ?? 0} 只`],
+      ["企业科技", `${typeCounts["企业科技"] ?? 0} 只`],
+      ["能源化工", `${typeCounts["能源化工"] ?? 0} 只`],
+      ["安全边际达标", `${buyableCount} 只`]
+    ].map(([label, value]) => `
+      <div class="sunny30-summary-cell">
+        <span>${escapeHTML(label)}</span>
+        <strong>${escapeHTML(value)}</strong>
+      </div>
+    `).join("");
+  }
+
+  if (!stocks.length) {
+    elements.sunny30Body.innerHTML = `<tr><td colspan="12" class="empty-state">暂无晴仓30标的</td></tr>`;
+    return;
+  }
+
+  elements.sunny30Body.innerHTML = stocks.map((stock) => {
+    const type = sunny30Type(stock);
+    const latestFinancial = latestAnnualFinancial(stock);
+    const quality = sunny30Quality(stock);
+    const moat = sunny30Moat(stock);
+    const margin = sunny30Margin(stock);
+    const dayChange = sunny30DayChange(stock);
+    const twentyDayChange = sunny30TwentyDayChange(stock);
+    const sourceClass = marketKind(stock) === "HK" ? "hk" : "";
+    const actionCell = `<button class="sunny30-delete-button" type="button" data-delete-sunny30="${escapeHTML(stock.symbol)}">删除</button>`;
+    return `
+      <tr>
+        <td>
+          <div class="stock-cell">
+            <span class="ticker ${sourceClass}">${escapeHTML(stock.symbol.slice(0, 4))}</span>
+            <a class="stock-name stock-link" href="${stockHash(stock.symbol)}">
+              <strong>${escapeHTML(stock.name)}</strong>
+              <span>${escapeHTML(stock.symbol)}</span>
+            </a>
+          </div>
+        </td>
+        <td data-label="类型">${sunny30Pill(type.text, type.tone)}</td>
+        <td data-label="毛利率"><span class="sunny30-metric">${financialRatio(latestFinancial.grossMargin)}</span></td>
+        <td data-label="净利率"><span class="sunny30-metric">${financialRatio(latestFinancial.netMargin)}</span></td>
+        <td data-label="ROE"><span class="sunny30-metric">${financialRatio(latestFinancial.roe)}</span></td>
+        <td data-label="ROIC"><span class="sunny30-metric">${financialRatio(latestFinancial.roic)}</span></td>
+        <td data-label="公司质量">${sunny30Pill(quality.text, quality.tone)}</td>
+        <td data-label="护城河">${sunny30Pill(moat.text, moat.tone)}</td>
+        <td data-label="安全边际">${sunny30Pill(margin.text, margin.tone)}</td>
+        <td data-label="今日涨跌"><span class="${dayChange.className}">${escapeHTML(dayChange.text)}</span></td>
+        <td data-label="20日涨跌"><span class="${twentyDayChange.className}">${escapeHTML(twentyDayChange.text)}</span></td>
+        <td class="sunny30-action-cell" data-label="操作">${actionCell}</td>
+      </tr>
+    `;
+  }).join("");
 }
 
 function renderPositions(positions) {
@@ -2338,7 +2649,14 @@ function renderFunds(funds, positions = computePositions()) {
   `).join("");
 
   if (!funds.length) {
-    elements.fundsBody.innerHTML = `<tr><td colspan="8" class="empty-state">暂无基金持仓；点击“新增基金交易”买入后自动生成基金持仓</td></tr>`;
+    elements.fundsBody.innerHTML = `
+      <tr class="fund-empty-row">
+        <td colspan="8" class="empty-state fund-empty-state">
+          <strong>基金背包还是空的</strong>
+          <span>新增一笔基金买入后，这里会自动生成基金持仓，并同步净值、盈亏和资产占比。</span>
+        </td>
+      </tr>
+    `;
     return;
   }
 
@@ -2448,36 +2766,38 @@ function renderPlanAndCandidates() {
       : `<div class="empty-state compact-empty">暂无执行计划</div>`;
   }
 
-  const candidates = sortedCandidates();
-  elements.candidateList.innerHTML = candidates.length
-    ? candidates.map((item) => {
-      const plan = findPlanForStock(item);
-      const strategy = strategyProfile(item);
-      return `
-        <a class="candidate-card" href="${stockHash(item.symbol)}">
-          <div class="candidate-head">
-            <div>
-              <strong>${escapeHTML(item.name)}</strong>
-              <span>${escapeHTML(item.symbol)} · ${escapeHTML(item.industry)}</span>
+  if (elements.candidateList) {
+    const candidates = sortedCandidates();
+    elements.candidateList.innerHTML = candidates.length
+      ? candidates.map((item) => {
+        const plan = findPlanForStock(item);
+        const strategy = strategyProfile(item);
+        return `
+          <a class="candidate-card" href="${stockHash(item.symbol)}">
+            <div class="candidate-head">
+              <div>
+                <strong>${escapeHTML(item.name)}</strong>
+                <span>${escapeHTML(item.symbol)} · ${escapeHTML(item.industry)}</span>
+              </div>
+              <em>${escapeHTML(strategy.status)}</em>
             </div>
-            <em>${escapeHTML(strategy.status)}</em>
-          </div>
-          <div class="candidate-metrics">
-            <span>综合回报 <strong>${displayDividendRatio(strategy.shield.value)}</strong></span>
-            <span>门槛 <strong>${displayDividendRatio(strategy.shield.target)}</strong></span>
-            <span>可信度 <strong>${escapeHTML(confidenceMeta(item).text)}</strong></span>
-            <span>最新价 <strong>${Number.isFinite(item.currentPrice) && item.currentPrice > 0 ? currency(item.currentPrice, item.currency) : "-"}</strong></span>
-            <span>安全边际 <strong>${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</strong></span>
-            <span>长期评分 <strong>${strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "-"}</strong></span>
-            <span>ex-cash PE <strong>${financialMultiple(strategy.netCash.exCashPe)}</strong></span>
-            <span>ex-cash P/FCF <strong>${financialMultiple(strategy.netCash.exCashPfcf)}</strong></span>
-          </div>
-          <p>${escapeHTML(strategy.blockers.length ? strategy.blockers.join("；") : displayText(plan?.advice, item.action))}</p>
-        </a>
-      `;
-    })
-    .join("")
-    : `<div class="empty-state compact-empty">当前筛选下暂无候选股</div>`;
+            <div class="candidate-metrics">
+              <span>综合回报 <strong>${displayDividendRatio(strategy.shield.value)}</strong></span>
+              <span>门槛 <strong>${displayDividendRatio(strategy.shield.target)}</strong></span>
+              <span>可信度 <strong>${escapeHTML(confidenceMeta(item).text)}</strong></span>
+              <span>最新价 <strong>${Number.isFinite(item.currentPrice) && item.currentPrice > 0 ? currency(item.currentPrice, item.currency) : "-"}</strong></span>
+              <span>安全边际 <strong>${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</strong></span>
+              <span>长期评分 <strong>${strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "-"}</strong></span>
+              <span>ex-cash PE <strong>${financialMultiple(strategy.netCash.exCashPe)}</strong></span>
+              <span>ex-cash P/FCF <strong>${financialMultiple(strategy.netCash.exCashPfcf)}</strong></span>
+            </div>
+            <p>${escapeHTML(strategy.blockers.length ? strategy.blockers.join("；") : displayText(plan?.advice, item.action))}</p>
+          </a>
+        `;
+      })
+      .join("")
+      : `<div class="empty-state compact-empty">当前筛选下暂无跟踪标的</div>`;
+  }
 }
 
 function decisionUniverse(positions) {
@@ -3029,7 +3349,7 @@ function renderMasterSummary(items, key) {
 
 function renderMasterStockCard(item) {
   const { stock, vote, margin, quality, consensus } = item;
-  const sourceText = stock.sourceType === "holding" ? "持仓" : "候选";
+  const sourceText = stock.sourceType === "holding" ? "持仓" : "跟踪";
   return `
     <a class="master-stock-card ${vote.key} ${vote.tone}" href="${stockHash(stock.symbol)}">
       <div class="master-stock-head">
@@ -3089,7 +3409,7 @@ function renderStrategyStockList(items, emptyText) {
 
 function renderStrategyStockCard(item) {
   const { stock, strategy } = item;
-  const sourceText = stock.sourceType === "holding" ? "持仓" : "候选";
+  const sourceText = stock.sourceType === "holding" ? "持仓" : "跟踪";
   return `
     <a class="master-stock-card ${strategy.tone}" href="${stockHash(stock.symbol)}">
       <div class="master-stock-head">
@@ -3418,7 +3738,7 @@ function renderIndustryMetric(metric) {
 }
 
 function renderIndustryStockChip(stock) {
-  const sourceText = stock.sourceType === "holding" ? "持仓" : "候选";
+  const sourceText = stock.sourceType === "holding" ? "持仓" : "跟踪";
   return `
     <a class="industry-stock-chip" href="${stockHash(stock.symbol)}">
       <strong>${escapeHTML(stock.name)}</strong>
@@ -3573,7 +3893,7 @@ function renderIndustryCompanyAnalysis(analysis, stocks) {
   const trends = computedCompanyTrends(stock);
   const judgments = Array.isArray(analysis?.judgments) ? analysis.judgments : [];
   const watchpoints = Array.isArray(analysis?.watchpoints) ? analysis.watchpoints : [];
-  const sourceText = stock?.sourceType === "holding" ? "持仓" : stock?.sourceType === "candidate" ? "候选" : "未关联持仓";
+  const sourceText = stock?.sourceType === "holding" ? "持仓" : stock?.sourceType === "candidate" ? "跟踪" : "未关联持仓";
 
   return `
     <article class="industry-company-card">
@@ -3843,11 +4163,15 @@ function dateDiffDays(fromDate, toDate) {
 function auditUniverse(positions) {
   const holdingSymbols = new Set(positions.map((position) => normalizeSymbol(position.symbol)));
   const holdings = positions.map((position) => ({ ...position, sourceType: "holding" }));
-  const candidates = state.candidates.map((candidate) => ({
-    ...candidate,
-    sourceType: "candidate",
-    duplicateHolding: holdingSymbols.has(normalizeSymbol(candidate.symbol))
-  }));
+  const candidates = (state.candidates ?? [])
+    .filter((candidate) => {
+      const symbol = normalizeSymbol(candidate.symbol);
+      return symbol && !holdingSymbols.has(symbol);
+    })
+    .map((candidate) => ({
+      ...candidate,
+      sourceType: "candidate"
+    }));
   return [...holdings, ...candidates].filter((stock) => stock.symbol && stock.name);
 }
 
@@ -3880,7 +4204,7 @@ function buildDataQualityIssues(positions) {
     const lagDays = dateDiffDays(stock.currentPriceDate, referenceDate);
 
     if (stock.duplicateHolding) {
-      pushIssue("warn", stock, "候选池重复持仓", "该标的已有持仓，候选池展示会被过滤；建议只保留一处维护。");
+      pushIssue("warn", stock, "跟踪标的重复持仓", "该标的已有持仓，晴仓30展示会去重；建议只保留一处维护。");
     }
     if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
       pushIssue("warn", stock, "缺最新价", "会影响市值、安全边际、行动列表和综合回报率计算。");
@@ -3955,7 +4279,7 @@ function renderDataQuality(positions) {
 
   elements.dataQualityList.innerHTML = issues.length
     ? issues.slice(0, 14).map((issue) => {
-      const tag = issue.sourceType === "holding" ? "持仓" : issue.sourceType === "candidate" ? "候选" : issue.sourceType === "data" ? "数据" : "Plan";
+      const tag = issue.sourceType === "holding" ? "持仓" : issue.sourceType === "candidate" ? "跟踪" : issue.sourceType === "data" ? "数据" : "Plan";
       const content = `
         <div class="data-quality-head">
           <strong>${escapeHTML(issue.title)}</strong>
@@ -4163,7 +4487,7 @@ function searchableStocks() {
 
   return [
     ...addSource(positions, "持仓"),
-    ...addSource(state.candidates, "候选")
+    ...addSource(state.candidates, "跟踪")
   ];
 }
 
@@ -4870,12 +5194,12 @@ function renderTradeStockNames() {
   const seen = new Set();
   const items = [
     ...(state.holdings ?? []).map((stock) => ({ ...stock, optionType: "股票" })),
-    ...(state.candidates ?? []).map((stock) => ({ ...stock, optionType: "候选" })),
+    ...(state.candidates ?? []).map((stock) => ({ ...stock, optionType: "跟踪" })),
     ...(state.funds ?? []).map((fund) => ({ ...fund, optionType: "基金" }))
   ]
     .filter((item) => item?.name && item?.symbol)
     .filter((item) => {
-      const key = `${item.optionType}:${item.optionType === "基金" ? normalizeFundKey(item.symbol) : normalizeSymbol(item.symbol)}`;
+      const key = item.optionType === "基金" ? `fund:${normalizeFundKey(item.symbol)}` : `stock:${normalizeSymbol(item.symbol)}`;
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -4887,7 +5211,10 @@ function renderTradeStockNames() {
 
 function routeInfo(rawHash = window.location.hash.slice(1)) {
   const view = rawHash || "overview";
-  if (view === "masters" || view === "positions" || view === "candidates") {
+  if (view === "sunny30" || view === "candidates") {
+    return { view, page: "portfolio", section: "sunny30Section" };
+  }
+  if (view === "masters" || view === "positions") {
     return { view, page: "portfolio" };
   }
   if (view.startsWith("industry=")) {
@@ -4949,6 +5276,7 @@ function render(rawHash = window.location.hash.slice(1)) {
     return;
   }
   if (route.page === "portfolio") {
+    renderSunny30(positions);
     renderPositions(positions);
     renderMastersPage(positions);
     renderPlanAndCandidates();
@@ -5028,14 +5356,14 @@ function clearedCandidateFromHolding(holding) {
   const status = String(candidate.status ?? "").trim();
   const action = String(candidate.action ?? "").trim();
   if (!status || status.includes("持仓")) {
-    candidate.status = "候选池观察（清仓后跟踪）";
+    candidate.status = "晴仓30跟踪（清仓后）";
   }
   if (!action) {
-    candidate.action = "清仓后放回候选池观察；等待重新达到买入纪律";
+    candidate.action = "清仓后继续放在晴仓30跟踪；等待重新达到买入纪律";
   } else if (action.includes("继续持有")) {
-    candidate.action = action.replace("继续持有", "清仓后放回候选池观察");
+    candidate.action = action.replace("继续持有", "清仓后继续晴仓30跟踪");
   } else if (!action.includes("清仓后")) {
-    candidate.action = `清仓后放回候选池观察；${action}`;
+    candidate.action = `清仓后继续晴仓30跟踪；${action}`;
   }
   return candidate;
 }
@@ -5053,6 +5381,98 @@ function upsertCandidate(candidate) {
 function removeCandidate(symbol) {
   const normalized = normalizeSymbol(symbol);
   state.candidates = state.candidates.filter((item) => normalizeSymbol(item.symbol) !== normalized);
+}
+
+function optionalFormNumber(formData, name) {
+  return finiteNumber(formData.get(name));
+}
+
+function candidateFromSunny30Form(formData) {
+  const symbol = normalizeSymbol(formData.get("symbol"));
+  const existingHolding = (state.holdings ?? []).find((holding) => normalizeSymbol(holding.symbol) === symbol);
+  const name = String(formData.get("name") ?? "").trim() || existingHolding?.name || "";
+  const category = String(formData.get("industry") ?? "可选消费").trim() || "可选消费";
+  const currencyCode = String(formData.get("currency") ?? "").trim().toUpperCase() || inferTradeCurrency({ symbol });
+  const currentPrice = optionalFormNumber(formData, "currentPrice");
+  const intrinsicValue = optionalFormNumber(formData, "intrinsicValue");
+  const qualityScore = optionalFormNumber(formData, "qualityScore");
+  const moat = optionalFormNumber(formData, "moat");
+
+  if (!symbol) throw new Error("请填写股票代码");
+  if (!name) throw new Error("请填写股票名称");
+  if (currentPrice !== null && currentPrice <= 0) throw new Error("最新价必须大于 0");
+  if (intrinsicValue !== null && intrinsicValue <= 0) throw new Error("内在价值必须大于 0");
+  if (qualityScore !== null && (qualityScore < 0 || qualityScore > 100)) throw new Error("公司质量需在 0-100 之间");
+  if (moat !== null && (moat < 0 || moat > 25)) throw new Error("护城河需在 0-25 之间");
+
+  const today = new Date().toISOString().slice(0, 10);
+  const candidate = {
+    symbol,
+    name,
+    industry: category,
+    currency: currencyCode,
+    updatedAt: today,
+    notes: String(formData.get("notes") ?? "").trim()
+  };
+  if (currentPrice !== null) {
+    candidate.currentPrice = currentPrice;
+    candidate.previousClose = currentPrice;
+    candidate.currentPriceDate = today;
+    candidate.previousCloseDate = today;
+  }
+  if (intrinsicValue !== null) candidate.intrinsicValue = intrinsicValue;
+  if (qualityScore !== null) candidate.qualityScore = qualityScore;
+  if (moat !== null) candidate.moat = moat;
+  const margin = calculatedMarginOfSafety(candidate);
+  if (Number.isFinite(margin)) candidate.marginOfSafety = margin;
+
+  return candidate;
+}
+
+function openSunny30CandidateDialog() {
+  if (!elements.sunny30CandidateDialog || !elements.sunny30CandidateForm) return;
+  elements.sunny30CandidateForm.reset();
+  elements.sunny30CandidateForm.industry.value = "可选消费";
+  elements.sunny30CandidateDialog.showModal();
+}
+
+async function saveSunny30Candidate(formData) {
+  const candidate = candidateFromSunny30Form(formData);
+
+  if (USE_BACKEND) {
+    state = await requestJSON("/api/candidates", {
+      method: "POST",
+      body: JSON.stringify(candidate)
+    });
+    localStorage.removeItem(STORAGE_KEY);
+    render("portfolio");
+    return;
+  }
+
+  state.candidates ??= [];
+  const existing = state.candidates.find((item) => normalizeSymbol(item.symbol) === candidate.symbol);
+  const nextCandidate = { ...(existing ?? {}), ...candidate };
+  nextCandidate.status ||= "晴仓30跟踪";
+  nextCandidate.action ||= "纳入晴仓30长期跟踪；等待质量和安全边际补充";
+  upsertCandidate(nextCandidate);
+  saveState();
+  render("portfolio");
+}
+
+async function deleteSunny30Candidate(symbol) {
+  const normalized = normalizeSymbol(symbol);
+  if (!normalized) return;
+
+  if (USE_BACKEND) {
+    state = await requestJSON(`/api/candidates/${encodeURIComponent(normalized)}`, { method: "DELETE" });
+    localStorage.removeItem(STORAGE_KEY);
+    render("portfolio");
+    return;
+  }
+
+  removeCandidate(normalized);
+  saveState();
+  render("portfolio");
 }
 
 function tradeFromSimpleForm(formData) {
@@ -5084,7 +5504,7 @@ function tradeFromSimpleForm(formData) {
   }
 
   const stock = findTradeStock(nameInput);
-  if (!stock) throw new Error(`未找到“${nameInput}”，请先把它加入持仓或候选池`);
+  if (!stock) throw new Error(`未找到“${nameInput}”，请先把它加入持仓或晴仓30`);
 
   const symbol = normalizeSymbol(stock.symbol);
   const currencyCode = inferTradeCurrency(stock);
@@ -5563,7 +5983,12 @@ function handleRoute(rawHash) {
     render("portfolio");
     return;
   }
-  if (view === "positions" || view === "candidates") {
+  if (view === "sunny30" || view === "candidates") {
+    showEmbeddedMasters("sunny30Section");
+    render("portfolio");
+    return;
+  }
+  if (view === "positions") {
     showPage("portfolio");
     render("portfolio");
     return;
@@ -5601,7 +6026,7 @@ document.addEventListener("click", (event) => {
   elements.searchResults?.classList.remove("active");
 });
 
-elements.candidateSort.addEventListener("change", (event) => {
+elements.candidateSort?.addEventListener("change", (event) => {
   candidateSort = event.target.value;
   renderPlanAndCandidates();
 });
@@ -5615,6 +6040,37 @@ document.addEventListener("click", (event) => {
     direction: positionSort.key === key && positionSort.direction === "desc" ? "asc" : "desc"
   };
   renderPositions(computePositions());
+});
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-sunny30-sort]");
+  if (!button) return;
+  const key = button.dataset.sunny30Sort;
+  sunny30Sort = {
+    key,
+    direction: sunny30Sort.key === key
+      ? (sunny30Sort.direction === "desc" ? "asc" : "desc")
+      : sunny30DefaultDirection(key)
+  };
+  renderSunny30(computePositions());
+});
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-delete-sunny30]");
+  if (!button) return;
+  const symbol = normalizeSymbol(button.dataset.deleteSunny30);
+  const candidate = (state.candidates ?? []).find((item) => normalizeSymbol(item.symbol) === symbol);
+  const name = candidate?.name || symbol;
+  if (!window.confirm(`从晴仓30删除「${name}」？这里只移出晴仓30，不会删除持仓。`)) return;
+
+  try {
+    button.disabled = true;
+    await deleteSunny30Candidate(symbol);
+    setQuoteUpdateStatus(`已从晴仓30删除 ${name}`, "success");
+  } catch (error) {
+    button.disabled = false;
+    window.alert(error.message);
+  }
 });
 
 elements.masterMatrix?.addEventListener("click", (event) => {
@@ -5693,7 +6149,9 @@ document.querySelector("#openTradePanelSecondary").addEventListener("click", () 
   elements.tradeDialog.showModal();
 });
 
-document.querySelector("#openFundTradePanel")?.addEventListener("click", () => {
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-open-fund-trade]");
+  if (!button) return;
   setTradeAssetType("fund");
   elements.tradeDialog.showModal();
 });
@@ -5746,6 +6204,16 @@ document.querySelector("#cancelFund")?.addEventListener("click", () => {
   elements.fundDialog.close();
 });
 
+elements.openSunny30CandidateButton?.addEventListener("click", openSunny30CandidateDialog);
+
+document.querySelector("#closeSunny30CandidatePanel")?.addEventListener("click", () => {
+  elements.sunny30CandidateDialog.close();
+});
+
+document.querySelector("#cancelSunny30Candidate")?.addEventListener("click", () => {
+  elements.sunny30CandidateDialog.close();
+});
+
 document.querySelector("#closeResearchPanel").addEventListener("click", () => {
   elements.researchDialog.close();
 });
@@ -5781,6 +6249,18 @@ elements.fundForm?.addEventListener("submit", async (event) => {
   try {
     await saveFund(new FormData(elements.fundForm));
     elements.fundDialog.close();
+  } catch (error) {
+    window.alert(error.message);
+  }
+});
+
+elements.sunny30CandidateForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    await saveSunny30Candidate(new FormData(elements.sunny30CandidateForm));
+    elements.sunny30CandidateForm.reset();
+    elements.sunny30CandidateDialog.close();
+    setQuoteUpdateStatus("晴仓30跟踪标的已保存", "success");
   } catch (error) {
     window.alert(error.message);
   }
