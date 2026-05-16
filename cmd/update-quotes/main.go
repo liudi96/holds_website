@@ -75,6 +75,9 @@ type Holding struct {
 	Cost                float64             `json:"cost"`
 	CurrentPrice        float64             `json:"currentPrice"`
 	PreviousClose       float64             `json:"previousClose"`
+	TwentyDayClose      float64             `json:"twentyDayClose,omitempty"`
+	TwentyDayCloseDate  string              `json:"twentyDayCloseDate,omitempty"`
+	TwentyDayChange     *float64            `json:"twentyDayChange,omitempty"`
 	MarketCap           *float64            `json:"marketCap,omitempty"`
 	MarketCapCurrency   string              `json:"marketCapCurrency,omitempty"`
 	CurrentPriceDate    string              `json:"currentPriceDate"`
@@ -189,6 +192,9 @@ type Candidate struct {
 	Action              string              `json:"action"`
 	CurrentPrice        float64             `json:"currentPrice"`
 	PreviousClose       float64             `json:"previousClose"`
+	TwentyDayClose      float64             `json:"twentyDayClose,omitempty"`
+	TwentyDayCloseDate  string              `json:"twentyDayCloseDate,omitempty"`
+	TwentyDayChange     *float64            `json:"twentyDayChange,omitempty"`
 	MarketCap           *float64            `json:"marketCap,omitempty"`
 	MarketCapCurrency   string              `json:"marketCapCurrency,omitempty"`
 	CurrentPriceDate    string              `json:"currentPriceDate"`
@@ -283,6 +289,9 @@ func main() {
 		fmt.Printf("%s %s: %.4f -> %.4f (%s), yesterday close %.4f (%s) [%s]\n", holding.Symbol, holding.Name, holding.CurrentPrice, quote.Price, quote.PriceDate, quote.PreviousClose, quote.PreviousCloseDate, quote.SourceSymbol)
 		holding.CurrentPrice = quote.Price
 		holding.PreviousClose = quote.PreviousClose
+		holding.TwentyDayClose = quote.TwentyDayClose
+		holding.TwentyDayCloseDate = quote.TwentyDayCloseDate
+		holding.TwentyDayChange = quote.TwentyDayChange
 		holding.CurrentPriceDate = quote.PriceDate
 		holding.PreviousCloseDate = quote.PreviousCloseDate
 		holding.MarginOfSafety = marginOfSafetyFromPrice(holding.IntrinsicValue, holding.CurrentPrice, holding.MarginOfSafety)
@@ -310,6 +319,9 @@ func main() {
 		fmt.Printf("%s %s: %.4f -> %.4f (%s), yesterday close %.4f (%s) [%s]\n", candidate.Symbol, candidate.Name, candidate.CurrentPrice, quote.Price, quote.PriceDate, quote.PreviousClose, quote.PreviousCloseDate, quote.SourceSymbol)
 		candidate.CurrentPrice = quote.Price
 		candidate.PreviousClose = quote.PreviousClose
+		candidate.TwentyDayClose = quote.TwentyDayClose
+		candidate.TwentyDayCloseDate = quote.TwentyDayCloseDate
+		candidate.TwentyDayChange = quote.TwentyDayChange
 		candidate.CurrentPriceDate = quote.PriceDate
 		candidate.PreviousCloseDate = quote.PreviousCloseDate
 		candidate.MarginOfSafety = marginOfSafetyFromPrice(candidate.IntrinsicValue, candidate.CurrentPrice, candidate.MarginOfSafety)
@@ -340,6 +352,9 @@ func main() {
 type quote struct {
 	Price              float64
 	PreviousClose      float64
+	TwentyDayClose     float64
+	TwentyDayCloseDate string
+	TwentyDayChange    *float64
 	PriceDate          string
 	PreviousCloseDate  string
 	Currency           string
@@ -445,10 +460,22 @@ func fetchYahooQuote(client *http.Client, symbol string) (quote, error) {
 
 	priceClose := validCloses[len(validCloses)-1]
 	previousClose := validCloses[len(validCloses)-2]
+	twentyDayClose := dailyClose{}
+	var twentyDayChange *float64
+	if len(validCloses) >= 21 {
+		twentyDayClose = validCloses[len(validCloses)-21]
+		if twentyDayClose.Price > 0 {
+			change := (priceClose.Price - twentyDayClose.Price) / twentyDayClose.Price
+			twentyDayChange = &change
+		}
+	}
 	dividendPerShare, dividendFiscalYear := trailingDividendFromEvents(result.Events.Dividends, priceClose.Date, location)
 	return quote{
 		Price:              priceClose.Price,
 		PreviousClose:      previousClose.Price,
+		TwentyDayClose:     twentyDayClose.Price,
+		TwentyDayCloseDate: twentyDayClose.Date,
+		TwentyDayChange:    twentyDayChange,
 		PriceDate:          priceClose.Date,
 		PreviousCloseDate:  previousClose.Date,
 		Currency:           result.Meta.Currency,
@@ -1123,6 +1150,9 @@ type RuntimeQuote struct {
 	Symbol             string   `json:"symbol"`
 	CurrentPrice       float64  `json:"currentPrice,omitempty"`
 	PreviousClose      float64  `json:"previousClose,omitempty"`
+	TwentyDayClose     float64  `json:"twentyDayClose,omitempty"`
+	TwentyDayCloseDate string   `json:"twentyDayCloseDate,omitempty"`
+	TwentyDayChange    *float64 `json:"twentyDayChange,omitempty"`
 	CurrentPriceDate   string   `json:"currentPriceDate,omitempty"`
 	PreviousCloseDate  string   `json:"previousCloseDate,omitempty"`
 	Currency           string   `json:"currency,omitempty"`
@@ -1217,6 +1247,15 @@ func applyRuntimeQuoteToHolding(holding *Holding, record RuntimeQuote) {
 	if record.PreviousClose > 0 {
 		holding.PreviousClose = record.PreviousClose
 	}
+	if record.TwentyDayClose > 0 {
+		holding.TwentyDayClose = record.TwentyDayClose
+	}
+	if strings.TrimSpace(record.TwentyDayCloseDate) != "" {
+		holding.TwentyDayCloseDate = record.TwentyDayCloseDate
+	}
+	if record.TwentyDayChange != nil {
+		holding.TwentyDayChange = record.TwentyDayChange
+	}
 	holding.CurrentPriceDate = firstNonEmpty(record.CurrentPriceDate, holding.CurrentPriceDate)
 	holding.PreviousCloseDate = firstNonEmpty(record.PreviousCloseDate, holding.PreviousCloseDate)
 	if strings.TrimSpace(holding.Currency) == "" {
@@ -1236,6 +1275,15 @@ func applyRuntimeQuoteToCandidate(candidate *Candidate, record RuntimeQuote) {
 	if record.PreviousClose > 0 {
 		candidate.PreviousClose = record.PreviousClose
 	}
+	if record.TwentyDayClose > 0 {
+		candidate.TwentyDayClose = record.TwentyDayClose
+	}
+	if strings.TrimSpace(record.TwentyDayCloseDate) != "" {
+		candidate.TwentyDayCloseDate = record.TwentyDayCloseDate
+	}
+	if record.TwentyDayChange != nil {
+		candidate.TwentyDayChange = record.TwentyDayChange
+	}
 	candidate.CurrentPriceDate = firstNonEmpty(record.CurrentPriceDate, candidate.CurrentPriceDate)
 	candidate.PreviousCloseDate = firstNonEmpty(record.PreviousCloseDate, candidate.PreviousCloseDate)
 	if strings.TrimSpace(candidate.Currency) == "" {
@@ -1252,6 +1300,9 @@ func runtimeQuoteFromQuote(symbol string, quote quote, updateLabel string) Runti
 		Symbol:             normalizeSymbol(symbol),
 		CurrentPrice:       quote.Price,
 		PreviousClose:      quote.PreviousClose,
+		TwentyDayClose:     quote.TwentyDayClose,
+		TwentyDayCloseDate: quote.TwentyDayCloseDate,
+		TwentyDayChange:    quote.TwentyDayChange,
 		CurrentPriceDate:   quote.PriceDate,
 		PreviousCloseDate:  quote.PreviousCloseDate,
 		Currency:           strings.ToUpper(strings.TrimSpace(quote.Currency)),
@@ -1268,6 +1319,9 @@ func runtimeRecordAsQuote(record RuntimeQuote) quote {
 	return quote{
 		Price:              record.CurrentPrice,
 		PreviousClose:      record.PreviousClose,
+		TwentyDayClose:     record.TwentyDayClose,
+		TwentyDayCloseDate: record.TwentyDayCloseDate,
+		TwentyDayChange:    record.TwentyDayChange,
 		PriceDate:          record.CurrentPriceDate,
 		PreviousCloseDate:  record.PreviousCloseDate,
 		Currency:           record.Currency,

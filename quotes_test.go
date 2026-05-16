@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func ptrFloat(value float64) *float64 {
 	return &value
@@ -150,5 +153,68 @@ func TestTencentMarketCapUsesHundredMillionUnit(t *testing.T) {
 	marketCap := tencentMarketCap(fields)
 	if marketCap == nil || *marketCap != 10405670000 {
 		t.Fatalf("market cap = %v, want 10405670000", marketCap)
+	}
+}
+
+func TestParseEastmoneyDailyClose(t *testing.T) {
+	close, err := parseEastmoneyDailyClose("2026-05-15,82.00,82.57,83.10,81.90,100,200")
+	if err != nil {
+		t.Fatalf("parseEastmoneyDailyClose() error = %v", err)
+	}
+	if close.Date != "2026-05-15" || close.Price != 82.57 {
+		t.Fatalf("daily close = %+v, want 2026-05-15 82.57", close)
+	}
+}
+
+func TestParseTencentKlineRows(t *testing.T) {
+	rows, err := parseTencentKlineRows(json.RawMessage(`[
+		["2026-05-14","81.00","82.57","83.10","80.90","100"],
+		["2026-05-15","82.00","83.20","83.50","81.90","120"]
+	]`))
+	if err != nil {
+		t.Fatalf("parseTencentKlineRows() error = %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("len(rows) = %d, want 2", len(rows))
+	}
+	if rows[1].Date != "2026-05-15" || rows[1].Price != 83.20 {
+		t.Fatalf("second row = %+v, want 2026-05-15 83.20", rows[1])
+	}
+}
+
+func TestApplyTwentyDayChangeFromClosesUsesCurrentPrice(t *testing.T) {
+	closes := make([]dailyClose, 21)
+	for i := range closes {
+		closes[i] = dailyClose{Date: "2026-05-01", Price: 100 + float64(i)}
+	}
+	closes[0] = dailyClose{Date: "2026-04-15", Price: 80}
+	item := quote{Price: 100}
+
+	applyTwentyDayChangeFromCloses(&item, closes)
+
+	if item.TwentyDayClose != 80 || item.TwentyDayCloseDate != "2026-04-15" {
+		t.Fatalf("twenty day base = %.2f %q, want 80 2026-04-15", item.TwentyDayClose, item.TwentyDayCloseDate)
+	}
+	if item.TwentyDayChange == nil || *item.TwentyDayChange != 0.25 {
+		t.Fatalf("twenty day change = %v, want 0.25", item.TwentyDayChange)
+	}
+}
+
+func TestPreserveRuntimeTwentyDayQuote(t *testing.T) {
+	existingChange := 0.12
+	record := RuntimeQuote{Symbol: "0700.HK", CurrentPrice: 456.4}
+
+	preserveRuntimeTwentyDayQuote(&record, RuntimeQuote{
+		Symbol:             "0700.HK",
+		TwentyDayClose:     407.5,
+		TwentyDayCloseDate: "2026-04-16",
+		TwentyDayChange:    &existingChange,
+	})
+
+	if record.TwentyDayClose != 407.5 || record.TwentyDayCloseDate != "2026-04-16" {
+		t.Fatalf("twenty day quote = %.2f %q, want 407.5 2026-04-16", record.TwentyDayClose, record.TwentyDayCloseDate)
+	}
+	if record.TwentyDayChange == nil || *record.TwentyDayChange != existingChange {
+		t.Fatalf("twenty day change = %v, want %v", record.TwentyDayChange, existingChange)
 	}
 }

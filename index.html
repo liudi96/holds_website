@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>晴仓记 · 清新冒险看板</title>
-    <link rel="stylesheet" href="./styles.css?v=sunny-quest" />
+    <link rel="stylesheet" href="./styles.css?v=sunny-quest-compact-hero" />
   </head>
   <body>
     <aside class="sidebar">
@@ -21,9 +21,9 @@
           <span class="nav-icon">⌂</span>
           总览
         </button>
-        <button class="nav-item" data-view="portfolio" title="持仓">
+        <button class="nav-item" data-view="portfolio" title="股票">
           <span class="nav-icon">▦</span>
-          持仓
+          股票
         </button>
         <button class="nav-item" data-view="funds" title="基金">
           <span class="nav-icon">◌</span>
@@ -158,11 +158,6 @@
               <p class="eyebrow">Position Decisions</p>
               <h2>持仓决策表</h2>
             </div>
-            <div class="segmented">
-              <button class="segment active" data-filter="all">全部</button>
-              <button class="segment" data-filter="holding">持仓</button>
-              <button class="segment" data-filter="candidate">候选</button>
-            </div>
           </div>
 
           <div class="table-wrap">
@@ -208,26 +203,98 @@
           </div>
         </div>
 
-        <section class="panel portfolio-candidates-panel">
-          <div class="panel-head compact">
-            <div>
-              <p class="eyebrow">Watchlist</p>
-              <h2>候选池</h2>
+        <section id="sunny30Section" class="stock-page-sunny30" aria-label="晴仓30">
+          <section class="panel sunny30-panel" aria-label="晴仓30表格">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Sunny 30 Matrix</p>
+                <h2>晴仓30 · 股票本身数据</h2>
+              </div>
+              <button class="primary-button compact-link" id="openSunny30Candidate" type="button">
+                <span>＋</span>
+                新增跟踪
+              </button>
             </div>
-            <div class="candidate-sort">
-              <label for="candidateSort">排序</label>
-              <select id="candidateSort">
-                <option value="consensus">双策略优先</option>
-                <option value="discipline">纪律优先</option>
-                <option value="priority">执行优先级</option>
-                <option value="margin">安全边际</option>
-                <option value="quality">质量分</option>
-                <option value="buyDistance">距离买入价</option>
-                <option value="industry">行业</option>
-              </select>
+
+            <div class="sunny30-summary" id="sunny30Summary"></div>
+
+            <div class="table-wrap">
+              <table class="sunny30-table">
+                <thead>
+                  <tr>
+                    <th>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="name" aria-label="按股票排序">
+                        <span>股票</span>
+                        <strong>↕</strong>
+                      </button>
+                    </th>
+                    <th>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="type" aria-label="按类型排序">
+                        <span>类型</span>
+                        <strong>↕</strong>
+                      </button>
+                    </th>
+                    <th>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="grossMargin" aria-label="按毛利率排序">
+                        <span>毛利率</span>
+                        <strong>↕</strong>
+                      </button>
+                    </th>
+                    <th>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="netMargin" aria-label="按净利率排序">
+                        <span>净利率</span>
+                        <strong>↕</strong>
+                      </button>
+                    </th>
+                    <th>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="roe" aria-label="按ROE排序">
+                        <span>ROE</span>
+                        <strong>↕</strong>
+                      </button>
+                    </th>
+                    <th>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="roic" aria-label="按ROIC排序">
+                        <span>ROIC</span>
+                        <strong>↕</strong>
+                      </button>
+                    </th>
+                    <th>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="quality" aria-label="按公司质量排序">
+                        <span>公司质量</span>
+                        <strong>↕</strong>
+                      </button>
+                    </th>
+                    <th>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="moat" aria-label="按护城河排序">
+                        <span>护城河</span>
+                        <strong>↕</strong>
+                      </button>
+                    </th>
+                    <th>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="margin" aria-label="按安全边际排序">
+                        <span>安全边际</span>
+                        <strong>↕</strong>
+                      </button>
+                    </th>
+                    <th>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="dayChange" aria-label="按今日涨跌排序">
+                        <span>今日涨跌</span>
+                        <strong>↕</strong>
+                      </button>
+                    </th>
+                    <th>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="twentyDayChange" aria-label="按20日涨跌排序">
+                        <span>20日涨跌</span>
+                        <strong>↕</strong>
+                      </button>
+                    </th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="sunny30Body"></tbody>
+              </table>
             </div>
-          </div>
-          <div class="candidate-list candidate-page" id="candidateList"></div>
+          </section>
         </section>
       </section>
 
@@ -299,7 +366,7 @@
               <p class="eyebrow">Fund Trades</p>
               <h2>基金交易流水</h2>
             </div>
-            <button class="primary-button" id="openFundTradePanel" type="button">
+            <button class="primary-button" id="openFundTradePanel" type="button" data-open-fund-trade>
               <span>＋</span>
               新增基金交易
             </button>
@@ -418,6 +485,70 @@
       </form>
     </dialog>
 
+    <dialog class="trade-dialog" id="sunny30CandidateDialog">
+      <form id="sunny30CandidateForm" method="dialog">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Sunny 30</p>
+            <h2>新增晴仓30股票</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeSunny30CandidatePanel" title="关闭">×</button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            股票代码
+            <input name="symbol" placeholder="03613.HK" required />
+          </label>
+          <label>
+            股票名称
+            <input name="name" placeholder="达势股份" required />
+          </label>
+          <label>
+            类型
+            <select name="industry" required>
+              <option value="快消/餐饮">快消/餐饮</option>
+              <option value="可选消费">可选消费</option>
+              <option value="互联网/媒体">互联网/媒体</option>
+              <option value="公用事业">公用事业</option>
+              <option value="金融">金融</option>
+              <option value="企业科技">企业科技</option>
+              <option value="能源化工">能源化工</option>
+            </select>
+          </label>
+          <label>
+            币种
+            <input name="currency" placeholder="HKD" />
+          </label>
+          <label>
+            最新价
+            <input name="currentPrice" type="number" min="0" step="0.0001" />
+          </label>
+          <label>
+            内在价值
+            <input name="intrinsicValue" type="number" min="0" step="0.0001" />
+          </label>
+          <label>
+            公司质量
+            <input name="qualityScore" type="number" min="0" max="100" step="1" />
+          </label>
+          <label>
+            护城河
+            <input name="moat" type="number" min="0" max="25" step="1" />
+          </label>
+          <label class="wide-field">
+            备注
+            <textarea name="notes" rows="3" placeholder="成长空间、资本配置、主要风险"></textarea>
+          </label>
+        </div>
+
+        <div class="dialog-actions">
+          <button type="button" class="ghost-button" id="cancelSunny30Candidate">取消</button>
+          <button type="submit" class="primary-button">保存跟踪</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog class="trade-dialog" id="holdingDialog">
       <form id="holdingForm" method="dialog">
         <div class="dialog-head">
@@ -493,6 +624,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=sunny-quest"></script>
+    <script src="./app.js?v=sunny-quest-sunny30-maintenance"></script>
   </body>
 </html>
