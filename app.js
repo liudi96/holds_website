@@ -246,7 +246,7 @@ const seedState = {
   ]
 };
 
-const palette = ["#087f5b", "#1c4f82", "#a16207", "#7c3aed", "#be123c", "#0f766e"];
+const palette = ["#1aa88a", "#39aee6", "#ffbe56", "#4dae69", "#e65d6a", "#c97b14"];
 const USE_BACKEND = location.protocol === "http:" || location.protocol === "https:";
 const BUY_PROXIMITY = 0.05;
 const SAFETY_MARGIN_TARGET = 0.25;
@@ -298,9 +298,9 @@ let masterMatrixSort = { key: "margin", direction: "desc" };
 let masterMatrixFilter = "all";
 let backendStateError = "";
 const pageTitles = {
-  overview: "总览",
-  portfolio: "持仓",
-  funds: "基金",
+  overview: "晴仓记",
+  portfolio: "持仓冒险地图",
+  funds: "基金背包",
   industry: "研究台",
   trades: "交易页",
   "industry-detail": "行业分析",
