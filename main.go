@@ -14,10 +14,21 @@ import (
 	"time"
 )
 
-const dataFile = "data/portfolio.json"
-const runtimeQuotesFile = "data/runtime/quotes.json"
-const runtimeIndustryMetricsFile = "data/runtime/industry_metrics.json"
-const decisionLogLimit = 500
+const (
+	defaultDataDir                 = "data"
+	portfolioDataDirEnv            = "PORTFOLIO_DATA_DIR"
+	portfolioDataFileName          = "portfolio.json"
+	runtimeQuotesFileName          = "quotes.json"
+	runtimeIndustryMetricsFileName = "industry_metrics.json"
+	decisionLogLimit               = 500
+)
+
+var (
+	dataDir                    = resolveDataDir()
+	dataFile                   = filepath.Join(dataDir, portfolioDataFileName)
+	runtimeQuotesFile          = filepath.Join(dataDir, "runtime", runtimeQuotesFileName)
+	runtimeIndustryMetricsFile = filepath.Join(dataDir, "runtime", runtimeIndustryMetricsFileName)
+)
 
 //go:embed data/portfolio.json
 var bundledPortfolioJSON []byte
@@ -34,6 +45,32 @@ type AppState struct {
 	Candidates   []Candidate        `json:"candidates"`
 	Industries   []IndustryResearch `json:"industries,omitempty"`
 	Rules        []Rule             `json:"rules"`
+	DataStatus   *DataStatus        `json:"dataStatus,omitempty"`
+}
+
+type DataStatus struct {
+	Status                 string            `json:"status"`
+	DataDir                string            `json:"dataDir"`
+	Writable               bool              `json:"writable"`
+	BackupCount            int               `json:"backupCount"`
+	Portfolio              DataFileStatus    `json:"portfolio"`
+	RuntimeQuotes          DataFileStatus    `json:"runtimeQuotes"`
+	RuntimeIndustryMetrics DataFileStatus    `json:"runtimeIndustryMetrics"`
+	Issues                 []DataStatusIssue `json:"issues,omitempty"`
+}
+
+type DataFileStatus struct {
+	Path       string `json:"path"`
+	Exists     bool   `json:"exists"`
+	Size       int64  `json:"size,omitempty"`
+	ModifiedAt string `json:"modifiedAt,omitempty"`
+	UpdatedAt  string `json:"updatedAt,omitempty"`
+}
+
+type DataStatusIssue struct {
+	Tone   string `json:"tone"`
+	Title  string `json:"title"`
+	Detail string `json:"detail"`
 }
 
 type Trade struct {
@@ -271,6 +308,14 @@ type Server struct {
 	state AppState
 }
 
+func resolveDataDir() string {
+	dir := strings.TrimSpace(os.Getenv(portfolioDataDirEnv))
+	if dir == "" {
+		return defaultDataDir
+	}
+	return filepath.Clean(dir)
+}
+
 func main() {
 	state, err := loadState()
 	if err != nil {
@@ -291,9 +336,8 @@ func main() {
 	mux.HandleFunc("POST /api/quotes/update", server.handleUpdateQuotes)
 	mux.HandleFunc("POST /api/industries/update", server.handleUpdateIndustries)
 	mux.HandleFunc("POST /api/financials/update/", server.handleUpdateFinancials)
-	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	})
+	mux.HandleFunc("GET /api/health", server.handleHealth)
+	mux.HandleFunc("GET /api/data/status", server.handleDataStatus)
 	mux.Handle("/", noCache(http.FileServer(http.Dir("."))))
 
 	addr := listenAddress()
@@ -317,6 +361,21 @@ func noCache(next http.Handler) http.Handler {
 		w.Header().Set("Cache-Control", "no-store")
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	status := buildDataStatus()
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":      "ok",
+		"dataStatus":  status.Status,
+		"dataDir":     status.DataDir,
+		"writable":    status.Writable,
+		"backupCount": status.BackupCount,
+	})
+}
+
+func (s *Server) handleDataStatus(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, buildDataStatus())
 }
 
 func (s *Server) handleGetState(w http.ResponseWriter, r *http.Request) {
@@ -393,12 +452,26 @@ func (s *Server) handleCreateTrade(w http.ResponseWriter, r *http.Request) {
 	trade.ID = time.Now().UnixMilli()
 	trade.Date = time.Now().Format("2006-01-02")
 
-	s.applyTrade(trade)
-	appendTradeDecisionLog(&s.state, trade)
-	if err := saveState(s.state); err != nil {
+	nextState, err := cloneAppState(s.state)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to prepare state")
+		return
+	}
+	if _, err := backupPortfolioFile(); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to backup portfolio data")
+		return
+	}
+	applyTradeToState(&nextState, trade)
+	appendTradeDecisionLog(&nextState, trade)
+	if err := saveState(nextState); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save state")
 		return
 	}
+	if err := hydrateState(&nextState); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
+		return
+	}
+	s.state = nextState
 
 	writeJSON(w, http.StatusCreated, s.state)
 }
@@ -407,18 +480,28 @@ func (s *Server) handleClearDecisionLogs(w http.ResponseWriter, r *http.Request)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	nextLogs := make([]DecisionLog, 0, len(s.state.DecisionLogs))
-	for _, log := range s.state.DecisionLogs {
+	nextState, err := cloneAppState(s.state)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to prepare state")
+		return
+	}
+	nextLogs := make([]DecisionLog, 0, len(nextState.DecisionLogs))
+	for _, log := range nextState.DecisionLogs {
 		if strings.EqualFold(strings.TrimSpace(log.Type), "trade") {
 			nextLogs = append(nextLogs, log)
 		}
 	}
-	s.state.DecisionLogs = nextLogs
+	nextState.DecisionLogs = nextLogs
 
-	if err := saveState(s.state); err != nil {
+	if _, err := saveStateWithBackup(nextState); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save state")
 		return
 	}
+	if err := hydrateState(&nextState); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
+		return
+	}
+	s.state = nextState
 
 	writeJSON(w, http.StatusOK, s.state)
 }
@@ -440,19 +523,33 @@ func (s *Server) handleUpdateHolding(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for i := range s.state.Holdings {
-		if strings.EqualFold(s.state.Holdings[i].Symbol, symbol) {
-			s.state.Holdings[i].Name = strings.TrimSpace(patch.Name)
-			s.state.Holdings[i].Industry = strings.TrimSpace(patch.Industry)
-			s.state.Holdings[i].Action = strings.TrimSpace(patch.Action)
-			s.state.Holdings[i].Status = strings.TrimSpace(patch.Status)
-			s.state.Holdings[i].MarginOfSafety = marginOfSafetyFromPrice(s.state.Holdings[i].IntrinsicValue, s.state.Holdings[i].CurrentPrice, patch.MarginOfSafety)
-			s.state.Holdings[i].QualityScore = patch.QualityScore
-			s.state.Holdings[i].Notes = strings.TrimSpace(patch.Notes)
-			if err := saveState(s.state); err != nil {
+	nextState, err := cloneAppState(s.state)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to prepare state")
+		return
+	}
+	for i := range nextState.Holdings {
+		if strings.EqualFold(nextState.Holdings[i].Symbol, symbol) {
+			if _, err := backupPortfolioFile(); err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to backup portfolio data")
+				return
+			}
+			nextState.Holdings[i].Name = strings.TrimSpace(patch.Name)
+			nextState.Holdings[i].Industry = strings.TrimSpace(patch.Industry)
+			nextState.Holdings[i].Action = strings.TrimSpace(patch.Action)
+			nextState.Holdings[i].Status = strings.TrimSpace(patch.Status)
+			nextState.Holdings[i].MarginOfSafety = marginOfSafetyFromPrice(nextState.Holdings[i].IntrinsicValue, nextState.Holdings[i].CurrentPrice, patch.MarginOfSafety)
+			nextState.Holdings[i].QualityScore = patch.QualityScore
+			nextState.Holdings[i].Notes = strings.TrimSpace(patch.Notes)
+			if err := saveState(nextState); err != nil {
 				writeError(w, http.StatusInternalServerError, "failed to save state")
 				return
 			}
+			if err := hydrateState(&nextState); err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to load state")
+				return
+			}
+			s.state = nextState
 			writeJSON(w, http.StatusOK, s.state)
 			return
 		}
@@ -478,13 +575,22 @@ func (s *Server) handleUpdateFund(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	idx := findFundIndex(s.state.Funds, symbol)
+	nextState, err := cloneAppState(s.state)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to prepare state")
+		return
+	}
+	idx := findFundIndex(nextState.Funds, symbol)
 	if idx == -1 {
 		writeError(w, http.StatusNotFound, "fund not found")
 		return
 	}
 
-	fund := &s.state.Funds[idx]
+	if _, err := backupPortfolioFile(); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to backup portfolio data")
+		return
+	}
+	fund := &nextState.Funds[idx]
 	if strings.TrimSpace(patch.Name) != "" {
 		fund.Name = strings.TrimSpace(patch.Name)
 	}
@@ -500,10 +606,15 @@ func (s *Server) handleUpdateFund(w http.ResponseWriter, r *http.Request) {
 	}
 	fund.UpdatedAt = time.Now().Format("2006-01-02")
 
-	if err := saveState(s.state); err != nil {
+	if err := saveState(nextState); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save state")
 		return
 	}
+	if err := hydrateState(&nextState); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
+		return
+	}
+	s.state = nextState
 	writeJSON(w, http.StatusOK, s.state)
 }
 
@@ -870,21 +981,25 @@ func removeCandidate(candidates []Candidate, symbol string) []Candidate {
 }
 
 func (s *Server) applyTrade(trade Trade) {
+	applyTradeToState(&s.state, trade)
+}
+
+func applyTradeToState(state *AppState, trade Trade) {
 	if normalizeAssetType(trade.AssetType) == "fund" {
-		s.applyFundTrade(trade)
+		applyFundTradeToState(state, trade)
 		return
 	}
 
-	idx := findHoldingIndex(s.state.Holdings, trade.Symbol)
+	idx := findHoldingIndex(state.Holdings, trade.Symbol)
 
 	if idx == -1 {
-		candidateIdx := findCandidateIndex(s.state.Candidates, trade.Symbol)
+		candidateIdx := findCandidateIndex(state.Candidates, trade.Symbol)
 		if trade.Side == "buy" && candidateIdx >= 0 {
-			holding := holdingFromCandidate(s.state.Candidates[candidateIdx], trade.Price)
-			s.state.Candidates = removeCandidate(s.state.Candidates, trade.Symbol)
-			s.state.Holdings = append(s.state.Holdings, holding)
+			holding := holdingFromCandidate(state.Candidates[candidateIdx], trade.Price)
+			state.Candidates = removeCandidate(state.Candidates, trade.Symbol)
+			state.Holdings = append(state.Holdings, holding)
 		} else {
-			s.state.Holdings = append(s.state.Holdings, Holding{
+			state.Holdings = append(state.Holdings, Holding{
 				Symbol:       trade.Symbol,
 				Name:         trade.Name,
 				Shares:       0,
@@ -893,12 +1008,12 @@ func (s *Server) applyTrade(trade Trade) {
 				Currency:     trade.Currency,
 			})
 		}
-		idx = len(s.state.Holdings) - 1
+		idx = len(state.Holdings) - 1
 	}
 
-	holding := &s.state.Holdings[idx]
+	holding := &state.Holdings[idx]
 	if trade.Side == "buy" {
-		s.state.Candidates = removeCandidate(s.state.Candidates, trade.Symbol)
+		state.Candidates = removeCandidate(state.Candidates, trade.Symbol)
 		totalCost := holding.Shares*holding.Cost + trade.Shares*trade.Price
 		holding.Shares += trade.Shares
 		if holding.Shares > 0 {
@@ -918,31 +1033,35 @@ func (s *Server) applyTrade(trade Trade) {
 	holding.CurrentPrice = trade.CurrentPrice
 	if trade.Side == "sell" && holding.Shares == 0 {
 		candidate := clearedCandidateFromHolding(*holding)
-		s.state.Candidates = upsertCandidate(s.state.Candidates, candidate)
-		s.state.Holdings = append(s.state.Holdings[:idx], s.state.Holdings[idx+1:]...)
+		state.Candidates = upsertCandidate(state.Candidates, candidate)
+		state.Holdings = append(state.Holdings[:idx], state.Holdings[idx+1:]...)
 	}
-	s.state.Trades = append(s.state.Trades, trade)
+	state.Trades = append(state.Trades, trade)
 
-	multiplier := s.state.FX[trade.Currency]
+	multiplier := state.FX[trade.Currency]
 	if multiplier == 0 {
 		multiplier = 1
 	}
 	cashDelta := trade.Shares * trade.Price * multiplier
 	if trade.Side == "buy" {
-		s.state.Cash -= cashDelta
+		state.Cash -= cashDelta
 	} else {
-		s.state.Cash += cashDelta
+		state.Cash += cashDelta
 	}
 }
 
 func (s *Server) applyFundTrade(trade Trade) {
-	idx := findFundIndex(s.state.Funds, trade.Symbol)
+	applyFundTradeToState(&s.state, trade)
+}
+
+func applyFundTradeToState(state *AppState, trade Trade) {
+	idx := findFundIndex(state.Funds, trade.Symbol)
 
 	if idx == -1 {
 		if trade.Side == "sell" {
 			return
 		}
-		s.state.Funds = append(s.state.Funds, Fund{
+		state.Funds = append(state.Funds, Fund{
 			Symbol:         trade.Symbol,
 			Name:           trade.Name,
 			Shares:         0,
@@ -953,10 +1072,10 @@ func (s *Server) applyFundTrade(trade Trade) {
 			CurrentNAVDate: trade.Date,
 			UpdatedAt:      trade.Date,
 		})
-		idx = len(s.state.Funds) - 1
+		idx = len(state.Funds) - 1
 	}
 
-	fund := &s.state.Funds[idx]
+	fund := &state.Funds[idx]
 	if trade.Side == "buy" {
 		totalCost := fund.Shares*fund.Cost + trade.Shares*trade.Price
 		fund.Shares += trade.Shares
@@ -978,19 +1097,19 @@ func (s *Server) applyFundTrade(trade Trade) {
 	fund.CurrentNAVDate = trade.Date
 	fund.UpdatedAt = trade.Date
 	if trade.Side == "sell" && fund.Shares == 0 {
-		s.state.Funds = append(s.state.Funds[:idx], s.state.Funds[idx+1:]...)
+		state.Funds = append(state.Funds[:idx], state.Funds[idx+1:]...)
 	}
-	s.state.Trades = append(s.state.Trades, trade)
+	state.Trades = append(state.Trades, trade)
 
-	multiplier := s.state.FX[trade.Currency]
+	multiplier := state.FX[trade.Currency]
 	if multiplier == 0 {
 		multiplier = 1
 	}
 	cashDelta := trade.Shares * trade.Price * multiplier
 	if trade.Side == "buy" {
-		s.state.Cash -= cashDelta
+		state.Cash -= cashDelta
 	} else {
-		s.state.Cash += cashDelta
+		state.Cash += cashDelta
 	}
 }
 
@@ -1222,6 +1341,152 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
+func buildDataStatus() DataStatus {
+	status := DataStatus{
+		Status:                 "ok",
+		DataDir:                dataDir,
+		Portfolio:              fileStatus(dataFile, nil),
+		RuntimeQuotes:          fileStatus(runtimeQuotesFile, runtimeQuotesUpdatedAt),
+		RuntimeIndustryMetrics: fileStatus(runtimeIndustryMetricsFile, runtimeIndustryMetricsUpdatedAt),
+		BackupCount:            backupCount(),
+	}
+	if err := checkDataDirWritable(); err != nil {
+		status.Writable = false
+		status.Issues = append(status.Issues, DataStatusIssue{
+			Tone:   "error",
+			Title:  "数据目录不可写",
+			Detail: fmt.Sprintf("%s 写入失败：%v", dataDir, err),
+		})
+	} else {
+		status.Writable = true
+	}
+	if !status.Portfolio.Exists {
+		status.Issues = append(status.Issues, DataStatusIssue{
+			Tone:   "error",
+			Title:  "组合数据文件缺失",
+			Detail: fmt.Sprintf("未找到 %s，服务会尝试用内置数据初始化。", dataFile),
+		})
+	}
+	if status.BackupCount == 0 {
+		status.Issues = append(status.Issues, DataStatusIssue{
+			Tone:   "info",
+			Title:  "暂无组合备份",
+			Detail: "发生交易、持仓编辑或研究导入后会自动生成备份。",
+		})
+	}
+	if !status.RuntimeQuotes.Exists {
+		status.Issues = append(status.Issues, DataStatusIssue{
+			Tone:   "warn",
+			Title:  "行情缓存缺失",
+			Detail: "更新行情前会使用 portfolio.json 内的旧价格，建议进入总览点击“更新行情”。",
+		})
+	} else if isFileStale(status.RuntimeQuotes.ModifiedAt, 72*time.Hour) {
+		status.Issues = append(status.Issues, DataStatusIssue{
+			Tone:   "warn",
+			Title:  "行情缓存较旧",
+			Detail: "行情缓存超过 72 小时未更新，持仓市值和安全边际可能滞后。",
+		})
+	}
+	if status.RuntimeIndustryMetrics.Exists && isFileStale(status.RuntimeIndustryMetrics.ModifiedAt, 45*24*time.Hour) {
+		status.Issues = append(status.Issues, DataStatusIssue{
+			Tone:   "info",
+			Title:  "行业指标缓存较旧",
+			Detail: "行业外部指标超过 45 天未更新，可在研究台刷新行业数据。",
+		})
+	}
+
+	for _, issue := range status.Issues {
+		if issue.Tone == "error" {
+			status.Status = "error"
+			return status
+		}
+		if issue.Tone == "warn" {
+			status.Status = "warn"
+		}
+	}
+	return status
+}
+
+func fileStatus(path string, updatedAt func([]byte) string) DataFileStatus {
+	status := DataFileStatus{Path: path}
+	info, err := os.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return status
+	}
+	if err != nil {
+		return status
+	}
+	status.Exists = true
+	status.Size = info.Size()
+	status.ModifiedAt = info.ModTime().Format(time.RFC3339)
+	if updatedAt != nil {
+		if body, readErr := os.ReadFile(path); readErr == nil {
+			status.UpdatedAt = updatedAt(body)
+		}
+	}
+	return status
+}
+
+func runtimeQuotesUpdatedAt(body []byte) string {
+	var book RuntimeQuoteBook
+	if err := json.Unmarshal(body, &book); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(book.UpdatedAt)
+}
+
+func runtimeIndustryMetricsUpdatedAt(body []byte) string {
+	var book struct {
+		UpdatedAt string `json:"updatedAt"`
+	}
+	if err := json.Unmarshal(body, &book); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(book.UpdatedAt)
+}
+
+func backupCount() int {
+	entries, err := os.ReadDir(filepath.Join(filepath.Dir(dataFile), "backups"))
+	if err != nil {
+		return 0
+	}
+	count := 0
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			count++
+		}
+	}
+	return count
+}
+
+func checkDataDirWritable() error {
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		return err
+	}
+	file, err := os.CreateTemp(dataDir, ".write-check-*")
+	if err != nil {
+		return err
+	}
+	name := file.Name()
+	closeErr := file.Close()
+	removeErr := os.Remove(name)
+	if closeErr != nil {
+		return closeErr
+	}
+	return removeErr
+}
+
+func isFileStale(modifiedAt string, maxAge time.Duration) bool {
+	if strings.TrimSpace(modifiedAt) == "" {
+		return false
+	}
+	modified, err := time.Parse(time.RFC3339, modifiedAt)
+	if err != nil {
+		return false
+	}
+	return time.Since(modified) > maxAge
+}
+
 func loadState() (AppState, error) {
 	if _, err := os.Stat(dataFile); errors.Is(err, os.ErrNotExist) {
 		state, err := bundledState()
@@ -1294,6 +1559,8 @@ func hydrateState(state *AppState) error {
 		return err
 	}
 	state.Industries = industries
+	status := buildDataStatus()
+	state.DataStatus = &status
 	return nil
 }
 
@@ -1306,7 +1573,56 @@ func saveState(state AppState) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dataFile, body, 0o644)
+	body = append(body, '\n')
+	return writeFileAtomic(dataFile, body, 0o644)
+}
+
+func saveStateWithBackup(state AppState) (string, error) {
+	backupPath, err := backupPortfolioFile()
+	if err != nil {
+		return "", err
+	}
+	if err := saveState(state); err != nil {
+		return backupPath, err
+	}
+	return backupPath, nil
+}
+
+func cloneAppState(state AppState) (AppState, error) {
+	body, err := json.Marshal(state)
+	if err != nil {
+		return AppState{}, err
+	}
+	var cloned AppState
+	if err := json.Unmarshal(body, &cloned); err != nil {
+		return AppState{}, err
+	}
+	return cloned, nil
+}
+
+func writeFileAtomic(path string, body []byte, perm os.FileMode) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	temp, err := os.CreateTemp(dir, fmt.Sprintf(".%s.tmp-*", filepath.Base(path)))
+	if err != nil {
+		return err
+	}
+	tempName := temp.Name()
+	defer os.Remove(tempName)
+	if _, err := temp.Write(body); err != nil {
+		temp.Close()
+		return err
+	}
+	if err := temp.Chmod(perm); err != nil {
+		temp.Close()
+		return err
+	}
+	if err := temp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tempName, path)
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {

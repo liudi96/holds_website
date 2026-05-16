@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -82,15 +81,12 @@ func saveRuntimeQuoteBook(book RuntimeQuoteBook) error {
 	if book.Quotes == nil {
 		book.Quotes = map[string]RuntimeQuote{}
 	}
-	if err := os.MkdirAll(filepath.Dir(runtimeQuotesFile), 0o755); err != nil {
-		return err
-	}
 	body, err := json.MarshalIndent(book, "", "  ")
 	if err != nil {
 		return err
 	}
 	body = append(body, '\n')
-	return os.WriteFile(runtimeQuotesFile, body, 0o644)
+	return writeFileAtomic(runtimeQuotesFile, body, 0o644)
 }
 
 func mergeRuntimeQuotes(state *AppState) error {
@@ -213,6 +209,7 @@ func persistentState(state AppState) AppState {
 	state.Candidates = append([]Candidate(nil), state.Candidates...)
 	state.Funds = append([]Fund(nil), state.Funds...)
 	state.Industries = nil
+	state.DataStatus = nil
 	for i := range state.Holdings {
 		clearHoldingRuntimeQuote(&state.Holdings[i])
 	}

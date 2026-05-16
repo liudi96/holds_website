@@ -146,13 +146,13 @@ func (s *Server) handleImportResearch(w http.ResponseWriter, r *http.Request) {
 
 	summary, targetType, changedFields := applyResearch(&state, research)
 	appendResearchDecisionLog(&state, research, summary, targetType)
-	backupPath, err := backupPortfolioFile()
+	backupPath, err := saveStateWithBackup(state)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to backup portfolio data")
+		writeError(w, http.StatusInternalServerError, "failed to save state")
 		return
 	}
-	if err := saveState(state); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save state")
+	if err := hydrateState(&state); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
 		return
 	}
 
@@ -940,7 +940,7 @@ func backupPortfolioFile() (string, error) {
 
 	now := time.Now()
 	backupPath := filepath.Join(backupDir, fmt.Sprintf("portfolio-%s-%03d.json", now.Format("20060102-150405"), now.UnixMilli()%1000))
-	if err := os.WriteFile(backupPath, body, 0o644); err != nil {
+	if err := writeFileAtomic(backupPath, body, 0o644); err != nil {
 		return "", err
 	}
 	return backupPath, nil

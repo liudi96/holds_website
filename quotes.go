@@ -103,6 +103,10 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if err := hydrateState(&state); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
+		return
+	}
 
 	s.state = state
 	writeJSON(w, http.StatusOK, QuoteUpdateResponse{

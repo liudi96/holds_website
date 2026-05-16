@@ -107,15 +107,37 @@ func LoadBook(path string) (Book, error) {
 
 func SaveBook(path string, book Book) error {
 	book = NormalizeBook(book)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
 	body, err := json.MarshalIndent(book, "", "  ")
 	if err != nil {
 		return err
 	}
 	body = append(body, '\n')
-	return os.WriteFile(path, body, 0o644)
+	return writeFileAtomic(path, body, 0o644)
+}
+
+func writeFileAtomic(path string, body []byte, perm os.FileMode) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	temp, err := os.CreateTemp(dir, fmt.Sprintf(".%s.tmp-*", filepath.Base(path)))
+	if err != nil {
+		return err
+	}
+	tempName := temp.Name()
+	defer os.Remove(tempName)
+	if _, err := temp.Write(body); err != nil {
+		temp.Close()
+		return err
+	}
+	if err := temp.Chmod(perm); err != nil {
+		temp.Close()
+		return err
+	}
+	if err := temp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tempName, path)
 }
 
 func NormalizeBook(book Book) Book {

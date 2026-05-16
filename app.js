@@ -296,6 +296,7 @@ let candidateFilter = "all";
 let decisionLogFilter = "all";
 let masterMatrixSort = { key: "margin", direction: "desc" };
 let masterMatrixFilter = "all";
+let backendStateError = "";
 const pageTitles = {
   overview: "总览",
   portfolio: "持仓",
@@ -380,7 +381,9 @@ const elements = {
   importResearchButton: document.querySelector("#importResearch")
 };
 
-syncCash();
+if (!USE_BACKEND) {
+  syncCash();
+}
 
 function loadState() {
   if (USE_BACKEND) {
@@ -422,10 +425,13 @@ async function loadBackendState() {
 
   try {
     state = await requestJSON("/api/state");
+    backendStateError = "";
     localStorage.removeItem(STORAGE_KEY);
     return true;
   } catch (error) {
     console.warn("后端不可用，使用浏览器本地数据", error);
+    backendStateError = error.message || "后端不可用";
+    setQuoteUpdateStatus("后端不可用，已切换到浏览器本地兜底数据", "error");
     return false;
   }
 }
@@ -1193,6 +1199,10 @@ function setQuoteUpdateStatus(message, tone = "") {
 }
 
 function renderQuoteUpdateStatus(positions) {
+  if (backendStateError) {
+    setQuoteUpdateStatus(`后端不可用：${backendStateError}`, "error");
+    return;
+  }
   const stocks = auditUniverse(positions);
   const referenceDate = quoteReferenceDate(stocks);
   if (!referenceDate) {
@@ -2308,9 +2318,9 @@ function fundCategoryTone(category) {
   return "neutral";
 }
 
-function renderFunds(funds) {
+function renderFunds(funds, positions = computePositions()) {
   if (!elements.fundSummary || !elements.fundsBody) return;
-  const { totalAssets } = assetSummary(computePositions(), funds);
+  const { totalAssets } = assetSummary(positions, funds);
   const fundValue = funds.reduce((sum, item) => sum + item.marketValueCny, 0);
   const fundCost = funds.reduce((sum, item) => sum + item.costValueCny, 0);
   const fundPnl = funds.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
@@ -3856,6 +3866,10 @@ function buildDataQualityIssues(positions) {
     });
   };
 
+  (state.dataStatus?.issues ?? []).forEach((issue) => {
+    pushIssue(issue.tone || "info", { name: "数据持久化", sourceType: "data" }, issue.title || "数据状态提醒", issue.detail || "");
+  });
+
   stocks.forEach((stock) => {
     const currentPrice = finiteNumber(stock.currentPrice);
     const previousClose = finiteNumber(stock.previousClose);
@@ -3941,7 +3955,7 @@ function renderDataQuality(positions) {
 
   elements.dataQualityList.innerHTML = issues.length
     ? issues.slice(0, 14).map((issue) => {
-      const tag = issue.sourceType === "holding" ? "持仓" : issue.sourceType === "candidate" ? "候选" : "Plan";
+      const tag = issue.sourceType === "holding" ? "持仓" : issue.sourceType === "candidate" ? "候选" : issue.sourceType === "data" ? "数据" : "Plan";
       const content = `
         <div class="data-quality-head">
           <strong>${escapeHTML(issue.title)}</strong>
@@ -4871,29 +4885,95 @@ function renderTradeStockNames() {
     .join("");
 }
 
-function render() {
+function routeInfo(rawHash = window.location.hash.slice(1)) {
+  const view = rawHash || "overview";
+  if (view === "masters" || view === "positions" || view === "candidates") {
+    return { view, page: "portfolio" };
+  }
+  if (view.startsWith("industry=")) {
+    return { view, page: "industry-detail", id: decodeURIComponent(view.slice("industry=".length)) };
+  }
+  if (view.startsWith("stock=")) {
+    return { view, page: "stock-detail", id: decodeURIComponent(view.slice("stock=".length)) };
+  }
+  return { view, page: pageTitles[view] ? view : "overview" };
+}
+
+function renderContext() {
   const positions = computePositions();
   const funds = computeFunds();
+  return { positions, funds };
+}
+
+function renderRecordCount() {
+  if (!elements.recordCount) return;
+  elements.recordCount.textContent = `${state.holdings.length} 条股票 · ${(state.funds ?? []).length} 只基金 · ${state.trades.length} 条交易`;
+}
+
+function renderLoadingState() {
+  setQuoteUpdateStatus("正在加载组合数据...");
+  [
+    elements.totalFunds,
+    elements.totalValue,
+    elements.totalPositionPnl,
+    elements.dayChange,
+    elements.annualDividend,
+    elements.dataQualityMetric
+  ].filter(Boolean).forEach((element) => {
+    element.textContent = "加载中";
+    element.className = "";
+  });
+  if (elements.positionCount) elements.positionCount.textContent = "等待后端数据";
+  if (elements.totalPositionPnlRate) elements.totalPositionPnlRate.textContent = "";
+  if (elements.dayChangeRate) elements.dayChangeRate.textContent = "";
+  if (elements.portfolioDividendYield) elements.portfolioDividendYield.textContent = "";
+  if (elements.dataQualityDetail) elements.dataQualityDetail.textContent = "正在读取数据目录";
+  if (elements.committeeConsensus) {
+    elements.committeeConsensus.innerHTML = `<div class="empty-state compact-empty">正在加载组合数据...</div>`;
+  }
+}
+
+function render(rawHash = window.location.hash.slice(1)) {
+  const route = routeInfo(rawHash);
+  const { positions, funds } = renderContext();
+
   renderTradeStockNames();
   renderQuoteUpdateStatus(positions);
-  renderMetrics(positions, funds);
-  renderAssetAllocation(positions, funds);
-  renderPositions(positions);
-  renderDecisionArea(positions);
-  renderCommitteeOverview(positions);
-  renderMastersPage(positions);
-  renderDecisionLogs();
-  renderAllocation(positions);
-  renderTrades();
-  renderFunds(funds);
-  renderFundTrades();
-  renderPlanAndCandidates();
-  renderIndustryDesk(positions);
-  if (window.location.hash.startsWith("#industry=")) {
-    renderIndustryDetail(positions, decodeURIComponent(window.location.hash.slice("#industry=".length)));
+  renderRecordCount();
+
+  if (route.page === "overview") {
+    renderMetrics(positions, funds);
+    renderAssetAllocation(positions, funds);
+    renderDecisionArea(positions);
+    renderCommitteeOverview(positions);
+    return;
   }
-  if (window.location.hash.startsWith("#stock=")) {
-    renderStockDetail(positions, decodeURIComponent(window.location.hash.slice("#stock=".length)));
+  if (route.page === "portfolio") {
+    renderPositions(positions);
+    renderMastersPage(positions);
+    renderPlanAndCandidates();
+    return;
+  }
+  if (route.page === "funds") {
+    renderFunds(funds, positions);
+    return;
+  }
+  if (route.page === "industry") {
+    renderIndustryDesk(positions);
+    return;
+  }
+  if (route.page === "industry-detail") {
+    renderIndustryDetail(positions, route.id);
+    return;
+  }
+  if (route.page === "trades") {
+    renderTrades();
+    renderFundTrades();
+    renderDecisionLogs();
+    return;
+  }
+  if (route.page === "stock-detail") {
+    renderStockDetail(positions, route.id);
   }
 }
 
@@ -5468,13 +5548,6 @@ function showPage(view) {
     nextView = "overview";
   }
 
-  if (isStockDetail) {
-    renderStockDetail(computePositions(), decodeURIComponent(view.slice("stock=".length)));
-  }
-  if (isIndustryDetail) {
-    renderIndustryDetail(computePositions(), decodeURIComponent(view.slice("industry=".length)));
-  }
-
   document.querySelector(".nav-item.active")?.classList.remove("active");
   const activeNavView = isIndustryDetail ? "industry" : nextView;
   document.querySelector(`.nav-item[data-view="${activeNavView}"]`)?.classList.add("active");
@@ -5487,13 +5560,16 @@ function handleRoute(rawHash) {
   const view = rawHash || "overview";
   if (view === "masters") {
     showEmbeddedMasters("masters");
+    render("portfolio");
     return;
   }
   if (view === "positions" || view === "candidates") {
     showPage("portfolio");
+    render("portfolio");
     return;
   }
   showPage(view);
+  render(view);
 }
 
 window.addEventListener("hashchange", () => {
@@ -5748,9 +5824,14 @@ elements.positionsBody.addEventListener("click", (event) => {
 });
 
 async function init() {
-  await loadBackendState();
+  if (USE_BACKEND) {
+    renderLoadingState();
+  }
+  const loaded = await loadBackendState();
+  if (!loaded && USE_BACKEND) {
+    setQuoteUpdateStatus("后端不可用，使用浏览器本地兜底数据", "error");
+  }
   syncCash();
-  render();
   handleRoute(window.location.hash.slice(1));
 }
 

@@ -146,8 +146,12 @@ func (s *Server) handleUpdateFinancials(w http.ResponseWriter, r *http.Request) 
 		Detail:     financialDecisionDetail(financials),
 	})
 
-	if err := saveState(state); err != nil {
+	if _, err := saveStateWithBackup(state); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save state")
+		return
+	}
+	if err := hydrateState(&state); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
 		return
 	}
 

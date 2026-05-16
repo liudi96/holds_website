@@ -6,14 +6,27 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"portfolio-desk/internal/industrymetrics"
+	"strings"
 	"time"
 )
 
-const runtimeIndustryMetricsFile = "data/runtime/industry_metrics.json"
+const (
+	defaultDataDir      = "data"
+	portfolioDataDirEnv = "PORTFOLIO_DATA_DIR"
+)
+
+func defaultDataPath(name string) string {
+	dir := strings.TrimSpace(os.Getenv(portfolioDataDirEnv))
+	if dir == "" {
+		dir = defaultDataDir
+	}
+	return filepath.Join(filepath.Clean(dir), name)
+}
 
 func main() {
-	metricsPath := flag.String("metrics", runtimeIndustryMetricsFile, "runtime industry metrics JSON file to update")
+	metricsPath := flag.String("metrics", defaultDataPath(filepath.Join("runtime", "industry_metrics.json")), "runtime industry metrics JSON file to update")
 	dryRun := flag.Bool("dry-run", false, "fetch and print metrics without writing the runtime file")
 	flag.Parse()
 

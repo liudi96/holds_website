@@ -22,11 +22,19 @@ http://127.0.0.1:8080
 PORT=8081 go run .
 ```
 
+生产或云服务器建议把组合数据放到可持久化目录，并通过环境变量指定：
+
+```bash
+PORTFOLIO_DATA_DIR=/data/holds go run .
+```
+
+服务会从该目录读写 `portfolio.json`、`runtime/quotes.json`、`runtime/industry_metrics.json` 和 `backups/`。如果目录里没有 `portfolio.json`，启动时会用仓库内置数据初始化一份。所有组合数据写入都会先写临时文件再原子替换，交易、持仓编辑、基金编辑和研究导入会自动备份旧文件。
+
 ## 更新行情
 
 推荐在总览页点击“更新行情”。网站会优先拉取 Yahoo Finance 日线收盘价；如果云服务器 IP 被 Yahoo 限流，会自动切换到腾讯实时行情，必要时再尝试东方财富。
 
-行情更新只写入本机运行时文件 `data/runtime/quotes.json`，不会改动 `data/portfolio.json`。`data/runtime/` 已加入 `.gitignore`，适合在云服务器上部署后本地生成最新行情。页面读取状态时会自动把 `portfolio.json` 和 runtime 行情合并，安全边际按 `(内在价值 - 最新价) / 内在价值` 实时重算。
+行情更新优先写入运行时文件 `runtime/quotes.json`，不会污染 `portfolio.json` 里的静态研究档案；基金净值会同步写回组合数据。页面读取状态时会自动把 `portfolio.json` 和 runtime 行情合并，安全边际按 `(内在价值 - 最新价) / 内在价值` 实时重算。
 
 也可以用命令行更新：
 
@@ -39,6 +47,8 @@ go run ./cmd/update-quotes
 ```bash
 go run ./cmd/update-quotes -quotes data/runtime/quotes.json
 ```
+
+命令行工具同样支持 `PORTFOLIO_DATA_DIR` 作为默认数据目录，也可以继续用 `-data`、`-quotes` 显式指定文件。
 
 只校验不写入：
 

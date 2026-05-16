@@ -19,8 +19,17 @@ import (
 const (
 	decisionLogLimit          = 500
 	defaultSafetyMarginTarget = 0.25
-	runtimeQuotesFile         = "data/runtime/quotes.json"
+	defaultDataDir            = "data"
+	portfolioDataDirEnv       = "PORTFOLIO_DATA_DIR"
 )
+
+func defaultDataPath(name string) string {
+	dir := strings.TrimSpace(os.Getenv(portfolioDataDirEnv))
+	if dir == "" {
+		dir = defaultDataDir
+	}
+	return filepath.Join(filepath.Clean(dir), name)
+}
 
 type AppState struct {
 	TotalCapital float64            `json:"totalCapital"`
@@ -239,8 +248,8 @@ type yahooChartResponse struct {
 }
 
 func main() {
-	dataPath := flag.String("data", "data/portfolio.json", "portfolio JSON file to read")
-	quotesPath := flag.String("quotes", runtimeQuotesFile, "runtime quote JSON file to update")
+	dataPath := flag.String("data", defaultDataPath("portfolio.json"), "portfolio JSON file to read")
+	quotesPath := flag.String("quotes", defaultDataPath(filepath.Join("runtime", "quotes.json")), "runtime quote JSON file to update")
 	dryRun := flag.Bool("dry-run", false, "print updates without writing the file")
 	flag.Parse()
 
@@ -1297,15 +1306,37 @@ func loadState(path string) (AppState, error) {
 }
 
 func saveState(path string, state AppState) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
 	body, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
 		return err
 	}
 	body = append(body, '\n')
-	return os.WriteFile(path, body, 0o644)
+	return writeFileAtomic(path, body, 0o644)
+}
+
+func writeFileAtomic(path string, body []byte, perm os.FileMode) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	temp, err := os.CreateTemp(dir, fmt.Sprintf(".%s.tmp-*", filepath.Base(path)))
+	if err != nil {
+		return err
+	}
+	tempName := temp.Name()
+	defer os.Remove(tempName)
+	if _, err := temp.Write(body); err != nil {
+		temp.Close()
+		return err
+	}
+	if err := temp.Chmod(perm); err != nil {
+		temp.Close()
+		return err
+	}
+	if err := temp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tempName, path)
 }
 
 func fail(err error) {
