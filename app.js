@@ -285,6 +285,25 @@ const MASTER_MATRIX_FILTERS = [
   { key: "holding", label: "持仓" },
   { key: "candidate", label: "跟踪" }
 ];
+const POSITION_CATEGORY_ORDER = ["dividend", "bluechip", "growth"];
+const POSITION_CATEGORY_META = {
+  dividend: { key: "dividend", label: "红利", tone: "dividend", order: 0 },
+  bluechip: { key: "bluechip", label: "蓝筹", tone: "bluechip", order: 1 },
+  growth: { key: "growth", label: "成长 / 修复", tone: "growth", order: 2 }
+};
+const POSITION_CATEGORY_OVERRIDES = {
+  "600036.SH": "dividend",
+  "0506.HK": "dividend",
+  "600887.SH": "dividend",
+  "0700.HK": "bluechip",
+  "000333.SZ": "bluechip",
+  "002415.SZ": "bluechip",
+  "0696.HK": "bluechip",
+  "2669.HK": "growth",
+  "6049.HK": "growth",
+  "1405.HK": "growth",
+  "7489.HK": "growth"
+};
 
 let state = loadState();
 let activeFilter = "all";
@@ -310,6 +329,7 @@ const pageTitles = {
 
 const elements = {
   pageTitle: document.querySelector("#pageTitle"),
+  positionCategorySummary: document.querySelector("#positionCategorySummary"),
   sunny30Summary: document.querySelector("#sunny30Summary"),
   sunny30Body: document.querySelector("#sunny30Body"),
   positionsBody: document.querySelector("#positionsBody"),
@@ -1511,8 +1531,80 @@ function getFilteredPositions(positions) {
   });
 }
 
+function normalizePositionCategory(value) {
+  const text = String(value ?? "").trim().toLowerCase();
+  if (!text) return "";
+  if (["dividend", "income", "yield", "红利"].includes(text) || text.includes("红利") || text.includes("股息")) return "dividend";
+  if (["bluechip", "blue-chip", "core", "蓝筹"].includes(text) || text.includes("蓝筹") || text.includes("核心")) return "bluechip";
+  if (["growth", "成长", "修复", "成长 / 修复"].includes(text) || text.includes("成长") || text.includes("修复")) return "growth";
+  return "";
+}
+
+function positionCategory(stock, strategy = strategyProfile(stock)) {
+  const explicit = [
+    stock?.positionCategory,
+    stock?.holdingCategory,
+    stock?.stockCategory,
+    stock?.classification,
+    stock?.category
+  ].map(normalizePositionCategory).find(Boolean);
+  if (explicit) return POSITION_CATEGORY_META[explicit];
+
+  const override = POSITION_CATEGORY_OVERRIDES[normalizeSymbol(stock?.symbol)];
+  if (override) return POSITION_CATEGORY_META[override];
+
+  const text = [stock?.symbol, stock?.name, stock?.industry, stock?.status, stock?.action, stock?.notes].filter(Boolean).join(" ");
+  const dividendYield = calculatedDividendYield(stock);
+  const latest = latestAnnualFinancial(stock);
+  const revenueGrowth = finiteNumber(latest?.revenueYoY);
+  const profitGrowth = finiteNumber(latest?.netProfitYoY);
+  const dividendLike = /红利|高股息|股息|银行|油气|能源|物业|招商银行|中海油|中国食品/.test(text);
+  const growthLike = /成长|互联网|平台|游戏|广告|AI|AIoT|科技|智能|机器人|新能源|餐饮|连锁|QSR|云|SaaS|电商|海康|达势|岚图/.test(text);
+
+  if (dividendLike || (Number.isFinite(dividendYield) && dividendYield >= 0.06)) {
+    return POSITION_CATEGORY_META.dividend;
+  }
+  if (growthLike || (Number.isFinite(revenueGrowth) && revenueGrowth >= 0.12) || (Number.isFinite(profitGrowth) && profitGrowth >= 0.15)) {
+    return POSITION_CATEGORY_META.growth;
+  }
+  return POSITION_CATEGORY_META.bluechip;
+}
+
+function positionCategoryPill(category) {
+  return `<span class="position-category-pill ${category.tone}">${escapeHTML(category.label)}</span>`;
+}
+
+function renderPositionCategorySummary(positions) {
+  if (!elements.positionCategorySummary) return;
+  const totalValue = positions.reduce((sum, stock) => sum + (finiteNumber(stock.marketValueCny) ?? 0), 0);
+  const summary = POSITION_CATEGORY_ORDER.reduce((result, key) => {
+    result[key] = { value: 0, count: 0 };
+    return result;
+  }, {});
+
+  positions.forEach((stock) => {
+    const category = positionCategory(stock);
+    summary[category.key].value += finiteNumber(stock.marketValueCny) ?? 0;
+    summary[category.key].count += 1;
+  });
+
+  elements.positionCategorySummary.innerHTML = POSITION_CATEGORY_ORDER.map((key) => {
+    const category = POSITION_CATEGORY_META[key];
+    const item = summary[key];
+    const share = totalValue > 0 ? item.value / totalValue : 0;
+    return `
+      <div class="position-category-summary-cell ${category.tone}">
+        <span>${escapeHTML(category.label)}</span>
+        <strong>${percent(share * 100, false)}</strong>
+        <small>${item.count} 只 · ${wholeCurrency(item.value)}</small>
+      </div>
+    `;
+  }).join("");
+}
+
 function positionSortValue(item, key) {
   const { stock, strategy } = item;
+  if (key === "category") return positionCategory(stock, strategy).order;
   if (key === "marketValue") return finiteNumber(stock.marketValueCny);
   if (key === "pnl") return finiteNumber(stock.pnlCny);
   if (key === "return") return finiteNumber(strategy?.shield?.value);
@@ -1539,6 +1631,10 @@ function sortedPositions(positions) {
     const result = compareNullableNumbers(positionSortValue(a, positionSort.key), positionSortValue(b, positionSort.key), positionSort.direction);
     return result || String(a.stock?.name ?? "").localeCompare(String(b.stock?.name ?? ""), "zh-CN");
   });
+}
+
+function positionSortDefaultDirection(key) {
+  return key === "category" ? "asc" : "desc";
 }
 
 function updatePositionSortControls() {
@@ -2272,33 +2368,9 @@ function mergeSunny30Stock(holding, candidate, symbol) {
   return merged;
 }
 
-function sunny30TypeOrder(type) {
-  return ["快消/餐饮", "可选消费", "互联网/媒体", "公用事业", "金融", "企业科技", "能源化工"].indexOf(type);
-}
-
 function sunny30Type(stock) {
-  const explicit = String(stock?.companyType ?? stock?.type ?? "").trim();
-  const categories = [
-    { text: "可选消费", tone: "optional", pattern: /可选消费|家电|白电|汽车|乘用车|新能源车|新能源乘用车|服饰|家居|旅游|酒店|免税|医药|中药|中成药|白酒|茅台|同仁堂|国药|美的|海尔|岚图/ },
-    { text: "快消/餐饮", tone: "consumer", pattern: /快消|餐饮|食品|饮料|乳制品|奶|茶饮|连锁|百胜|达势|伊利|中国食品/ },
-    { text: "企业科技", tone: "enterprise", pattern: /企业科技|科技制造|AIoT|安防|机器视觉|自动化|机器人|软件|云|SaaS|数字基础设施|海康/ },
-    { text: "互联网/媒体", tone: "media", pattern: /互联网|媒体|游戏|广告|社交|内容|平台|电商|腾讯|快手|网易|哔哩|微博/ },
-    { text: "公用事业", tone: "utility", pattern: /公用事业|公共事业|公用|电力|水务|燃气|环保|高速|铁路|机场|港口|物业|殡葬|民航信息|中国民航信息网络|民航信|中海物业|保利物业|福寿园/ },
-    { text: "金融", tone: "finance", pattern: /银行|保险|券商|证券|资管|财富管理|金融服务|金融现金流|招商银行|招行/ },
-    { text: "能源化工", tone: "energy", pattern: /能源|石油|油气|煤炭|天然气|化工|炼化|中海油|海油/ },
-  ];
-  const normalizedExplicit = explicit.toLowerCase();
-  const explicitMatch = categories.find((category) => category.text === explicit || category.text.toLowerCase() === normalizedExplicit);
-  if (explicitMatch) return explicitMatch;
-
-  const primaryText = [stock?.symbol, stock?.name, stock?.industry].filter(Boolean).join(" ");
-  const secondaryText = [stock?.status, stock?.action, stock?.notes].filter(Boolean).join(" ");
-  const primaryMatch = categories.find((category) => category.pattern.test(primaryText));
-  if (primaryMatch) return primaryMatch;
-  const secondaryMatch = categories
-    .filter((category) => category.text !== "金融")
-    .find((category) => category.pattern.test(secondaryText));
-  return secondaryMatch ?? { text: "可选消费", tone: "optional" };
+  const category = positionCategory(stock);
+  return { text: category.label, tone: category.tone, order: category.order };
 }
 
 function sunny30Quality(stock) {
@@ -2385,7 +2457,7 @@ function sunny30FinancialValue(stock, key) {
 
 function sunny30SortValue(stock, key) {
   if (key === "name") return String(stock?.name ?? "");
-  if (key === "type") return sunny30TypeOrder(sunny30Type(stock).text);
+  if (key === "type") return sunny30Type(stock).order;
   if (["grossMargin", "netMargin", "roe", "roic"].includes(key)) return sunny30FinancialValue(stock, key);
   if (key === "quality") return sunny30QualityValue(stock);
   if (key === "moat") return finiteNumber(stock?.moat);
@@ -2442,11 +2514,6 @@ function renderSunny30(positions) {
   if (!elements.sunny30Body) return;
   const stocks = sunny30Universe(positions);
   updateSunny30SortControls();
-  const typeCounts = stocks.reduce((counts, stock) => {
-    const type = sunny30Type(stock).text;
-    counts[type] = (counts[type] ?? 0) + 1;
-    return counts;
-  }, {});
   const buyableCount = stocks.filter((stock) => {
     const margin = marginValue(stock);
     return Number.isFinite(margin) && margin >= MAIN_DCF_MARGIN_TARGET;
@@ -2455,13 +2522,6 @@ function renderSunny30(positions) {
   if (elements.sunny30Summary) {
     elements.sunny30Summary.innerHTML = [
       ["跟踪标的", `${stocks.length}/30`],
-      ["快消/餐饮", `${typeCounts["快消/餐饮"] ?? 0} 只`],
-      ["可选消费", `${typeCounts["可选消费"] ?? 0} 只`],
-      ["互联网/媒体", `${typeCounts["互联网/媒体"] ?? 0} 只`],
-      ["公用事业", `${typeCounts["公用事业"] ?? 0} 只`],
-      ["金融", `${typeCounts["金融"] ?? 0} 只`],
-      ["企业科技", `${typeCounts["企业科技"] ?? 0} 只`],
-      ["能源化工", `${typeCounts["能源化工"] ?? 0} 只`],
       ["安全边际达标", `${buyableCount} 只`]
     ].map(([label, value]) => `
       <div class="sunny30-summary-cell">
@@ -2517,9 +2577,10 @@ function renderPositions(positions) {
   const filtered = sortedPositions(positions);
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   updatePositionSortControls();
+  renderPositionCategorySummary(positions);
 
   if (!filtered.length) {
-    elements.positionsBody.innerHTML = `<tr><td colspan="7" class="empty-state">暂无符合条件的标的</td></tr>`;
+    elements.positionsBody.innerHTML = `<tr><td colspan="8" class="empty-state">暂无符合条件的标的</td></tr>`;
     return;
   }
 
@@ -2531,6 +2592,7 @@ function renderPositions(positions) {
       const marginTone = decisionMarginTone(strategy.margin);
       const returnTone = strategy.shield.passed ? "core" : "reduce";
       const ownerTone = decisionToneClass(strategy.ownerAudit.tone);
+      const category = positionCategory(stock, strategy);
 
       return `
         <tr>
@@ -2542,6 +2604,9 @@ function renderPositions(positions) {
                 <span>${escapeHTML(decisionStockMeta(stock))}</span>
               </a>
             </div>
+          </td>
+          <td data-label="分类">
+            ${positionCategoryPill(category)}
           </td>
           <td data-label="市值/现价">
             ${decisionMarketCell(stock)}
@@ -5391,7 +5456,7 @@ function candidateFromSunny30Form(formData) {
   const symbol = normalizeSymbol(formData.get("symbol"));
   const existingHolding = (state.holdings ?? []).find((holding) => normalizeSymbol(holding.symbol) === symbol);
   const name = String(formData.get("name") ?? "").trim() || existingHolding?.name || "";
-  const category = String(formData.get("industry") ?? "可选消费").trim() || "可选消费";
+  const category = String(formData.get("category") ?? "成长 / 修复").trim() || "成长 / 修复";
   const currencyCode = String(formData.get("currency") ?? "").trim().toUpperCase() || inferTradeCurrency({ symbol });
   const currentPrice = optionalFormNumber(formData, "currentPrice");
   const intrinsicValue = optionalFormNumber(formData, "intrinsicValue");
@@ -5409,7 +5474,8 @@ function candidateFromSunny30Form(formData) {
   const candidate = {
     symbol,
     name,
-    industry: category,
+    category,
+    industry: existingHolding?.industry || category,
     currency: currencyCode,
     updatedAt: today,
     notes: String(formData.get("notes") ?? "").trim()
@@ -5432,7 +5498,7 @@ function candidateFromSunny30Form(formData) {
 function openSunny30CandidateDialog() {
   if (!elements.sunny30CandidateDialog || !elements.sunny30CandidateForm) return;
   elements.sunny30CandidateForm.reset();
-  elements.sunny30CandidateForm.industry.value = "可选消费";
+  elements.sunny30CandidateForm.category.value = "成长 / 修复";
   elements.sunny30CandidateDialog.showModal();
 }
 
@@ -6037,7 +6103,7 @@ document.addEventListener("click", (event) => {
   const key = button.dataset.positionSort;
   positionSort = {
     key,
-    direction: positionSort.key === key && positionSort.direction === "desc" ? "asc" : "desc"
+    direction: positionSort.key === key && positionSort.direction === "desc" ? "asc" : positionSortDefaultDirection(key)
   };
   renderPositions(computePositions());
 });

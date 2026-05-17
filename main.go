@@ -131,6 +131,7 @@ type Holding struct {
 	QualityScore        *float64            `json:"qualityScore"`
 	Risk                string              `json:"risk"`
 	Industry            string              `json:"industry"`
+	Category            string              `json:"category,omitempty"`
 	Currency            string              `json:"currency"`
 	IntrinsicValue      *float64            `json:"intrinsicValue"`
 	FairValueRange      string              `json:"fairValueRange"`
@@ -282,6 +283,7 @@ type Candidate struct {
 	QualityScore        *float64            `json:"qualityScore"`
 	Risk                string              `json:"risk"`
 	Industry            string              `json:"industry"`
+	Category            string              `json:"category,omitempty"`
 	Currency            string              `json:"currency"`
 	IntrinsicValue      *float64            `json:"intrinsicValue"`
 	FairValueRange      string              `json:"fairValueRange"`
@@ -566,6 +568,9 @@ func (s *Server) handleUpsertCandidate(w http.ResponseWriter, r *http.Request) {
 	}
 	if industry := strings.TrimSpace(patch.Industry); industry != "" {
 		candidate.Industry = industry
+	}
+	if category := strings.TrimSpace(patch.Category); category != "" {
+		candidate.Category = category
 	}
 	if strings.TrimSpace(candidate.Industry) == "" {
 		candidate.Industry = "可选消费"
@@ -1015,6 +1020,7 @@ func candidateFromHolding(holding Holding) Candidate {
 		QualityScore:        holding.QualityScore,
 		Risk:                holding.Risk,
 		Industry:            holding.Industry,
+		Category:            holding.Category,
 		Currency:            holding.Currency,
 		IntrinsicValue:      holding.IntrinsicValue,
 		FairValueRange:      holding.FairValueRange,
@@ -1044,6 +1050,7 @@ func sunny30CandidateFromHolding(holding Holding) Candidate {
 		Status:    "晴仓30跟踪",
 		Action:    "纳入晴仓30独立跟踪；持仓数据同步展示",
 		Industry:  holding.Industry,
+		Category:  holding.Category,
 		Currency:  holding.Currency,
 		UpdatedAt: time.Now().Format("2006-01-02"),
 	}
@@ -1058,6 +1065,9 @@ func preserveSunny30CandidateText(candidate *Candidate, existing Candidate) {
 	}
 	if industry := strings.TrimSpace(existing.Industry); industry != "" {
 		candidate.Industry = industry
+	}
+	if category := strings.TrimSpace(existing.Category); category != "" {
+		candidate.Category = category
 	}
 	if currency := strings.TrimSpace(existing.Currency); currency != "" {
 		candidate.Currency = strings.ToUpper(currency)
@@ -1085,6 +1095,7 @@ func holdingFromCandidate(candidate Candidate, cost float64) Holding {
 		QualityScore:        candidate.QualityScore,
 		Risk:                candidate.Risk,
 		Industry:            candidate.Industry,
+		Category:            candidate.Category,
 		Currency:            candidate.Currency,
 		IntrinsicValue:      candidate.IntrinsicValue,
 		FairValueRange:      candidate.FairValueRange,

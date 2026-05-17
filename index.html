@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>晴仓记 · 清新冒险看板</title>
-    <link rel="stylesheet" href="./styles.css?v=sunny-quest-compact-hero" />
+    <link rel="stylesheet" href="./styles.css?v=sunny-quest-sunny30-categories" />
   </head>
   <body>
     <aside class="sidebar">
@@ -160,11 +160,19 @@
             </div>
           </div>
 
+          <div class="position-category-summary" id="positionCategorySummary"></div>
+
           <div class="table-wrap">
             <table class="decision-table">
               <thead>
                 <tr>
                   <th>股票</th>
+                  <th>
+                    <button class="position-sort-button" type="button" data-position-sort="category" aria-label="按分类排序">
+                      <span>分类</span>
+                      <strong>↕</strong>
+                    </button>
+                  </th>
                   <th>
                     <button class="position-sort-button" type="button" data-position-sort="marketValue" aria-label="按市值排序">
                       <span>市值/现价</span>
@@ -506,14 +514,10 @@
           </label>
           <label>
             类型
-            <select name="industry" required>
-              <option value="快消/餐饮">快消/餐饮</option>
-              <option value="可选消费">可选消费</option>
-              <option value="互联网/媒体">互联网/媒体</option>
-              <option value="公用事业">公用事业</option>
-              <option value="金融">金融</option>
-              <option value="企业科技">企业科技</option>
-              <option value="能源化工">能源化工</option>
+            <select name="category" required>
+              <option value="红利">红利</option>
+              <option value="蓝筹">蓝筹</option>
+              <option value="成长 / 修复">成长 / 修复</option>
             </select>
           </label>
           <label>
@@ -624,6 +628,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=sunny-quest-sunny30-maintenance"></script>
+    <script src="./app.js?v=sunny-quest-sunny30-categories"></script>
   </body>
 </html>

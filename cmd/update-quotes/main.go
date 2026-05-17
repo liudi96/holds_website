@@ -88,6 +88,7 @@ type Holding struct {
 	QualityScore        *float64            `json:"qualityScore"`
 	Risk                string              `json:"risk"`
 	Industry            string              `json:"industry"`
+	Category            string              `json:"category,omitempty"`
 	Currency            string              `json:"currency"`
 	IntrinsicValue      *float64            `json:"intrinsicValue"`
 	FairValueRange      string              `json:"fairValueRange"`
@@ -203,6 +204,7 @@ type Candidate struct {
 	QualityScore        *float64            `json:"qualityScore"`
 	Risk                string              `json:"risk"`
 	Industry            string              `json:"industry"`
+	Category            string              `json:"category,omitempty"`
 	Currency            string              `json:"currency"`
 	IntrinsicValue      *float64            `json:"intrinsicValue"`
 	FairValueRange      string              `json:"fairValueRange"`
