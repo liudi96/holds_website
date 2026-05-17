@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>晴仓记 · 清新冒险看板</title>
-    <link rel="stylesheet" href="./styles.css?v=sunny-quest-sunny30-categories" />
+    <link rel="stylesheet" href="./styles.css?v=sunny-quest-detail-category" />
   </head>
   <body>
     <aside class="sidebar">
@@ -243,26 +243,8 @@
                       </button>
                     </th>
                     <th>
-                      <button class="position-sort-button" type="button" data-sunny30-sort="grossMargin" aria-label="按毛利率排序">
-                        <span>毛利率</span>
-                        <strong>↕</strong>
-                      </button>
-                    </th>
-                    <th>
-                      <button class="position-sort-button" type="button" data-sunny30-sort="netMargin" aria-label="按净利率排序">
-                        <span>净利率</span>
-                        <strong>↕</strong>
-                      </button>
-                    </th>
-                    <th>
-                      <button class="position-sort-button" type="button" data-sunny30-sort="roe" aria-label="按ROE排序">
-                        <span>ROE</span>
-                        <strong>↕</strong>
-                      </button>
-                    </th>
-                    <th>
-                      <button class="position-sort-button" type="button" data-sunny30-sort="roic" aria-label="按ROIC排序">
-                        <span>ROIC</span>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="return" aria-label="按综合回报率排序">
+                        <span>综合回报率</span>
                         <strong>↕</strong>
                       </button>
                     </th>
@@ -574,6 +556,14 @@
             <input name="industry" />
           </label>
           <label>
+            分类
+            <select name="category">
+              <option value="红利">红利</option>
+              <option value="蓝筹">蓝筹</option>
+              <option value="成长 / 修复">成长 / 修复</option>
+            </select>
+          </label>
+          <label>
             最终动作
             <input name="action" />
           </label>
@@ -628,6 +618,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=sunny-quest-sunny30-categories"></script>
+    <script src="./app.js?v=sunny-quest-detail-category"></script>
   </body>
 </html>

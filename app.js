@@ -299,6 +299,7 @@ const POSITION_CATEGORY_OVERRIDES = {
   "000333.SZ": "bluechip",
   "002415.SZ": "bluechip",
   "0696.HK": "bluechip",
+  "600563.SH": "growth",
   "2669.HK": "growth",
   "6049.HK": "growth",
   "1405.HK": "growth",
@@ -1571,7 +1572,33 @@ function positionCategory(stock, strategy = strategyProfile(stock)) {
 }
 
 function positionCategoryPill(category) {
-  return `<span class="position-category-pill ${category.tone}">${escapeHTML(category.label)}</span>`;
+  const label = category?.label ?? category?.text ?? "-";
+  const tone = category?.tone ?? "";
+  return `<span class="position-category-pill ${tone}">${escapeHTML(label)}</span>`;
+}
+
+function positionCategorySelect(stock, category = positionCategory(stock)) {
+  const symbol = normalizeSymbol(stock?.symbol);
+  const options = POSITION_CATEGORY_ORDER.map((key) => {
+    const item = POSITION_CATEGORY_META[key];
+    const selected = item.key === category.key ? " selected" : "";
+    return `<option value="${escapeHTML(item.label)}"${selected}>${escapeHTML(item.label)}</option>`;
+  }).join("");
+  return `
+    <select class="position-category-select ${category.tone}" data-stock-category-select data-symbol="${escapeHTML(symbol)}" data-current-category="${escapeHTML(category.label)}" aria-label="选择${escapeHTML(stock?.name || symbol)}分类">
+      ${options}
+    </select>
+  `;
+}
+
+function stockDetailCategoryControl(stock) {
+  const category = positionCategory(stock);
+  return `
+    <label class="detail-category-control">
+      <span>分类</span>
+      ${positionCategorySelect(stock, category)}
+    </label>
+  `;
 }
 
 function renderPositionCategorySummary(positions) {
@@ -2369,8 +2396,7 @@ function mergeSunny30Stock(holding, candidate, symbol) {
 }
 
 function sunny30Type(stock) {
-  const category = positionCategory(stock);
-  return { text: category.label, tone: category.tone, order: category.order };
+  return positionCategory(stock);
 }
 
 function sunny30Quality(stock) {
@@ -2451,14 +2477,23 @@ function sunny30TwentyDayRatio(stock) {
   return sunny30Ratio(stock?.currentPrice, stock?.twentyDayClose);
 }
 
-function sunny30FinancialValue(stock, key) {
-  return finiteNumber(latestAnnualFinancial(stock)?.[key]);
+function sunny30ReturnValue(stock) {
+  const strategy = stock?.strategy ?? strategyProfile(stock);
+  return finiteNumber(strategy?.shield?.value);
+}
+
+function sunny30ReturnCell(stock) {
+  const strategy = stock?.strategy ?? strategyProfile(stock);
+  const value = finiteNumber(strategy?.shield?.value);
+  const target = finiteNumber(strategy?.shield?.target);
+  const tone = Number.isFinite(value) && Number.isFinite(target) && value >= target ? "core" : "reduce";
+  return `<span class="health-pill ${tone}">${displayDividendRatio(value)} / ${displayDividendRatio(target)}</span>`;
 }
 
 function sunny30SortValue(stock, key) {
   if (key === "name") return String(stock?.name ?? "");
   if (key === "type") return sunny30Type(stock).order;
-  if (["grossMargin", "netMargin", "roe", "roic"].includes(key)) return sunny30FinancialValue(stock, key);
+  if (key === "return") return sunny30ReturnValue(stock);
   if (key === "quality") return sunny30QualityValue(stock);
   if (key === "moat") return finiteNumber(stock?.moat);
   if (key === "margin") return marginValue(stock);
@@ -2532,13 +2567,12 @@ function renderSunny30(positions) {
   }
 
   if (!stocks.length) {
-    elements.sunny30Body.innerHTML = `<tr><td colspan="12" class="empty-state">暂无晴仓30标的</td></tr>`;
+    elements.sunny30Body.innerHTML = `<tr><td colspan="9" class="empty-state">暂无晴仓30标的</td></tr>`;
     return;
   }
 
   elements.sunny30Body.innerHTML = stocks.map((stock) => {
     const type = sunny30Type(stock);
-    const latestFinancial = latestAnnualFinancial(stock);
     const quality = sunny30Quality(stock);
     const moat = sunny30Moat(stock);
     const margin = sunny30Margin(stock);
@@ -2557,11 +2591,8 @@ function renderSunny30(positions) {
             </a>
           </div>
         </td>
-        <td data-label="类型">${sunny30Pill(type.text, type.tone)}</td>
-        <td data-label="毛利率"><span class="sunny30-metric">${financialRatio(latestFinancial.grossMargin)}</span></td>
-        <td data-label="净利率"><span class="sunny30-metric">${financialRatio(latestFinancial.netMargin)}</span></td>
-        <td data-label="ROE"><span class="sunny30-metric">${financialRatio(latestFinancial.roe)}</span></td>
-        <td data-label="ROIC"><span class="sunny30-metric">${financialRatio(latestFinancial.roic)}</span></td>
+        <td data-label="类型">${positionCategoryPill(type)}</td>
+        <td data-label="综合回报率">${sunny30ReturnCell(stock)}</td>
         <td data-label="公司质量">${sunny30Pill(quality.text, quality.tone)}</td>
         <td data-label="护城河">${sunny30Pill(moat.text, moat.tone)}</td>
         <td data-label="安全边际">${sunny30Pill(margin.text, margin.tone)}</td>
@@ -5067,6 +5098,7 @@ function renderStockDetail(positions, symbol) {
       <div>
         <p class="eyebrow">${escapeHTML(stock.symbol)} · ${escapeHTML(displayText(stock.industry, "未分类"))}</p>
         <h2>${escapeHTML(stock.name)}</h2>
+        ${stockDetailCategoryControl(stock)}
       </div>
       <div class="detail-hero-actions">
         <button class="ghost-button compact-link" type="button" data-update-financials="${escapeHTML(stock.symbol)}">
@@ -5541,6 +5573,52 @@ async function deleteSunny30Candidate(symbol) {
   render("portfolio");
 }
 
+function categoryLabelFromValue(value) {
+  const key = normalizePositionCategory(value);
+  const category = POSITION_CATEGORY_META[key];
+  if (!category) throw new Error("请选择有效分类");
+  return category.label;
+}
+
+async function saveStockCategory(symbol, value) {
+  const normalized = normalizeSymbol(symbol);
+  const category = categoryLabelFromValue(value);
+  const holding = (state.holdings ?? []).find((item) => normalizeSymbol(item.symbol) === normalized);
+  const candidate = (state.candidates ?? []).find((item) => normalizeSymbol(item.symbol) === normalized);
+  if (!holding && !candidate) throw new Error(`未找到 ${normalized}`);
+
+  if (USE_BACKEND) {
+    let nextState = state;
+    if (holding) {
+      nextState = await requestJSON(`/api/holdings/${encodeURIComponent(normalized)}`, {
+        method: "PUT",
+        body: JSON.stringify({ ...holding, category })
+      });
+    }
+    if (candidate) {
+      nextState = await requestJSON("/api/candidates", {
+        method: "POST",
+        body: JSON.stringify({
+          ...candidate,
+          symbol: normalized,
+          name: candidate.name || holding?.name || normalized,
+          category
+        })
+      });
+    }
+    state = nextState;
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+    return category;
+  }
+
+  if (holding) holding.category = category;
+  if (candidate) candidate.category = category;
+  saveState();
+  render();
+  return category;
+}
+
 function tradeFromSimpleForm(formData) {
   const assetType = String(formData.get("assetType") ?? "stock").trim().toLowerCase() === "fund" ? "fund" : "stock";
   const nameInput = String(formData.get("name") ?? "").trim();
@@ -5893,6 +5971,7 @@ function openHoldingEditor(symbol) {
   form.symbol.value = holding.symbol;
   form.name.value = holding.name ?? "";
   form.industry.value = holding.industry ?? "";
+  form.category.value = positionCategory(holding).label;
   form.action.value = holding.action ?? "";
   form.status.value = holding.status ?? "";
   form.marginOfSafety.value = Number.isFinite(calculatedMarginOfSafety(holding)) ? calculatedMarginOfSafety(holding) : "";
@@ -5960,6 +6039,7 @@ async function saveHolding(formData) {
   const patch = {
     name: String(formData.get("name")).trim(),
     industry: String(formData.get("industry")).trim(),
+    category: String(formData.get("category") ?? "").trim(),
     action: String(formData.get("action")).trim(),
     status: String(formData.get("status")).trim(),
     marginOfSafety: calculatedMarginOfSafety(holding),
@@ -5979,6 +6059,7 @@ async function saveHolding(formData) {
 
   holding.name = patch.name;
   holding.industry = patch.industry;
+  holding.category = patch.category;
   holding.action = patch.action;
   holding.status = patch.status;
   holding.marginOfSafety = patch.marginOfSafety;
@@ -6119,6 +6200,22 @@ document.addEventListener("click", (event) => {
       : sunny30DefaultDirection(key)
   };
   renderSunny30(computePositions());
+});
+
+document.addEventListener("change", async (event) => {
+  const select = event.target.closest("[data-stock-category-select]");
+  if (!select) return;
+  const symbol = normalizeSymbol(select.dataset.symbol);
+  const previous = select.dataset.currentCategory || select.value;
+  try {
+    select.disabled = true;
+    const category = await saveStockCategory(symbol, select.value);
+    setQuoteUpdateStatus(`已更新 ${symbol} 分类：${category}`, "success");
+  } catch (error) {
+    select.value = previous;
+    select.disabled = false;
+    window.alert(error.message);
+  }
 });
 
 document.addEventListener("click", async (event) => {

@@ -697,6 +697,9 @@ func (s *Server) handleUpdateHolding(w http.ResponseWriter, r *http.Request) {
 			}
 			nextState.Holdings[i].Name = strings.TrimSpace(patch.Name)
 			nextState.Holdings[i].Industry = strings.TrimSpace(patch.Industry)
+			if category := strings.TrimSpace(patch.Category); category != "" {
+				nextState.Holdings[i].Category = category
+			}
 			nextState.Holdings[i].Action = strings.TrimSpace(patch.Action)
 			nextState.Holdings[i].Status = strings.TrimSpace(patch.Status)
 			nextState.Holdings[i].MarginOfSafety = marginOfSafetyFromPrice(nextState.Holdings[i].IntrinsicValue, nextState.Holdings[i].CurrentPrice, patch.MarginOfSafety)
