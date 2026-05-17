@@ -318,6 +318,7 @@ let decisionLogFilter = "all";
 let masterMatrixSort = { key: "margin", direction: "desc" };
 let masterMatrixFilter = "all";
 let backendStateError = "";
+let backendAvailable = false;
 const pageTitles = {
   overview: "晴仓记",
   portfolio: "股票",
@@ -433,10 +434,24 @@ function saveState() {
 }
 
 async function requestJSON(path, options = {}) {
+  const { headers = {}, timeoutMs = 0, signal, ...fetchOptions } = options;
+  const timeoutController = timeoutMs > 0 && !signal ? new AbortController() : null;
+  const timeout = timeoutController
+    ? window.setTimeout(() => timeoutController.abort(), timeoutMs)
+    : null;
+
   const response = await fetch(path, {
     cache: "no-store",
-    headers: { "Content-Type": "application/json", ...(options.headers ?? {}) },
-    ...options
+    ...fetchOptions,
+    signal: signal ?? timeoutController?.signal,
+    headers: { "Content-Type": "application/json", ...headers }
+  }).catch((error) => {
+    if (error?.name === "AbortError") {
+      throw new Error(`${path} 请求超时`);
+    }
+    throw error;
+  }).finally(() => {
+    if (timeout) window.clearTimeout(timeout);
   });
 
   if (!response.ok) {
@@ -447,19 +462,129 @@ async function requestJSON(path, options = {}) {
   return response.json();
 }
 
+function normalizedLoadedState(rawState) {
+  return {
+    ...structuredClone(seedState),
+    ...(rawState ?? {}),
+    holdings: Array.isArray(rawState?.holdings) ? rawState.holdings : [],
+    candidates: Array.isArray(rawState?.candidates) ? rawState.candidates : [],
+    trades: Array.isArray(rawState?.trades) ? rawState.trades : [],
+    decisionLogs: Array.isArray(rawState?.decisionLogs) ? rawState.decisionLogs : [],
+    funds: Array.isArray(rawState?.funds) ? rawState.funds : [],
+    plan: Array.isArray(rawState?.plan) ? rawState.plan : [],
+    industries: Array.isArray(rawState?.industries) ? rawState.industries : [],
+    rules: Array.isArray(rawState?.rules) ? rawState.rules : []
+  };
+}
+
+function applyStaticRuntimeQuote(stock, record) {
+  if (!stock || !record) return stock;
+  const next = { ...stock };
+  const currentPrice = finiteNumber(record.currentPrice);
+  if (Number.isFinite(currentPrice) && currentPrice > 0) {
+    next.currentPrice = currentPrice;
+    next.marginOfSafety = calculatedMarginOfSafety({ ...next, currentPrice }) ?? next.marginOfSafety;
+  }
+  ["previousClose", "twentyDayClose"].forEach((key) => {
+    const value = finiteNumber(record[key]);
+    if (Number.isFinite(value) && value > 0) next[key] = value;
+  });
+  ["twentyDayCloseDate", "currentPriceDate", "previousCloseDate", "updatedAt"].forEach((key) => {
+    const value = String(record[key] ?? "").trim();
+    if (value) next[key] = value;
+  });
+  if (record.twentyDayChange !== undefined && record.twentyDayChange !== null) {
+    const value = finiteNumber(record.twentyDayChange);
+    if (Number.isFinite(value)) next.twentyDayChange = value;
+  }
+  const marketCap = finiteNumber(record.marketCap);
+  if (Number.isFinite(marketCap) && marketCap > 0) {
+    next.marketCap = marketCap;
+    next.marketCapCurrency = String(record.marketCapCurrency || record.currency || next.currency || "").trim().toUpperCase();
+  }
+  if (!String(next.currency ?? "").trim() && record.currency) {
+    next.currency = String(record.currency).trim().toUpperCase();
+  }
+  const dividendPerShare = finiteNumber(record.dividendPerShare);
+  if (Number.isFinite(dividendPerShare) && dividendPerShare > 0) {
+    next.dividend = { ...(next.dividend ?? {}), dividendPerShare };
+    if (record.dividendCurrency) next.dividend.dividendCurrency = String(record.dividendCurrency).trim().toUpperCase();
+    if (record.dividendFiscalYear) next.dividend.fiscalYear = String(record.dividendFiscalYear).trim();
+  }
+  return next;
+}
+
+function mergeStaticRuntimeQuotes(nextState, quoteBook) {
+  const quotes = quoteBook?.quotes ?? {};
+  const quoteFor = (symbol) => quotes[normalizeSymbol(symbol)];
+  return {
+    ...nextState,
+    holdings: (nextState.holdings ?? []).map((holding) => applyStaticRuntimeQuote(holding, quoteFor(holding.symbol))),
+    candidates: (nextState.candidates ?? []).map((candidate) => applyStaticRuntimeQuote(candidate, quoteFor(candidate.symbol)))
+  };
+}
+
+function staticDataStatus(apiError, quoteBook) {
+  const quoteCount = Object.keys(quoteBook?.quotes ?? {}).length;
+  const issues = [{
+    tone: "info",
+    title: "静态数据模式",
+    detail: `/api/state 不可用，已从 data/portfolio.json 加载。${apiError?.message ? `原因：${apiError.message}` : ""}`
+  }];
+  if (!quoteCount) {
+    issues.push({
+      tone: "warn",
+      title: "行情缓存缺失",
+      detail: "未读取到 data/runtime/quotes.json，行情会使用 portfolio.json 内的旧价格。"
+    });
+  }
+  return {
+    status: quoteCount ? "ok" : "warn",
+    dataDir: "data",
+    writable: false,
+    backupCount: 0,
+    portfolio: { path: "data/portfolio.json", exists: true },
+    runtimeQuotes: {
+      path: "data/runtime/quotes.json",
+      exists: quoteCount > 0,
+      updatedAt: String(quoteBook?.updatedAt ?? "")
+    },
+    runtimeIndustryMetrics: { path: "data/runtime/industry_metrics.json", exists: false },
+    issues
+  };
+}
+
+async function loadStaticState(apiError) {
+  const staticState = normalizedLoadedState(await requestJSON("./data/portfolio.json", { timeoutMs: 5000 }));
+  const quoteBook = await requestJSON("./data/runtime/quotes.json", { timeoutMs: 5000 }).catch(() => null);
+  state = mergeStaticRuntimeQuotes(staticState, quoteBook);
+  state.dataStatus = staticDataStatus(apiError, quoteBook);
+  backendStateError = "";
+  backendAvailable = false;
+  localStorage.removeItem(STORAGE_KEY);
+  return true;
+}
+
 async function loadBackendState() {
   if (!USE_BACKEND) return false;
 
   try {
-    state = await requestJSON("/api/state");
+    state = await requestJSON("/api/state", { timeoutMs: 3000 });
     backendStateError = "";
+    backendAvailable = true;
     localStorage.removeItem(STORAGE_KEY);
     return true;
   } catch (error) {
-    console.warn("后端不可用，使用浏览器本地数据", error);
-    backendStateError = error.message || "后端不可用";
-    setQuoteUpdateStatus("后端不可用，已切换到浏览器本地兜底数据", "error");
-    return false;
+    console.warn("后端不可用，尝试加载静态数据", error);
+    try {
+      return await loadStaticState(error);
+    } catch (staticError) {
+      console.warn("静态数据也不可用，使用浏览器本地数据", staticError);
+      backendAvailable = false;
+      backendStateError = `${error.message || "后端不可用"}；静态数据加载失败：${staticError.message || staticError}`;
+      setQuoteUpdateStatus("后端和静态数据都不可用，已切换到浏览器本地兜底数据", "error");
+      return false;
+    }
   }
 }
 
