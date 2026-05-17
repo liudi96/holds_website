@@ -392,13 +392,6 @@ func (s *Server) handleGetState(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	state, err := loadState()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load state")
-		return
-	}
-	s.state = state
-
 	writeJSON(w, http.StatusOK, s.state)
 }
 
