@@ -508,6 +508,28 @@
       "decision": "更新多年财务数据",
       "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
       "detail": "来源 东方财富财务分析；年度 10 年；最新期 2025；收入 1050506000000；利润 134778000000；ROE 14.00%"
+    },
+    {
+      "id": 1779003539077225000,
+      "date": "2026-05-17 15:38:59",
+      "type": "financials",
+      "symbol": "601899.SH",
+      "name": "紫金矿业",
+      "currency": "CNY",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富财务分析；年度 10 年；最新期 2025；收入 349079082852；利润 51777327785；ROE 33.04%；ROIC 17.62%；FCF 44447218533"
+    },
+    {
+      "id": 1779003543971058000,
+      "date": "2026-05-17 15:39:03",
+      "type": "financials",
+      "symbol": "600309.SH",
+      "name": "万华化学",
+      "currency": "CNY",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富财务分析；年度 10 年；最新期 2025；收入 203234573814；利润 12527201094；ROE 12.44%；ROIC 7.28%；FCF 2393988244"
     }
   ],
   "holdings": [
@@ -12180,6 +12202,7 @@
         "fiscalYear": "FY2025",
         "dividendPerShare": 1.25,
         "dividendCurrency": "CNY",
+        "cashDividendTotal": 3913091309.130913,
         "cashDividendCurrency": "CNY",
         "buybackAmount": 499979600,
         "buybackCurrency": "CNY",
@@ -12235,7 +12258,7 @@
         }
       },
       "financials": {
-        "updatedAt": "2026-05-17 14:58:13",
+        "updatedAt": "2026-05-17 15:39:03",
         "source": "东方财富财务分析",
         "sourceSymbol": "600309.SH",
         "currency": "CNY",
@@ -12275,7 +12298,9 @@
             "netMargin": 0.06908241896,
             "inventoryTurnoverDays": 51.386310829097,
             "receivableTurnoverDays": 24.968952020592,
-            "dividendPaid": 6737836925.98
+            "dividendPaid": 6737836925.98,
+            "peAtCurrentPrice": 20.50375939849624,
+            "pbAtCurrentPrice": 2.3646442659185607
           },
           {
             "fiscalYear": "2024",
@@ -12311,7 +12336,9 @@
             "netMargin": 0.08124010164499999,
             "inventoryTurnoverDays": 52.779117989343,
             "receivableTurnoverDays": 21.219330010212,
-            "dividendPaid": 11311953510.64
+            "dividendPaid": 11311953510.64,
+            "peAtCurrentPrice": 19.71325301204819,
+            "pbAtCurrentPrice": 2.7145071502628997
           },
           {
             "fiscalYear": "2023",
@@ -12347,7 +12374,9 @@
             "netMargin": 0.104355084256,
             "inventoryTurnoverDays": 47.90349178285,
             "receivableTurnoverDays": 18.686093879356,
-            "dividendPaid": 9001793158.27
+            "dividendPaid": 9001793158.27,
+            "peAtCurrentPrice": 15.263059701492537,
+            "pbAtCurrentPrice": 2.897289274847969
           },
           {
             "fiscalYear": "2022",
@@ -12383,7 +12412,9 @@
             "netMargin": 0.102931519299,
             "inventoryTurnoverDays": 47.520594929852,
             "receivableTurnoverDays": 19.250131465891,
-            "dividendPaid": 10489947082.1
+            "dividendPaid": 10489947082.1,
+            "peAtCurrentPrice": 15.823984526112186,
+            "pbAtCurrentPrice": 3.342627752892763
           },
           {
             "fiscalYear": "2021",
@@ -12419,7 +12450,9 @@
             "netMargin": 0.172047589293,
             "inventoryTurnoverDays": 45.262363761548,
             "receivableTurnoverDays": 18.496485565859,
-            "dividendPaid": 6673634212.28
+            "dividendPaid": 6673634212.28,
+            "peAtCurrentPrice": 10.421656050955415,
+            "pbAtCurrentPrice": 3.749900526078144
           },
           {
             "fiscalYear": "2020",
@@ -12455,7 +12488,9 @@
             "netMargin": 0.14182892388499999,
             "inventoryTurnoverDays": 55.659338557538,
             "receivableTurnoverDays": 26.331226438379,
-            "dividendPaid": 6164130654.48
+            "dividendPaid": 6164130654.48,
+            "peAtCurrentPrice": 25.565625,
+            "pbAtCurrentPrice": 5.265700165509885
           },
           {
             "fiscalYear": "2019",
@@ -12491,7 +12526,9 @@
             "netMargin": 0.15566810774700002,
             "inventoryTurnoverDays": 64.388820971156,
             "receivableTurnoverDays": 21.917640921956,
-            "dividendPaid": 8249245441.63
+            "dividendPaid": 8249245441.63,
+            "peAtCurrentPrice": 25.328173374613005,
+            "pbAtCurrentPrice": 6.063216366755034
           },
           {
             "fiscalYear": "2018",
@@ -12527,7 +12564,9 @@
             "netMargin": 0.220663139661,
             "inventoryTurnoverDays": 61.088450243158,
             "receivableTurnoverDays": 16.522606413583,
-            "dividendPaid": 5645086838.35
+            "dividendPaid": 5645086838.35,
+            "peAtCurrentPrice": 16.493951612903228,
+            "pbAtCurrentPrice": 6.62160920809029
           },
           {
             "fiscalYear": "2017",
@@ -12563,7 +12602,9 @@
             "netMargin": 0.250536985868,
             "inventoryTurnoverDays": 63.704302243356,
             "receivableTurnoverDays": 15.409094100546,
-            "dividendPaid": 4298057355
+            "dividendPaid": 4298057355,
+            "peAtCurrentPrice": 20.002444987775064,
+            "pbAtCurrentPrice": 8.199170074383995
           },
           {
             "fiscalYear": "2016",
@@ -12599,12 +12640,28 @@
             "netMargin": 0.151099347451,
             "inventoryTurnoverDays": 74.02414138394,
             "receivableTurnoverDays": 17.514210042417,
-            "dividendPaid": 1948913155.6
+            "dividendPaid": 1948913155.6,
+            "peAtCurrentPrice": 57.61267605633803,
+            "pbAtCurrentPrice": 11.935335570560934
           }
         ],
         "valuation": {
           "date": "2025-12-31",
+          "price": 81.81,
           "currency": "CNY",
+          "pe": 20.50375939849624,
+          "pb": 2.3646442659185607,
+          "dividendYield": 0.01527930570834861,
+          "peRange": {
+            "min": 10.421656050955415,
+            "median": 19.857848999911628,
+            "max": 57.61267605633803
+          },
+          "pbRange": {
+            "min": 2.3646442659185607,
+            "median": 4.507800345794014,
+            "max": 11.935335570560934
+          },
           "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
         }
       }
@@ -13026,6 +13083,7 @@
         "fiscalYear": "FY2025",
         "dividendPerShare": 0.6000000000000001,
         "dividendCurrency": "CNY",
+        "cashDividendTotal": 15954422110.552765,
         "cashDividendCurrency": "CNY",
         "buybackAmount": 999887625.01,
         "buybackCurrency": "CNY",
@@ -13081,7 +13139,7 @@
         }
       },
       "financials": {
-        "updatedAt": "2026-05-17 14:58:03",
+        "updatedAt": "2026-05-17 15:38:58",
         "source": "东方财富财务分析",
         "sourceSymbol": "601899.SH",
         "currency": "CNY",
@@ -13121,7 +13179,9 @@
             "netMargin": 0.182830174371,
             "inventoryTurnoverDays": 53.455498270908,
             "receivableTurnoverDays": 8.312233560354,
-            "dividendPaid": 22888925189
+            "dividendPaid": 22888925189,
+            "peAtCurrentPrice": 16.328205128205127,
+            "pbAtCurrentPrice": 4.602773629749983
           },
           {
             "fiscalYear": "2024",
@@ -13157,7 +13217,9 @@
             "netMargin": 0.129735442431,
             "inventoryTurnoverDays": 48.200545806217,
             "receivableTurnoverDays": 8.648859109728,
-            "dividendPaid": 16012050922
+            "dividendPaid": 16012050922,
+            "peAtCurrentPrice": 26.31404958677686,
+            "pbAtCurrentPrice": 6.1241923994423235
           },
           {
             "fiscalYear": "2023",
@@ -13193,7 +13255,9 @@
             "netMargin": 0.090454349477,
             "inventoryTurnoverDays": 43.548915727095,
             "receivableTurnoverDays": 9.62864997322,
-            "dividendPaid": 15174567428
+            "dividendPaid": 15174567428,
+            "peAtCurrentPrice": 39.8,
+            "pbAtCurrentPrice": 7.7971319758861375
           },
           {
             "fiscalYear": "2022",
@@ -13230,7 +13294,9 @@
             "netMargin": 0.09161876921899999,
             "inventoryTurnoverDays": 38.436335823042,
             "receivableTurnoverDays": 6.899717743536,
-            "dividendPaid": 11475070934
+            "dividendPaid": 11475070934,
+            "peAtCurrentPrice": 41.89473684210526,
+            "pbAtCurrentPrice": 9.425445179784651
           },
           {
             "fiscalYear": "2021",
@@ -13266,7 +13332,9 @@
             "netMargin": 0.087069843051,
             "inventoryTurnoverDays": 35.340653328885,
             "receivableTurnoverDays": 2.868031767211,
-            "dividendPaid": 7336876536
+            "dividendPaid": 7336876536,
+            "peAtCurrentPrice": 53.06666666666667,
+            "pbAtCurrentPrice": 11.802044511773621
           },
           {
             "fiscalYear": "2020",
@@ -13302,7 +13370,9 @@
             "netMargin": 0.049317626483000004,
             "inventoryTurnoverDays": 39.26057274675,
             "receivableTurnoverDays": 2.18891446962,
-            "dividendPaid": 5671366799
+            "dividendPaid": 5671366799,
+            "peAtCurrentPrice": 127.36,
+            "pbAtCurrentPrice": 15.786764390636861
           },
           {
             "fiscalYear": "2019",
@@ -13338,7 +13408,9 @@
             "netMargin": 0.037185744841,
             "inventoryTurnoverDays": 41.134625413081,
             "receivableTurnoverDays": 2.584297255125,
-            "dividendPaid": 5490938903
+            "dividendPaid": 5490938903,
+            "peAtCurrentPrice": 176.88888888888889,
+            "pbAtCurrentPrice": 17.489260256434807
           },
           {
             "fiscalYear": "2018",
@@ -13374,7 +13446,9 @@
             "netMargin": 0.044178591992,
             "inventoryTurnoverDays": 46.159183190466,
             "receivableTurnoverDays": 3.910518029809,
-            "dividendPaid": 4594953627
+            "dividendPaid": 4594953627,
+            "peAtCurrentPrice": 176.88888888888889,
+            "pbAtCurrentPrice": 20.674242128362707
           },
           {
             "fiscalYear": "2017",
@@ -13410,7 +13484,9 @@
             "netMargin": 0.034347928378,
             "inventoryTurnoverDays": 51.081999127389,
             "receivableTurnoverDays": 3.952122858111,
-            "dividendPaid": 3188451228
+            "dividendPaid": 3188451228,
+            "peAtCurrentPrice": 199,
+            "pbAtCurrentPrice": 21.25475577781826
           },
           {
             "fiscalYear": "2016",
@@ -13446,12 +13522,29 @@
             "netMargin": 0.021398142739,
             "inventoryTurnoverDays": 59.208614088777,
             "receivableTurnoverDays": 3.761455409698,
-            "dividendPaid": 2864677303
+            "dividendPaid": 2864677303,
+            "peAtCurrentPrice": 353.77777777777777,
+            "pbAtCurrentPrice": 24.70447187814506
           }
         ],
         "valuation": {
           "date": "2025-12-31",
+          "price": 31.84,
           "currency": "CNY",
+          "pe": 16.328205128205127,
+          "pb": 4.602773629749983,
+          "peg": 0.2652892468677985,
+          "dividendYield": 0.01884422110552764,
+          "peRange": {
+            "min": 16.328205128205127,
+            "median": 90.21333333333334,
+            "max": 353.77777777777777
+          },
+          "pbRange": {
+            "min": 4.602773629749983,
+            "median": 13.794404451205242,
+            "max": 24.70447187814506
+          },
           "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
         }
       }
@@ -13889,7 +13982,7 @@
       "name": "中国平安",
       "status": "未达标（公司质量较高且估值不贵，但按A股主策略口径，当前股息+回购综合回报盾不足6%，且投资收益和金融资产波动仍需折价）",
       "action": "加入红利/金融蓝筹候选池观察；当前CNY55.50附近不追买，等待CNY50-52复核，CNY45-48且寿险NBV、分红和投资收益未恶化时再考虑分批",
-      "marginOfSafety": 0.18,
+      "marginOfSafety": 0.18382352941176472,
       "qualityScore": 84,
       "risk": "权益市场和利率波动、保险资金投资收益下行、寿险新业务价值可持续性、代理人队伍质量、平安银行净息差和资产质量、地产与地方债信用风险、CSM释放压力、偿付能力和监管政策变化需折价",
       "industry": "保险/综合金融/寿险/财险/银行/资产管理",
@@ -13902,7 +13995,7 @@
       "moat": 22,
       "governance": 17,
       "financialQuality": 20,
-      "updatedAt": "2026-05-17 15:03:32；ChatGPT分析导入；分析日 2026-05-17",
+      "updatedAt": "",
       "notes": "2025年中国平安归母营运利润1344.15亿元，同比增长10.3%；归母净利润1347.78亿元；寿险及健康险NBV为368.97亿元，同比增长29.3%；集团EV为15042.88亿元，摊薄后约83元/股；2025年每股股息2.70元，同比增长5.9%。2026Q1归母营运利润408亿元，同比增长7.6%；归母净利润250亿元，同比下降7.4%；NBV为156亿元，同比增长20.8%，但综合投资收益率受权益市场波动短期承压。按中性内在价值CNY68估算，CNY55.50安全边际约18%，但股息+回购综合回报盾不足6%，建议等待CNY50-52复核，CNY45-48再考虑分批。",
       "dividend": {
         "fiscalYear": "FY2025",
