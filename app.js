@@ -693,6 +693,10 @@ function normalizeSymbol(symbol) {
   return text;
 }
 
+function normalizeAssetType(assetType) {
+  return String(assetType ?? "").trim().toLowerCase() === "fund" ? "fund" : "stock";
+}
+
 function normalizeFundKey(value) {
   return String(value ?? "").trim().toUpperCase();
 }
@@ -1574,9 +1578,11 @@ function renderResearchPreview(result, imported = false) {
 }
 
 function computePositions() {
+  const realizedPnl = realizedStockPnlBySymbol();
   return state.holdings
     .filter((holding) => holding.shares > 0)
     .map((holding) => {
+      const symbol = normalizeSymbol(holding.symbol);
       const shares = finiteNumber(holding.shares) ?? 0;
       const cost = finiteNumber(holding.cost) ?? 0;
       const currentPrice = finiteNumber(holding.currentPrice);
@@ -1586,7 +1592,14 @@ function computePositions() {
       const costValueLocal = shares * cost;
       const marketValueCny = marketValueLocal * fx(holding.currency);
       const costValueCny = costValueLocal * fx(holding.currency);
-      const pnlCny = hasCurrentPrice ? marketValueCny - costValueCny : null;
+      const unrealizedPnlCny = hasCurrentPrice ? marketValueCny - costValueCny : null;
+      const realized = realizedPnl.get(symbol) || { pnlCny: 0, costCny: 0 };
+      const realizedPnlCny = realized.pnlCny;
+      const realizedCostCny = realized.costCny;
+      const pnlCny = Number.isFinite(unrealizedPnlCny)
+        ? unrealizedPnlCny + realizedPnlCny
+        : Math.abs(realizedPnlCny) > 0 ? realizedPnlCny : null;
+      const pnlCostValueCny = costValueCny + realizedCostCny;
       const closeForDayChange = Number.isFinite(previousClose) && previousClose > 0 ? previousClose : currentPrice;
       const dayChange = hasCurrentPrice && Number.isFinite(closeForDayChange)
         ? shares * (currentPrice - closeForDayChange) * fx(holding.currency)
@@ -1602,8 +1615,12 @@ function computePositions() {
         marketValueLocal,
         marketValueCny,
         costValueCny,
+        realizedCostCny,
+        pnlCostValueCny,
+        unrealizedPnlCny,
+        realizedPnlCny,
         pnlCny,
-        pnlRate: costValueCny && Number.isFinite(pnlCny) ? (pnlCny / costValueCny) * 100 : null,
+        pnlRate: pnlCostValueCny && Number.isFinite(pnlCny) ? (pnlCny / pnlCostValueCny) * 100 : null,
         dayChange
       };
     });
@@ -1642,6 +1659,103 @@ function assetSummary(positions = computePositions(), funds = computeFunds()) {
   const cashValue = finiteNumber(state.cash) ?? 0;
   const totalAssets = stockValue + fundValue + cashValue;
   return { stockValue, fundValue, cashValue, totalAssets };
+}
+
+function sortedStockTrades() {
+  return [...(state.trades ?? [])]
+    .map((trade, index) => ({ ...trade, index }))
+    .filter((trade) => normalizeAssetType(trade.assetType) !== "fund" && normalizeSymbol(trade.symbol))
+    .sort((a, b) => {
+      const idA = finiteNumber(a.id);
+      const idB = finiteNumber(b.id);
+      if (Number.isFinite(idA) && Number.isFinite(idB) && idA !== idB) return idA - idB;
+      const dateCompare = String(a.date ?? "").localeCompare(String(b.date ?? ""));
+      return dateCompare || a.index - b.index;
+    });
+}
+
+function realizedStockPnlBySymbol() {
+  const trades = sortedStockTrades();
+  const openingLots = new Map();
+
+  state.holdings.forEach((holding) => {
+    const symbol = normalizeSymbol(holding.symbol);
+    const shares = finiteNumber(holding.shares) ?? 0;
+    const cost = finiteNumber(holding.cost) ?? 0;
+    if (!symbol || shares <= 0) return;
+    openingLots.set(symbol, {
+      shares,
+      cost,
+      currency: String(holding.currency || "CNY").toUpperCase()
+    });
+  });
+
+  [...trades].reverse().forEach((trade) => {
+    const symbol = normalizeSymbol(trade.symbol);
+    const shares = finiteNumber(trade.shares) ?? 0;
+    const price = finiteNumber(trade.price);
+    const side = String(trade.side ?? "").trim().toLowerCase();
+    if (!symbol || shares <= 0 || !Number.isFinite(price)) return;
+    const lot = openingLots.get(symbol) || {
+      shares: 0,
+      cost: price,
+      currency: String(trade.currency || "CNY").toUpperCase()
+    };
+
+    if (side === "buy") {
+      const previousShares = lot.shares - shares;
+      if (previousShares > 0) {
+        const previousCostTotal = lot.shares * lot.cost - shares * price;
+        lot.shares = previousShares;
+        if (Number.isFinite(previousCostTotal)) lot.cost = previousCostTotal / previousShares;
+      } else {
+        lot.shares = 0;
+        lot.cost = price;
+      }
+      openingLots.set(symbol, lot);
+      return;
+    }
+
+    if (side === "sell") {
+      lot.shares += shares;
+      openingLots.set(symbol, lot);
+    }
+  });
+
+  const lots = new Map([...openingLots.entries()].map(([symbol, lot]) => [symbol, { ...lot }]));
+  const realized = new Map();
+
+  trades.forEach((trade) => {
+    const symbol = normalizeSymbol(trade.symbol);
+    const shares = finiteNumber(trade.shares) ?? 0;
+    const price = finiteNumber(trade.price);
+    const side = String(trade.side ?? "").trim().toLowerCase();
+    if (!symbol || shares <= 0 || !Number.isFinite(price)) return;
+    const currencyCode = String(trade.currency || lots.get(symbol)?.currency || "CNY").toUpperCase();
+    const lot = lots.get(symbol) || { shares: 0, cost: price, currency: currencyCode };
+
+    if (side === "buy") {
+      const totalCost = lot.shares * lot.cost + shares * price;
+      lot.shares += shares;
+      if (lot.shares > 0) lot.cost = totalCost / lot.shares;
+      lot.currency = currencyCode;
+      lots.set(symbol, lot);
+      return;
+    }
+
+    if (side === "sell") {
+      const multiplier = fx(currencyCode);
+      const entry = realized.get(symbol) || { pnlCny: 0, costCny: 0 };
+      entry.pnlCny += shares * (price - lot.cost) * multiplier;
+      entry.costCny += shares * lot.cost * multiplier;
+      realized.set(symbol, entry);
+      lot.shares = Math.max(0, lot.shares - shares);
+      lot.currency = currencyCode;
+      lots.set(symbol, lot);
+    }
+  });
+
+  return realized;
 }
 
 function syncCash() {
@@ -2341,7 +2455,9 @@ function renderMetrics(positions, funds = computeFunds()) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   const fundValue = funds.reduce((sum, item) => sum + item.marketValueCny, 0);
   const holdingsValue = totalValue + fundValue;
-  const totalCost = positions.reduce((sum, item) => sum + (finiteNumber(item.costValueCny) ?? 0), 0);
+  const totalCost = positions.reduce((sum, item) => {
+    return sum + (finiteNumber(item.pnlCostValueCny) ?? finiteNumber(item.costValueCny) ?? 0);
+  }, 0);
   const totalPositionPnl = positions.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
   const totalPositionPnlRate = totalCost ? (totalPositionPnl / totalCost) * 100 : 0;
   const cashValue = finiteNumber(state.cash) ?? 0;
@@ -2455,9 +2571,13 @@ function decisionPnlCell(stock) {
   if (stock.sourceType !== "holding") {
     return { className: "", html: `<strong>-</strong><br /><small>未持仓</small>` };
   }
+  const hasRealizedPnl = Math.abs(finiteNumber(stock.realizedPnlCny) ?? 0) >= 0.005;
+  const detailText = hasRealizedPnl && Number.isFinite(stock.unrealizedPnlCny)
+    ? `浮动 ${currency(stock.unrealizedPnlCny)} · 已实现 ${currency(stock.realizedPnlCny)}`
+    : percent(stock.pnlRate);
   return {
     className: privateClass(stock.pnlCny >= 0 ? "positive" : "negative"),
-    html: `<span class="decision-primary">${escapeHTML(privateText(currency(stock.pnlCny)))}</span><br /><small>${escapeHTML(privateText(percent(stock.pnlRate)))}</small>`
+    html: `<span class="decision-primary">${escapeHTML(privateText(currency(stock.pnlCny)))}</span><br /><small>${escapeHTML(privateText(detailText))}</small>`
   };
 }
 
@@ -5205,6 +5325,9 @@ function renderStockDetail(positions, symbol) {
   const detailPnlValue = isHolding
     ? privateHTML(`<span class="${privateClass(pnlClass)}">${currency(stock.pnlCny)}</span>`)
     : "-";
+  const detailPnlMeta = isHolding && Math.abs(finiteNumber(stock.realizedPnlCny) ?? 0) >= 0.005 && Number.isFinite(stock.unrealizedPnlCny)
+    ? privateText(`浮动 ${currency(stock.unrealizedPnlCny)} · 已实现 ${currency(stock.realizedPnlCny)}`)
+    : isHolding ? privateText(percent(stock.pnlRate)) : "";
   const detailDayValue = isHolding
     ? privateHTML(`<span class="${privateClass(dayClass)}">${currency(stock.dayChange)}</span>`)
     : `<span class="${priceChangeClass}">${Number.isFinite(priceChange) ? currency(priceChange, stock.currency) : "-"}</span>`;
@@ -5238,7 +5361,7 @@ function renderStockDetail(positions, symbol) {
     <section class="metrics-grid detail-metrics">
       ${metricCard("今天收盘", hasCurrentQuote ? currency(stock.currentPrice, stock.currency) : "-", stock.currentPriceDate || "收盘日未知")}
       ${metricCard("昨天收盘", hasPreviousQuote ? currency(stock.previousClose, stock.currency) : "-", stock.previousCloseDate || "收盘日未知")}
-      ${metricCard("浮动盈亏", detailPnlValue, isHolding ? privateText(percent(stock.pnlRate)) : "")}
+      ${metricCard("累计盈亏", detailPnlValue, detailPnlMeta)}
       ${metricCard(
         "今日变动",
         detailDayValue,
