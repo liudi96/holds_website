@@ -307,10 +307,67 @@ const POSITION_CATEGORY_OVERRIDES = {
   "7489.HK": "growth"
 };
 
+const POSITION_MOBILE_SORT_OPTIONS = [
+  { value: "default", label: "默认顺序" },
+  { value: "category:asc", label: "分类正序" },
+  { value: "category:desc", label: "分类反序" },
+  { value: "marketValue:desc", label: "市值高到低" },
+  { value: "marketValue:asc", label: "市值低到高" },
+  { value: "pnl:desc", label: "累计盈亏高到低" },
+  { value: "pnl:asc", label: "累计盈亏低到高" },
+  { value: "return:desc", label: "综合回报率高到低" },
+  { value: "return:asc", label: "综合回报率低到高" },
+  { value: "margin:desc", label: "安全边际高到低" },
+  { value: "margin:asc", label: "安全边际低到高" },
+  { value: "owner:desc", label: "长期评分高到低" },
+  { value: "owner:asc", label: "长期评分低到高" }
+];
+
+const SUNNY30_MOBILE_SORT_OPTIONS = [
+  { value: "name:asc", label: "股票名正序" },
+  { value: "name:desc", label: "股票名反序" },
+  { value: "type:asc", label: "类型正序" },
+  { value: "type:desc", label: "类型反序" },
+  { value: "return:desc", label: "综合回报率高到低" },
+  { value: "return:asc", label: "综合回报率低到高" },
+  { value: "quality:desc", label: "公司质量高到低" },
+  { value: "quality:asc", label: "公司质量低到高" },
+  { value: "moat:desc", label: "护城河高到低" },
+  { value: "moat:asc", label: "护城河低到高" },
+  { value: "margin:desc", label: "安全边际高到低" },
+  { value: "margin:asc", label: "安全边际低到高" },
+  { value: "dayChange:desc", label: "今日涨跌高到低" },
+  { value: "dayChange:asc", label: "今日涨跌低到高" },
+  { value: "twentyDayChange:desc", label: "20日涨跌高到低" },
+  { value: "twentyDayChange:asc", label: "20日涨跌低到高" }
+];
+
+const POSITION_MOBILE_FILTERS = [
+  { value: "all", label: "全部" },
+  { value: "dividend", label: "红利" },
+  { value: "bluechip", label: "蓝筹" },
+  { value: "growth", label: "成长修复" },
+  { value: "safe", label: "安全边际达标" },
+  { value: "dayLoss", label: "今日亏损" }
+];
+
+const FUND_MOBILE_SORT_OPTIONS = [
+  { value: "marketValue:desc", label: "市值高到低" },
+  { value: "pnl:desc", label: "盈亏高到低" },
+  { value: "pnl:asc", label: "盈亏低到高" },
+  { value: "share:desc", label: "资产占比高到低" },
+  { value: "name:asc", label: "名称正序" }
+];
+
 let state = loadState();
 let activeFilter = "all";
 let positionSort = { key: "", direction: "desc" };
 let sunny30Sort = { key: "quality", direction: "desc" };
+let fundMobileSort = "marketValue:desc";
+let positionMobileFilter = "all";
+const expandedPositionCards = new Set();
+const expandedSunny30Cards = new Set();
+const expandedFundCards = new Set();
 let holdingsMasked = localStorage.getItem(HOLDINGS_PRIVACY_KEY) === "1";
 let pendingResearch = null;
 let candidateSort = "consensus";
@@ -334,8 +391,10 @@ const elements = {
   pageTitle: document.querySelector("#pageTitle"),
   positionCategorySummary: document.querySelector("#positionCategorySummary"),
   positionMobileSort: document.querySelector("#positionMobileSort"),
+  positionMobileCards: document.querySelector("#positionMobileCards"),
   sunny30Summary: document.querySelector("#sunny30Summary"),
   sunny30MobileSort: document.querySelector("#sunny30MobileSort"),
+  sunny30MobileCards: document.querySelector("#sunny30MobileCards"),
   sunny30Body: document.querySelector("#sunny30Body"),
   positionsBody: document.querySelector("#positionsBody"),
   tradeList: document.querySelector("#tradeList"),
@@ -348,6 +407,7 @@ const elements = {
   assetAllocationLegend: document.querySelector("#assetAllocationLegend"),
   fundSummary: document.querySelector("#fundSummary"),
   fundsBody: document.querySelector("#fundsBody"),
+  fundMobileCards: document.querySelector("#fundMobileCards"),
   fundTradeList: document.querySelector("#fundTradeList"),
   overviewPlanList: document.querySelector("#overviewPlanList"),
   committeeConsensus: document.querySelector("#committeeConsensus"),
@@ -409,7 +469,11 @@ const elements = {
   researchPreview: document.querySelector("#researchPreview"),
   researchStatus: document.querySelector("#researchStatus"),
   importResearchButton: document.querySelector("#importResearch"),
-  backToTopButton: document.querySelector("#backToTopButton")
+  backToTopButton: document.querySelector("#backToTopButton"),
+  mobileContextActionbar: document.querySelector("#mobileContextActionbar"),
+  mobilePortfolioControlsDialog: document.querySelector("#mobilePortfolioControlsDialog"),
+  mobileControlTitle: document.querySelector("#mobileControlTitle"),
+  mobileControlOptions: document.querySelector("#mobileControlOptions")
 };
 
 const HOLDINGS_MASK = "******";
@@ -1875,12 +1939,13 @@ function renderPositionCategorySummary(positions) {
     const category = POSITION_CATEGORY_META[key];
     const item = summary[key];
     const share = totalValue > 0 ? item.value / totalValue : 0;
+    const active = positionMobileFilter === key;
     return `
-      <div class="position-category-summary-cell ${category.tone}">
+      <button class="position-category-summary-cell ${category.tone} ${active ? "active" : ""}" type="button" data-mobile-position-filter="${category.key}" aria-pressed="${active ? "true" : "false"}">
         <span>${escapeHTML(category.label)}</span>
         <strong>${escapeHTML(privateText(percent(share * 100, false)))}</strong>
         <small>${escapeHTML(privateText(`${item.count} 只 · ${wholeCurrency(item.value)}`))}</small>
-      </div>
+      </button>
     `;
   }).join("");
 }
@@ -1942,6 +2007,110 @@ function updatePositionSortControls() {
   if (elements.positionMobileSort) {
     elements.positionMobileSort.value = positionMobileSortValue();
   }
+}
+
+function renderMobileStat(label, value, className = "", detail = "") {
+  return `
+    <div class="mobile-card-stat">
+      <span>${escapeHTML(label)}</span>
+      <strong class="${className || ""}">${escapeHTML(value)}</strong>
+      ${detail ? `<small>${escapeHTML(detail)}</small>` : ""}
+    </div>
+  `;
+}
+
+function renderMobileDetail(label, value, detail = "", className = "") {
+  return `
+    <div class="mobile-card-detail-item">
+      <span>${escapeHTML(label)}</span>
+      <strong class="${className || ""}">${escapeHTML(value)}</strong>
+      ${detail ? `<small>${escapeHTML(detail)}</small>` : ""}
+    </div>
+  `;
+}
+
+function mobilePositionMatchesFilter(item) {
+  const { stock, strategy } = item;
+  if (positionMobileFilter === "all") return true;
+  if (["dividend", "bluechip", "growth"].includes(positionMobileFilter)) {
+    return positionCategory(stock, strategy).key === positionMobileFilter;
+  }
+  if (positionMobileFilter === "safe") {
+    return Number.isFinite(strategy?.margin) && strategy.margin >= MAIN_DCF_MARGIN_TARGET;
+  }
+  if (positionMobileFilter === "dayLoss") {
+    return Number.isFinite(stock.dayChange) && stock.dayChange < 0;
+  }
+  return true;
+}
+
+function mobilePositionFilterCount(items, filter) {
+  const previous = positionMobileFilter;
+  positionMobileFilter = filter;
+  const count = items.filter(mobilePositionMatchesFilter).length;
+  positionMobileFilter = previous;
+  return count;
+}
+
+function renderPositionMobileCards(items, totalValue) {
+  if (!elements.positionMobileCards) return;
+  const mobileItems = items.filter(mobilePositionMatchesFilter);
+
+  if (!mobileItems.length) {
+    elements.positionMobileCards.innerHTML = `<div class="empty-state compact-empty">暂无符合筛选的持仓</div>`;
+    return;
+  }
+
+  elements.positionMobileCards.innerHTML = mobileItems.map(({ stock, strategy }) => {
+    const symbol = normalizeSymbol(stock.symbol);
+    const expanded = expandedPositionCards.has(symbol);
+    const category = positionCategory(stock, strategy);
+    const health = decisionHealthCell(stock, totalValue);
+    const marginTone = decisionMarginTone(strategy.margin);
+    const returnTone = strategy.shield.passed ? "core" : "reduce";
+    const ownerTone = decisionToneClass(strategy.ownerAudit.tone);
+    const dayClass = privateClass(stock.dayChange >= 0 ? "positive" : "negative");
+    const pnlClass = privateClass(stock.pnlCny >= 0 ? "positive" : "negative");
+    const dayRate = stock.marketValueCny ? percent((stock.dayChange / stock.marketValueCny) * 100) : "";
+    const weight = totalValue ? (stock.marketValueCny / totalValue) * 100 : 0;
+    const currentPrice = Number.isFinite(stock.currentPrice) && stock.currentPrice > 0
+      ? currency(stock.currentPrice, stock.currency)
+      : "-";
+    const quoteDate = stock.currentPriceDate || "收盘日未知";
+    const sourceClass = marketKind(stock) === "HK" ? "hk" : "";
+    const ownerText = strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "待评分";
+    return `
+      <article class="mobile-position-card ${expanded ? "is-expanded" : ""}">
+        <button class="mobile-card-toggle" type="button" data-toggle-position-card="${escapeHTML(symbol)}" aria-expanded="${expanded ? "true" : "false"}">
+          <span class="ticker ${sourceClass}">${escapeHTML(stock.symbol.slice(0, 4))}</span>
+          <span class="mobile-card-title">
+            <strong>${escapeHTML(stock.name)}</strong>
+            <small>${escapeHTML(stock.symbol)} · ${escapeHTML(currentPrice)} · ${escapeHTML(quoteDate)}</small>
+          </span>
+          <span class="mobile-card-pills">
+            ${positionCategoryPill(category)}
+            <span class="health-status-score ${health.tone}">${escapeHTML(health.scoreText)}</span>
+          </span>
+          <span class="mobile-card-chevron">${expanded ? "收起" : "展开"}</span>
+        </button>
+        <div class="mobile-card-core">
+          ${renderMobileStat("今日盈亏", privateText(currency(stock.dayChange)), dayClass, privateText(dayRate))}
+          ${renderMobileStat("安全边际", Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-", `health-pill ${marginTone}`)}
+          ${renderMobileStat("累计盈亏", privateText(currency(stock.pnlCny)), pnlClass, privateText(percent(stock.pnlRate)))}
+        </div>
+        <div class="mobile-card-expanded">
+          <div class="mobile-card-detail-grid">
+            ${renderMobileDetail("市值/现价", privateText(currency(stock.marketValueCny)), `${currentPrice} · ${quoteDate}`)}
+            ${renderMobileDetail("持股/成本", privateText(`${stock.shares} 股`), `成本 ${privateText(currency(stock.cost, stock.currency))}`)}
+            ${renderMobileDetail("综合回报率", privateText(`${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}`), "", `health-pill ${returnTone}`)}
+            ${renderMobileDetail("长期评分", ownerText, "", `health-pill ${ownerTone}`)}
+            ${renderMobileDetail("仓位", privateText(`${weight.toFixed(1)}%`), privateText(health.title))}
+          </div>
+          <a class="ghost-button compact-link mobile-card-link" href="${stockHash(stock.symbol)}">查看详情</a>
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
 function holdingHealth(position, totalValue) {
@@ -2830,6 +2999,59 @@ function updateSunny30SortControls() {
   }
 }
 
+function renderSunny30MobileCards(stocks) {
+  if (!elements.sunny30MobileCards) return;
+
+  if (!stocks.length) {
+    elements.sunny30MobileCards.innerHTML = `<div class="empty-state compact-empty">暂无晴仓30标的</div>`;
+    return;
+  }
+
+  elements.sunny30MobileCards.innerHTML = stocks.map((stock) => {
+    const symbol = normalizeSymbol(stock.symbol);
+    const expanded = expandedSunny30Cards.has(symbol);
+    const type = sunny30Type(stock);
+    const quality = sunny30Quality(stock);
+    const moat = sunny30Moat(stock);
+    const margin = sunny30Margin(stock);
+    const dayChange = sunny30DayChange(stock);
+    const twentyDayChange = sunny30TwentyDayChange(stock);
+    const strategy = stock?.strategy ?? strategyProfile(stock);
+    const returnValue = `${displayDividendRatio(strategy?.shield?.value)} / ${displayDividendRatio(strategy?.shield?.target)}`;
+    const sourceClass = marketKind(stock) === "HK" ? "hk" : "";
+    return `
+      <article class="mobile-position-card mobile-sunny30-card ${expanded ? "is-expanded" : ""}">
+        <button class="mobile-card-toggle" type="button" data-toggle-sunny30-card="${escapeHTML(symbol)}" aria-expanded="${expanded ? "true" : "false"}">
+          <span class="ticker ${sourceClass}">${escapeHTML(stock.symbol.slice(0, 4))}</span>
+          <span class="mobile-card-title">
+            <strong>${escapeHTML(stock.name)}</strong>
+            <small>${escapeHTML(stock.symbol)} · ${escapeHTML(stock.currentPriceDate || "行情日期未知")}</small>
+          </span>
+          <span class="mobile-card-pills">
+            ${positionCategoryPill(type)}
+            ${sunny30Pill(quality.text, quality.tone)}
+          </span>
+          <span class="mobile-card-chevron">${expanded ? "收起" : "展开"}</span>
+        </button>
+        <div class="mobile-card-core">
+          ${renderMobileStat("安全边际", margin.text, `sunny30-pill ${margin.tone}`)}
+          ${renderMobileStat("今日涨跌", privateText(dayChange.text), privateClass(dayChange.className))}
+          ${renderMobileStat("公司质量", quality.text, `sunny30-pill ${quality.tone}`)}
+        </div>
+        <div class="mobile-card-expanded">
+          <div class="mobile-card-detail-grid">
+            ${renderMobileDetail("综合回报率", privateText(returnValue))}
+            ${renderMobileDetail("护城河", moat.text, "", `sunny30-pill ${moat.tone}`)}
+            ${renderMobileDetail("20日涨跌", privateText(twentyDayChange.text), "", privateClass(twentyDayChange.className))}
+            ${renderMobileDetail("当前价格", Number.isFinite(stock.currentPrice) ? currency(stock.currentPrice, stock.currency) : "-", stock.currentPriceDate || "")}
+          </div>
+          <button class="ghost-button compact-link danger mobile-card-link sunny30-delete-button" type="button" data-delete-sunny30="${escapeHTML(stock.symbol)}">删除标的</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
 function renderSunny30(positions) {
   if (!elements.sunny30Body) return;
   const stocks = sunny30Universe(positions);
@@ -2853,8 +3075,11 @@ function renderSunny30(positions) {
 
   if (!stocks.length) {
     elements.sunny30Body.innerHTML = `<tr><td colspan="9" class="empty-state">暂无晴仓30标的</td></tr>`;
+    renderSunny30MobileCards(stocks);
     return;
   }
+
+  renderSunny30MobileCards(stocks);
 
   elements.sunny30Body.innerHTML = stocks.map((stock) => {
     const type = sunny30Type(stock);
@@ -2894,6 +3119,7 @@ function renderPositions(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   updatePositionSortControls();
   renderPositionCategorySummary(positions);
+  renderPositionMobileCards(filtered, totalValue);
 
   if (!filtered.length) {
     elements.positionsBody.innerHTML = `<tr><td colspan="8" class="empty-state">暂无符合条件的标的</td></tr>`;
@@ -3012,6 +3238,84 @@ function fundCategoryTone(category) {
   return "neutral";
 }
 
+function fundMobileSortState() {
+  const [key, direction] = String(fundMobileSort || "marketValue:desc").split(":");
+  return {
+    key: key || "marketValue",
+    direction: direction === "asc" ? "asc" : "desc"
+  };
+}
+
+function fundMobileSortValue(fund, key, totalAssets) {
+  if (key === "name") return String(fund?.name ?? "");
+  if (key === "pnl") return finiteNumber(fund.pnlCny);
+  if (key === "share") return totalAssets ? (finiteNumber(fund.marketValueCny) ?? 0) / totalAssets : 0;
+  return finiteNumber(fund.marketValueCny);
+}
+
+function sortedFundsForMobile(funds, totalAssets) {
+  const sort = fundMobileSortState();
+  return [...funds].sort((a, b) => {
+    const valueA = fundMobileSortValue(a, sort.key, totalAssets);
+    const valueB = fundMobileSortValue(b, sort.key, totalAssets);
+    const result = sort.key === "name"
+      ? compareNullableStrings(valueA, valueB, sort.direction)
+      : compareNullableNumbers(valueA, valueB, sort.direction);
+    return result || String(a.name ?? "").localeCompare(String(b.name ?? ""), "zh-CN");
+  });
+}
+
+function renderFundMobileCards(funds, totalAssets) {
+  if (!elements.fundMobileCards) return;
+  const sortedFunds = sortedFundsForMobile(funds, totalAssets);
+
+  if (!sortedFunds.length) {
+    elements.fundMobileCards.innerHTML = `
+      <div class="empty-state compact-empty">
+        <strong>基金背包还是空的</strong>
+        <span>新增基金买入后会在这里生成持仓卡片。</span>
+      </div>
+    `;
+    return;
+  }
+
+  elements.fundMobileCards.innerHTML = sortedFunds.map((fund, index) => {
+    const key = normalizeFundKey(fund.symbol);
+    const expanded = expandedFundCards.has(key);
+    const category = displayText(fund.category, "未分类");
+    const pnlClass = privateClass(fund.pnlCny >= 0 ? "positive" : "negative");
+    const assetShare = totalAssets > 0 ? (fund.marketValueCny / totalAssets) * 100 : 0;
+    return `
+      <article class="mobile-position-card mobile-fund-card ${expanded ? "is-expanded" : ""}">
+        <button class="mobile-card-toggle" type="button" data-toggle-fund-card="${escapeHTML(key)}" aria-expanded="${expanded ? "true" : "false"}">
+          <span class="fund-code">F${String(index + 1).padStart(3, "0")}</span>
+          <span class="mobile-card-title">
+            <strong>${escapeHTML(fund.name)}</strong>
+            <small>${escapeHTML(fund.symbol)}</small>
+          </span>
+          <span class="mobile-card-pills">
+            <span class="fund-pill ${fundCategoryTone(category)}">${escapeHTML(category)}</span>
+          </span>
+          <span class="mobile-card-chevron">${expanded ? "收起" : "展开"}</span>
+        </button>
+        <div class="mobile-card-core">
+          ${renderMobileStat("总盈亏", privateText(wholeCurrency(fund.pnlCny)), pnlClass, privateText(percent(fund.pnlRate)))}
+          ${renderMobileStat("资产占比", privateText(`${assetShare.toFixed(1)}%`))}
+          ${renderMobileStat("市值", privateText(wholeCurrency(fund.marketValueCny)))}
+        </div>
+        <div class="mobile-card-expanded">
+          <div class="mobile-card-detail-grid">
+            ${renderMobileDetail("净值", currency(fund.currentNav, fund.currency), fund.currentNavDate || "")}
+            ${renderMobileDetail("份额", privateText(fund.shares.toLocaleString("zh-CN", { maximumFractionDigits: 2 })), `成本 ${privateText(currency(fund.cost, fund.currency))}`)}
+            ${renderMobileDetail("更新时间", displayText(fund.currentNavDate, "-"), displayText(fund.updatedAt, "手动维护"))}
+          </div>
+          <button class="ghost-button compact-link mobile-card-link edit-fund" type="button" data-edit-fund="${escapeHTML(fund.symbol)}">更新净值</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
 function renderFunds(funds, positions = computePositions()) {
   if (!elements.fundSummary || !elements.fundsBody) return;
   const { totalAssets } = assetSummary(positions, funds);
@@ -3030,6 +3334,7 @@ function renderFunds(funds, positions = computePositions()) {
       <strong class="${className || ""}">${escapeHTML(value)}</strong>
     </div>
   `).join("");
+  renderFundMobileCards(funds, totalAssets);
 
   if (!funds.length) {
     elements.fundsBody.innerHTML = `
@@ -6334,6 +6639,98 @@ document.querySelectorAll(".segment").forEach((button) => {
   });
 });
 
+function mobileActionButton(action, icon, label) {
+  return `
+    <button class="mobile-context-action" type="button" data-mobile-action="${escapeHTML(action)}">
+      <span>${escapeHTML(icon)}</span>
+      <strong>${escapeHTML(label)}</strong>
+    </button>
+  `;
+}
+
+function renderMobileContextActionbar(page) {
+  if (!elements.mobileContextActionbar) return;
+  const isPortfolio = page === "portfolio";
+  const isFunds = page === "funds";
+  const hasActions = isPortfolio || isFunds;
+  elements.mobileContextActionbar.hidden = !hasActions;
+  document.body.classList.toggle("mobile-context-actions-active", hasActions);
+
+  if (isPortfolio) {
+    elements.mobileContextActionbar.innerHTML = [
+      mobileActionButton("stockTrade", "＋", "交易"),
+      mobileActionButton("positionSort", "↕", "排序"),
+      mobileActionButton("positionFilter", "⌕", "筛选")
+    ].join("");
+    return;
+  }
+
+  if (isFunds) {
+    elements.mobileContextActionbar.innerHTML = [
+      mobileActionButton("fundTrade", "＋", "基金交易"),
+      mobileActionButton("fundSort", "↕", "排序")
+    ].join("");
+    return;
+  }
+
+  elements.mobileContextActionbar.innerHTML = "";
+}
+
+function mobileControlOption(target, option, currentValue) {
+  const active = option.value === currentValue;
+  return `
+    <button class="mobile-control-option ${active ? "active" : ""}" type="button" data-mobile-sort-target="${escapeHTML(target)}" data-mobile-sort-value="${escapeHTML(option.value)}" aria-pressed="${active ? "true" : "false"}">
+      <span>${escapeHTML(option.label)}</span>
+      ${active ? "<strong>当前</strong>" : ""}
+    </button>
+  `;
+}
+
+function mobileFilterOption(option, count) {
+  const active = option.value === positionMobileFilter;
+  return `
+    <button class="mobile-control-option ${active ? "active" : ""}" type="button" data-mobile-filter-value="${escapeHTML(option.value)}" aria-pressed="${active ? "true" : "false"}">
+      <span>${escapeHTML(option.label)}</span>
+      <strong>${escapeHTML(String(count))}</strong>
+    </button>
+  `;
+}
+
+function openMobileControlSheet(mode) {
+  if (!elements.mobilePortfolioControlsDialog || !elements.mobileControlOptions) return;
+  if (mode === "positionSort") {
+    elements.mobileControlTitle.textContent = "股票排序";
+    elements.mobileControlOptions.innerHTML = `
+      <div class="mobile-control-section">
+        <span>持仓决策表</span>
+        ${POSITION_MOBILE_SORT_OPTIONS.map((option) => mobileControlOption("position", option, positionMobileSortValue())).join("")}
+      </div>
+      <div class="mobile-control-section">
+        <span>晴仓30</span>
+        ${SUNNY30_MOBILE_SORT_OPTIONS.map((option) => mobileControlOption("sunny30", option, sunny30MobileSortValue())).join("")}
+      </div>
+    `;
+  } else if (mode === "positionFilter") {
+    const items = sortedPositions(computePositions());
+    elements.mobileControlTitle.textContent = "股票筛选";
+    elements.mobileControlOptions.innerHTML = `
+      <div class="mobile-control-section">
+        <span>持仓卡片</span>
+        ${POSITION_MOBILE_FILTERS.map((option) => mobileFilterOption(option, mobilePositionFilterCount(items, option.value))).join("")}
+      </div>
+    `;
+  } else if (mode === "fundSort") {
+    elements.mobileControlTitle.textContent = "基金排序";
+    elements.mobileControlOptions.innerHTML = `
+      <div class="mobile-control-section">
+        <span>基金持仓</span>
+        ${FUND_MOBILE_SORT_OPTIONS.map((option) => mobileControlOption("fund", option, fundMobileSort)).join("")}
+      </div>
+    `;
+  }
+  elements.mobilePortfolioControlsDialog.showModal();
+}
+
 document.querySelectorAll(".nav-item").forEach((button) => {
   button.addEventListener("click", () => {
     window.location.hash = button.dataset.view;
@@ -6382,6 +6779,7 @@ function showPage(view) {
   document.querySelector(".page.active")?.classList.remove("active");
   document.querySelector(`[data-page="${nextView}"]`)?.classList.add("active");
   elements.pageTitle.textContent = pageTitles[nextView];
+  renderMobileContextActionbar(nextView);
   requestBackToTopUpdate();
 }
 
@@ -6454,6 +6852,92 @@ document.addEventListener("click", (event) => {
 elements.sunny30MobileSort?.addEventListener("change", (event) => {
   sunny30Sort = parseMobileSortValue(event.target.value);
   renderSunny30(computePositions());
+});
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-mobile-action]");
+  if (!button) return;
+  const action = button.dataset.mobileAction;
+  if (action === "stockTrade") {
+    setTradeAssetType("stock");
+    elements.tradeDialog.showModal();
+    return;
+  }
+  if (action === "fundTrade") {
+    setTradeAssetType("fund");
+    elements.tradeDialog.showModal();
+    return;
+  }
+  if (action === "positionSort" || action === "positionFilter" || action === "fundSort") {
+    openMobileControlSheet(action);
+  }
+});
+
+elements.mobileControlOptions?.addEventListener("click", (event) => {
+  const sortButton = event.target.closest("[data-mobile-sort-target]");
+  if (sortButton) {
+    const target = sortButton.dataset.mobileSortTarget;
+    const value = sortButton.dataset.mobileSortValue;
+    if (target === "position") {
+      positionSort = parseMobileSortValue(value);
+      renderPositions(computePositions());
+    } else if (target === "sunny30") {
+      sunny30Sort = parseMobileSortValue(value);
+      renderSunny30(computePositions());
+    } else if (target === "fund") {
+      fundMobileSort = value;
+      renderFunds(computeFunds(), computePositions());
+    }
+    elements.mobilePortfolioControlsDialog?.close();
+    return;
+  }
+
+  const filterButton = event.target.closest("[data-mobile-filter-value]");
+  if (filterButton) {
+    positionMobileFilter = filterButton.dataset.mobileFilterValue || "all";
+    renderPositions(computePositions());
+    elements.mobilePortfolioControlsDialog?.close();
+  }
+});
+
+document.querySelector("#closeMobilePortfolioControls")?.addEventListener("click", () => {
+  elements.mobilePortfolioControlsDialog?.close();
+});
+
+document.addEventListener("click", (event) => {
+  const positionButton = event.target.closest("[data-toggle-position-card]");
+  if (positionButton) {
+    const symbol = normalizeSymbol(positionButton.dataset.togglePositionCard);
+    if (expandedPositionCards.has(symbol)) expandedPositionCards.delete(symbol);
+    else expandedPositionCards.add(symbol);
+    renderPositions(computePositions());
+    return;
+  }
+
+  const sunny30Button = event.target.closest("[data-toggle-sunny30-card]");
+  if (sunny30Button) {
+    const symbol = normalizeSymbol(sunny30Button.dataset.toggleSunny30Card);
+    if (expandedSunny30Cards.has(symbol)) expandedSunny30Cards.delete(symbol);
+    else expandedSunny30Cards.add(symbol);
+    renderSunny30(computePositions());
+    return;
+  }
+
+  const fundButton = event.target.closest("[data-toggle-fund-card]");
+  if (fundButton) {
+    const symbol = normalizeFundKey(fundButton.dataset.toggleFundCard);
+    if (expandedFundCards.has(symbol)) expandedFundCards.delete(symbol);
+    else expandedFundCards.add(symbol);
+    renderFunds(computeFunds(), computePositions());
+  }
+});
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-mobile-position-filter]");
+  if (!button) return;
+  const nextFilter = button.dataset.mobilePositionFilter || "all";
+  positionMobileFilter = positionMobileFilter === nextFilter ? "all" : nextFilter;
+  renderPositions(computePositions());
 });
 
 document.addEventListener("change", async (event) => {
