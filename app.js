@@ -1764,8 +1764,8 @@ function renderPositionCategorySummary(positions) {
     return `
       <div class="position-category-summary-cell ${category.tone}">
         <span>${escapeHTML(category.label)}</span>
-        <strong>${percent(share * 100, false)}</strong>
-        <small>${item.count} 只 · ${wholeCurrency(item.value)}</small>
+        <strong>${escapeHTML(privateText(percent(share * 100, false)))}</strong>
+        <small>${escapeHTML(privateText(`${item.count} 只 · ${wholeCurrency(item.value)}`))}</small>
       </div>
     `;
   }).join("");
