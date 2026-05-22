@@ -803,9 +803,15 @@ function displayText(value, fallback = "-") {
 
 function closeDateText(position) {
   if (!position.currentPriceDate && !position.previousCloseDate) return "";
+  const currentPrice = Number.isFinite(position?.currentPrice) && position.currentPrice > 0
+    ? currency(position.currentPrice, position.currency)
+    : "价格未知";
+  const previousClose = Number.isFinite(position?.previousClose) && position.previousClose > 0
+    ? currency(position.previousClose, position.currency)
+    : "价格未知";
   const currentDate = position.currentPriceDate || "未知";
   const previousDate = position.previousCloseDate || "未知";
-  return `今收 ${currentDate} · 昨收 ${previousDate}`;
+  return `今收 ${currentPrice} · ${currentDate}；昨收 ${previousClose} · ${previousDate}`;
 }
 
 function calculatedMarginOfSafety(stock) {
@@ -6169,13 +6175,19 @@ function renderStockDetail(positions, symbol) {
   }
 
   const plan = findPlanForStock(stock);
-  const pnlClass = stock.pnlCny >= 0 ? "positive" : "negative";
-  const dayClass = stock.dayChange >= 0 ? "positive" : "negative";
   const marginText = displayMarginOfSafety(stock);
   const qualityText = Number.isFinite(stock.qualityScore) ? `${stock.qualityScore}` : "-";
   const hasCurrentQuote = Number.isFinite(stock.currentPrice) && stock.currentPrice > 0;
   const hasPreviousQuote = Number.isFinite(stock.previousClose) && stock.previousClose > 0;
   const priceChange = hasCurrentQuote && hasPreviousQuote ? stock.currentPrice - stock.previousClose : null;
+  const dayMetricClass = isHolding && Number.isFinite(stock.dayChange)
+    ? stock.dayChange >= 0 ? "positive" : "negative"
+    : Number.isFinite(priceChange)
+      ? priceChange >= 0 ? "positive" : "negative"
+      : "";
+  const pnlClass = isHolding && Number.isFinite(stock.pnlCny)
+    ? stock.pnlCny >= 0 ? "positive" : "negative"
+    : "";
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   const health = isHolding ? holdingHealth(stock, totalValue) : null;
   const confidence = confidenceMeta(stock);
@@ -6189,6 +6201,10 @@ function renderStockDetail(positions, symbol) {
       ? percent((priceChange / stock.previousClose) * 100)
       : "";
   const detailHoldingValue = isHolding ? privateText(currency(stock.marketValueCny)) : "-";
+  const detailDayLabel = isHolding ? "今日盈亏" : "今日涨跌";
+  const detailDayValue = isHolding
+    ? privateText(currency(stock.dayChange))
+    : Number.isFinite(priceChange) ? currency(priceChange, stock.currency) : "-";
 
   elements.stockDetail.innerHTML = `
     <div class="stock-detail-workbench">
@@ -6223,7 +6239,7 @@ function renderStockDetail(positions, symbol) {
           ${stockDetailMetricButton("detailIncome", "综合回报率", escapeHTML(privateText(`${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}`)), privateText(strategy.shield.source))}
           ${stockDetailMetricButton("detailFinancials", "长期评分", escapeHTML(strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "-"), strategy.ownerAudit.text)}
           ${stockDetailMetricButton("detailRisk", "健康评分", escapeHTML(health ? `${health.score}分` : "-"), health ? health.status : "未持仓")}
-          ${stockDetailMetricButton("detailSummary", "今日盈亏", escapeHTML(isHolding ? privateText(currency(stock.dayChange)) : Number.isFinite(priceChange) ? currency(priceChange, stock.currency) : "-"), detailDayRate, privateClass(dayClass))}
+          ${stockDetailMetricButton("detailSummary", detailDayLabel, escapeHTML(detailDayValue), detailDayRate, privateClass(dayMetricClass))}
           ${stockDetailMetricButton("detailSummary", "累计盈亏", escapeHTML(isHolding ? privateText(currency(stock.pnlCny)) : "-"), detailPnlMeta, privateClass(pnlClass))}
         </section>
       </aside>
