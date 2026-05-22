@@ -2022,16 +2022,16 @@ tbody tr:hover {
   line-height: 1.15;
 }
 
-.position-category-summary-cell.dividend strong {
-  color: var(--gold);
+.position-category-summary-cell.core strong {
+  color: var(--green);
 }
 
-.position-category-summary-cell.bluechip strong {
+.position-category-summary-cell.repair strong {
   color: var(--blue);
 }
 
-.position-category-summary-cell.growth strong {
-  color: var(--green);
+.position-category-summary-cell.tactical strong {
+  color: var(--gold);
 }
 
 .position-category-summary-cell.active {
@@ -2052,19 +2052,19 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
-.position-category-pill.dividend {
-  background: #fff7ed;
-  color: var(--gold);
+.position-category-pill.core {
+  background: #e6f4ef;
+  color: var(--green);
 }
 
-.position-category-pill.bluechip {
+.position-category-pill.repair {
   background: #eef4fb;
   color: var(--blue);
 }
 
-.position-category-pill.growth {
-  background: #e6f4ef;
-  color: var(--green);
+.position-category-pill.tactical {
+  background: #fff7ed;
+  color: var(--gold);
 }
 
 .position-category-select {
@@ -2091,19 +2091,19 @@ tbody tr:hover {
   background-repeat: no-repeat;
 }
 
-.position-category-select.dividend {
-  background-color: #fff7ed;
-  color: var(--gold);
+.position-category-select.core {
+  background-color: #e6f4ef;
+  color: var(--green);
 }
 
-.position-category-select.bluechip {
+.position-category-select.repair {
   background-color: #eef4fb;
   color: var(--blue);
 }
 
-.position-category-select.growth {
-  background-color: #e6f4ef;
-  color: var(--green);
+.position-category-select.tactical {
+  background-color: #fff7ed;
+  color: var(--gold);
 }
 
 .position-category-select:disabled {
@@ -2238,19 +2238,19 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
-.sunny30-pill.dividend {
-  background: #fff7ed;
-  color: var(--gold);
+.sunny30-pill.core {
+  background: #f0fdf4;
+  color: #15803d;
 }
 
-.sunny30-pill.bluechip {
+.sunny30-pill.repair {
   background: #eef2ff;
   color: var(--blue);
 }
 
-.sunny30-pill.growth {
-  background: #f0fdf4;
-  color: #15803d;
+.sunny30-pill.tactical {
+  background: #fff7ed;
+  color: var(--gold);
 }
 
 .sunny30-pill.strong,

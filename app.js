@@ -286,25 +286,25 @@ const MASTER_MATRIX_FILTERS = [
   { key: "holding", label: "持仓" },
   { key: "candidate", label: "跟踪" }
 ];
-const POSITION_CATEGORY_ORDER = ["dividend", "bluechip", "growth"];
+const POSITION_CATEGORY_ORDER = ["core", "repair", "tactical"];
 const POSITION_CATEGORY_META = {
-  dividend: { key: "dividend", label: "红利", tone: "dividend", order: 0 },
-  bluechip: { key: "bluechip", label: "蓝筹", tone: "bluechip", order: 1 },
-  growth: { key: "growth", label: "成长 / 修复", tone: "growth", order: 2 }
+  core: { key: "core", label: "核心仓", tone: "core", order: 0 },
+  repair: { key: "repair", label: "修复仓", tone: "repair", order: 1 },
+  tactical: { key: "tactical", label: "机动仓", tone: "tactical", order: 2 }
 };
 const POSITION_CATEGORY_OVERRIDES = {
-  "600036.SH": "dividend",
-  "0506.HK": "dividend",
-  "600887.SH": "dividend",
-  "0700.HK": "bluechip",
-  "000333.SZ": "bluechip",
-  "002415.SZ": "bluechip",
-  "0696.HK": "bluechip",
-  "600563.SH": "growth",
-  "2669.HK": "growth",
-  "6049.HK": "growth",
-  "1405.HK": "growth",
-  "7489.HK": "growth"
+  "600036.SH": "core",
+  "0506.HK": "core",
+  "600887.SH": "core",
+  "0700.HK": "core",
+  "000333.SZ": "core",
+  "002415.SZ": "core",
+  "0696.HK": "core",
+  "600563.SH": "repair",
+  "2669.HK": "repair",
+  "6049.HK": "repair",
+  "1405.HK": "tactical",
+  "7489.HK": "tactical"
 };
 
 const POSITION_MOBILE_SORT_OPTIONS = [
@@ -344,9 +344,9 @@ const SUNNY30_MOBILE_SORT_OPTIONS = [
 
 const POSITION_MOBILE_FILTERS = [
   { value: "all", label: "全部" },
-  { value: "dividend", label: "红利" },
-  { value: "bluechip", label: "蓝筹" },
-  { value: "growth", label: "成长修复" },
+  { value: "core", label: "核心仓" },
+  { value: "repair", label: "修复仓" },
+  { value: "tactical", label: "机动仓" },
   { value: "safe", label: "安全边际达标" },
   { value: "dayLoss", label: "今日亏损" }
 ];
@@ -1877,9 +1877,9 @@ function getFilteredPositions(positions) {
 function normalizePositionCategory(value) {
   const text = String(value ?? "").trim().toLowerCase();
   if (!text) return "";
-  if (["dividend", "income", "yield", "红利"].includes(text) || text.includes("红利") || text.includes("股息")) return "dividend";
-  if (["bluechip", "blue-chip", "core", "蓝筹"].includes(text) || text.includes("蓝筹") || text.includes("核心")) return "bluechip";
-  if (["growth", "成长", "修复", "成长 / 修复"].includes(text) || text.includes("成长") || text.includes("修复")) return "growth";
+  if (["core", "核心仓"].includes(text) || text.includes("核心仓")) return "core";
+  if (["repair", "修复仓"].includes(text) || text.includes("修复仓")) return "repair";
+  if (["tactical", "机动仓"].includes(text) || text.includes("机动仓")) return "tactical";
   return "";
 }
 
@@ -1901,16 +1901,20 @@ function positionCategory(stock, strategy = strategyProfile(stock)) {
   const latest = latestAnnualFinancial(stock);
   const revenueGrowth = finiteNumber(latest?.revenueYoY);
   const profitGrowth = finiteNumber(latest?.netProfitYoY);
-  const dividendLike = /红利|高股息|股息|银行|油气|能源|物业|招商银行|中海油|中国食品/.test(text);
-  const growthLike = /成长|互联网|平台|游戏|广告|AI|AIoT|科技|智能|机器人|新能源|餐饮|连锁|QSR|云|SaaS|电商|海康|达势|岚图/.test(text);
+  const coreLike = /核心|复利|长期|龙头|现金流|分红|股息|银行|家电|乳制品|饮料|白酒|腾讯|美的|伊利|招商银行|中国食品|茅台|海尔/.test(text);
+  const tacticalLike = /机动|套利|事件|景气|周期|小仓|弹性|油气|能源|金铜|资源|汽车|新能源|餐饮|连锁|QSR|达势|岚图|泡泡玛特/.test(text);
+  const repairLike = /修复|低估|低预期|物业|地产链|安防|民航|广告|分众|同仁堂|中海物业|保利物业|海康|中航信/.test(text);
 
-  if (dividendLike || (Number.isFinite(dividendYield) && dividendYield >= 0.06)) {
-    return POSITION_CATEGORY_META.dividend;
+  if (tacticalLike || (Number.isFinite(revenueGrowth) && revenueGrowth >= 0.18) || (Number.isFinite(profitGrowth) && profitGrowth >= 0.22)) {
+    return POSITION_CATEGORY_META.tactical;
   }
-  if (growthLike || (Number.isFinite(revenueGrowth) && revenueGrowth >= 0.12) || (Number.isFinite(profitGrowth) && profitGrowth >= 0.15)) {
-    return POSITION_CATEGORY_META.growth;
+  if (repairLike || strategy.bucket === "cigar") {
+    return POSITION_CATEGORY_META.repair;
   }
-  return POSITION_CATEGORY_META.bluechip;
+  if (coreLike || (Number.isFinite(dividendYield) && dividendYield >= 0.04) || strategy.bucket === "main") {
+    return POSITION_CATEGORY_META.core;
+  }
+  return POSITION_CATEGORY_META.repair;
 }
 
 function positionCategoryPill(category) {
@@ -2053,7 +2057,7 @@ function renderMobileDetail(label, value, detail = "", className = "") {
 function mobilePositionMatchesFilter(item) {
   const { stock, strategy } = item;
   if (positionMobileFilter === "all") return true;
-  if (["dividend", "bluechip", "growth"].includes(positionMobileFilter)) {
+  if (["core", "repair", "tactical"].includes(positionMobileFilter)) {
     return positionCategory(stock, strategy).key === positionMobileFilter;
   }
   if (positionMobileFilter === "safe") {
@@ -6550,7 +6554,7 @@ function candidateFromSunny30Form(formData) {
   const symbol = normalizeSymbol(formData.get("symbol"));
   const existingHolding = (state.holdings ?? []).find((holding) => normalizeSymbol(holding.symbol) === symbol);
   const name = String(formData.get("name") ?? "").trim() || existingHolding?.name || "";
-  const category = String(formData.get("category") ?? "成长 / 修复").trim() || "成长 / 修复";
+  const category = String(formData.get("category") ?? "修复仓").trim() || "修复仓";
   const currencyCode = String(formData.get("currency") ?? "").trim().toUpperCase() || inferTradeCurrency({ symbol });
   const currentPrice = optionalFormNumber(formData, "currentPrice");
   const intrinsicValue = optionalFormNumber(formData, "intrinsicValue");
@@ -6592,7 +6596,7 @@ function candidateFromSunny30Form(formData) {
 function openSunny30CandidateDialog() {
   if (!elements.sunny30CandidateDialog || !elements.sunny30CandidateForm) return;
   elements.sunny30CandidateForm.reset();
-  elements.sunny30CandidateForm.category.value = "成长 / 修复";
+  elements.sunny30CandidateForm.category.value = "修复仓";
   elements.sunny30CandidateDialog.showModal();
 }
 
