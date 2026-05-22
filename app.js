@@ -2106,18 +2106,20 @@ function renderPositionMobileCards(items, totalValue) {
     const ownerText = strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "待评分";
     return `
       <article class="mobile-position-card ${expanded ? "is-expanded" : ""}">
-        <button class="mobile-card-toggle" type="button" data-toggle-position-card="${escapeHTML(symbol)}" aria-expanded="${expanded ? "true" : "false"}">
-          <span class="ticker ${sourceClass}">${escapeHTML(stock.symbol.slice(0, 4))}</span>
-          <span class="mobile-card-title">
+        <div class="mobile-card-toggle" aria-expanded="${expanded ? "true" : "false"}">
+          <button class="ticker mobile-card-code-action ${sourceClass}" type="button" data-toggle-position-card="${escapeHTML(symbol)}" aria-label="${expanded ? "收起" : "展开"}${escapeHTML(stock.name)}卡片">
+            ${escapeHTML(stock.symbol.slice(0, 4))}
+          </button>
+          <a class="mobile-card-title mobile-card-title-link" href="${stockHash(stock.symbol)}" aria-label="查看${escapeHTML(stock.name)}详情">
             <strong>${escapeHTML(stock.name)}</strong>
             <small>${escapeHTML(stock.symbol)} · ${escapeHTML(currentPrice)} · ${escapeHTML(quoteDate)}</small>
-          </span>
-          <span class="mobile-card-pills">
+          </a>
+          <button class="mobile-card-pills mobile-card-inline-toggle" type="button" data-toggle-position-card="${escapeHTML(symbol)}" aria-label="${expanded ? "收起" : "展开"}${escapeHTML(stock.name)}卡片">
             ${positionCategoryPill(category)}
             <span class="health-status-score ${health.tone}">${escapeHTML(health.scoreText)}</span>
-          </span>
-          <span class="mobile-card-chevron">${expanded ? "收起" : "展开"}</span>
-        </button>
+          </button>
+          <button class="mobile-card-chevron mobile-card-inline-toggle" type="button" data-toggle-position-card="${escapeHTML(symbol)}">${expanded ? "收起" : "展开"}</button>
+        </div>
         <div class="mobile-card-core">
           ${renderMobileStat("今日盈亏", privateText(currency(stock.dayChange)), dayClass, privateText(dayRate))}
           ${renderMobileStat("安全边际", Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-", `health-pill ${marginTone}`)}
@@ -3046,18 +3048,20 @@ function renderSunny30MobileCards(stocks) {
     const sourceClass = marketKind(stock) === "HK" ? "hk" : "";
     return `
       <article class="mobile-position-card mobile-sunny30-card ${expanded ? "is-expanded" : ""}">
-        <button class="mobile-card-toggle" type="button" data-toggle-sunny30-card="${escapeHTML(symbol)}" aria-expanded="${expanded ? "true" : "false"}">
-          <span class="ticker ${sourceClass}">${escapeHTML(stock.symbol.slice(0, 4))}</span>
-          <span class="mobile-card-title">
+        <div class="mobile-card-toggle" aria-expanded="${expanded ? "true" : "false"}">
+          <button class="ticker mobile-card-code-action ${sourceClass}" type="button" data-toggle-sunny30-card="${escapeHTML(symbol)}" aria-label="${expanded ? "收起" : "展开"}${escapeHTML(stock.name)}卡片">
+            ${escapeHTML(stock.symbol.slice(0, 4))}
+          </button>
+          <a class="mobile-card-title mobile-card-title-link" href="${stockHash(stock.symbol)}" aria-label="查看${escapeHTML(stock.name)}详情">
             <strong>${escapeHTML(stock.name)}</strong>
             <small>${escapeHTML(stock.symbol)} · ${escapeHTML(stock.currentPriceDate || "行情日期未知")}</small>
-          </span>
-          <span class="mobile-card-pills">
+          </a>
+          <button class="mobile-card-pills mobile-card-inline-toggle" type="button" data-toggle-sunny30-card="${escapeHTML(symbol)}" aria-label="${expanded ? "收起" : "展开"}${escapeHTML(stock.name)}卡片">
             ${positionCategoryPill(type)}
             ${sunny30Pill(quality.text, quality.tone)}
-          </span>
-          <span class="mobile-card-chevron">${expanded ? "收起" : "展开"}</span>
-        </button>
+          </button>
+          <button class="mobile-card-chevron mobile-card-inline-toggle" type="button" data-toggle-sunny30-card="${escapeHTML(symbol)}">${expanded ? "收起" : "展开"}</button>
+        </div>
         <div class="mobile-card-core">
           ${renderMobileStat("安全边际", margin.text, `sunny30-pill ${margin.tone}`)}
           ${renderMobileStat("今日涨跌", privateText(dayChange.text), privateClass(dayChange.className))}
@@ -7382,6 +7386,15 @@ function showPage(view) {
   requestBackToTopUpdate();
 }
 
+function resetStockDetailRouteScroll() {
+  activeStockDetailSection = "detailSummary";
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    setStockDetailActiveSection("detailSummary");
+    requestBackToTopUpdate();
+  });
+}
+
 function handleRoute(rawHash) {
   const view = rawHash || "overview";
   if (view === "masters") {
@@ -7399,8 +7412,12 @@ function handleRoute(rawHash) {
     render("portfolio");
     return;
   }
+  const route = routeInfo(view);
   showPage(view);
   render(view);
+  if (route.page === "stock-detail") {
+    resetStockDetailRouteScroll();
+  }
 }
 
 window.addEventListener("hashchange", () => {
