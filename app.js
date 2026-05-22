@@ -406,6 +406,7 @@ const elements = {
   assetAllocationSummary: document.querySelector("#assetAllocationSummary"),
   assetAllocationLegend: document.querySelector("#assetAllocationLegend"),
   fundSummary: document.querySelector("#fundSummary"),
+  fundMobileSort: document.querySelector("#fundMobileSort"),
   fundsBody: document.querySelector("#fundsBody"),
   fundMobileCards: document.querySelector("#fundMobileCards"),
   fundTradeList: document.querySelector("#fundTradeList"),
@@ -1939,13 +1940,12 @@ function renderPositionCategorySummary(positions) {
     const category = POSITION_CATEGORY_META[key];
     const item = summary[key];
     const share = totalValue > 0 ? item.value / totalValue : 0;
-    const active = positionMobileFilter === key;
     return `
-      <button class="position-category-summary-cell ${category.tone} ${active ? "active" : ""}" type="button" data-mobile-position-filter="${category.key}" aria-pressed="${active ? "true" : "false"}">
+      <div class="position-category-summary-cell ${category.tone}">
         <span>${escapeHTML(category.label)}</span>
         <strong>${escapeHTML(privateText(percent(share * 100, false)))}</strong>
         <small>${escapeHTML(privateText(`${item.count} 只 · ${wholeCurrency(item.value)}`))}</small>
-      </button>
+      </div>
     `;
   }).join("");
 }
@@ -3334,6 +3334,9 @@ function renderFunds(funds, positions = computePositions()) {
       <strong class="${className || ""}">${escapeHTML(value)}</strong>
     </div>
   `).join("");
+  if (elements.fundMobileSort) {
+    elements.fundMobileSort.value = fundMobileSort;
+  }
   renderFundMobileCards(funds, totalAssets);
 
   if (!funds.length) {
@@ -6649,7 +6652,10 @@ function mobileActionButton(action, icon, label) {
 }
 
 function renderMobileContextActionbar(page) {
-  if (!elements.mobileContextActionbar) return;
+  if (!elements.mobileContextActionbar) {
+    document.body.classList.remove("mobile-context-actions-active");
+    return;
+  }
   const isPortfolio = page === "portfolio";
   const isFunds = page === "funds";
   const hasActions = isPortfolio || isFunds;
@@ -6852,6 +6858,11 @@ document.addEventListener("click", (event) => {
 elements.sunny30MobileSort?.addEventListener("change", (event) => {
   sunny30Sort = parseMobileSortValue(event.target.value);
   renderSunny30(computePositions());
+});
+
+elements.fundMobileSort?.addEventListener("change", (event) => {
+  fundMobileSort = event.target.value;
+  renderFunds(computeFunds(), computePositions());
 });
 
 document.addEventListener("click", (event) => {

@@ -1999,7 +1999,6 @@ tbody tr:hover {
   border-right: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.32);
   color: inherit;
-  cursor: pointer;
   font: inherit;
   text-align: left;
 }
@@ -5928,7 +5927,7 @@ tbody tr:hover {
   }
 
   .mobile-sort-control {
-    display: none !important;
+    display: grid !important;
   }
 
   .page[data-page="portfolio"] .main-panel > .table-wrap,
@@ -5949,6 +5948,11 @@ tbody tr:hover {
   .mobile-sunny30-card-list,
   .mobile-fund-card-list {
     padding: 0 12px 12px;
+  }
+
+  .mobile-fund-sort-control {
+    padding: 0 12px;
+    margin: 8px 0 10px;
   }
 
   .mobile-position-card {
