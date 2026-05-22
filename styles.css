@@ -6196,3 +6196,932 @@ tbody tr:hover {
     padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
   }
 }
+
+.stock-detail-workbench {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.stock-detail-summary {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.stock-detail-decision-hero,
+.stock-detail-conclusion-card,
+.stock-detail-signal-card,
+.stock-detail-section,
+.stock-detail-evidence-card {
+  border: 1px solid rgba(38, 49, 44, 0.06);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.60);
+  box-shadow: var(--soft-shadow);
+}
+
+.stock-detail-decision-hero {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.stock-detail-decision-hero h2 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.08;
+}
+
+.stock-detail-hero-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.stock-detail-hero-actions .ghost-button {
+  min-width: 0;
+  width: 100%;
+}
+
+.stock-detail-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.stock-detail-hero-meta small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.stock-detail-conclusion-card {
+  display: grid;
+  gap: 6px;
+  padding: 15px;
+}
+
+.stock-detail-conclusion-card span,
+.stock-detail-signal-card span,
+.stock-detail-evidence-card span,
+.stock-detail-summary-grid span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.stock-detail-conclusion-card strong {
+  font-size: 19px;
+  line-height: 1.32;
+}
+
+.stock-detail-conclusion-card small,
+.stock-detail-signal-card small,
+.stock-detail-evidence-card small,
+.stock-detail-summary-grid small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.stock-detail-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stock-detail-signal-card,
+.stock-detail-evidence-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 13px;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+.stock-detail-signal-card {
+  min-height: 106px;
+}
+
+.stock-detail-signal-card strong,
+.stock-detail-evidence-card strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 20px;
+  line-height: 1.12;
+}
+
+.stock-detail-signal-card:hover,
+.stock-detail-evidence-card:hover {
+  border-color: rgba(43, 159, 139, 0.24);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.stock-detail-evidence-flow {
+  min-width: 0;
+}
+
+.stock-detail-nav {
+  top: 10px;
+  z-index: 9;
+}
+
+.stock-detail-nav .mobile-label {
+  display: none;
+}
+
+.detail-section-nav button.active {
+  border-color: rgba(43, 159, 139, 0.36);
+  background: rgba(229, 248, 239, 0.92);
+  color: var(--green);
+}
+
+.stock-detail-section {
+  scroll-margin-top: 88px;
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.stock-detail-section-head {
+  display: grid;
+  gap: 4px;
+}
+
+.stock-detail-section-head h2 {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.18;
+}
+
+.stock-detail-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stock-detail-summary-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.stock-detail-summary-grid strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 1.32;
+}
+
+.stock-detail-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stock-detail-evidence-card {
+  min-height: 112px;
+}
+
+.stock-detail-evidence-card.strong {
+  border-top: 4px solid var(--green);
+}
+
+.stock-detail-evidence-card.watch {
+  border-top: 4px solid var(--blue);
+}
+
+.stock-detail-evidence-card.wait {
+  border-top: 4px solid var(--gold);
+}
+
+.stock-detail-evidence-card.risk {
+  border-top: 4px solid var(--red);
+}
+
+.stock-detail-evidence-card.neutral {
+  border-top: 4px solid rgba(120, 144, 135, 0.42);
+}
+
+.stock-detail-accordion {
+  padding: 0;
+  overflow: hidden;
+}
+
+.stock-detail-accordion-head {
+  width: 100%;
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+.stock-detail-accordion-head span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.stock-detail-accordion-head small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.stock-detail-accordion-head strong {
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.stock-detail-accordion-head em {
+  min-width: 44px;
+  min-height: 34px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(229, 248, 239, 0.82);
+  color: var(--green);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.stock-detail-accordion-body {
+  display: grid;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+
+.stock-detail-section.is-collapsed .stock-detail-accordion-body {
+  display: none;
+}
+
+.financial-table-disclosure {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.financial-table-disclosure summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--ink);
+  font-weight: 950;
+  list-style: none;
+}
+
+.financial-table-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.financial-table-disclosure summary::after {
+  content: "展开";
+  color: var(--green);
+  font-size: 12px;
+}
+
+.financial-table-disclosure[open] summary::after {
+  content: "收起";
+}
+
+@media (max-width: 980px) {
+  .stock-detail-workbench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stock-detail-summary {
+    position: static;
+  }
+}
+
+@media (max-width: 720px) {
+  .page[data-page="stock-detail"] {
+    padding-bottom: 8px;
+  }
+
+  .stock-detail-workbench {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .stock-detail-decision-hero,
+  .stock-detail-conclusion-card,
+  .stock-detail-section {
+    border-radius: 20px;
+  }
+
+  .stock-detail-decision-hero {
+    gap: 13px;
+    padding: 14px;
+  }
+
+  .stock-detail-decision-hero h2 {
+    font-size: 26px;
+  }
+
+  .stock-detail-hero-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stock-detail-conclusion-card {
+    padding: 14px;
+  }
+
+  .stock-detail-conclusion-card strong {
+    font-size: 17px;
+  }
+
+  .stock-detail-signal-grid {
+    gap: 8px;
+  }
+
+  .stock-detail-signal-card {
+    min-height: 92px;
+    padding: 11px;
+    border-radius: 18px;
+  }
+
+  .stock-detail-signal-card strong {
+    font-size: 18px;
+  }
+
+  .stock-detail-signal-card small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stock-detail-nav {
+    top: 8px;
+    flex-wrap: nowrap;
+    margin-bottom: 12px;
+    padding: 8px;
+  }
+
+  .stock-detail-nav .desktop-label {
+    display: none;
+  }
+
+  .stock-detail-nav .mobile-label {
+    display: inline;
+  }
+
+  .stock-detail-section {
+    scroll-margin-top: 80px;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .stock-detail-section-head h2,
+  .stock-detail-accordion-head strong {
+    font-size: 18px;
+  }
+
+  .stock-detail-summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .stock-detail-summary-grid article {
+    padding: 11px;
+  }
+
+  .stock-detail-evidence-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .stock-detail-evidence-card {
+    min-height: 104px;
+    padding: 11px;
+    border-radius: 18px;
+  }
+
+  .stock-detail-evidence-card strong {
+    font-size: 17px;
+  }
+
+  .stock-detail-evidence-card small {
+    font-size: 11px;
+  }
+
+  .stock-detail-section .detail-grid,
+  .stock-detail-section .valuation-grid,
+  .stock-detail-section .dividend-grid,
+  .stock-detail-section .source-grid,
+  .stock-detail-section .financial-summary-grid,
+  .stock-detail-section .financial-health-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stock-detail-section .detail-content,
+  .stock-detail-section .master-vote-grid,
+  .stock-detail-section .source-grid {
+    padding: 12px;
+  }
+
+  .stock-detail-section .panel {
+    border-radius: 18px;
+  }
+
+  .stock-detail-accordion-head {
+    min-height: 60px;
+    padding: 14px;
+  }
+
+  .stock-detail-accordion-head em {
+    min-height: 32px;
+  }
+
+  .stock-detail-accordion-body {
+    gap: 12px;
+    padding: 0 14px 14px;
+  }
+}
+
+.research-desk {
+  display: grid;
+  gap: 14px;
+}
+
+.research-desk-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 18px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(255, 190, 86, 0.34), transparent 22%),
+    linear-gradient(135deg, rgba(57, 174, 230, 0.20), transparent 44%),
+    rgba(255, 255, 255, 0.46);
+  box-shadow: var(--soft-shadow);
+  backdrop-filter: blur(10px);
+}
+
+.research-desk-hero-main {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.research-desk-hero-main h2 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.08;
+}
+
+.research-desk-hero-main > span {
+  max-width: 680px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.research-desk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.research-desk-metrics {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.research-desk-metric {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.research-desk-metric span,
+.research-card-metrics span,
+.research-queue-type,
+.research-desk-section-head small,
+.research-card-head span,
+.research-opportunity-card > small,
+.research-industry-card > small,
+.research-update-card > small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.research-desk-metric strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 21px;
+  font-weight: 950;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-desk-metric small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-desk-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.research-desk-filter button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--muted);
+  font: inherit;
+  font-weight: 900;
+}
+
+.research-desk-filter button.active {
+  background: rgba(229, 248, 239, 0.92);
+  color: var(--green);
+}
+
+.research-desk-filter strong {
+  min-width: 22px;
+  min-height: 22px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+}
+
+.research-desk-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.research-desk-grid.single-column {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.research-desk-primary,
+.research-desk-secondary {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.research-desk-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.research-desk-section-head {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+.research-desk-section-head span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.research-desk-section-head strong {
+  font-size: 19px;
+  line-height: 1.18;
+}
+
+.research-desk-section-head em {
+  min-width: 34px;
+  min-height: 28px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(229, 248, 239, 0.86);
+  color: var(--green);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.research-desk-section-body,
+.research-queue-list,
+.research-data-list,
+.research-update-list {
+  display: grid;
+  gap: 10px;
+}
+
+.research-opportunity-grid,
+.research-industry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.research-queue-item,
+.research-opportunity-card,
+.research-data-issue,
+.research-industry-card,
+.research-update-card {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(240, 250, 245, 0.52);
+  color: inherit;
+  text-decoration: none;
+  box-shadow: none;
+}
+
+.research-queue-item:hover,
+.research-opportunity-card:hover,
+.research-data-issue:hover,
+.research-industry-card:hover,
+.research-update-card:hover {
+  background: rgba(246, 252, 248, 0.72);
+}
+
+.research-queue-item {
+  grid-template-columns: 82px minmax(0, 1fr);
+  border-left: 4px solid rgba(120, 144, 135, 0.30);
+}
+
+.research-queue-item.risk,
+.research-data-issue.error,
+.research-data-issue.warn {
+  border-left-color: var(--red);
+}
+
+.research-queue-item.watch {
+  border-left-color: var(--gold);
+}
+
+.research-queue-item.strong,
+.research-queue-item.core,
+.research-queue-item.buy {
+  border-left-color: var(--green);
+}
+
+.research-queue-item.info {
+  border-left-color: var(--blue);
+}
+
+.research-queue-main,
+.research-card-head div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.research-queue-main strong,
+.research-card-head strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-queue-main span {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.research-queue-main small,
+.research-opportunity-card p,
+.research-data-issue p,
+.research-industry-card p,
+.research-update-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.research-card-head {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.research-card-head em {
+  flex: 0 0 auto;
+  max-width: 42%;
+  overflow: hidden;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.66);
+  color: var(--green);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.research-card-metrics span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.research-card-metrics strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-data-issue {
+  border-left: 4px solid rgba(120, 144, 135, 0.30);
+}
+
+.research-data-issue.info {
+  border-left-color: var(--blue);
+}
+
+.research-update-card {
+  background: linear-gradient(135deg, rgba(240, 250, 245, 0.54), rgba(255, 247, 223, 0.34));
+}
+
+@media (max-width: 960px) {
+  .research-desk-grid,
+  .research-desk-grid.single-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .research-desk-secondary {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .research-desk {
+    gap: 12px;
+  }
+
+  .research-desk-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .research-desk-hero-main h2 {
+    font-size: 26px;
+  }
+
+  .research-desk-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+  }
+
+  .research-desk-actions .primary-button,
+  .research-desk-actions .ghost-button {
+    width: 100%;
+    min-width: 0;
+    padding: 0 8px;
+    white-space: nowrap;
+  }
+
+  .research-desk-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .research-desk-metric {
+    padding: 10px;
+  }
+
+  .research-desk-metric strong {
+    font-size: 19px;
+  }
+
+  .research-desk-filter {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .research-desk-filter::-webkit-scrollbar {
+    display: none;
+  }
+
+  .research-desk-filter button {
+    flex: 0 0 auto;
+    min-height: 42px;
+  }
+
+  .research-desk-primary,
+  .research-desk-secondary {
+    gap: 14px;
+  }
+
+  .research-desk-section-head {
+    min-height: 44px;
+  }
+
+  .research-desk-section.is-collapsed .research-desk-section-body {
+    display: none;
+  }
+
+  .research-opportunity-grid,
+  .research-industry-grid,
+  .research-card-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .research-queue-item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .research-card-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .research-card-head em {
+    max-width: 132px;
+  }
+}

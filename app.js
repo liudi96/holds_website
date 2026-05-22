@@ -359,15 +359,36 @@ const FUND_MOBILE_SORT_OPTIONS = [
   { value: "name:asc", label: "名称正序" }
 ];
 
+const STOCK_DETAIL_NAV_ITEMS = [
+  { id: "detailSummary", label: "摘要", desktopLabel: "研究摘要" },
+  { id: "detailValuation", label: "估值", desktopLabel: "估值证据" },
+  { id: "detailFinancials", label: "财务", desktopLabel: "财务质量" },
+  { id: "detailIncome", label: "现金", desktopLabel: "现金回报" },
+  { id: "detailRisk", label: "风险", desktopLabel: "风险反证" },
+  { id: "detailRecords", label: "日志", desktopLabel: "日志档案" }
+];
+
+const RESEARCH_DESK_FILTERS = [
+  { value: "all", label: "全部" },
+  { value: "queue", label: "队列" },
+  { value: "opportunity", label: "机会" },
+  { value: "data", label: "数据" },
+  { value: "industry", label: "行业" }
+];
+
 let state = loadState();
 let activeFilter = "all";
 let positionSort = { key: "", direction: "desc" };
 let sunny30Sort = { key: "quality", direction: "desc" };
 let fundMobileSort = "marketValue:desc";
 let positionMobileFilter = "all";
+let researchDeskFilter = "all";
 const expandedPositionCards = new Set();
 const expandedSunny30Cards = new Set();
 const expandedFundCards = new Set();
+const expandedStockDetailSections = new Set(["detailSummary", "detailValuation", "detailFinancials"]);
+const expandedResearchDeskSections = new Set(["queue", "opportunity"]);
+let activeStockDetailSection = "detailSummary";
 let holdingsMasked = localStorage.getItem(HOLDINGS_PRIVACY_KEY) === "1";
 let pendingResearch = null;
 let candidateSort = "consensus";
@@ -4628,41 +4649,404 @@ function renderIndustryCompanyAnalysis(analysis, stocks) {
   `;
 }
 
+function researchDeskSectionVisible(section) {
+  return researchDeskFilter === "all" || researchDeskFilter === section;
+}
+
+function researchDeskDisplayDate(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  return text.slice(0, 10);
+}
+
+function researchDeskLatestDate(industries, updates) {
+  return [
+    ...industries.flatMap((industry) => [industry.updatedAt, industry.metricsUpdatedAt]),
+    ...updates.map((item) => item.date)
+  ]
+    .map(researchDeskDisplayDate)
+    .filter(Boolean)
+    .sort()
+    .at(-1) ?? "";
+}
+
+function buildResearchOpportunities() {
+  return sortedCandidates().slice(0, 8).map((candidate) => {
+    const strategy = strategyProfile(candidate);
+    const distance = candidateBuyDistance(candidate);
+    const confidence = confidenceMeta(candidate);
+    const plan = findPlanForStock(candidate);
+    return { candidate, strategy, distance, confidence, plan };
+  });
+}
+
+function researchQueueFromDataIssues(issues) {
+  return issues
+    .filter((issue) => issue.tone === "warn" || issue.tone === "error")
+    .slice(0, 5)
+    .map((issue) => ({
+      type: "data",
+      tone: issue.tone === "error" ? "risk" : "watch",
+      symbol: issue.symbol,
+      name: issue.name || issue.symbol || "数据状态",
+      label: "数据体检",
+      title: issue.title,
+      detail: issue.detail
+    }));
+}
+
+function researchQueueFromOpportunities(opportunities) {
+  return opportunities
+    .filter(({ candidate, strategy, distance, confidence }) => {
+      const margin = calculatedMarginOfSafety(candidate) ?? finiteNumber(candidate.marginOfSafety);
+      return strategy.bucket === "main" ||
+        strategy.shield.passed ||
+        (Number.isFinite(margin) && margin >= MAIN_DCF_MARGIN_TARGET) ||
+        (Number.isFinite(distance) && distance <= BUY_PROXIMITY) ||
+        confidence.tone === "risk";
+    })
+    .slice(0, 5)
+    .map(({ candidate, strategy, distance, confidence, plan }) => ({
+      type: "opportunity",
+      tone: strategy.bucket === "excluded" || confidence.tone === "risk" ? "risk" : strategy.tone,
+      symbol: candidate.symbol,
+      name: candidate.name,
+      label: "候选机会",
+      title: Number.isFinite(distance) && distance <= BUY_PROXIMITY ? "接近买点" : strategy.status,
+      detail: strategy.blockers.length ? strategy.blockers.join("；") : displayText(plan?.advice, candidate.action)
+    }));
+}
+
+function researchQueueFromFinancials(positions) {
+  return auditUniverse(positions)
+    .filter((stock) => !String(stock.financials?.updatedAt ?? "").trim())
+    .slice(0, 4)
+    .map((stock) => ({
+      type: "financials",
+      tone: "info",
+      symbol: stock.symbol,
+      name: stock.name,
+      label: "财务更新",
+      title: "缺财务更新时间",
+      detail: "详情页可点击“更新财务”补齐多年财务和估值口径。"
+    }));
+}
+
+function buildResearchQueue(positions, issues, opportunities) {
+  const items = [
+    ...researchQueueFromDataIssues(issues),
+    ...researchQueueFromOpportunities(opportunities),
+    ...researchQueueFromFinancials(positions)
+  ];
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = `${item.type}:${normalizeSymbol(item.symbol) || item.name}:${item.title}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 10);
+}
+
+function buildResearchUpdates(positions) {
+  const stocks = auditUniverse(positions);
+  const stockMap = new Map(stocks.map((stock) => [normalizeSymbol(stock.symbol), stock]));
+  const updates = [];
+
+  stocks.forEach((stock) => {
+    (stock.researchUpdates ?? []).forEach((item) => {
+      updates.push({
+        symbol: stock.symbol,
+        name: stock.name,
+        date: item.importedAt || item.asOf || item.date,
+        title: item.title || item.event?.title || "研究更新",
+        detail: item.summary || item.notesAppend || item.event?.summary || displayText(stock.action, stock.status),
+        source: "研究导入"
+      });
+    });
+  });
+
+  (state.decisionLogs ?? [])
+    .filter((log) => log.type === "research")
+    .forEach((log) => {
+      const symbol = normalizeSymbol(log.symbol);
+      const stock = stockMap.get(symbol);
+      updates.push({
+        symbol,
+        name: log.name || stock?.name || symbol,
+        date: log.date || log.createdAt,
+        title: log.decision || "导入分析",
+        detail: log.detail || log.discipline || "",
+        source: "决策日志"
+      });
+    });
+
+  return updates
+    .filter((item) => item.date || item.title || item.detail)
+    .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")))
+    .slice(0, 8);
+}
+
+function researchDeskMetric(label, value, detail = "") {
+  return `
+    <article class="research-desk-metric">
+      <span>${escapeHTML(label)}</span>
+      <strong>${escapeHTML(value)}</strong>
+      <small>${escapeHTML(detail)}</small>
+    </article>
+  `;
+}
+
+function researchDeskFilters(counts) {
+  return `
+    <div class="research-desk-filter" aria-label="研究台筛选">
+      ${RESEARCH_DESK_FILTERS.map((filter) => {
+        const active = filter.value === researchDeskFilter;
+        const count = counts[filter.value] ?? 0;
+        return `
+          <button class="${active ? "active" : ""}" type="button" data-research-desk-filter="${filter.value}" aria-pressed="${active ? "true" : "false"}">
+            <span>${escapeHTML(filter.label)}</span>
+            <strong>${count}</strong>
+          </button>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function researchDeskSection(id, eyebrow, title, body, count = "") {
+  const expanded = expandedResearchDeskSections.has(id);
+  return `
+    <section class="research-desk-section ${expanded ? "" : "is-collapsed"}" data-research-desk-section="${escapeHTML(id)}">
+      <button class="research-desk-section-head" type="button" data-research-desk-toggle="${escapeHTML(id)}" aria-expanded="${expanded ? "true" : "false"}">
+        <span>
+          <small>${escapeHTML(eyebrow)}</small>
+          <strong>${escapeHTML(title)}</strong>
+        </span>
+        <em>${escapeHTML(count ? String(count) : expanded ? "收起" : "展开")}</em>
+      </button>
+      <div class="research-desk-section-body">
+        ${body}
+      </div>
+    </section>
+  `;
+}
+
+function renderResearchQueueItem(item) {
+  const content = `
+    <div class="research-queue-type">${escapeHTML(item.label)}</div>
+    <div class="research-queue-main">
+      <strong>${escapeHTML(item.name || item.symbol || "未命名")}</strong>
+      <span>${escapeHTML(item.title)}</span>
+      <small>${escapeHTML(item.detail || "等待补充下一步动作。")}</small>
+    </div>
+  `;
+  return item.symbol
+    ? `<a class="research-queue-item ${item.tone}" href="${stockHash(item.symbol)}">${content}</a>`
+    : `<div class="research-queue-item ${item.tone}">${content}</div>`;
+}
+
+function renderResearchOpportunityCard(item) {
+  const { candidate, strategy, distance, confidence, plan } = item;
+  const margin = calculatedMarginOfSafety(candidate) ?? finiteNumber(candidate.marginOfSafety);
+  const score = strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "-";
+  return `
+    <a class="research-opportunity-card" href="${stockHash(candidate.symbol)}">
+      <div class="research-card-head">
+        <div>
+          <strong>${escapeHTML(candidate.name)}</strong>
+          <span>${escapeHTML(candidate.symbol)} · ${escapeHTML(displayText(candidate.industry, "未分类"))}</span>
+        </div>
+        <em>${escapeHTML(strategy.status)}</em>
+      </div>
+      <div class="research-card-metrics">
+        <span>综合回报 <strong>${escapeHTML(privateText(displayDividendRatio(strategy.shield.value)))}</strong></span>
+        <span>安全边际 <strong>${escapeHTML(privateText(Number.isFinite(margin) ? percent(margin * 100, false) : "-"))}</strong></span>
+        <span>买点距离 <strong>${escapeHTML(privateText(Number.isFinite(distance) ? displayBuyDistance(candidate) : "-"))}</strong></span>
+        <span>长期评分 <strong>${escapeHTML(score)}</strong></span>
+      </div>
+      <p>${escapeHTML(strategy.blockers.length ? strategy.blockers.join("；") : displayText(plan?.advice, candidate.action))}</p>
+      <small>${escapeHTML(confidence.text)} · ${escapeHTML(strategy.shield.source)}</small>
+    </a>
+  `;
+}
+
+function renderResearchDataIssue(issue) {
+  const tag = issue.sourceType === "holding" ? "持仓" : issue.sourceType === "candidate" ? "跟踪" : issue.sourceType === "data" ? "数据" : "Plan";
+  const content = `
+    <div class="research-card-head">
+      <div>
+        <strong>${escapeHTML(issue.title)}</strong>
+        <span>${escapeHTML(issue.name || issue.symbol || "数据状态")} ${issue.symbol ? `· ${escapeHTML(issue.symbol)}` : ""}</span>
+      </div>
+      <em>${escapeHTML(tag)}</em>
+    </div>
+    <p>${escapeHTML(issue.detail)}</p>
+  `;
+  return issue.symbol
+    ? `<a class="research-data-issue ${issue.tone}" href="${stockHash(issue.symbol)}">${content}</a>`
+    : `<div class="research-data-issue ${issue.tone}">${content}</div>`;
+}
+
+function renderResearchIndustryCard(industry, positions) {
+  const id = normalizeIndustryId(industry.id || industry.name);
+  const stocks = industryStocks(industry, positions);
+  const exposure = industryExposure(stocks);
+  const metrics = Array.isArray(industry.metrics) ? industry.metrics : [];
+  const companyAnalyses = industryCompanyAnalyses(industry, stocks);
+  const latestNote = Array.isArray(industry.notes) ? industry.notes[0] : null;
+  return `
+    <a class="research-industry-card" href="${industryHash(id)}">
+      <div class="research-card-head">
+        <div>
+          <span>${escapeHTML(displayText(industry.category, "行业档案"))}</span>
+          <strong>${escapeHTML(displayText(industry.name, id))}</strong>
+        </div>
+        <em>${escapeHTML(displayText(industry.status, "待完善"))}</em>
+      </div>
+      <p>${escapeHTML(displayText(industry.summary, "后续补充行业分析、关键指标和跟踪记录。"))}</p>
+      <div class="research-card-metrics">
+        <span>相关标的 <strong>${stocks.length}</strong></span>
+        <span>持仓暴露 <strong>${escapeHTML(privateText(currency(exposure)))}</strong></span>
+        <span>趋势指标 <strong>${metrics.length}</strong></span>
+        <span>标的分析 <strong>${companyAnalyses.length}</strong></span>
+      </div>
+      <small>${escapeHTML(latestNote ? `${latestNote.date || "未记录日期"} · ${latestNote.title || latestNote.summary || "研究记录"}` : "暂无研究记录")}</small>
+    </a>
+  `;
+}
+
+function renderResearchUpdateCard(item) {
+  const content = `
+    <div class="research-card-head">
+      <div>
+        <strong>${escapeHTML(item.title || "研究更新")}</strong>
+        <span>${escapeHTML(item.name || item.symbol || "未关联标的")}</span>
+      </div>
+      <em>${escapeHTML(researchDeskDisplayDate(item.date) || item.source)}</em>
+    </div>
+    <p>${escapeHTML(item.detail || "暂无摘要。")}</p>
+    <small>${escapeHTML(item.source)}</small>
+  `;
+  return item.symbol
+    ? `<a class="research-update-card" href="${stockHash(item.symbol)}">${content}</a>`
+    : `<div class="research-update-card">${content}</div>`;
+}
+
 function renderIndustryDesk(positions) {
   if (!elements.industryList) return;
   const industries = industryRecords()
     .slice()
     .sort((a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")) || String(a.name ?? "").localeCompare(String(b.name ?? ""), "zh-CN"));
+  const issues = buildDataQualityIssues(positions);
+  const warningCount = issues.filter((issue) => issue.tone === "warn" || issue.tone === "error").length;
+  const opportunities = buildResearchOpportunities();
+  const queue = buildResearchQueue(positions, issues, opportunities);
+  const updates = buildResearchUpdates(positions);
+  const latestDate = researchDeskLatestDate(industries, updates);
+  const counts = {
+    queue: queue.length,
+    opportunity: opportunities.length,
+    data: issues.length,
+    industry: industries.length
+  };
+  counts.all = counts.queue + counts.opportunity + counts.data + counts.industry;
 
-  elements.industryList.innerHTML = industries.length
-    ? industries.map((industry) => {
-      const id = normalizeIndustryId(industry.id || industry.name);
-      const stocks = industryStocks(industry, positions);
-      const exposure = industryExposure(stocks);
-      const metrics = Array.isArray(industry.metrics) ? industry.metrics : [];
-      const companyAnalyses = industryCompanyAnalyses(industry, stocks);
-      const latestNote = Array.isArray(industry.notes) ? industry.notes[0] : null;
-      return `
-        <a class="industry-card" href="${industryHash(id)}">
-          <div class="industry-card-head">
-            <div>
-              <span>${escapeHTML(displayText(industry.category, "行业档案"))}</span>
-              <strong>${escapeHTML(displayText(industry.name, id))}</strong>
-            </div>
-            <em>${escapeHTML(displayText(industry.status, "待完善"))}</em>
-          </div>
-          <p>${escapeHTML(displayText(industry.summary, "后续补充行业分析、关键指标和跟踪记录。"))}</p>
-          <div class="industry-card-metrics">
-            <span>相关标的 <strong>${stocks.length}</strong></span>
-            <span>持仓暴露 <strong>${currency(exposure)}</strong></span>
-            <span>趋势指标 <strong>${metrics.length}</strong></span>
-            <span>标的分析 <strong>${companyAnalyses.length}</strong></span>
-          </div>
-          <small>${escapeHTML(latestNote ? `${latestNote.date || "未记录日期"} · ${latestNote.title || latestNote.summary || "研究记录"}` : "暂无研究记录")}</small>
-        </a>
-      `;
-    }).join("")
-    : `<div class="empty-state compact-empty">暂无行业档案。可在 data/industries/ 下新增行业 JSON。</div>`;
+  const queueSection = researchDeskSection(
+    "queue",
+    "Research Queue",
+    "今日研究队列",
+    queue.length
+      ? `<div class="research-queue-list">${queue.map(renderResearchQueueItem).join("")}</div>`
+      : `<div class="empty-state compact-empty">当前没有高优先级研究任务</div>`,
+    queue.length
+  );
+  const opportunitySection = researchDeskSection(
+    "opportunity",
+    "Candidate Signals",
+    "候选机会",
+    opportunities.length
+      ? `<div class="research-opportunity-grid">${opportunities.map(renderResearchOpportunityCard).join("")}</div>`
+      : `<div class="empty-state compact-empty">当前暂无候选机会</div>`,
+    opportunities.length
+  );
+  const dataSection = researchDeskSection(
+    "data",
+    "Data Quality",
+    "数据体检",
+    issues.length
+      ? `<div class="research-data-list">${issues.slice(0, 12).map(renderResearchDataIssue).join("")}</div>`
+      : `<div class="empty-state compact-empty">关键研究数据完整</div>`,
+    warningCount ? `${warningCount} 项` : "通过"
+  );
+  const industrySection = researchDeskSection(
+    "industry",
+    "Industry Themes",
+    "行业主题",
+    industries.length
+      ? `<div class="research-industry-grid">${industries.map((industry) => renderResearchIndustryCard(industry, positions)).join("")}</div>`
+      : `<div class="empty-state compact-empty">暂无行业档案。可在 data/industries/ 下新增行业 JSON。</div>`,
+    industries.length
+  );
+  const updatesSection = researchDeskSection(
+    "updates",
+    "Recent Updates",
+    "最近研究更新",
+    updates.length
+      ? `<div class="research-update-list">${updates.map(renderResearchUpdateCard).join("")}</div>`
+      : `<div class="empty-state compact-empty">暂无研究更新记录</div>`,
+    updates.length
+  );
+
+  const dataInPrimary = researchDeskFilter === "data";
+  const primarySections = [
+    researchDeskSectionVisible("queue") ? queueSection : "",
+    researchDeskSectionVisible("opportunity") ? opportunitySection : "",
+    researchDeskSectionVisible("industry") ? industrySection : "",
+    dataInPrimary ? dataSection : ""
+  ].join("");
+  const secondarySections = [
+    !dataInPrimary && researchDeskSectionVisible("data") ? dataSection : "",
+    researchDeskFilter === "all" ? updatesSection : ""
+  ].join("");
+
+  elements.industryList.innerHTML = `
+    <div class="research-desk">
+      <section class="research-desk-hero">
+        <div class="research-desk-hero-main">
+          <p class="eyebrow">Research Command</p>
+          <h2>研究总控台</h2>
+          <span>把行业主题、跟踪机会、数据体检和近期研究更新放在同一个入口，优先处理会影响买入纪律和复盘结论的事项。</span>
+        </div>
+        <div class="research-desk-actions">
+          <button class="primary-button" type="button" data-open-research>
+            <span>＋</span>
+            导入分析
+          </button>
+          <button class="ghost-button" type="button" data-update-industries>
+            <span>↻</span>
+            更新行业数据
+          </button>
+        </div>
+        <div class="research-desk-metrics">
+          ${researchDeskMetric("行业档案", `${industries.length}`, "主题研究")}
+          ${researchDeskMetric("跟踪标的", `${state.candidates?.length ?? 0}`, "晴仓30候选")}
+          ${researchDeskMetric("待处理问题", warningCount ? `${warningCount} 项` : "通过", issues.length ? `总计 ${issues.length}` : "关键数据完整")}
+          ${researchDeskMetric("最近更新", latestDate || "-", latestDate ? "研究/行业记录" : "暂无记录")}
+        </div>
+      </section>
+
+      ${researchDeskFilters(counts)}
+
+      <div class="research-desk-grid ${secondarySections ? "" : "single-column"}">
+        <main class="research-desk-primary">
+          ${primarySections || `<div class="empty-state compact-empty">当前筛选下暂无内容</div>`}
+        </main>
+        <aside class="research-desk-secondary">
+          ${secondarySections}
+        </aside>
+      </div>
+    </div>
+  `;
 }
 
 function renderIndustryDetail(positions, id) {
@@ -4698,7 +5082,7 @@ function renderIndustryDetail(positions, id) {
     </section>
 
     <section class="metrics-grid industry-metrics-summary">
-      ${metricCard("持仓暴露", currency(exposure), "按当前市值折人民币")}
+      ${metricCard("持仓暴露", privateText(currency(exposure)), "按当前市值折人民币")}
       ${metricCard("标的分析", `${companyAnalyses.length}`, "趋势与定性判断")}
       ${metricCard("覆盖公司", stocks.map((stock) => stock.name).join(" / ") || "-", "行业内当前关注对象")}
       ${metricCard("趋势指标", `${metrics.length}`, industry.metricsUpdatedAt ? "runtime 行业数据" : "等待行业数据更新")}
@@ -5513,7 +5897,7 @@ function financialFcfCell(stock, item, index, currencyCode) {
   return financialAmount(item.freeCashFlow, item.currency || currencyCode);
 }
 
-function renderFinancialsPanel(stock) {
+function renderFinancialsPanel(stock, options = {}) {
   const financials = stock.financials ?? {};
   const annual = financialAnnuals(stock);
   if (!annual.length) {
@@ -5541,6 +5925,15 @@ function renderFinancialsPanel(stock) {
   const avgRoic = recentAverage(stock, "roic");
   const fcfRecord = positiveRecordRatio(stock, "freeCashFlow");
 
+  const tableMarkup = options.collapsibleTable
+    ? `
+      <details class="financial-table-disclosure">
+        <summary>多年财务表</summary>
+        ${renderFinancialTable(stock, annual, currencyCode)}
+      </details>
+    `
+    : renderFinancialTable(stock, annual, currencyCode);
+
   return `
     <section class="panel financials-panel">
       <div class="panel-head compact">
@@ -5562,7 +5955,7 @@ function renderFinancialsPanel(stock) {
           ${financialMetricCard("负债率", financialRatio(latest.debtRatio), `FCF 为正 ${Number.isFinite(fcfRecord) ? `${Math.round(fcfRecord * 100)}%` : "未知"}`)}
           ${financialMetricCard("PE / PB / PEG", `${financialMultiple(valuation.pe)} / ${financialMultiple(valuation.pb)} / ${Number.isFinite(finiteNumber(valuation.peg)) ? finiteNumber(valuation.peg).toFixed(2) : "-"}`, `PE低/中/高 ${rangeText(valuation.peRange)}`)}
         </div>
-        ${renderFinancialTable(stock, annual, currencyCode)}
+        ${tableMarkup}
         <p class="financial-source-note">${escapeHTML(displayText(valuation.sourceNote, "财务指标来自数据源披露口径；缺失字段会留空，不参与打分。"))}</p>
       </div>
     </section>
@@ -5605,6 +5998,156 @@ function renderKillCriteriaPanel(stock) {
   `;
 }
 
+function stockDetailNav() {
+  return `
+    <nav class="detail-section-nav stock-detail-nav" aria-label="详情分段导航">
+      ${STOCK_DETAIL_NAV_ITEMS.map((item) => `
+        <button class="${activeStockDetailSection === item.id ? "active" : ""}" type="button" data-detail-section="${item.id}" aria-pressed="${activeStockDetailSection === item.id ? "true" : "false"}">
+          <span class="desktop-label">${escapeHTML(item.desktopLabel)}</span>
+          <span class="mobile-label">${escapeHTML(item.label)}</span>
+        </button>
+      `).join("")}
+    </nav>
+  `;
+}
+
+function stockDetailMetricButton(target, label, value, detail = "", className = "") {
+  return `
+    <button class="stock-detail-signal-card" type="button" data-detail-section="${escapeHTML(target)}">
+      <span>${escapeHTML(label)}</span>
+      <strong class="${className || ""}">${value}</strong>
+      ${detail ? `<small>${escapeHTML(detail)}</small>` : ""}
+    </button>
+  `;
+}
+
+function stockDetailEvidenceCard(target, title, value, detail, tone = "") {
+  return `
+    <button class="stock-detail-evidence-card ${tone}" type="button" data-detail-section="${escapeHTML(target)}">
+      <span>${escapeHTML(title)}</span>
+      <strong>${value}</strong>
+      <small>${escapeHTML(detail)}</small>
+    </button>
+  `;
+}
+
+function stockDetailAccordion(id, eyebrow, title, body) {
+  const expanded = expandedStockDetailSections.has(id);
+  return `
+    <section class="stock-detail-section stock-detail-accordion ${expanded ? "" : "is-collapsed"}" id="${escapeHTML(id)}">
+      <button class="stock-detail-accordion-head" type="button" data-stock-detail-toggle="${escapeHTML(id)}" aria-expanded="${expanded ? "true" : "false"}">
+        <span>
+          <small>${escapeHTML(eyebrow)}</small>
+          <strong>${escapeHTML(title)}</strong>
+        </span>
+        <em>${expanded ? "收起" : "展开"}</em>
+      </button>
+      <div class="stock-detail-accordion-body">
+        ${body}
+      </div>
+    </section>
+  `;
+}
+
+function stockDetailSummaryPanel(stock, strategy, health, plan) {
+  return `
+    <section class="stock-detail-section" id="detailSummary">
+      <div class="stock-detail-section-head">
+        <p class="eyebrow">Research Summary</p>
+        <h2>研究摘要</h2>
+      </div>
+      <div class="stock-detail-summary-grid">
+        <article>
+          <span>当前动作</span>
+          <strong>${escapeHTML(displayText(stock.action, "暂无动作"))}</strong>
+        </article>
+        <article>
+          <span>达标状态</span>
+          <strong>${escapeHTML(displayText(stock.status, "未填写"))}</strong>
+        </article>
+        <article>
+          <span>策略归属</span>
+          <strong>${escapeHTML(strategy.status)}</strong>
+          <small>${escapeHTML(strategy.blockers.length ? strategy.blockers.join("；") : "当前无主要阻碍")}</small>
+        </article>
+        <article>
+          <span>执行计划</span>
+          <strong>${plan ? `${escapeHTML(String(plan.rank))}. ${escapeHTML(plan.priority)}` : "未列入优先级"}</strong>
+          <small>${escapeHTML(plan ? plan.advice : displayText(stock.action, "暂无执行计划"))}</small>
+        </article>
+        <article>
+          <span>健康状态</span>
+          <strong>${health ? `<span class="health-pill ${health.tone}">${escapeHTML(health.status)}</span>` : "-"}</strong>
+          <small>${escapeHTML(health ? `${health.score}分 · ${health.detail}` : "未持仓，仅保留研究信息")}</small>
+        </article>
+        <article>
+          <span>主要风险</span>
+          <strong>${escapeHTML(displayText(stock.risk, "未填写"))}</strong>
+        </article>
+      </div>
+    </section>
+  `;
+}
+
+function stockDetailEvidenceGrid(stock, strategy, health, confidence, detailHoldingValue) {
+  const annual = financialAnnuals(stock);
+  const latest = annual[0] ?? {};
+  const audit = strategy.ownerAudit;
+  const netCash = strategy.netCash;
+  const dividendYield = calculatedDividendYield(stock);
+  const shareholderReturnYield = calculatedShareholderReturnYield(stock);
+  const qualityText = Number.isFinite(stock.qualityScore) ? `${stock.qualityScore}` : "-";
+  const fcfRecord = positiveRecordRatio(stock, "freeCashFlow");
+  const riskItems = killCriteriaItems(stock);
+
+  return `
+    <div class="stock-detail-evidence-grid">
+      ${stockDetailEvidenceCard(
+        "detailValuation",
+        "估值",
+        Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-",
+        `主策略门槛 ${percent(MAIN_DCF_MARGIN_TARGET * 100, false)}；可信度 ${confidence.text}`,
+        Number.isFinite(strategy.margin) && strategy.margin >= MAIN_DCF_MARGIN_TARGET ? "strong" : "watch"
+      )}
+      ${stockDetailEvidenceCard(
+        "detailFinancials",
+        "财务质量",
+        `${qualityText} / ${audit.hasAudit ? audit.score : "-"}`,
+        `ROE/ROIC ${financialRatio(latest.roe)} / ${financialRatio(latest.roic)}；FCF为正 ${Number.isFinite(fcfRecord) ? `${Math.round(fcfRecord * 100)}%` : "未知"}`,
+        audit.tone
+      )}
+      ${stockDetailEvidenceCard(
+        "detailIncome",
+        "现金回报",
+        privateText(`${displayDividendRatio(shareholderReturnYield)} / ${displayDividendRatio(strategy.shield.target)}`),
+        `${dividendReliability(stock).text}；股息率 ${privateText(displayDividendRatio(dividendYield))}`,
+        strategy.shield.passed ? "strong" : "wait"
+      )}
+      ${stockDetailEvidenceCard(
+        "detailRisk",
+        "风险反证",
+        health ? `<span class="health-pill ${health.tone}">${escapeHTML(health.status)}</span>` : "-",
+        riskItems.length ? riskItems[0] : "暂无明确反证条件",
+        health?.tone || "watch"
+      )}
+      ${stockDetailEvidenceCard(
+        "detailValuation",
+        "持仓暴露",
+        escapeHTML(detailHoldingValue),
+        `现价 ${Number.isFinite(stock.currentPrice) ? currency(stock.currentPrice, stock.currency) : "-"}；公允区间 ${displayText(stock.fairValueRange)}`,
+        "neutral"
+      )}
+      ${stockDetailEvidenceCard(
+        "detailIncome",
+        "烟蒂口径",
+        financialMultiple(netCash.exCashPe),
+        `ex-cash PE 门槛 ≤${strategy.peLimit}x；FCF yield ${financialRatio(netCash.fcfYield)}`,
+        Number.isFinite(netCash.exCashPe) && netCash.exCashPe <= strategy.peLimit ? "strong" : "wait"
+      )}
+    </div>
+  `;
+}
+
 function renderStockDetail(positions, symbol) {
   const { stock, isHolding } = findStockRecord(symbol, positions);
 
@@ -5625,20 +6168,13 @@ function renderStockDetail(positions, symbol) {
   const hasCurrentQuote = Number.isFinite(stock.currentPrice) && stock.currentPrice > 0;
   const hasPreviousQuote = Number.isFinite(stock.previousClose) && stock.previousClose > 0;
   const priceChange = hasCurrentQuote && hasPreviousQuote ? stock.currentPrice - stock.previousClose : null;
-  const priceChangeClass = Number.isFinite(priceChange) && priceChange >= 0 ? "positive" : "negative";
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   const health = isHolding ? holdingHealth(stock, totalValue) : null;
   const confidence = confidenceMeta(stock);
   const strategy = strategyProfile(stock);
-  const detailPnlValue = isHolding
-    ? privateHTML(`<span class="${privateClass(pnlClass)}">${currency(stock.pnlCny)}</span>`)
-    : "-";
   const detailPnlMeta = isHolding && Math.abs(finiteNumber(stock.realizedPnlCny) ?? 0) >= 0.005 && Number.isFinite(stock.unrealizedPnlCny)
     ? privateText(`浮动 ${currency(stock.unrealizedPnlCny)} · 已实现 ${currency(stock.realizedPnlCny)}`)
     : isHolding ? privateText(percent(stock.pnlRate)) : "";
-  const detailDayValue = isHolding
-    ? privateHTML(`<span class="${privateClass(dayClass)}">${currency(stock.dayChange)}</span>`)
-    : `<span class="${priceChangeClass}">${Number.isFinite(priceChange) ? currency(priceChange, stock.currency) : "-"}</span>`;
   const detailDayRate = isHolding && stock.marketValueCny
     ? privateText(percent((stock.dayChange / stock.marketValueCny) * 100))
     : Number.isFinite(priceChange) && stock.previousClose
@@ -5647,191 +6183,169 @@ function renderStockDetail(positions, symbol) {
   const detailHoldingValue = isHolding ? privateText(currency(stock.marketValueCny)) : "-";
 
   elements.stockDetail.innerHTML = `
-    <section class="detail-hero">
-      <a class="ghost-button detail-back" href="#portfolio">返回持仓</a>
-      <div>
-        <p class="eyebrow">${escapeHTML(stock.symbol)} · ${escapeHTML(displayText(stock.industry, "未分类"))}</p>
-        <h2>${escapeHTML(stock.name)}</h2>
-        ${stockDetailCategoryControl(stock)}
-      </div>
-      <div class="detail-hero-actions">
-        <button class="ghost-button compact-link" type="button" data-update-financials="${escapeHTML(stock.symbol)}">
-          <span>↻</span>
-          更新财务
-        </button>
-        <div class="detail-hero-meta">
-          <span>${escapeHTML(closeDateText(stock) || displayText(stock.updatedAt, "行情日期未知"))}</span>
-          <small>${escapeHTML(stock.financials?.updatedAt ? `财务 ${stock.financials.updatedAt}` : "财务数据待更新")}</small>
-        </div>
-      </div>
-    </section>
-
-    <section class="metrics-grid detail-metrics">
-      ${metricCard("今天收盘", hasCurrentQuote ? currency(stock.currentPrice, stock.currency) : "-", stock.currentPriceDate || "收盘日未知")}
-      ${metricCard("昨天收盘", hasPreviousQuote ? currency(stock.previousClose, stock.currency) : "-", stock.previousCloseDate || "收盘日未知")}
-      ${metricCard("累计盈亏", detailPnlValue, detailPnlMeta)}
-      ${metricCard(
-        "今日变动",
-        detailDayValue,
-        detailDayRate
-      )}
-    </section>
-
-    ${renderMasterVotesPanel(stock, totalValue)}
-
-    <nav class="detail-section-nav" aria-label="详情分段导航">
-      <button type="button" data-detail-section="detailValuation">估值质量</button>
-      <button type="button" data-detail-section="detailOwnerAudit">长期评分</button>
-      <button type="button" data-detail-section="detailFinancials">多年财务</button>
-      <button type="button" data-detail-section="detailIncome">股息/净现金</button>
-      <button type="button" data-detail-section="detailRisk">风险反证</button>
-      <button type="button" data-detail-section="detailRecords">财报日志</button>
-    </nav>
-
-    <section class="detail-section" id="detailValuation">
-      <div class="detail-section-head">
-        <p class="eyebrow">Valuation</p>
-        <h2>估值质量</h2>
-      </div>
-      <section class="detail-grid">
-      <section class="panel">
-        <div class="panel-head compact">
+    <div class="stock-detail-workbench">
+      <aside class="stock-detail-summary">
+        <section class="stock-detail-decision-hero">
+          <div class="stock-detail-hero-actions">
+            <a class="ghost-button detail-back" href="#portfolio">返回持仓</a>
+            <button class="ghost-button compact-link" type="button" data-update-financials="${escapeHTML(stock.symbol)}">
+              <span>↻</span>
+              更新财务
+            </button>
+          </div>
           <div>
-            <p class="eyebrow">Analysis</p>
-            <h2>股票分析</h2>
+            <p class="eyebrow">${escapeHTML(stock.symbol)} · ${escapeHTML(displayText(stock.industry, "未分类"))}</p>
+            <h2>${escapeHTML(stock.name)}</h2>
+            ${stockDetailCategoryControl(stock)}
           </div>
-        </div>
-        <div class="detail-content">
-          <dl class="detail-list">
-            <div><dt>达标状态</dt><dd>${escapeHTML(displayText(stock.status, "未填写"))}</dd></div>
-            <div><dt>策略归属</dt><dd>${escapeHTML(strategy.status)}</dd></div>
-            <div><dt>最终动作</dt><dd>${escapeHTML(displayText(stock.action, "未填写"))}</dd></div>
-            <div><dt>主要风险</dt><dd>${escapeHTML(displayText(stock.risk, "未填写"))}</dd></div>
-            <div><dt>备注</dt><dd>${escapeHTML(displayText(stock.notes, "未填写"))}</dd></div>
-          </dl>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head compact">
-          <div>
-            <p class="eyebrow">Valuation</p>
-            <h2>估值与质量</h2>
+          <div class="stock-detail-hero-meta">
+            <span>${escapeHTML(closeDateText(stock) || displayText(stock.updatedAt, "行情日期未知"))}</span>
+            <small>${escapeHTML(stock.financials?.updatedAt ? `财务 ${stock.financials.updatedAt}` : "财务数据待更新")}</small>
           </div>
-        </div>
-        <div class="detail-content">
-          <div class="valuation-grid">
-            <div><span>安全边际</span><strong>${marginText}</strong></div>
-            <div><span>主策略安全边际</span><strong>${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"} / ${percent(MAIN_DCF_MARGIN_TARGET * 100, false)}</strong></div>
-            <div><span>综合回报率</span><strong>${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}</strong><small>${escapeHTML(strategy.shield.source)}</small></div>
-            <div><span>长期评分</span><strong>${badge(`${strategy.ownerAudit.hasAudit ? strategy.ownerAudit.score : "-"} / 100`, strategy.ownerAudit.tone)}</strong><small>${escapeHTML(strategy.ownerAudit.text)}</small></div>
-            <div><span>烟蒂PE</span><strong>${financialMultiple(strategy.netCash.exCashPe)} / ≤${strategy.peLimit}x</strong></div>
-            <div><span>估值可信度</span><strong>${badge(confidence.text, confidence.tone)}</strong></div>
-            <div><span>质量总分</span><strong>${qualityText}</strong></div>
-            <div><span>健康状态</span><strong>${health ? `<span class="health-pill ${health.tone}">${health.status}</span>` : "-"}</strong></div>
-            <div><span>健康评分</span><strong>${health ? `${health.score} 分` : "-"}</strong></div>
-            <div><span>内在价值</span><strong>${Number.isFinite(stock.intrinsicValue) ? currency(stock.intrinsicValue, stock.currency) : "-"}</strong></div>
-            <div><span>观察价</span><strong>${displayPriceLevel(stock, "watchPrice")}</strong></div>
-            <div><span>首买价</span><strong>${displayPriceLevel(stock, "initialBuyPrice")}</strong></div>
-            <div><span>重仓价</span><strong>${displayPriceLevel(stock, "aggressiveBuyPrice")}</strong></div>
-            <div><span>公允区间</span><strong>${escapeHTML(displayText(stock.fairValueRange))}</strong></div>
-            <div><span>持仓市值</span><strong>${escapeHTML(detailHoldingValue)}</strong></div>
+        </section>
+
+        <section class="stock-detail-conclusion-card">
+          <span>当前动作</span>
+          <strong>${escapeHTML(displayText(stock.action, "暂无动作"))}</strong>
+          <small>${escapeHTML(displayText(stock.status, strategy.status))}</small>
+        </section>
+
+        <section class="stock-detail-signal-grid">
+          ${stockDetailMetricButton("detailValuation", "安全边际", escapeHTML(marginText), `目标 ${percent(MAIN_DCF_MARGIN_TARGET * 100, false)}`)}
+          ${stockDetailMetricButton("detailIncome", "综合回报率", escapeHTML(privateText(`${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}`)), privateText(strategy.shield.source))}
+          ${stockDetailMetricButton("detailFinancials", "长期评分", escapeHTML(strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "-"), strategy.ownerAudit.text)}
+          ${stockDetailMetricButton("detailRisk", "健康评分", escapeHTML(health ? `${health.score}分` : "-"), health ? health.status : "未持仓")}
+          ${stockDetailMetricButton("detailSummary", "今日盈亏", escapeHTML(isHolding ? privateText(currency(stock.dayChange)) : Number.isFinite(priceChange) ? currency(priceChange, stock.currency) : "-"), detailDayRate, privateClass(dayClass))}
+          ${stockDetailMetricButton("detailSummary", "累计盈亏", escapeHTML(isHolding ? privateText(currency(stock.pnlCny)) : "-"), detailPnlMeta, privateClass(pnlClass))}
+        </section>
+      </aside>
+
+      <main class="stock-detail-evidence-flow">
+        ${stockDetailNav()}
+
+        ${stockDetailSummaryPanel(stock, strategy, health, plan)}
+
+        <section class="stock-detail-section" id="detailValuation">
+          <div class="stock-detail-section-head">
+            <p class="eyebrow">Evidence Matrix</p>
+            <h2>四象限证据</h2>
           </div>
-          <div class="score-list">
-            ${scoreItem("商业模式", stock.businessModel, 30)}
-            ${scoreItem("护城河", stock.moat, 25)}
-            ${scoreItem("治理", stock.governance, 20)}
-            ${scoreItem("财务质量", stock.financialQuality, 25)}
-          </div>
-        </div>
-      </section>
-      </section>
-    </section>
+          ${stockDetailEvidenceGrid(stock, strategy, health, confidence, detailHoldingValue)}
 
-    <section class="detail-section" id="detailOwnerAudit">
-      <div class="detail-section-head">
-        <p class="eyebrow">Owner Cash Flow</p>
-        <h2>长期股东现金流评分</h2>
-      </div>
-    ${renderOwnerAuditPanel(stock)}
-    </section>
+          <section class="detail-grid">
+            <section class="panel">
+              <div class="panel-head compact">
+                <div>
+                  <p class="eyebrow">Analysis</p>
+                  <h2>研究判断</h2>
+                </div>
+              </div>
+              <div class="detail-content">
+                <dl class="detail-list">
+                  <div><dt>达标状态</dt><dd>${escapeHTML(displayText(stock.status, "未填写"))}</dd></div>
+                  <div><dt>策略归属</dt><dd>${escapeHTML(strategy.status)}</dd></div>
+                  <div><dt>最终动作</dt><dd>${escapeHTML(displayText(stock.action, "未填写"))}</dd></div>
+                  <div><dt>主要风险</dt><dd>${escapeHTML(displayText(stock.risk, "未填写"))}</dd></div>
+                  <div><dt>备注</dt><dd>${escapeHTML(displayText(stock.notes, "未填写"))}</dd></div>
+                </dl>
+              </div>
+            </section>
 
-    <section class="detail-section" id="detailFinancials">
-      <div class="detail-section-head">
-        <p class="eyebrow">Financials</p>
-        <h2>多年财务</h2>
-      </div>
-    ${renderFinancialsPanel(stock)}
-    </section>
+            <section class="panel">
+              <div class="panel-head compact">
+                <div>
+                  <p class="eyebrow">Valuation</p>
+                  <h2>估值与质量</h2>
+                </div>
+              </div>
+              <div class="detail-content">
+                <div class="valuation-grid">
+                  <div><span>安全边际</span><strong>${marginText}</strong></div>
+                  <div><span>主策略安全边际</span><strong>${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"} / ${percent(MAIN_DCF_MARGIN_TARGET * 100, false)}</strong></div>
+                  <div><span>综合回报率</span><strong>${escapeHTML(privateText(`${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}`))}</strong><small>${escapeHTML(privateText(strategy.shield.source))}</small></div>
+                  <div><span>长期评分</span><strong>${badge(`${strategy.ownerAudit.hasAudit ? strategy.ownerAudit.score : "-"} / 100`, strategy.ownerAudit.tone)}</strong><small>${escapeHTML(strategy.ownerAudit.text)}</small></div>
+                  <div><span>烟蒂PE</span><strong>${financialMultiple(strategy.netCash.exCashPe)} / ≤${strategy.peLimit}x</strong></div>
+                  <div><span>估值可信度</span><strong>${badge(confidence.text, confidence.tone)}</strong></div>
+                  <div><span>质量总分</span><strong>${qualityText}</strong></div>
+                  <div><span>健康状态</span><strong>${health ? `<span class="health-pill ${health.tone}">${health.status}</span>` : "-"}</strong></div>
+                  <div><span>健康评分</span><strong>${health ? `${health.score} 分` : "-"}</strong></div>
+                  <div><span>内在价值</span><strong>${Number.isFinite(stock.intrinsicValue) ? currency(stock.intrinsicValue, stock.currency) : "-"}</strong></div>
+                  <div><span>观察价</span><strong>${displayPriceLevel(stock, "watchPrice")}</strong></div>
+                  <div><span>首买价</span><strong>${displayPriceLevel(stock, "initialBuyPrice")}</strong></div>
+                  <div><span>重仓价</span><strong>${displayPriceLevel(stock, "aggressiveBuyPrice")}</strong></div>
+                  <div><span>公允区间</span><strong>${escapeHTML(displayText(stock.fairValueRange))}</strong></div>
+                  <div><span>持仓市值</span><strong>${escapeHTML(detailHoldingValue)}</strong></div>
+                </div>
+                <div class="score-list">
+                  ${scoreItem("商业模式", stock.businessModel, 30)}
+                  ${scoreItem("护城河", stock.moat, 25)}
+                  ${scoreItem("治理", stock.governance, 20)}
+                  ${scoreItem("财务质量", stock.financialQuality, 25)}
+                </div>
+              </div>
+            </section>
+          </section>
 
-    <section class="detail-section" id="detailIncome">
-      <div class="detail-section-head">
-        <p class="eyebrow">Income</p>
-        <h2>股息/净现金</h2>
-      </div>
-    ${renderDividendPanel(stock, isHolding)}
+          ${renderMasterVotesPanel(stock, totalValue)}
+          ${renderOwnerAuditPanel(stock)}
+        </section>
 
-    ${renderNetCashPanel(stock)}
+        ${stockDetailAccordion("detailFinancials", "Financials", "财务质量", renderFinancialsPanel(stock, { collapsibleTable: true }))}
 
-    ${renderDataSourcePanel(stock)}
-    </section>
+        ${stockDetailAccordion("detailIncome", "Income", "现金回报", `
+          ${renderDividendPanel(stock, isHolding)}
+          ${renderNetCashPanel(stock)}
+          ${renderDataSourcePanel(stock)}
+        `)}
 
-    <section class="detail-section" id="detailRisk">
-      <div class="detail-section-head">
-        <p class="eyebrow">Risk</p>
-        <h2>风险反证</h2>
-      </div>
-    ${renderKillCriteriaPanel(stock)}
+        ${stockDetailAccordion("detailRisk", "Risk", "风险反证", `
+          ${renderKillCriteriaPanel(stock)}
+          <section class="panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Execution</p>
+                <h2>执行计划</h2>
+              </div>
+            </div>
+            <div class="detail-content">
+              <div class="execution-plan">
+                <strong>${plan ? `${plan.rank}. ${escapeHTML(plan.name)} · ${escapeHTML(plan.priority)}` : "未单独列入执行优先级"}</strong>
+                <span>${escapeHTML(plan ? plan.advice : displayText(stock.action, "暂无执行计划"))}</span>
+                <small>${escapeHTML(plan ? plan.discipline : displayText(stock.status, "暂无纪律说明"))}</small>
+              </div>
+            </div>
+          </section>
+        `)}
 
-    <section class="panel">
-      <div class="panel-head compact">
-        <div>
-          <p class="eyebrow">Execution</p>
-          <h2>执行计划</h2>
-        </div>
-      </div>
-      <div class="detail-content">
-        <div class="execution-plan">
-          <strong>${plan ? `${plan.rank}. ${escapeHTML(plan.name)} · ${escapeHTML(plan.priority)}` : "未单独列入执行优先级"}</strong>
-          <span>${escapeHTML(plan ? plan.advice : displayText(stock.action, "暂无执行计划"))}</span>
-          <small>${escapeHTML(plan ? plan.discipline : displayText(stock.status, "暂无纪律说明"))}</small>
-        </div>
-      </div>
-    </section>
-    </section>
-
-    <section class="detail-section" id="detailRecords">
-      <div class="detail-section-head">
-        <p class="eyebrow">Records</p>
-        <h2>财报日志</h2>
-      </div>
-    ${renderResearchUpdatesPanel(stock)}
-
-    <section class="panel decision-log-panel detail-log-panel">
-      <div class="panel-head compact">
-        <div>
-          <p class="eyebrow">Timeline</p>
-          <h2>决策日志</h2>
-        </div>
-      </div>
-      <div class="decision-log-list">
-        ${renderStockDecisionLogs(stock)}
-      </div>
-    </section>
-
-    <section class="panel report-panel">
-      <div class="panel-head compact">
-        <div>
-          <p class="eyebrow">Reports</p>
-          <h2>近两年财报 PDF</h2>
-        </div>
-      </div>
-      <div class="detail-content">
-        ${renderReportLibrary(stock)}
-      </div>
-    </section>
-    </section>
+        ${stockDetailAccordion("detailRecords", "Records", "日志档案", `
+          ${renderResearchUpdatesPanel(stock)}
+          <section class="panel decision-log-panel detail-log-panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Timeline</p>
+                <h2>决策日志</h2>
+              </div>
+            </div>
+            <div class="decision-log-list">
+              ${renderStockDecisionLogs(stock)}
+            </div>
+          </section>
+          <section class="panel report-panel">
+            <div class="panel-head compact">
+              <div>
+                <p class="eyebrow">Reports</p>
+                <h2>近两年财报 PDF</h2>
+              </div>
+            </div>
+            <div class="detail-content">
+              ${renderReportLibrary(stock)}
+            </div>
+          </section>
+        `)}
+      </main>
+    </div>
   `;
+  requestStockDetailActiveUpdate();
 }
 
 function renderTradeStockNames() {
@@ -6744,6 +7258,7 @@ document.querySelectorAll(".nav-item").forEach((button) => {
 });
 
 let backToTopTicking = false;
+let stockDetailActiveTicking = false;
 
 function updateBackToTopVisibility() {
   elements.backToTopButton?.classList.toggle("is-visible", window.scrollY > 360);
@@ -6763,6 +7278,80 @@ window.addEventListener("scroll", requestBackToTopUpdate, { passive: true });
 elements.backToTopButton?.addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
+
+function setStockDetailActiveSection(sectionId) {
+  if (!sectionId) return;
+  activeStockDetailSection = sectionId;
+  document.querySelectorAll(".stock-detail-nav [data-detail-section]").forEach((button) => {
+    const active = button.dataset.detailSection === sectionId;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+function updateStockDetailToggle(section, expanded) {
+  const toggle = section?.querySelector("[data-stock-detail-toggle]");
+  if (!toggle) return;
+  toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+  const label = toggle.querySelector("em");
+  if (label) label.textContent = expanded ? "收起" : "展开";
+}
+
+function expandStockDetailSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (!section?.classList.contains("stock-detail-accordion")) return;
+  expandedStockDetailSections.add(sectionId);
+  section.classList.remove("is-collapsed");
+  updateStockDetailToggle(section, true);
+}
+
+function toggleStockDetailSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (!section?.classList.contains("stock-detail-accordion")) return;
+  const expanded = !expandedStockDetailSections.has(sectionId);
+  if (expanded) {
+    expandedStockDetailSections.add(sectionId);
+  } else {
+    expandedStockDetailSections.delete(sectionId);
+  }
+  section.classList.toggle("is-collapsed", !expanded);
+  updateStockDetailToggle(section, expanded);
+}
+
+function updateStockDetailActiveFromScroll() {
+  const activePage = document.querySelector('.page[data-page="stock-detail"].active');
+  if (!activePage) return;
+  const sections = STOCK_DETAIL_NAV_ITEMS
+    .map((item) => document.getElementById(item.id))
+    .filter(Boolean);
+  if (!sections.length) return;
+
+  const anchor = window.innerWidth <= 720 ? 96 : 88;
+  const viewportLimit = window.innerHeight * 0.72;
+  let current = sections[0].id;
+  let closestDistance = Number.POSITIVE_INFINITY;
+  sections.forEach((section) => {
+    const top = section.getBoundingClientRect().top;
+    if (top > viewportLimit) return;
+    const distance = Math.abs(top - anchor);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      current = section.id;
+    }
+  });
+  setStockDetailActiveSection(current);
+}
+
+function requestStockDetailActiveUpdate() {
+  if (stockDetailActiveTicking) return;
+  stockDetailActiveTicking = true;
+  requestAnimationFrame(() => {
+    stockDetailActiveTicking = false;
+    updateStockDetailActiveFromScroll();
+  });
+}
+
+window.addEventListener("scroll", requestStockDetailActiveUpdate, { passive: true });
 
 function showEmbeddedMasters(target = "masters") {
   showPage("portfolio");
@@ -7027,7 +7616,16 @@ elements.clearDecisionLogs?.addEventListener("click", async () => {
 document.addEventListener("click", (event) => {
   const button = event.target.closest("[data-detail-section]");
   if (!button) return;
-  document.getElementById(button.dataset.detailSection)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const sectionId = button.dataset.detailSection;
+  expandStockDetailSection(sectionId);
+  setStockDetailActiveSection(sectionId);
+  document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-stock-detail-toggle]");
+  if (!button) return;
+  toggleStockDetailSection(button.dataset.stockDetailToggle);
 });
 
 document.addEventListener("click", async (event) => {
@@ -7068,12 +7666,39 @@ document.addEventListener("click", (event) => {
   elements.tradeDialog.showModal();
 });
 
-document.querySelector("#openResearchPanel").addEventListener("click", () => {
+function openResearchDialog() {
   pendingResearch = null;
   elements.importResearchButton.disabled = true;
   elements.researchPreview.innerHTML = "";
   setResearchStatus("");
   elements.researchDialog.showModal();
+}
+
+document.querySelector("#openResearchPanel").addEventListener("click", openResearchDialog);
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-open-research]");
+  if (!button) return;
+  openResearchDialog();
+});
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-research-desk-filter]");
+  if (!button) return;
+  researchDeskFilter = button.dataset.researchDeskFilter || "all";
+  renderIndustryDesk(computePositions());
+});
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-research-desk-toggle]");
+  if (!button) return;
+  const section = button.dataset.researchDeskToggle;
+  if (expandedResearchDeskSections.has(section)) {
+    expandedResearchDeskSections.delete(section);
+  } else {
+    expandedResearchDeskSections.add(section);
+  }
+  renderIndustryDesk(computePositions());
 });
 
 elements.updateQuotesButton.addEventListener("click", async () => {
