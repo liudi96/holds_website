@@ -2,6 +2,9 @@
 .gomodcache/
 .run/
 .tools/
+.DS_Store
+outputs/
+scripts/__pycache__/
 data/runtime/*
 !data/runtime/quotes.json
 !data/runtime/industry_metrics.json
