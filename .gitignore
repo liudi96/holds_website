@@ -9,3 +9,4 @@ data/runtime/*
 !data/runtime/quotes.json
 !data/runtime/industry_metrics.json
 data/backups/
+.superpowers/
