@@ -1,5 +1,6 @@
 const STORAGE_KEY = "stock-portfolio-desk-v2";
 const HOLDINGS_PRIVACY_KEY = "stock-portfolio-desk-holdings-masked";
+const PORTFOLIO_RETURN_SCROLL_KEY = "stock-portfolio-return-scroll-y";
 
 const seedState = {
   totalCapital: 1150000,
@@ -407,6 +408,7 @@ const pageTitles = {
   "industry-detail": "行业分析",
   "stock-detail": "股票分析详情"
 };
+let activeRoute = routeInfo(window.location.hash.slice(1));
 
 const elements = {
   pageTitle: document.querySelector("#pageTitle"),
@@ -7303,6 +7305,12 @@ elements.backToTopButton?.addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
+document.addEventListener("click", (event) => {
+  const stockLink = event.target.closest('a[href^="#stock="]');
+  if (!stockLink) return;
+  savePortfolioReturnScroll();
+}, { capture: true });
+
 function setStockDetailActiveSection(sectionId) {
   if (!sectionId) return;
   activeStockDetailSection = sectionId;
@@ -7411,29 +7419,52 @@ function resetStockDetailRouteScroll() {
   });
 }
 
+function savePortfolioReturnScroll() {
+  const activePortfolio = document.querySelector('.page[data-page="portfolio"].active');
+  if (!activePortfolio) return;
+  sessionStorage.setItem(PORTFOLIO_RETURN_SCROLL_KEY, String(Math.max(0, Math.round(window.scrollY))));
+}
+
+function restorePortfolioReturnScroll() {
+  const stored = Number(sessionStorage.getItem(PORTFOLIO_RETURN_SCROLL_KEY));
+  sessionStorage.removeItem(PORTFOLIO_RETURN_SCROLL_KEY);
+  if (!Number.isFinite(stored) || stored <= 0) return;
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: stored, left: 0, behavior: "auto" });
+    requestBackToTopUpdate();
+  });
+}
+
 function handleRoute(rawHash) {
   const view = rawHash || "overview";
+  const route = routeInfo(view);
+  const previousRoute = activeRoute;
   if (view === "masters") {
     showEmbeddedMasters("masters");
     render("portfolio");
+    activeRoute = route;
     return;
   }
   if (view === "sunny30" || view === "candidates") {
     showEmbeddedMasters("sunny30Section");
     render("portfolio");
+    activeRoute = route;
     return;
   }
   if (view === "positions") {
     showPage("portfolio");
     render("portfolio");
+    activeRoute = route;
     return;
   }
-  const route = routeInfo(view);
   showPage(view);
   render(view);
   if (route.page === "stock-detail") {
     resetStockDetailRouteScroll();
+  } else if (route.view === "portfolio" && previousRoute?.page === "stock-detail") {
+    restorePortfolioReturnScroll();
   }
+  activeRoute = route;
 }
 
 window.addEventListener("hashchange", () => {
