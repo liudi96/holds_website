@@ -8,7 +8,6 @@ const seedState = {
   fx: { CNY: 1, HKD: 0.8716, USD: 7.1 },
   trades: [],
   decisionLogs: [],
-  funds: [],
   holdings: [
     {
       symbol: "0700.HK",
@@ -308,65 +307,20 @@ const POSITION_CATEGORY_OVERRIDES = {
   "7489.HK": "tactical"
 };
 
-const POSITION_MOBILE_SORT_OPTIONS = [
-  { value: "default", label: "默认顺序" },
-  { value: "category:asc", label: "分类正序" },
-  { value: "category:desc", label: "分类反序" },
-  { value: "marketValue:desc", label: "市值高到低" },
-  { value: "marketValue:asc", label: "市值低到高" },
-  { value: "pnl:desc", label: "累计盈亏高到低" },
-  { value: "pnl:asc", label: "累计盈亏低到高" },
-  { value: "return:desc", label: "综合回报率高到低" },
-  { value: "return:asc", label: "综合回报率低到高" },
-  { value: "margin:desc", label: "安全边际高到低" },
-  { value: "margin:asc", label: "安全边际低到高" },
-  { value: "owner:desc", label: "长期评分高到低" },
-  { value: "owner:asc", label: "长期评分低到高" }
-];
-
-const SUNNY30_MOBILE_SORT_OPTIONS = [
-  { value: "name:asc", label: "股票名正序" },
-  { value: "name:desc", label: "股票名反序" },
-  { value: "type:asc", label: "类型正序" },
-  { value: "type:desc", label: "类型反序" },
-  { value: "return:desc", label: "综合回报率高到低" },
-  { value: "return:asc", label: "综合回报率低到高" },
-  { value: "quality:desc", label: "公司质量高到低" },
-  { value: "quality:asc", label: "公司质量低到高" },
-  { value: "moat:desc", label: "护城河高到低" },
-  { value: "moat:asc", label: "护城河低到高" },
-  { value: "margin:desc", label: "安全边际高到低" },
-  { value: "margin:asc", label: "安全边际低到高" },
-  { value: "dayChange:desc", label: "今日涨跌高到低" },
-  { value: "dayChange:asc", label: "今日涨跌低到高" },
-  { value: "twentyDayChange:desc", label: "20日涨跌高到低" },
-  { value: "twentyDayChange:asc", label: "20日涨跌低到高" }
-];
-
-const POSITION_MOBILE_FILTERS = [
-  { value: "all", label: "全部" },
-  { value: "core", label: "核心仓" },
-  { value: "repair", label: "修复仓" },
-  { value: "tactical", label: "机动仓" },
-  { value: "safe", label: "安全边际达标" },
-  { value: "dayLoss", label: "今日亏损" }
-];
-
-const FUND_MOBILE_SORT_OPTIONS = [
-  { value: "marketValue:desc", label: "市值高到低" },
-  { value: "pnl:desc", label: "盈亏高到低" },
-  { value: "pnl:asc", label: "盈亏低到高" },
-  { value: "share:desc", label: "资产占比高到低" },
-  { value: "name:asc", label: "名称正序" }
-];
-
 const STOCK_DETAIL_NAV_ITEMS = [
+  { id: "detailInputs", label: "判断", desktopLabel: "人工判断" },
   { id: "detailSummary", label: "摘要", desktopLabel: "研究摘要" },
   { id: "detailValuation", label: "估值", desktopLabel: "估值证据" },
   { id: "detailFinancials", label: "财务", desktopLabel: "财务质量" },
   { id: "detailIncome", label: "现金", desktopLabel: "现金回报" },
   { id: "detailRisk", label: "风险", desktopLabel: "风险反证" },
   { id: "detailRecords", label: "日志", desktopLabel: "日志档案" }
+];
+
+const STOCK_DETAIL_VALUATION_SCENARIOS = [
+  { key: "bear", label: "保守" },
+  { key: "base", label: "基准" },
+  { key: "bull", label: "乐观" }
 ];
 
 const RESEARCH_DESK_FILTERS = [
@@ -381,15 +335,12 @@ let state = loadState();
 let activeFilter = "all";
 let positionSort = { key: "", direction: "desc" };
 let sunny30Sort = { key: "quality", direction: "desc" };
-let fundMobileSort = "marketValue:desc";
-let positionMobileFilter = "all";
 let researchDeskFilter = "all";
 const expandedPositionCards = new Set();
 const expandedSunny30Cards = new Set();
-const expandedFundCards = new Set();
-const expandedStockDetailSections = new Set(["detailSummary", "detailValuation", "detailFinancials"]);
+const expandedStockDetailSections = new Set(["detailInputs", "detailSummary", "detailValuation", "detailFinancials"]);
 const expandedResearchDeskSections = new Set(["queue", "opportunity"]);
-let activeStockDetailSection = "detailSummary";
+let activeStockDetailSection = "detailInputs";
 let holdingsMasked = localStorage.getItem(HOLDINGS_PRIVACY_KEY) === "1";
 let pendingResearch = null;
 let candidateSort = "consensus";
@@ -401,10 +352,11 @@ let backendStateError = "";
 let backendAvailable = false;
 const pageTitles = {
   overview: "晴仓记",
-  portfolio: "股票",
-  funds: "基金背包",
+  screener: "选股估值",
+  holdings: "持仓",
+  logs: "日志",
   industry: "研究台",
-  trades: "交易页",
+  trades: "日志",
   "industry-detail": "行业分析",
   "stock-detail": "股票分析详情"
 };
@@ -416,32 +368,33 @@ const elements = {
   positionMobileSort: document.querySelector("#positionMobileSort"),
   positionMobileCards: document.querySelector("#positionMobileCards"),
   sunny30Summary: document.querySelector("#sunny30Summary"),
+  screeningWeightsPanel: document.querySelector("#screeningWeightsPanel"),
   sunny30MobileSort: document.querySelector("#sunny30MobileSort"),
   sunny30MobileCards: document.querySelector("#sunny30MobileCards"),
   sunny30Body: document.querySelector("#sunny30Body"),
   positionsBody: document.querySelector("#positionsBody"),
   tradeList: document.querySelector("#tradeList"),
   allocationChart: document.querySelector("#allocationChart"),
+  assetAllocationBar: document.querySelector("#assetAllocationBar"),
   assetAllocationDonut: document.querySelector("#assetAllocationDonut"),
   allocationCenterLabel: document.querySelector("#allocationCenterLabel"),
   allocationCenterValue: document.querySelector("#allocationCenterValue"),
   assetAllocationTitle: document.querySelector("#assetAllocationTitle"),
   assetAllocationSummary: document.querySelector("#assetAllocationSummary"),
   assetAllocationLegend: document.querySelector("#assetAllocationLegend"),
-  fundSummary: document.querySelector("#fundSummary"),
-  fundMobileSort: document.querySelector("#fundMobileSort"),
-  fundsBody: document.querySelector("#fundsBody"),
-  fundMobileCards: document.querySelector("#fundMobileCards"),
-  fundTradeList: document.querySelector("#fundTradeList"),
+  valuationModuleList: document.querySelector("#valuationModuleList"),
+  updateValuationHistoryButton: document.querySelector("#updateValuationHistory"),
   overviewPlanList: document.querySelector("#overviewPlanList"),
   committeeConsensus: document.querySelector("#committeeConsensus"),
+  decisionQueueCount: document.querySelector("#decisionQueueCount"),
+  overviewBuyCandidates: document.querySelector("#overviewBuyCandidates"),
+  overviewRiskReview: document.querySelector("#overviewRiskReview"),
   disciplineDashboard: document.querySelector("#disciplineDashboard"),
   dataQualityList: document.querySelector("#dataQualityList"),
   decisionLogList: document.querySelector("#decisionLogList"),
   decisionLogPanel: document.querySelector("#decisionLogPanel"),
   decisionLogToggle: document.querySelector("#decisionLogToggle"),
   decisionLogFilters: document.querySelector("#decisionLogFilters"),
-  clearDecisionLogs: document.querySelector("#clearDecisionLogs"),
   masterMatrix: document.querySelector("#masterMatrix"),
   masterMatrixFilters: document.querySelector("#masterMatrixFilters"),
   grahamSummary: document.querySelector("#grahamSummary"),
@@ -453,7 +406,7 @@ const elements = {
   industryList: document.querySelector("#industryList"),
   industryDetail: document.querySelector("#industryDetail"),
   stockDetail: document.querySelector("#stockDetail"),
-  totalFunds: document.querySelector("#totalFunds"),
+  totalAssetsMetric: document.querySelector("#totalAssetsMetric"),
   totalValue: document.querySelector("#totalValue"),
   totalPositionPnl: document.querySelector("#totalPositionPnl"),
   totalPositionPnlRate: document.querySelector("#totalPositionPnlRate"),
@@ -470,7 +423,6 @@ const elements = {
   recordCount: document.querySelector("#recordCount"),
   privacyToggle: document.querySelector("#privacyToggle"),
   updateQuotesButton: document.querySelector("#updateQuotesButton"),
-  exportChatGPTButton: document.querySelector("#exportChatGPTContext"),
   quoteUpdateStatus: document.querySelector("#quoteUpdateStatus"),
   tradeDialog: document.querySelector("#tradeDialog"),
   tradeForm: document.querySelector("#tradeForm"),
@@ -480,8 +432,6 @@ const elements = {
   tradeSharesLabel: document.querySelector("#tradeSharesLabel"),
   tradeNameInput: document.querySelector("#tradeNameInput"),
   tradeSharesInput: document.querySelector("#tradeSharesInput"),
-  fundDialog: document.querySelector("#fundDialog"),
-  fundForm: document.querySelector("#fundForm"),
   openSunny30CandidateButton: document.querySelector("#openSunny30Candidate"),
   sunny30CandidateDialog: document.querySelector("#sunny30CandidateDialog"),
   sunny30CandidateForm: document.querySelector("#sunny30CandidateForm"),
@@ -493,11 +443,7 @@ const elements = {
   researchPreview: document.querySelector("#researchPreview"),
   researchStatus: document.querySelector("#researchStatus"),
   importResearchButton: document.querySelector("#importResearch"),
-  backToTopButton: document.querySelector("#backToTopButton"),
-  mobileContextActionbar: document.querySelector("#mobileContextActionbar"),
-  mobilePortfolioControlsDialog: document.querySelector("#mobilePortfolioControlsDialog"),
-  mobileControlTitle: document.querySelector("#mobileControlTitle"),
-  mobileControlOptions: document.querySelector("#mobileControlOptions")
+  backToTopButton: document.querySelector("#backToTopButton")
 };
 
 const HOLDINGS_MASK = "******";
@@ -578,18 +524,59 @@ async function requestJSON(path, options = {}) {
 }
 
 function normalizedLoadedState(rawState) {
+  const stocks = Array.isArray(rawState?.stocks) ? rawState.stocks : [];
+  const holdings = stocks.length ? stocksToHoldings(stocks) : (Array.isArray(rawState?.holdings) ? rawState.holdings : []);
+  const candidates = stocks.length ? stocksToCandidates(stocks) : (Array.isArray(rawState?.candidates) ? rawState.candidates : []);
   return {
     ...structuredClone(seedState),
     ...(rawState ?? {}),
-    holdings: Array.isArray(rawState?.holdings) ? rawState.holdings : [],
-    candidates: Array.isArray(rawState?.candidates) ? rawState.candidates : [],
+    stocks,
+    holdings,
+    candidates,
     trades: Array.isArray(rawState?.trades) ? rawState.trades : [],
     decisionLogs: Array.isArray(rawState?.decisionLogs) ? rawState.decisionLogs : [],
-    funds: Array.isArray(rawState?.funds) ? rawState.funds : [],
+    screeningWeights: rawState?.screeningWeights ?? { quality: 30, cashFlow: 25, valuation: 20, shareholderReturn: 15, growth: 10 },
     plan: Array.isArray(rawState?.plan) ? rawState.plan : [],
     industries: Array.isArray(rawState?.industries) ? rawState.industries : [],
     rules: Array.isArray(rawState?.rules) ? rawState.rules : []
   };
+}
+
+function setLoadedState(rawState) {
+  state = normalizedLoadedState(rawState);
+  return state;
+}
+
+function stocksToHoldings(stocks) {
+  return stocks
+    .filter((stock) => stock?.position)
+    .map((stock) => ({
+      ...stock,
+      shares: Number(stock.position?.shares) || 0,
+      cost: Number(stock.position?.cost) || 0
+    }));
+}
+
+function stocksToCandidates(stocks) {
+  return stocks.map((stock) => {
+    const { position, ...candidate } = stock;
+    return candidate;
+  });
+}
+
+function stockPayloadFromLegacy(stock) {
+  const payload = { ...(stock ?? {}) };
+  const shares = finiteNumber(payload.shares);
+  const cost = finiteNumber(payload.cost);
+  if (Number.isFinite(shares) || Number.isFinite(cost)) {
+    payload.position = {
+      shares: Number.isFinite(shares) ? shares : 0,
+      cost: Number.isFinite(cost) ? cost : 0
+    };
+  }
+  delete payload.shares;
+  delete payload.cost;
+  return payload;
 }
 
 function applyStaticRuntimeQuote(stock, record) {
@@ -684,7 +671,7 @@ async function loadBackendState() {
   if (!USE_BACKEND) return false;
 
   try {
-    state = await requestJSON("/api/state", { timeoutMs: 3000 });
+    setLoadedState(await requestJSON("/api/state", { timeoutMs: 3000 }));
     backendStateError = "";
     backendAvailable = true;
     localStorage.removeItem(STORAGE_KEY);
@@ -701,20 +688,6 @@ async function loadBackendState() {
       return false;
     }
   }
-}
-
-async function clearNonTradeDecisionLogs() {
-  const confirmed = window.confirm("将清理分析、行情等非交易决策日志，并保留新增交易日志。此操作会写回 portfolio.json，是否继续？");
-  if (!confirmed) return;
-
-  if (USE_BACKEND) {
-    state = await requestJSON("/api/decision-logs/clear", { method: "POST" });
-  } else {
-    state.decisionLogs = [...(state.decisionLogs ?? [])].filter((log) => String(log.type ?? "").toLowerCase() === "trade");
-    saveState();
-  }
-
-  render();
 }
 
 function fx(currencyCode) {
@@ -783,10 +756,6 @@ function normalizeSymbol(symbol) {
 
 function normalizeAssetType(assetType) {
   return String(assetType ?? "").trim().toLowerCase() === "fund" ? "fund" : "stock";
-}
-
-function normalizeFundKey(value) {
-  return String(value ?? "").trim().toUpperCase();
 }
 
 function escapeHTML(value) {
@@ -1412,7 +1381,9 @@ function strategyProfile(stock) {
   if (majorRisk) blockers.push("重大风险未解除");
   if (structuralRisk) blockers.push("估值体系改变风险");
   if (confidence === "low") blockers.push("估值低可信");
-  if (!cigarPassed && Number.isFinite(netCash.exCashPe)) blockers.push(`烟蒂PE需≤${peLimit}x且FCF达标`);
+  if (!mainPassed && !cigarPassed && bucket !== "excluded" && Number.isFinite(netCash.exCashPe)) {
+    blockers.push(`烟蒂PE需≤${peLimit}x且FCF达标`);
+  }
 
   return {
     bucket,
@@ -1435,6 +1406,64 @@ function strategyBucketLabel(bucket) {
   if (bucket === "cigar") return "辅策略";
   if (bucket === "excluded") return "风险排除";
   return "过渡观察";
+}
+
+function cleanDecisionReason(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/^已触发重大风险否决项[:：]\s*/, "")
+    .replace(/^未达标[（(]\s*/, "")
+    .replace(/[）)]$/, "")
+    .trim();
+}
+
+function statusReasonText(status) {
+  const text = displayText(status, "");
+  const match = text.match(/[（(]([^（）()]+)[）)]/);
+  return cleanDecisionReason(match?.[1] || text);
+}
+
+function riskReasonText(stock) {
+  const reason = cleanDecisionReason(stock?.risk);
+  return reason && !/^无/.test(reason) ? reason : "";
+}
+
+function noteCoreReasonText(stock) {
+  const text = displayText(stock?.notes, "");
+  const match = text.match(/核心判断[:：]([^。；]+)/);
+  return cleanDecisionReason(match?.[1] || "");
+}
+
+function stockActionReasonText(stock, strategy) {
+  const isHolding = stock?.sourceType === "holding";
+  const statusReason = statusReasonText(stock?.status);
+  const actionText = displayText(stock?.action, "");
+
+  if (strategy.bucket === "excluded") {
+    const reason = riskReasonText(stock) || statusReason || noteCoreReasonText(stock) || actionText || "风险补偿不足";
+    return `${isHolding ? "卖出理由" : "不买入理由"}：${reason}`;
+  }
+
+  if (strategy.bucket === "main") {
+    const reasons = [
+      Number.isFinite(strategy.shield.value) ? `${strategy.shield.source} ${displayDividendRatio(strategy.shield.value)}达标` : "",
+      Number.isFinite(strategy.margin) ? `安全边际 ${percent(strategy.margin * 100, false)}` : "",
+      strategy.ownerAudit.hasAudit ? `长期股东评分 ${strategy.ownerAudit.score}/100` : ""
+    ].filter(Boolean);
+    return `${isHolding ? "加仓理由" : "买入理由"}：${reasons.length ? reasons.join("；") : statusReason || actionText || "主策略条件达标"}`;
+  }
+
+  if (strategy.bucket === "cigar") {
+    const reasons = [
+      `调整后净现金 ${financialAmount(strategy.netCash.adjustedCny, "CNY")}`,
+      `ex-cash PE ${financialMultiple(strategy.netCash.exCashPe)}`,
+      `FCF ${financialMultiple(strategy.netCash.exCashPfcf)}`
+    ].filter((item) => !item.endsWith(" -"));
+    return `${isHolding ? "加仓理由" : "买入理由"}：${reasons.length ? reasons.join("；") : statusReason || actionText || "辅策略烟蒂条件达标"}`;
+  }
+
+  const waitReason = statusReason || actionText || strategy.blockers.slice(0, 2).join("；") || "关键买入条件未完全达标";
+  return `等待理由：${waitReason}`;
 }
 
 function strategyUniverseItems(positions) {
@@ -1720,39 +1749,11 @@ function computePositions() {
     });
 }
 
-function computeFunds() {
-  return (state.funds ?? [])
-    .filter((fund) => (finiteNumber(fund.shares) ?? 0) > 0)
-    .map((fund) => {
-      const shares = finiteNumber(fund.shares) ?? 0;
-      const cost = finiteNumber(fund.cost) ?? 0;
-      const currentNav = finiteNumber(fund.currentNav);
-      const hasCurrentNav = Number.isFinite(currentNav) && currentNav > 0;
-      const marketValueLocal = hasCurrentNav ? shares * currentNav : 0;
-      const costValueLocal = shares * cost;
-      const marketValueCny = marketValueLocal * fx(fund.currency);
-      const costValueCny = costValueLocal * fx(fund.currency);
-      const pnlCny = hasCurrentNav ? marketValueCny - costValueCny : null;
-      return {
-        ...fund,
-        shares,
-        cost,
-        currentNav,
-        marketValueLocal,
-        marketValueCny,
-        costValueCny,
-        pnlCny,
-        pnlRate: costValueCny && Number.isFinite(pnlCny) ? (pnlCny / costValueCny) * 100 : null
-      };
-    });
-}
-
-function assetSummary(positions = computePositions(), funds = computeFunds()) {
+function assetSummary(positions = computePositions()) {
   const stockValue = positions.reduce((sum, item) => sum + (finiteNumber(item.marketValueCny) ?? 0), 0);
-  const fundValue = funds.reduce((sum, item) => sum + (finiteNumber(item.marketValueCny) ?? 0), 0);
   const cashValue = finiteNumber(state.cash) ?? 0;
-  const totalAssets = stockValue + fundValue + cashValue;
-  return { stockValue, fundValue, cashValue, totalAssets };
+  const totalAssets = stockValue + cashValue;
+  return { stockValue, cashValue, totalAssets };
 }
 
 function sortedStockTrades() {
@@ -1860,13 +1861,7 @@ function syncCash() {
     const currentPrice = finiteNumber(holding.currentPrice) ?? 0;
     return sum + shares * currentPrice * fx(holding.currency);
   }, 0);
-  const investedFunds = (state.funds ?? []).reduce((sum, fund) => {
-    const shares = finiteNumber(fund.shares) ?? 0;
-    const currentNav = finiteNumber(fund.currentNav) ?? 0;
-    return sum + shares * currentNav * fx(fund.currency);
-  }, 0);
-
-  state.cash = state.totalCapital - investedStocks - investedFunds;
+  state.cash = state.totalCapital - investedStocks;
 }
 
 function getFilteredPositions(positions) {
@@ -2062,32 +2057,9 @@ function renderMobileDetail(label, value, detail = "", className = "") {
   `;
 }
 
-function mobilePositionMatchesFilter(item) {
-  const { stock, strategy } = item;
-  if (positionMobileFilter === "all") return true;
-  if (["core", "repair", "tactical"].includes(positionMobileFilter)) {
-    return positionCategory(stock, strategy).key === positionMobileFilter;
-  }
-  if (positionMobileFilter === "safe") {
-    return Number.isFinite(strategy?.margin) && strategy.margin >= MAIN_DCF_MARGIN_TARGET;
-  }
-  if (positionMobileFilter === "dayLoss") {
-    return Number.isFinite(stock.dayChange) && stock.dayChange < 0;
-  }
-  return true;
-}
-
-function mobilePositionFilterCount(items, filter) {
-  const previous = positionMobileFilter;
-  positionMobileFilter = filter;
-  const count = items.filter(mobilePositionMatchesFilter).length;
-  positionMobileFilter = previous;
-  return count;
-}
-
 function renderPositionMobileCards(items, totalValue) {
   if (!elements.positionMobileCards) return;
-  const mobileItems = items.filter(mobilePositionMatchesFilter);
+  const mobileItems = items;
 
   if (!mobileItems.length) {
     elements.positionMobileCards.innerHTML = `<div class="empty-state compact-empty">暂无符合筛选的持仓</div>`;
@@ -2655,22 +2627,21 @@ function consensusLabel(stock, totalValue = 0) {
   return consensusText(consensusCount(stock, totalValue));
 }
 
-function renderMetrics(positions, funds = computeFunds()) {
+function renderMetrics(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
-  const fundValue = funds.reduce((sum, item) => sum + item.marketValueCny, 0);
-  const holdingsValue = totalValue + fundValue;
+  const holdingsValue = totalValue;
   const totalCost = positions.reduce((sum, item) => {
     return sum + (finiteNumber(item.pnlCostValueCny) ?? finiteNumber(item.costValueCny) ?? 0);
   }, 0);
   const totalPositionPnl = positions.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
   const totalPositionPnlRate = totalCost ? (totalPositionPnl / totalCost) * 100 : 0;
   const cashValue = finiteNumber(state.cash) ?? 0;
-  const totalFunds = holdingsValue + cashValue;
+  const totalAssets = holdingsValue + cashValue;
   const dayChange = positions.reduce((sum, item) => sum + item.dayChange, 0);
   const dividends = dividendSummary(positions);
   const dividendYield = totalValue ? dividends.annualCashCny / totalValue : 0;
 
-  elements.totalFunds.textContent = privateText(wholeCurrency(totalFunds));
+  elements.totalAssetsMetric.textContent = privateText(wholeCurrency(totalAssets));
   elements.totalValue.textContent = privateText(wholeCurrency(holdingsValue));
   if (elements.totalPositionPnl) {
     elements.totalPositionPnl.textContent = privateText(wholeCurrency(totalPositionPnl));
@@ -2692,50 +2663,68 @@ function renderMetrics(positions, funds = computeFunds()) {
   elements.portfolioDividendYield.textContent = privateText(dividends.topContributor
     ? `组合税后股息率 ${percent(dividendYield * 100, false)} · 高风险 ${percent(dividends.annualCashCny ? (dividends.highRiskCashCny / dividends.annualCashCny) * 100 : 0, false)}`
     : "组合税后股息率 0.00%");
-  elements.positionCount.textContent = privateText(`${positions.length} 只股票 · ${funds.length} 只基金`);
-  elements.recordCount.textContent = privateText(`${state.holdings.length} 条股票 · ${(state.funds ?? []).length} 只基金 · ${state.trades.length} 条交易`);
+  elements.positionCount.textContent = privateText(`${positions.length} 只股票`);
+  elements.recordCount.textContent = privateText(`${state.stocks?.length ?? state.holdings.length + state.candidates.length} 只股票 · ${state.trades.length} 条交易`);
 }
 
-function renderAssetAllocation(positions, funds) {
-  if (!elements.assetAllocationDonut || !elements.assetAllocationLegend) return;
-  const { stockValue, fundValue, cashValue, totalAssets } = assetSummary(positions, funds);
+function renderAssetAllocation(positions) {
+  if ((!elements.assetAllocationDonut && !elements.assetAllocationBar) || !elements.assetAllocationLegend) return;
+  const { stockValue, cashValue, totalAssets } = assetSummary(positions);
   const chartCash = Math.max(cashValue, 0);
-  const chartTotal = stockValue + fundValue + chartCash;
+  const chartTotal = stockValue + chartCash;
   const circumference = 2 * Math.PI * 72;
   const segments = [
     { key: "stock", label: "股票", value: stockValue, chartValue: stockValue, color: "#087f5b" },
-    { key: "fund", label: "基金", value: fundValue, chartValue: fundValue, color: "#1c4f82" },
     { key: "cash", label: "现金", value: cashValue, chartValue: chartCash, color: "#d69b2d" }
   ];
-  let offset = 0;
-  elements.assetAllocationDonut.innerHTML = !holdingsMasked && chartTotal > 0
-    ? segments.map((segment) => {
-        const length = (segment.chartValue / chartTotal) * circumference;
-        const html = `<circle cx="95" cy="95" r="72" stroke="${segment.color}" stroke-dasharray="${length} ${circumference}" stroke-dashoffset="${-offset}"></circle>`;
-        offset += length;
-        return html;
-      }).join("")
-    : "";
+  if (elements.assetAllocationDonut) {
+    let offset = 0;
+    elements.assetAllocationDonut.innerHTML = !holdingsMasked && chartTotal > 0
+      ? segments.map((segment) => {
+          const length = (segment.chartValue / chartTotal) * circumference;
+          const html = `<circle cx="95" cy="95" r="72" stroke="${segment.color}" stroke-dasharray="${length} ${circumference}" stroke-dashoffset="${-offset}"></circle>`;
+          offset += length;
+          return html;
+        }).join("")
+      : "";
+  }
 
-  const fundShare = totalAssets > 0 ? (fundValue / totalAssets) * 100 : 0;
-  elements.allocationCenterLabel.textContent = "基金占比";
-  elements.allocationCenterValue.textContent = privateText(`${fundShare.toFixed(1)}%`);
-  elements.assetAllocationTitle.textContent = fundValue > 0 ? "股票 / 基金 / 现金配置" : "股票 / 现金配置";
-  elements.assetAllocationSummary.textContent = fundValue > 0
-    ? "按当前市值和现金余额拆分总资产，基金净值在基金页维护，交易记录统一进入交易页。"
-    : "按当前股票市值和现金余额拆分总资产；新增基金交易后，这里会同步展示基金占比。";
-  elements.assetAllocationLegend.innerHTML = segments.map((segment) => {
+  if (elements.assetAllocationBar) {
+    elements.assetAllocationBar.innerHTML = !holdingsMasked && chartTotal > 0
+      ? segments.map((segment) => {
+          const width = (segment.chartValue / chartTotal) * 100;
+          return `<span style="width: ${Math.max(0, width).toFixed(2)}%; background: ${segment.color}" title="${escapeHTML(segment.label)}"></span>`;
+        }).join("")
+      : "";
+  }
+
+  const stockShare = totalAssets > 0 ? (stockValue / totalAssets) * 100 : 0;
+  if (elements.allocationCenterLabel) elements.allocationCenterLabel.textContent = "股票占比";
+  if (elements.allocationCenterValue) elements.allocationCenterValue.textContent = privateText(`${stockShare.toFixed(1)}%`);
+  if (elements.assetAllocationTitle) elements.assetAllocationTitle.textContent = "股票 / 现金配置";
+  if (elements.assetAllocationSummary) elements.assetAllocationSummary.textContent = "按当前股票市值和现金余额拆分总资产；行业暴露和单票风险在持仓页复盘。";
+  const exposureRows = segments.map((segment) => {
     const share = totalAssets > 0 ? (segment.value / totalAssets) * 100 : 0;
     const negativeNote = segment.key === "cash" && segment.value < 0 ? " · 现金为负" : "";
     return `
-      <div class="asset-allocation-legend-item">
+      <div class="overview-exposure-row asset-allocation-legend-item">
         <span class="allocation-dot" style="background: ${segment.color}"></span>
         <span>${escapeHTML(segment.label)}</span>
         <span>${escapeHTML(privateText(`${wholeCurrency(segment.value)}${negativeNote}`))}</span>
         <strong>${escapeHTML(privateText(`${share.toFixed(1)}%`))}</strong>
       </div>
     `;
-  }).join("");
+  });
+  const topIndustryText = topGroups(positions, (item) => firstIndustry(item.industry) || "未分类", (item) => item.marketValueCny)
+    .map((item) => item.name)
+    .join(" / ") || "-";
+  exposureRows.push(`
+    <div class="overview-exposure-row industry-row">
+      <span>前三行业</span>
+      <strong>${escapeHTML(topIndustryText)}</strong>
+    </div>
+  `);
+  elements.assetAllocationLegend.innerHTML = exposureRows.join("");
 }
 
 function decisionToneClass(tone) {
@@ -2963,9 +2952,159 @@ function sunny30ReturnCell(stock) {
   return `<span class="health-pill ${tone}">${displayDividendRatio(value)} / ${displayDividendRatio(target)}</span>`;
 }
 
+function sunny30CanDelete(stock) {
+  const positionShares = finiteNumber(stock?.position?.shares);
+  const legacyShares = finiteNumber(stock?.shares);
+  return stock?.sourceType !== "holding" && !(Number.isFinite(positionShares) && positionShares > 0) && !(Number.isFinite(legacyShares) && legacyShares > 0);
+}
+
+function sunny30DeleteControl(stock, mobile = false) {
+  if (!sunny30CanDelete(stock)) {
+    return `<span class="health-pill core ${mobile ? "mobile-card-link" : ""}">持仓中</span>`;
+  }
+  const mobileClass = mobile ? "ghost-button compact-link danger mobile-card-link " : "";
+  const label = mobile ? "删除标的" : "删除";
+  return `<button class="${mobileClass}sunny30-delete-button" type="button" data-delete-sunny30="${escapeHTML(stock.symbol)}">${label}</button>`;
+}
+
+const SCREENING_WEIGHT_FIELDS = [
+  { key: "quality", label: "质量" },
+  { key: "cashFlow", label: "现金流" },
+  { key: "valuation", label: "估值" },
+  { key: "shareholderReturn", label: "股东回报" },
+  { key: "growth", label: "成长" }
+];
+
+function screeningWeights() {
+  const defaults = { quality: 30, cashFlow: 25, valuation: 20, shareholderReturn: 15, growth: 10 };
+  return SCREENING_WEIGHT_FIELDS.reduce((weights, field) => {
+    const value = finiteNumber(state.screeningWeights?.[field.key]);
+    weights[field.key] = Number.isFinite(value) ? value : defaults[field.key];
+    return weights;
+  }, {});
+}
+
+function screeningHardRejects(stock) {
+  const rejects = [];
+  const latest = latestAnnualFinancial(stock);
+  const debtRatio = finiteNumber(latest.debtRatio);
+  const freeCashFlow = finiteNumber(latest.freeCashFlow);
+  const fcfRecord = positiveRecordRatio(stock, "freeCashFlow");
+  const confidence = valuationConfidence(stock);
+  if (hasMajorRisk(stock)) rejects.push("重大风险待排除");
+  if (confidence === "low") rejects.push("财报/估值可信度低");
+  if (Number.isFinite(fcfRecord) && fcfRecord < 0.5 && (!Number.isFinite(freeCashFlow) || freeCashFlow <= 0)) {
+    rejects.push("长期 FCF 未验证");
+  }
+  if (!isFinancialBusiness(stock) && Number.isFinite(debtRatio) && debtRatio > 0.75) rejects.push("杠杆过高");
+  return rejects;
+}
+
+function screeningSubscores(stock) {
+  const latest = latestAnnualFinancial(stock);
+  const valuation = financialValuation(stock);
+  const margin = marginValue(stock);
+  const revenueGrowth = finiteNumber(latest.revenueYoY);
+  const profitGrowth = finiteNumber(latest.netProfitYoY);
+  const revenueCagr = compoundGrowth(stock, "revenue");
+  const profitCagr = compoundGrowth(stock, "netProfit");
+  const fcfRecord = positiveRecordRatio(stock, "freeCashFlow");
+  const cashConversion = finiteNumber(latest.operatingCashFlowToRevenue);
+  const pePercentile = finiteNumber(valuation.pePercentile);
+  const pbPercentile = finiteNumber(valuation.pbPercentile);
+  const dividendYield = calculatedDividendYield(stock);
+
+  const valuationBase = (
+    scoreBand(margin, 0, 0.25, 0.35) * 0.55 +
+    inverseScoreBand(pePercentile, 0.25, 0.8, 0.55) * 0.25 +
+    inverseScoreBand(pbPercentile, 0.25, 0.8, 0.55) * 0.2
+  );
+  return {
+    quality: Math.round(qualityComposite(stock) * 100),
+    cashFlow: Math.round((
+      (Number.isFinite(fcfRecord) ? fcfRecord : 0.45) * 0.55 +
+      scoreBand(cashConversion, 0.05, 0.25, 0.45) * 0.25 +
+      balanceSheetScore(stock, 0.55) * 0.2
+    ) * 100),
+    valuation: Math.round(valuationBase * 100),
+    shareholderReturn: Math.round((
+      dividendScore(stock) * 0.65 +
+      scoreBand(dividendYield, 0.02, 0.07, 0.35) * 0.35
+    ) * 100),
+    growth: Math.round((
+      scoreBand(revenueGrowth, -0.03, 0.12, 0.45) * 0.3 +
+      scoreBand(profitGrowth, -0.05, 0.15, 0.45) * 0.25 +
+      scoreBand(revenueCagr, 0, 0.1, 0.45) * 0.2 +
+      scoreBand(profitCagr, 0, 0.12, 0.45) * 0.25
+    ) * 100)
+  };
+}
+
+function screeningProfile(stock) {
+  const weights = screeningWeights();
+  const subscores = screeningSubscores(stock);
+  const rejects = screeningHardRejects(stock);
+  const totalWeight = SCREENING_WEIGHT_FIELDS.reduce((sum, field) => sum + weights[field.key], 0) || 100;
+  const score = Math.round(SCREENING_WEIGHT_FIELDS.reduce((sum, field) => {
+    return sum + (subscores[field.key] ?? 0) * weights[field.key] / totalWeight;
+  }, 0));
+  const weightedScore = rejects.length ? Math.min(score, 59) : score;
+  return {
+    pass: rejects.length === 0,
+    rejects,
+    subscores,
+    score: weightedScore
+  };
+}
+
+function renderScreeningWeightsPanel(stocks) {
+  if (!elements.screeningWeightsPanel) return;
+  const weights = screeningWeights();
+  const total = SCREENING_WEIGHT_FIELDS.reduce((sum, field) => sum + weights[field.key], 0);
+  const profiles = stocks.map((stock) => screeningProfile(stock));
+  const rejectedCount = profiles.filter((profile) => !profile.pass).length;
+  elements.screeningWeightsPanel.innerHTML = `
+    <form class="screening-weights-form" data-screening-weights-form>
+      <div class="screening-rule-copy">
+        <strong>先硬否决，再排序</strong>
+        <span>默认口径：质量 30、现金流 25、估值 20、股东回报 15、成长 10。总和必须为 100。</span>
+      </div>
+      <div class="screening-weight-grid">
+        ${SCREENING_WEIGHT_FIELDS.map((field) => `
+          <label>
+            <span>${escapeHTML(field.label)}</span>
+            <input name="${escapeHTML(field.key)}" type="number" min="0" max="100" step="1" value="${escapeHTML(String(weights[field.key]))}" />
+          </label>
+        `).join("")}
+      </div>
+      <div class="screening-weight-actions">
+        <span class="${total === 100 ? "positive" : "negative"}">合计 ${escapeHTML(String(total))}</span>
+        <span>硬否决 ${escapeHTML(String(rejectedCount))} 只</span>
+        <button class="ghost-button compact-link" type="submit">保存权重</button>
+      </div>
+    </form>
+  `;
+}
+
+function screeningScoreCell(profile) {
+  const tone = profile.pass && profile.score >= 80 ? "core" : profile.pass && profile.score >= 65 ? "watch" : "risk";
+  return `<span class="health-pill ${tone}">${escapeHTML(String(profile.score))}/100</span>`;
+}
+
+function screeningSubscoresCell(profile) {
+  return `
+    <div class="screening-subscore-list">
+      ${SCREENING_WEIGHT_FIELDS.map((field) => `
+        <span><em>${escapeHTML(field.label)}</em><strong>${escapeHTML(String(profile.subscores[field.key] ?? "-"))}</strong></span>
+      `).join("")}
+    </div>
+  `;
+}
+
 function sunny30SortValue(stock, key) {
   if (key === "name") return String(stock?.name ?? "");
   if (key === "type") return sunny30Type(stock).order;
+  if (key === "screening") return screeningProfile(stock).score;
   if (key === "return") return sunny30ReturnValue(stock);
   if (key === "quality") return sunny30QualityValue(stock);
   if (key === "moat") return finiteNumber(stock?.moat);
@@ -3045,44 +3184,41 @@ function renderSunny30MobileCards(stocks) {
   elements.sunny30MobileCards.innerHTML = stocks.map((stock) => {
     const symbol = normalizeSymbol(stock.symbol);
     const expanded = expandedSunny30Cards.has(symbol);
-    const type = sunny30Type(stock);
     const quality = sunny30Quality(stock);
-    const moat = sunny30Moat(stock);
     const margin = sunny30Margin(stock);
+    const screening = screeningProfile(stock);
     const dayChange = sunny30DayChange(stock);
     const twentyDayChange = sunny30TwentyDayChange(stock);
-    const strategy = stock?.strategy ?? strategyProfile(stock);
-    const returnValue = `${displayDividendRatio(strategy?.shield?.value)} / ${displayDividendRatio(strategy?.shield?.target)}`;
     const sourceClass = marketKind(stock) === "HK" ? "hk" : "";
+    const rejectedNameClass = screening.pass ? "" : " screening-reject-name";
     return `
       <article class="mobile-position-card mobile-sunny30-card ${expanded ? "is-expanded" : ""}">
         <div class="mobile-card-toggle" aria-expanded="${expanded ? "true" : "false"}">
           <button class="ticker mobile-card-code-action ${sourceClass}" type="button" data-toggle-sunny30-card="${escapeHTML(symbol)}" aria-label="${expanded ? "收起" : "展开"}${escapeHTML(stock.name)}卡片">
             ${escapeHTML(stock.symbol.slice(0, 4))}
           </button>
-          <a class="mobile-card-title mobile-card-title-link" href="${stockHash(stock.symbol)}" aria-label="查看${escapeHTML(stock.name)}详情">
+          <a class="mobile-card-title mobile-card-title-link${rejectedNameClass}" href="${stockHash(stock.symbol)}" aria-label="查看${escapeHTML(stock.name)}详情">
             <strong>${escapeHTML(stock.name)}</strong>
             <small>${escapeHTML(stock.symbol)} · ${escapeHTML(stock.currentPriceDate || "行情日期未知")}</small>
           </a>
           <button class="mobile-card-pills mobile-card-inline-toggle" type="button" data-toggle-sunny30-card="${escapeHTML(symbol)}" aria-label="${expanded ? "收起" : "展开"}${escapeHTML(stock.name)}卡片">
-            ${positionCategoryPill(type)}
-            ${sunny30Pill(quality.text, quality.tone)}
+            ${screeningScoreCell(screening)}
           </button>
           <button class="mobile-card-chevron mobile-card-inline-toggle" type="button" data-toggle-sunny30-card="${escapeHTML(symbol)}">${expanded ? "收起" : "展开"}</button>
         </div>
         <div class="mobile-card-core">
-          ${renderMobileStat("安全边际", margin.text, `sunny30-pill ${margin.tone}`)}
+          ${renderMobileStat("选股评分", `${screening.score}/100`, `sunny30-pill ${screening.pass ? "strong" : "risk"}`)}
           ${renderMobileStat("今日涨跌", privateText(dayChange.text), privateClass(dayChange.className))}
           ${renderMobileStat("公司质量", quality.text, `sunny30-pill ${quality.tone}`)}
         </div>
         <div class="mobile-card-expanded">
           <div class="mobile-card-detail-grid">
-            ${renderMobileDetail("综合回报率", privateText(returnValue))}
-            ${renderMobileDetail("护城河", moat.text, "", `sunny30-pill ${moat.tone}`)}
+            ${renderMobileDetail("硬否决", screening.pass ? "通过" : screening.rejects.join(" / "))}
+            ${renderMobileDetail("子分", SCREENING_WEIGHT_FIELDS.map((field) => `${field.label}${screening.subscores[field.key] ?? "-"}`).join(" · "))}
             ${renderMobileDetail("20日涨跌", privateText(twentyDayChange.text), "", privateClass(twentyDayChange.className))}
             ${renderMobileDetail("当前价格", Number.isFinite(stock.currentPrice) ? currency(stock.currentPrice, stock.currency) : "-", stock.currentPriceDate || "")}
           </div>
-          <button class="ghost-button compact-link danger mobile-card-link sunny30-delete-button" type="button" data-delete-sunny30="${escapeHTML(stock.symbol)}">删除标的</button>
+          ${sunny30DeleteControl(stock, true)}
         </div>
       </article>
     `;
@@ -3093,15 +3229,22 @@ function renderSunny30(positions) {
   if (!elements.sunny30Body) return;
   const stocks = sunny30Universe(positions);
   updateSunny30SortControls();
-  const buyableCount = stocks.filter((stock) => {
+  const profiles = stocks.map((stock) => screeningProfile(stock));
+  const passedCount = profiles.filter((profile) => profile.pass).length;
+  const buyableCount = stocks.filter((stock, index) => {
     const margin = marginValue(stock);
-    return Number.isFinite(margin) && margin >= MAIN_DCF_MARGIN_TARGET;
+    return profiles[index].pass && Number.isFinite(margin) && margin >= MAIN_DCF_MARGIN_TARGET;
   }).length;
+  const averageScore = profiles.length
+    ? Math.round(profiles.reduce((sum, profile) => sum + profile.score, 0) / profiles.length)
+    : 0;
 
   if (elements.sunny30Summary) {
     elements.sunny30Summary.innerHTML = [
-      ["跟踪标的", `${stocks.length}/30`],
-      ["安全边际达标", `${buyableCount} 只`]
+      ["股票池", `${stocks.length}/50`],
+      ["通过硬否决", `${passedCount} 只`],
+      ["安全边际达标", `${buyableCount} 只`],
+      ["平均选股分", `${averageScore}`]
     ].map(([label, value]) => `
       <div class="sunny30-summary-cell">
         <span>${escapeHTML(label)}</span>
@@ -3109,9 +3252,10 @@ function renderSunny30(positions) {
       </div>
     `).join("");
   }
+  renderScreeningWeightsPanel(stocks);
 
   if (!stocks.length) {
-    elements.sunny30Body.innerHTML = `<tr><td colspan="9" class="empty-state">暂无晴仓30标的</td></tr>`;
+    elements.sunny30Body.innerHTML = `<tr><td colspan="7" class="empty-state">暂无股票池标的</td></tr>`;
     renderSunny30MobileCards(stocks);
     return;
   }
@@ -3119,29 +3263,27 @@ function renderSunny30(positions) {
   renderSunny30MobileCards(stocks);
 
   elements.sunny30Body.innerHTML = stocks.map((stock) => {
-    const type = sunny30Type(stock);
-    const quality = sunny30Quality(stock);
-    const moat = sunny30Moat(stock);
+    const screening = screeningProfile(stock);
     const margin = sunny30Margin(stock);
     const dayChange = sunny30DayChange(stock);
     const twentyDayChange = sunny30TwentyDayChange(stock);
     const sourceClass = marketKind(stock) === "HK" ? "hk" : "";
-    const actionCell = `<button class="sunny30-delete-button" type="button" data-delete-sunny30="${escapeHTML(stock.symbol)}">删除</button>`;
+    const rejectedNameClass = screening.pass ? "" : " screening-reject-name";
+    const rejectedTitle = screening.pass ? "" : ` title="硬否决：${escapeHTML(screening.rejects.join(" / ") || "否决")}"`;
+    const actionCell = sunny30DeleteControl(stock);
     return `
       <tr>
         <td>
           <div class="stock-cell">
             <span class="ticker ${sourceClass}">${escapeHTML(stock.symbol.slice(0, 4))}</span>
-            <a class="stock-name stock-link" href="${stockHash(stock.symbol)}">
+            <a class="stock-name stock-link${rejectedNameClass}" href="${stockHash(stock.symbol)}"${rejectedTitle}>
               <strong>${escapeHTML(stock.name)}</strong>
               <span>${escapeHTML(stock.symbol)}</span>
             </a>
           </div>
         </td>
-        <td data-label="类型">${positionCategoryPill(type)}</td>
-        <td data-label="综合回报率">${sunny30ReturnCell(stock)}</td>
-        <td data-label="公司质量">${sunny30Pill(quality.text, quality.tone)}</td>
-        <td data-label="护城河">${sunny30Pill(moat.text, moat.tone)}</td>
+        <td data-label="选股评分">${screeningScoreCell(screening)}</td>
+        <td data-label="五项子分">${screeningSubscoresCell(screening)}</td>
         <td data-label="安全边际">${sunny30Pill(margin.text, margin.tone)}</td>
         <td data-label="今日涨跌"><span class="${dayChange.className}">${escapeHTML(dayChange.text)}</span></td>
         <td data-label="20日涨跌"><span class="${twentyDayChange.className}">${escapeHTML(twentyDayChange.text)}</span></td>
@@ -3241,7 +3383,9 @@ function renderAllocation(positions) {
 }
 
 function renderTrades() {
-  const recentTrades = [...state.trades].reverse();
+  const recentTrades = [...state.trades]
+    .filter((trade) => normalizeAssetType(trade.assetType) !== "fund")
+    .reverse();
 
   if (!recentTrades.length) {
     elements.tradeList.innerHTML = `<div class="empty-state">暂无交易记录</div>`;
@@ -3250,197 +3394,122 @@ function renderTrades() {
 
   elements.tradeList.innerHTML = recentTrades
     .map((trade) => {
-      const assetType = String(trade.assetType ?? "stock").toLowerCase();
       const sideClass = trade.side === "buy" ? "positive" : "negative";
       const sideText = trade.side === "buy" ? "买入" : "卖出";
-      const unit = assetType === "fund" ? "份额" : "股";
-      const priceLabel = assetType === "fund" ? "成交净值" : "最新价";
       return `
         <div class="trade-item">
-          <strong>${escapeHTML(assetType === "fund" ? trade.name : trade.symbol)} · ${sideText}</strong>
+          <strong>${escapeHTML(trade.symbol)} · ${sideText}</strong>
           <span class="${privateClass(sideClass)}">${escapeHTML(privateText(currency(trade.price, trade.currency)))}</span>
           <small>${trade.date} · ${escapeHTML(trade.name)}</small>
-          <small>${escapeHTML(privateText(`${trade.shares} ${unit}`))} · ${priceLabel} ${escapeHTML(privateText(currency(trade.currentPrice, trade.currency)))}</small>
+          <small>${escapeHTML(privateText(`${trade.shares} 股`))} · 最新价 ${escapeHTML(privateText(currency(trade.currentPrice, trade.currency)))}</small>
         </div>
       `;
     })
     .join("");
 }
 
-function fundCategoryTone(category) {
-  const text = String(category ?? "").trim();
-  if (/债|固收/.test(text)) return "bond";
-  if (/货币|现金/.test(text)) return "cash";
-  if (/权益|股票|混合|红利/.test(text)) return "equity";
-  return "neutral";
+function parseValuationRangeText(text) {
+  const numbers = String(text ?? "").match(/\d+(?:\.\d+)?/g)?.map(Number).filter(Number.isFinite) ?? [];
+  if (!numbers.length) return null;
+  if (numbers.length === 1) return { low: numbers[0], base: numbers[0], high: numbers[0] };
+  const low = Math.min(numbers[0], numbers[1]);
+  const high = Math.max(numbers[0], numbers[1]);
+  return { low, base: (low + high) / 2, high };
 }
 
-function fundMobileSortState() {
-  const [key, direction] = String(fundMobileSort || "marketValue:desc").split(":");
-  return {
-    key: key || "marketValue",
-    direction: direction === "asc" ? "asc" : "desc"
-  };
+function valuationRangeView(stock) {
+  const explicitRange = stock?.valuation?.range;
+  const currencyCode = String(explicitRange?.currency || stock?.valuation?.currency || stock?.currency || "CNY").toUpperCase();
+  if (explicitRange && Number.isFinite(finiteNumber(explicitRange.low)) && Number.isFinite(finiteNumber(explicitRange.high))) {
+    const base = finiteNumber(explicitRange.base) ?? ((explicitRange.low + explicitRange.high) / 2);
+    const margin = finiteNumber(explicitRange.marginOfSafety) ?? (base > 0 && stock.currentPrice > 0 ? (base - stock.currentPrice) / base : null);
+    return { low: explicitRange.low, base, high: explicitRange.high, margin, currency: currencyCode, source: "三情景假设" };
+  }
+  const parsed = parseValuationRangeText(stock?.fairValueRange);
+  if (parsed) {
+    const margin = parsed.base > 0 && stock.currentPrice > 0 ? (parsed.base - stock.currentPrice) / parsed.base : marginValue(stock);
+    return { ...parsed, margin, currency: currencyCode, source: "公允区间文本" };
+  }
+  const intrinsicValue = finiteNumber(stock?.intrinsicValue);
+  if (Number.isFinite(intrinsicValue) && intrinsicValue > 0) {
+    const low = intrinsicValue * 0.85;
+    const high = intrinsicValue * 1.15;
+    return { low, base: intrinsicValue, high, margin: marginValue(stock), currency: currencyCode, source: "内在价值推导" };
+  }
+  return { low: null, base: null, high: null, margin: null, currency: currencyCode, source: "待补充" };
 }
 
-function fundMobileSortValue(fund, key, totalAssets) {
-  if (key === "name") return String(fund?.name ?? "");
-  if (key === "pnl") return finiteNumber(fund.pnlCny);
-  if (key === "share") return totalAssets ? (finiteNumber(fund.marketValueCny) ?? 0) / totalAssets : 0;
-  return finiteNumber(fund.marketValueCny);
+function fallbackValuationScenarios(stock) {
+  if (Array.isArray(stock?.valuation?.scenarios) && stock.valuation.scenarios.length) return stock.valuation.scenarios;
+  const latest = latestAnnualFinancial(stock);
+  const valuation = financialValuation(stock);
+  const revenueGrowth = finiteNumber(latest.revenueYoY) ?? compoundGrowth(stock, "revenue") ?? 0;
+  const profitMargin = finiteNumber(latest.netMargin) ?? finiteNumber(latest.profitMargin) ?? 0;
+  const fcf = finiteNumber(latest.freeCashFlow);
+  const pe = finiteNumber(valuation.pe);
+  return [
+    { name: "保守", revenueGrowth: revenueGrowth * 0.5, profitMargin: profitMargin * 0.9, fcf: Number.isFinite(fcf) ? fcf * 0.85 : null, discountRate: 0.105, reasonablePe: Number.isFinite(pe) ? pe * 0.85 : null },
+    { name: "基准", revenueGrowth, profitMargin, fcf, discountRate: 0.095, reasonablePe: Number.isFinite(pe) ? pe : null },
+    { name: "乐观", revenueGrowth: revenueGrowth * 1.2, profitMargin: profitMargin * 1.05, fcf: Number.isFinite(fcf) ? fcf * 1.15 : null, discountRate: 0.085, reasonablePe: Number.isFinite(pe) ? pe * 1.1 : null }
+  ];
 }
 
-function sortedFundsForMobile(funds, totalAssets) {
-  const sort = fundMobileSortState();
-  return [...funds].sort((a, b) => {
-    const valueA = fundMobileSortValue(a, sort.key, totalAssets);
-    const valueB = fundMobileSortValue(b, sort.key, totalAssets);
-    const result = sort.key === "name"
-      ? compareNullableStrings(valueA, valueB, sort.direction)
-      : compareNullableNumbers(valueA, valueB, sort.direction);
-    return result || String(a.name ?? "").localeCompare(String(b.name ?? ""), "zh-CN");
-  });
+function valuationScenarioCell(stock) {
+  const currencyCode = stock?.valuation?.currency || latestAnnualFinancial(stock).currency || stock?.currency || "CNY";
+  return `
+    <div class="valuation-scenario-grid">
+      ${fallbackValuationScenarios(stock).map((scenario) => `
+        <div>
+          <strong>${escapeHTML(scenario.name || "情景")}</strong>
+          <span>收入 ${financialRatio(scenario.revenueGrowth)}</span>
+          <span>利润率 ${financialRatio(scenario.profitMargin)}</span>
+          <span>FCF ${Number.isFinite(finiteNumber(scenario.fcf)) ? financialAmount(scenario.fcf, currencyCode) : "-"}</span>
+          <span>折现 ${financialRatio(scenario.discountRate)}</span>
+          <span>PE ${financialMultiple(scenario.reasonablePe)} / FCF ${financialMultiple(scenario.reasonablePfcf)}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 
-function renderFundMobileCards(funds, totalAssets) {
-  if (!elements.fundMobileCards) return;
-  const sortedFunds = sortedFundsForMobile(funds, totalAssets);
+function renderValuationModule(positions) {
+  if (!elements.valuationModuleList) return;
+  const stocks = auditUniverse(positions)
+    .map((stock) => ({ ...stock, screening: screeningProfile(stock), valuationRange: valuationRangeView(stock) }))
+    .sort((a, b) => compareNullableNumbers(a.valuationRange.margin, b.valuationRange.margin, "desc") || compareNullableStrings(a.name, b.name, "asc"));
 
-  if (!sortedFunds.length) {
-    elements.fundMobileCards.innerHTML = `
-      <div class="empty-state compact-empty">
-        <strong>基金背包还是空的</strong>
-        <span>新增基金买入后会在这里生成持仓卡片。</span>
-      </div>
-    `;
+  if (!stocks.length) {
+    elements.valuationModuleList.innerHTML = `<div class="empty-state">暂无股票池标的</div>`;
     return;
   }
 
-  elements.fundMobileCards.innerHTML = sortedFunds.map((fund, index) => {
-    const key = normalizeFundKey(fund.symbol);
-    const expanded = expandedFundCards.has(key);
-    const category = displayText(fund.category, "未分类");
-    const pnlClass = privateClass(fund.pnlCny >= 0 ? "positive" : "negative");
-    const assetShare = totalAssets > 0 ? (fund.marketValueCny / totalAssets) * 100 : 0;
+  elements.valuationModuleList.innerHTML = stocks.map((stock) => {
+    const range = stock.valuationRange;
+    const marginTone = decisionMarginTone(range.margin);
+    const priceText = Number.isFinite(finiteNumber(stock.currentPrice)) ? currency(stock.currentPrice, stock.currency) : "-";
+    const rangeText = Number.isFinite(finiteNumber(range.low)) && Number.isFinite(finiteNumber(range.high))
+      ? `${currency(range.low, range.currency)} - ${currency(range.high, range.currency)}`
+      : "估值区间待补充";
     return `
-      <article class="mobile-position-card mobile-fund-card ${expanded ? "is-expanded" : ""}">
-        <button class="mobile-card-toggle" type="button" data-toggle-fund-card="${escapeHTML(key)}" aria-expanded="${expanded ? "true" : "false"}">
-          <span class="fund-code">F${String(index + 1).padStart(3, "0")}</span>
-          <span class="mobile-card-title">
-            <strong>${escapeHTML(fund.name)}</strong>
-            <small>${escapeHTML(fund.symbol)}</small>
-          </span>
-          <span class="mobile-card-pills">
-            <span class="fund-pill ${fundCategoryTone(category)}">${escapeHTML(category)}</span>
-          </span>
-          <span class="mobile-card-chevron">${expanded ? "收起" : "展开"}</span>
-        </button>
-        <div class="mobile-card-core">
-          ${renderMobileStat("总盈亏", privateText(wholeCurrency(fund.pnlCny)), pnlClass, privateText(percent(fund.pnlRate)))}
-          ${renderMobileStat("资产占比", privateText(`${assetShare.toFixed(1)}%`))}
-          ${renderMobileStat("市值", privateText(wholeCurrency(fund.marketValueCny)))}
+      <article class="valuation-card">
+        <div class="valuation-card-head">
+          <a class="stock-name stock-link" href="${stockHash(stock.symbol)}">
+            <strong>${escapeHTML(stock.name)}</strong>
+            <span>${escapeHTML(stock.symbol)} · ${escapeHTML(displayText(firstIndustry(stock.industry), "未分类"))}</span>
+          </a>
+          <span class="health-pill ${marginTone}">${Number.isFinite(range.margin) ? percent(range.margin * 100, false) : "安全边际待补"}</span>
         </div>
-        <div class="mobile-card-expanded">
-          <div class="mobile-card-detail-grid">
-            ${renderMobileDetail("净值", currency(fund.currentNav, fund.currency), fund.currentNavDate || "")}
-            ${renderMobileDetail("份额", privateText(fund.shares.toLocaleString("zh-CN", { maximumFractionDigits: 2 })), `成本 ${privateText(currency(fund.cost, fund.currency))}`)}
-            ${renderMobileDetail("更新时间", displayText(fund.currentNavDate, "-"), displayText(fund.updatedAt, "手动维护"))}
-          </div>
-          <button class="ghost-button compact-link mobile-card-link edit-fund" type="button" data-edit-fund="${escapeHTML(fund.symbol)}">更新净值</button>
+        <div class="valuation-range-grid">
+          <div><span>现价</span><strong>${escapeHTML(privateText(priceText))}</strong></div>
+          <div><span>估值区间</span><strong>${escapeHTML(privateText(rangeText))}</strong><small>${escapeHTML(range.source)}</small></div>
+          <div><span>基准值</span><strong>${Number.isFinite(finiteNumber(range.base)) ? escapeHTML(privateText(currency(range.base, range.currency))) : "-"}</strong></div>
+          <div><span>选股分</span><strong>${escapeHTML(String(stock.screening.score))}/100</strong><small>${escapeHTML(stock.screening.pass ? "通过硬否决" : stock.screening.rejects.join(" / "))}</small></div>
+        </div>
+        ${valuationScenarioCell(stock)}
+        <div class="valuation-card-actions">
+          <button class="ghost-button compact-link" type="button" data-create-hold-log="${escapeHTML(stock.symbol)}">记录继续持有</button>
         </div>
       </article>
-    `;
-  }).join("");
-}
-
-function renderFunds(funds, positions = computePositions()) {
-  if (!elements.fundSummary || !elements.fundsBody) return;
-  const { totalAssets } = assetSummary(positions, funds);
-  const fundValue = funds.reduce((sum, item) => sum + item.marketValueCny, 0);
-  const fundCost = funds.reduce((sum, item) => sum + item.costValueCny, 0);
-  const fundPnl = funds.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
-  const fundPnlRate = fundCost ? (fundPnl / fundCost) * 100 : 0;
-  elements.fundSummary.innerHTML = [
-    ["基金总市值", privateText(wholeCurrency(fundValue))],
-    ["基金总盈亏", privateText(wholeCurrency(fundPnl)), privateClass(fundPnl >= 0 ? "positive" : "negative")],
-    ["持有基金数", privateText(`${funds.length} 只`)],
-    ["平均收益率", privateText(percent(fundPnlRate)), privateClass(fundPnl >= 0 ? "positive" : "negative")]
-  ].map(([label, value, className]) => `
-    <div class="fund-summary-cell">
-      <span>${label}</span>
-      <strong class="${className || ""}">${escapeHTML(value)}</strong>
-    </div>
-  `).join("");
-  if (elements.fundMobileSort) {
-    elements.fundMobileSort.value = fundMobileSort;
-  }
-  renderFundMobileCards(funds, totalAssets);
-
-  if (!funds.length) {
-    elements.fundsBody.innerHTML = `
-      <tr class="fund-empty-row">
-        <td colspan="8" class="empty-state fund-empty-state">
-          <strong>基金背包还是空的</strong>
-          <span>新增一笔基金买入后，这里会自动生成基金持仓，并同步净值、盈亏和资产占比。</span>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  elements.fundsBody.innerHTML = funds
-    .slice()
-    .sort((a, b) => b.marketValueCny - a.marketValueCny)
-    .map((fund, index) => {
-      const pnlClass = fund.pnlCny >= 0 ? "positive" : "negative";
-      const assetShare = totalAssets > 0 ? (fund.marketValueCny / totalAssets) * 100 : 0;
-      const category = displayText(fund.category, "未分类");
-      return `
-        <tr>
-          <td>
-            <div class="fund-name-cell">
-              <span class="fund-code">F${String(index + 1).padStart(3, "0")}</span>
-              <div>
-                <strong>${escapeHTML(fund.name)}</strong>
-                <span>${escapeHTML(fund.symbol)}</span>
-              </div>
-            </div>
-          </td>
-          <td><span class="fund-pill ${fundCategoryTone(category)}">${escapeHTML(category)}</span></td>
-          <td data-label="市值/净值"><strong>${escapeHTML(privateText(wholeCurrency(fund.marketValueCny)))}</strong><br /><small>净值 ${currency(fund.currentNav, fund.currency)}</small></td>
-          <td data-label="份额/成本"><strong>${escapeHTML(privateText(fund.shares.toLocaleString("zh-CN", { maximumFractionDigits: 2 })))}</strong><br /><small>成本 ${escapeHTML(privateText(currency(fund.cost, fund.currency)))}</small></td>
-          <td data-label="盈亏" class="${privateClass(pnlClass)}"><strong>${escapeHTML(privateText(wholeCurrency(fund.pnlCny)))}</strong><br /><small>${escapeHTML(privateText(percent(fund.pnlRate)))}</small></td>
-          <td data-label="资产占比"><strong>${escapeHTML(privateText(`${assetShare.toFixed(1)}%`))}</strong><br /><small>总资产</small></td>
-          <td data-label="更新时间"><strong>${escapeHTML(displayText(fund.currentNavDate, "-"))}</strong><br /><small>${escapeHTML(displayText(fund.updatedAt, "手动维护"))}</small></td>
-          <td data-label="操作">
-            <button class="icon-button edit-fund" type="button" data-edit-fund="${escapeHTML(fund.symbol)}" title="更新净值">✎</button>
-          </td>
-        </tr>
-      `;
-    })
-    .join("");
-}
-
-function renderFundTrades() {
-  if (!elements.fundTradeList) return;
-  const trades = [...(state.trades ?? [])]
-    .filter((trade) => String(trade.assetType ?? "stock").toLowerCase() === "fund")
-    .reverse();
-  if (!trades.length) {
-    elements.fundTradeList.innerHTML = `<div class="empty-state">暂无基金交易记录</div>`;
-    return;
-  }
-  elements.fundTradeList.innerHTML = trades.map((trade) => {
-    const sideClass = trade.side === "buy" ? "positive" : "negative";
-    const sideText = trade.side === "buy" ? "买入" : "卖出";
-    const amount = trade.shares * trade.price * fx(trade.currency);
-    return `
-      <div class="trade-item">
-        <strong>${escapeHTML(trade.name)} · ${sideText}</strong>
-        <span class="${privateClass(sideClass)}">${escapeHTML(privateText(wholeCurrency(amount)))}</span>
-        <small>${escapeHTML(trade.date)} · 成交净值 ${escapeHTML(privateText(currency(trade.price, trade.currency)))}</small>
-        <small>${escapeHTML(privateText(`${Number(trade.shares).toLocaleString("zh-CN", { maximumFractionDigits: 2 })} 份额`))}</small>
-      </div>
     `;
   }).join("");
 }
@@ -3674,13 +3743,19 @@ function buildOpportunitySignals(positions) {
       a.stock.name.localeCompare(b.stock.name, "zh-CN"));
 }
 
+function isOverviewActionSignal(signal) {
+  if (signal.stock.sourceType === "holding") return true;
+  return signal.strategy.bucket === "main" || signal.strategy.bucket === "cigar";
+}
+
 function buildActionConclusion(positions) {
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   const totalAssets = totalValue + (finiteNumber(state.cash) ?? 0);
   const cashRatio = totalAssets ? (finiteNumber(state.cash) ?? 0) / totalAssets : 0;
   const signals = buildOpportunitySignals(positions);
-  const buySignals = signals.filter(({ strategy }) => strategy.bucket === "main" || strategy.bucket === "cigar");
-  const reduceSignals = signals.filter(({ strategy }) => strategy.bucket === "excluded");
+  const overviewSignals = signals.filter(isOverviewActionSignal);
+  const buySignals = overviewSignals.filter(({ strategy }) => strategy.bucket === "main" || strategy.bucket === "cigar");
+  const reduceSignals = overviewSignals.filter(({ stock, strategy }) => stock.sourceType === "holding" && strategy.bucket === "excluded");
   const strategyItems = strategyUniverseItems(positions);
   const mainValue = strategyItems
     .filter((item) => item.stock.sourceType === "holding" && item.strategy.bucket === "main")
@@ -3725,12 +3800,12 @@ function buildActionConclusion(positions) {
       reasons: [first.reasons[0], ...reasons].slice(0, 4)
     };
   }
-  if (signals.length) {
+  if (overviewSignals.length) {
     return {
       tone: "watch",
       status: "过渡观察",
       detail: "旧仓不强制卖出，新资金只等综合回报/安全边际或烟蒂条件达标",
-      reasons: [signals[0].reasons[0], ...reasons].slice(0, 3)
+      reasons: [overviewSignals[0].reasons[0], ...reasons].slice(0, 3)
     };
   }
   return {
@@ -3743,7 +3818,7 @@ function buildActionConclusion(positions) {
 
 function renderActionConclusion(positions) {
   const conclusion = buildActionConclusion(positions);
-  elements.actionConclusion.className = `executive-hero panel ${conclusion.tone}`;
+  elements.actionConclusion.className = `overview-conclusion ${conclusion.tone}`;
   elements.actionConclusionStatus.textContent = conclusion.status;
   elements.actionConclusionDetail.textContent = conclusion.detail;
 }
@@ -3844,34 +3919,119 @@ function executiveActionItems(stats, positions) {
 
 function renderExecutiveActionItem(item, index) {
   return `
-    <a class="next-action-item ${item.tone}" href="${stockHash(item.symbol)}">
-      <span class="next-action-rank">${index + 1}</span>
-      <div>
-        <div class="next-action-head">
+    <a class="decision-action-row ${item.tone}" href="${stockHash(item.symbol)}">
+      <div class="decision-action-stock">
+        <span class="decision-action-rank">${index + 1}</span>
+        <div>
           <strong>${escapeHTML(item.name)}</strong>
-          <em>${escapeHTML(item.type)}</em>
+          <small>${escapeHTML(item.symbol)} · ${escapeHTML(item.type)}</small>
         </div>
-        <small>${escapeHTML(item.symbol)} · ${escapeHTML(item.meta)}</small>
-        <p>${escapeHTML(item.detail)}</p>
       </div>
+      <p>${escapeHTML(item.detail)}</p>
     </a>
   `;
 }
 
+function overviewCandidateMarker(stock, strategy) {
+  const margin = finiteNumber(strategy?.margin) ?? calculatedMarginOfSafety(stock);
+  if (!Number.isFinite(margin)) return 66;
+  if (margin >= MAIN_DCF_MARGIN_TARGET) return 36;
+  if (margin <= 0) return 76;
+  return Math.max(36, Math.min(76, 66 - (margin / MAIN_DCF_MARGIN_TARGET) * 30));
+}
+
+function renderCockpitSignal(title, detail, marker = null) {
+  return `
+    <article class="cockpit-signal">
+      <strong>${escapeHTML(title)}</strong>
+      <span>${escapeHTML(detail)}</span>
+      ${Number.isFinite(marker) ? `<div class="mini-range"><i style="left: ${marker.toFixed(0)}%"></i></div>` : ""}
+    </article>
+  `;
+}
+
+function renderOverviewBuyCandidates(positions) {
+  if (!elements.overviewBuyCandidates) return;
+  const candidates = decisionUniverse(positions)
+    .filter((stock) => stock.sourceType !== "holding")
+    .map((stock) => ({
+      stock,
+      screening: screeningProfile(stock),
+      strategy: strategyProfile(stock),
+      valuation: valuationRangeView(stock)
+    }))
+    .filter((item) => item.screening.pass && item.strategy.bucket !== "excluded")
+    .sort((a, b) => {
+      const marginA = finiteNumber(a.strategy.margin) ?? -Infinity;
+      const marginB = finiteNumber(b.strategy.margin) ?? -Infinity;
+      return b.screening.score - a.screening.score || marginB - marginA || a.stock.name.localeCompare(b.stock.name, "zh-CN");
+    })
+    .slice(0, 3);
+
+  elements.overviewBuyCandidates.innerHTML = candidates.length
+    ? candidates.map(({ stock, screening, strategy }) => {
+        const margin = Number.isFinite(strategy.margin) ? `安全边际 ${percent(strategy.margin * 100, false)}` : "安全边际待补";
+        const detail = `选股分 ${screening.score} · ${strategy.shield.source || "综合回报"} ${displayDividendRatio(strategy.shield.value)} · ${margin}`;
+        return renderCockpitSignal(stock.name, detail, overviewCandidateMarker(stock, strategy));
+      }).join("")
+    : `<div class="empty-state compact-empty">暂无通过硬否决且接近买点的候选</div>`;
+}
+
+function renderOverviewRiskReview(positions) {
+  if (!elements.overviewRiskReview) return;
+  const totalAssets = positions.reduce((sum, item) => sum + (finiteNumber(item.marketValueCny) ?? 0), 0) + (finiteNumber(state.cash) ?? 0);
+  const maxPosition = positions.reduce((max, item) => (item.marketValueCny > (max?.marketValueCny ?? 0) ? item : max), null);
+  const riskSignal = buildOpportunitySignals(positions)
+    .find((signal) => signal.stock.sourceType === "holding" && signal.strategy.bucket === "excluded");
+  const qualityIssues = buildDataQualityIssues(positions);
+  const warningCount = qualityIssues.filter((issue) => issue.tone === "warn" || issue.tone === "error").length;
+  const logCount = Array.isArray(state.decisionLogs) ? state.decisionLogs.length : 0;
+  const items = [
+    {
+      title: "单票风险",
+      detail: maxPosition
+        ? `${maxPosition.name} ${percent(totalAssets ? (maxPosition.marketValueCny / totalAssets) * 100 : 0, false)}，继续看行业集中和现金缓冲。`
+        : "暂无持仓。"
+    },
+    {
+      title: "买入逻辑偏离",
+      detail: riskSignal
+        ? `${riskSignal.stock.name}：${stockActionReasonText(riskSignal.stock, riskSignal.strategy).replace(/^卖出理由[:：]\s*/, "")}`
+        : "暂无持仓触发重大风险排除。"
+    },
+    {
+      title: "日志缺口",
+      detail: warningCount
+        ? `数据体检 ${warningCount} 项提醒；已有 ${logCount} 条决策日志，复盘时优先补理由。`
+        : `已有 ${logCount} 条决策日志；新交易继续强制填写理由。`
+    }
+  ];
+
+  elements.overviewRiskReview.innerHTML = items
+    .map((item) => renderCockpitSignal(item.title, item.detail))
+    .join("");
+}
+
 function renderCommitteeOverview(positions) {
   const actions = buildOpportunitySignals(positions)
+    .filter(isOverviewActionSignal)
     .slice(0, 6)
     .map((signal) => ({
       tone: signal.tone,
       type: strategyBucketLabel(signal.strategy.bucket),
       symbol: signal.stock.symbol,
       name: signal.stock.name,
-        meta: `${displayDividendRatio(signal.strategy.shield.value)}综合回报 · 安全边际 ${Number.isFinite(signal.strategy.margin) ? percent(signal.strategy.margin * 100, false) : "-"} · ${signal.strategy.ownerAudit.text}`,
-      detail: signal.strategy.blockers.length ? signal.strategy.blockers.join("；") : displayText(signal.stock.action, signal.stock.status)
+      meta: `${displayDividendRatio(signal.strategy.shield.value)} 综合回报 · 安全边际 ${Number.isFinite(signal.strategy.margin) ? percent(signal.strategy.margin * 100, false) : "-"} · ${signal.strategy.ownerAudit.text}`,
+      detail: stockActionReasonText(signal.stock, signal.strategy)
     }));
+  if (elements.decisionQueueCount) {
+    elements.decisionQueueCount.textContent = actions.length ? `${actions.length} 项待判断` : "无待办";
+  }
   elements.committeeConsensus.innerHTML = actions.length
     ? actions.map(renderExecutiveActionItem).join("")
     : `<div class="empty-state compact-empty">暂无需要立即处理的动作</div>`;
+  renderOverviewBuyCandidates(positions);
+  renderOverviewRiskReview(positions);
 }
 
 function renderConsensusItem(stock, votes, consensus) {
@@ -6065,6 +6225,207 @@ function stockDetailAccordion(id, eyebrow, title, body) {
   `;
 }
 
+function stockDetailInputValue(value) {
+  return escapeHTML(value ?? "");
+}
+
+function stockDetailNumberValue(value, decimals = 2) {
+  const number = finiteNumber(value);
+  if (!Number.isFinite(number)) return "";
+  return escapeHTML(String(Number(number.toFixed(decimals))));
+}
+
+function stockDetailPercentInputValue(value, decimals = 2) {
+  const number = finiteNumber(value);
+  if (!Number.isFinite(number)) return "";
+  return escapeHTML(String(Number((number * 100).toFixed(decimals))));
+}
+
+function stockDetailScenarioInputs(stock) {
+  const scenarios = fallbackValuationScenarios(stock);
+  return STOCK_DETAIL_VALUATION_SCENARIOS.map((meta, index) => {
+    const scenario = scenarios[index] ?? {};
+    return {
+      ...scenario,
+      key: meta.key,
+      label: meta.label,
+      name: meta.label
+    };
+  });
+}
+
+function stockDetailHumanInputPanel(stock) {
+  return `
+    <section class="stock-detail-section" id="detailInputs">
+      <div class="stock-detail-section-head">
+        <p class="eyebrow">Human Inputs</p>
+        <h2>人工判断</h2>
+      </div>
+      <section class="panel stock-detail-edit-panel">
+        <div class="panel-head compact">
+          <div>
+            <p class="eyebrow">Editable</p>
+            <h2>只编辑系统无法替你判断的内容</h2>
+          </div>
+        </div>
+        <div class="detail-content">
+          <form class="stock-detail-edit-form" data-stock-human-input-form data-symbol="${escapeHTML(stock.symbol)}">
+            <div class="stock-detail-form-grid">
+              <label class="wide">
+                <span>买入逻辑</span>
+                <textarea name="buyLogic" rows="3" placeholder="为什么值得买，哪些事实会让这个逻辑失效">${stockDetailInputValue(stock.buyLogic)}</textarea>
+              </label>
+              <label>
+                <span>当前动作</span>
+                <input name="action" type="text" value="${stockDetailInputValue(stock.action)}" placeholder="继续持有 / 等待 / 卖出" />
+              </label>
+              <label>
+                <span>达标状态</span>
+                <input name="status" type="text" value="${stockDetailInputValue(stock.status)}" placeholder="达标 / 观察 / 风险排除" />
+              </label>
+              <label>
+                <span>估值可信度</span>
+                <input name="valuationConfidence" type="text" value="${stockDetailInputValue(stock.valuationConfidence)}" placeholder="high / medium / low 或中文说明" />
+              </label>
+              <label>
+                <span>质量总分</span>
+                <input name="qualityScore" type="number" min="0" max="100" step="1" value="${stockDetailNumberValue(stock.qualityScore, 0)}" />
+              </label>
+              <label>
+                <span>商业模式</span>
+                <input name="businessModel" type="number" min="0" max="30" step="1" value="${stockDetailNumberValue(stock.businessModel, 0)}" />
+              </label>
+              <label>
+                <span>护城河</span>
+                <input name="moat" type="number" min="0" max="25" step="1" value="${stockDetailNumberValue(stock.moat, 0)}" />
+              </label>
+              <label>
+                <span>治理</span>
+                <input name="governance" type="number" min="0" max="20" step="1" value="${stockDetailNumberValue(stock.governance, 0)}" />
+              </label>
+              <label>
+                <span>财务质量</span>
+                <input name="financialQuality" type="number" min="0" max="25" step="1" value="${stockDetailNumberValue(stock.financialQuality, 0)}" />
+              </label>
+              <label class="wide">
+                <span>主要风险</span>
+                <textarea name="risk" rows="3" placeholder="最重要的业务、治理、财务或行业风险">${stockDetailInputValue(stock.risk)}</textarea>
+              </label>
+              <label class="wide">
+                <span>反证条件</span>
+                <textarea name="killCriteria" rows="3" placeholder="一行一个：出现什么事实就要推翻买入逻辑">${stockDetailInputValue(killCriteriaItems(stock).join("\n"))}</textarea>
+              </label>
+              <label class="wide">
+                <span>备注</span>
+                <textarea name="notes" rows="3" placeholder="补充判断，不放系统能自动获取的数据">${stockDetailInputValue(stock.notes)}</textarea>
+              </label>
+            </div>
+            <div class="stock-detail-form-actions">
+              <span>自动数据仍由行情、财报和估值分位更新维护。</span>
+              <button class="primary-button compact-link" type="submit">保存人工判断</button>
+            </div>
+          </form>
+        </div>
+      </section>
+      <section class="panel stock-detail-edit-panel">
+        <div class="panel-head compact">
+          <div>
+            <p class="eyebrow">Decision Log</p>
+            <h2>继续持有 / 复盘理由</h2>
+          </div>
+        </div>
+        <div class="detail-content">
+          <form class="stock-detail-edit-form" data-stock-hold-log-form data-symbol="${escapeHTML(stock.symbol)}">
+            <div class="stock-detail-form-grid">
+              <label>
+                <span>日志类型</span>
+                <select name="decision">
+                  <option value="继续持有">继续持有</option>
+                  <option value="复盘">复盘</option>
+                </select>
+              </label>
+              <label class="wide">
+                <span>人工理由</span>
+                <textarea name="detail" rows="3" required placeholder="写清楚这次为什么继续持有、复盘结论是什么"></textarea>
+              </label>
+            </div>
+            <div class="stock-detail-form-actions">
+              <span>保存时自动附带现价、仓位、估值区间和安全边际快照。</span>
+              <button class="primary-button compact-link" type="submit">保存日志</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </section>
+  `;
+}
+
+function stockDetailValuationInputPanel(stock) {
+  const range = valuationRangeView(stock);
+  const requiredMargin = finiteNumber(stock?.valuation?.requiredMargin) ?? MAIN_DCF_MARGIN_TARGET;
+  return `
+    <section class="panel stock-detail-edit-panel">
+      <div class="panel-head compact">
+        <div>
+          <p class="eyebrow">Editable Assumptions</p>
+          <h2>三情景估值假设</h2>
+        </div>
+      </div>
+      <div class="detail-content">
+        <form class="stock-detail-edit-form" data-stock-valuation-form data-symbol="${escapeHTML(stock.symbol)}">
+          <div class="stock-detail-valuation-topline">
+            <label>
+              <span>币种</span>
+              <input name="currency" type="text" value="${stockDetailInputValue(range.currency || stock.currency || "CNY")}" />
+            </label>
+            <label>
+              <span>当前价</span>
+              <input name="currentPrice" type="number" step="0.0001" value="${stockDetailNumberValue(stock.currentPrice, 4)}" />
+            </label>
+            <label>
+              <span>安全边际要求</span>
+              <input name="requiredMargin" type="number" step="0.1" value="${stockDetailPercentInputValue(requiredMargin, 1)}" />
+            </label>
+            <div>
+              <span>当前估值区间</span>
+              <strong>${Number.isFinite(range.low) && Number.isFinite(range.high) ? `${currency(range.low, range.currency)} - ${currency(range.high, range.currency)}` : "待补充"}</strong>
+              <small>${Number.isFinite(range.margin) ? `安全边际 ${percent(range.margin * 100, false)}` : range.source}</small>
+            </div>
+          </div>
+          <div class="stock-detail-scenario-table" role="table" aria-label="三情景估值假设">
+            <div class="stock-detail-scenario-row head" role="row">
+              <span>情景</span>
+              <span>收入增长%</span>
+              <span>利润率%</span>
+              <span>FCF</span>
+              <span>折现率%</span>
+              <span>PE</span>
+              <span>P/FCF</span>
+              <span>股本</span>
+            </div>
+            ${stockDetailScenarioInputs(stock).map((scenario) => `
+              <div class="stock-detail-scenario-row" role="row">
+                <strong>${escapeHTML(scenario.label)}</strong>
+                <input name="${escapeHTML(scenario.key)}.revenueGrowth" type="number" step="0.1" value="${stockDetailPercentInputValue(scenario.revenueGrowth, 2)}" />
+                <input name="${escapeHTML(scenario.key)}.profitMargin" type="number" step="0.1" value="${stockDetailPercentInputValue(scenario.profitMargin, 2)}" />
+                <input name="${escapeHTML(scenario.key)}.fcf" type="number" step="0.01" value="${stockDetailNumberValue(scenario.fcf, 2)}" />
+                <input name="${escapeHTML(scenario.key)}.discountRate" type="number" step="0.1" value="${stockDetailPercentInputValue(scenario.discountRate, 2)}" />
+                <input name="${escapeHTML(scenario.key)}.reasonablePe" type="number" step="0.1" value="${stockDetailNumberValue(scenario.reasonablePe, 2)}" />
+                <input name="${escapeHTML(scenario.key)}.reasonablePfcf" type="number" step="0.1" value="${stockDetailNumberValue(scenario.reasonablePFCF ?? scenario.reasonablePfcf, 2)}" />
+                <input name="${escapeHTML(scenario.key)}.shares" type="number" step="0.01" value="${stockDetailNumberValue(scenario.shares, 2)}" />
+              </div>
+            `).join("")}
+          </div>
+          <div class="stock-detail-form-actions">
+            <span>保存后写入估值区间，选股页和总览继续只读展示。</span>
+            <button class="primary-button compact-link" type="submit">保存估值假设</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  `;
+}
+
 function stockDetailSummaryPanel(stock, strategy, health, plan) {
   return `
     <section class="stock-detail-section" id="detailSummary">
@@ -6213,7 +6574,7 @@ function renderStockDetail(positions, symbol) {
       <aside class="stock-detail-summary">
         <section class="stock-detail-decision-hero">
           <div class="stock-detail-hero-actions">
-            <a class="ghost-button detail-back" href="#portfolio">返回持仓</a>
+            <a class="ghost-button detail-back" href="#holdings">返回持仓</a>
             <button class="ghost-button compact-link" type="button" data-update-financials="${escapeHTML(stock.symbol)}">
               <span>↻</span>
               更新财务
@@ -6249,6 +6610,8 @@ function renderStockDetail(positions, symbol) {
       <main class="stock-detail-evidence-flow">
         ${stockDetailNav()}
 
+        ${stockDetailHumanInputPanel(stock)}
+
         ${stockDetailSummaryPanel(stock, strategy, health, plan)}
 
         <section class="stock-detail-section" id="detailValuation">
@@ -6256,6 +6619,7 @@ function renderStockDetail(positions, symbol) {
             <p class="eyebrow">Evidence Matrix</p>
             <h2>四象限证据</h2>
           </div>
+          ${stockDetailValuationInputPanel(stock)}
           ${stockDetailEvidenceGrid(stock, strategy, health, confidence, detailHoldingValue)}
 
           <section class="detail-grid">
@@ -6379,12 +6743,11 @@ function renderTradeStockNames() {
   const seen = new Set();
   const items = [
     ...(state.holdings ?? []).map((stock) => ({ ...stock, optionType: "股票" })),
-    ...(state.candidates ?? []).map((stock) => ({ ...stock, optionType: "跟踪" })),
-    ...(state.funds ?? []).map((fund) => ({ ...fund, optionType: "基金" }))
+    ...(state.candidates ?? []).map((stock) => ({ ...stock, optionType: "跟踪" }))
   ]
     .filter((item) => item?.name && item?.symbol)
     .filter((item) => {
-      const key = item.optionType === "基金" ? `fund:${normalizeFundKey(item.symbol)}` : `stock:${normalizeSymbol(item.symbol)}`;
+      const key = `stock:${normalizeSymbol(item.symbol)}`;
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -6396,11 +6759,14 @@ function renderTradeStockNames() {
 
 function routeInfo(rawHash = window.location.hash.slice(1)) {
   const view = rawHash || "overview";
-  if (view === "sunny30" || view === "candidates") {
-    return { view, page: "portfolio", section: "sunny30Section" };
+  if (view === "screener" || view === "valuation" || view === "sunny30" || view === "candidates") {
+    return { view: "screener", page: "screener" };
   }
-  if (view === "masters" || view === "positions") {
-    return { view, page: "portfolio" };
+  if (view === "holdings" || view === "masters" || view === "positions") {
+    return { view: "holdings", page: "holdings" };
+  }
+  if (view === "logs") {
+    return { view, page: "trades" };
   }
   if (view.startsWith("industry=")) {
     return { view, page: "industry-detail", id: decodeURIComponent(view.slice("industry=".length)) };
@@ -6413,19 +6779,18 @@ function routeInfo(rawHash = window.location.hash.slice(1)) {
 
 function renderContext() {
   const positions = computePositions();
-  const funds = computeFunds();
-  return { positions, funds };
+  return { positions };
 }
 
 function renderRecordCount() {
   if (!elements.recordCount) return;
-  elements.recordCount.textContent = privateText(`${state.holdings.length} 条股票 · ${(state.funds ?? []).length} 只基金 · ${state.trades.length} 条交易`);
+  elements.recordCount.textContent = privateText(`${state.stocks?.length ?? state.holdings.length + state.candidates.length} 只股票 · ${state.trades.length} 条交易`);
 }
 
 function renderLoadingState() {
   setQuoteUpdateStatus("正在加载组合数据...");
   [
-    elements.totalFunds,
+    elements.totalAssetsMetric,
     elements.totalValue,
     elements.totalPositionPnl,
     elements.dayChange,
@@ -6447,28 +6812,28 @@ function renderLoadingState() {
 
 function render(rawHash = window.location.hash.slice(1)) {
   const route = routeInfo(rawHash);
-  const { positions, funds } = renderContext();
+  const { positions } = renderContext();
 
   renderTradeStockNames();
   renderQuoteUpdateStatus(positions);
   renderRecordCount();
 
   if (route.page === "overview") {
-    renderMetrics(positions, funds);
-    renderAssetAllocation(positions, funds);
+    renderMetrics(positions);
+    renderAssetAllocation(positions);
     renderDecisionArea(positions);
     renderCommitteeOverview(positions);
     return;
   }
-  if (route.page === "portfolio") {
-    renderSunny30(positions);
+  if (route.page === "holdings") {
     renderPositions(positions);
     renderMastersPage(positions);
     renderPlanAndCandidates();
     return;
   }
-  if (route.page === "funds") {
-    renderFunds(funds, positions);
+  if (route.page === "screener") {
+    renderSunny30(positions);
+    renderValuationModule(positions);
     return;
   }
   if (route.page === "industry") {
@@ -6481,7 +6846,6 @@ function render(rawHash = window.location.hash.slice(1)) {
   }
   if (route.page === "trades") {
     renderTrades();
-    renderFundTrades();
     renderDecisionLogs();
     return;
   }
@@ -6500,22 +6864,6 @@ function findTradeStock(input) {
     stocks.find((stock) => String(stock.name ?? "").trim() === text) ||
     stocks.find((stock) => {
       const name = String(stock.name ?? "").trim();
-      return name && (name.includes(text) || text.includes(name));
-    }) ||
-    null
-  );
-}
-
-function findTradeFund(input) {
-  const text = String(input ?? "").trim();
-  if (!text) return null;
-  const normalized = normalizeFundKey(text);
-  const funds = state.funds ?? [];
-  return (
-    funds.find((fund) => normalizeFundKey(fund.symbol) === normalized) ||
-    funds.find((fund) => String(fund.name ?? "").trim() === text) ||
-    funds.find((fund) => {
-      const name = String(fund.name ?? "").trim();
       return name && (name.includes(text) || text.includes(name));
     }) ||
     null
@@ -6572,6 +6920,199 @@ function optionalFormNumber(formData, name) {
   return finiteNumber(formData.get(name));
 }
 
+function stockForDetailSave(symbol) {
+  const normalized = normalizeSymbol(symbol);
+  return (
+    (state.stocks ?? []).find((item) => normalizeSymbol(item.symbol) === normalized) ||
+    (state.holdings ?? []).find((item) => normalizeSymbol(item.symbol) === normalized) ||
+    (state.candidates ?? []).find((item) => normalizeSymbol(item.symbol) === normalized) ||
+    null
+  );
+}
+
+function optionalDetailFormNumber(formData, name) {
+  const raw = String(formData.get(name) ?? "").trim();
+  if (!raw) return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value)) throw new Error(`${name} 必须是数字`);
+  return value;
+}
+
+function optionalDetailFormRate(formData, name) {
+  const value = optionalDetailFormNumber(formData, name);
+  return value === null ? null : value / 100;
+}
+
+function inferStockCurrency(symbol) {
+  const normalized = normalizeSymbol(symbol);
+  if (normalized.endsWith(".HK")) return "HKD";
+  if (normalized.endsWith(".US")) return "USD";
+  return "CNY";
+}
+
+function localUpsertStockPayload(payload) {
+  const normalized = normalizeSymbol(payload.symbol);
+  state.stocks ??= [];
+  const next = stockPayloadFromLegacy(payload);
+  const stockIndex = state.stocks.findIndex((item) => normalizeSymbol(item.symbol) === normalized);
+  if (stockIndex >= 0) state.stocks[stockIndex] = { ...state.stocks[stockIndex], ...next };
+  else state.stocks.push(next);
+  state.holdings = stocksToHoldings(state.stocks);
+  state.candidates = stocksToCandidates(state.stocks);
+  saveState();
+  render();
+}
+
+async function saveStockPayload(symbol, patch) {
+  const normalized = normalizeSymbol(symbol);
+  const existing = stockForDetailSave(normalized);
+  if (!existing) throw new Error(`未找到 ${normalized}`);
+  const payload = stockPayloadFromLegacy({
+    ...existing,
+    ...patch,
+    symbol: normalized,
+    name: existing.name || patch.name || normalized,
+    currency: patch.currency || existing.currency || inferStockCurrency(normalized)
+  });
+
+  if (USE_BACKEND) {
+    setLoadedState(await requestJSON(`/api/stocks/${encodeURIComponent(normalized)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    }));
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+    return;
+  }
+
+  localUpsertStockPayload(payload);
+}
+
+async function saveStockHumanInputs(form) {
+  const formData = new FormData(form);
+  const symbol = normalizeSymbol(form.dataset.symbol);
+  const killCriteria = String(formData.get("killCriteria") ?? "")
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  await saveStockPayload(symbol, {
+    buyLogic: String(formData.get("buyLogic") ?? "").trim(),
+    action: String(formData.get("action") ?? "").trim(),
+    status: String(formData.get("status") ?? "").trim(),
+    valuationConfidence: String(formData.get("valuationConfidence") ?? "").trim(),
+    risk: String(formData.get("risk") ?? "").trim(),
+    notes: String(formData.get("notes") ?? "").trim(),
+    killCriteria,
+    qualityScore: optionalDetailFormNumber(formData, "qualityScore"),
+    businessModel: optionalDetailFormNumber(formData, "businessModel"),
+    moat: optionalDetailFormNumber(formData, "moat"),
+    governance: optionalDetailFormNumber(formData, "governance"),
+    financialQuality: optionalDetailFormNumber(formData, "financialQuality")
+  });
+}
+
+function scenarioFairValueFromInputs(scenario) {
+  const values = [];
+  if (Number.isFinite(scenario.fairValue) && scenario.fairValue > 0) values.push(scenario.fairValue);
+  if (Number.isFinite(scenario.fcf) && scenario.fcf > 0 && Number.isFinite(scenario.shares) && scenario.shares > 0) {
+    if (Number.isFinite(scenario.reasonablePfcf) && scenario.reasonablePfcf > 0) {
+      values.push((scenario.fcf * scenario.reasonablePfcf) / scenario.shares);
+    }
+    if (Number.isFinite(scenario.reasonablePe) && scenario.reasonablePe > 0) {
+      values.push((scenario.fcf * scenario.reasonablePe) / scenario.shares);
+    }
+  }
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function valuationRangeFromScenarios(scenarios, currentPrice, currencyCode) {
+  const values = scenarios
+    .map((scenario) => scenarioFairValueFromInputs(scenario))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .sort((a, b) => a - b);
+  if (!values.length) throw new Error("至少填写一个可计算的估值情景：FCF、倍数、股本");
+  const base = values[Math.floor(values.length / 2)];
+  const margin = Number.isFinite(currentPrice) && currentPrice > 0 && base > 0 ? (base - currentPrice) / base : null;
+  return {
+    low: values[0],
+    base,
+    high: values[values.length - 1],
+    currency: currencyCode,
+    marginOfSafety: margin
+  };
+}
+
+async function saveStockValuationInputs(form) {
+  const formData = new FormData(form);
+  const symbol = normalizeSymbol(form.dataset.symbol);
+  const existing = stockForDetailSave(symbol);
+  if (!existing) throw new Error(`未找到 ${symbol}`);
+  const currencyCode = String(formData.get("currency") || existing.currency || inferStockCurrency(symbol)).trim().toUpperCase();
+  const currentPrice = optionalDetailFormNumber(formData, "currentPrice") ?? finiteNumber(existing.currentPrice) ?? 0;
+  const requiredMargin = optionalDetailFormRate(formData, "requiredMargin") ?? MAIN_DCF_MARGIN_TARGET;
+  const scenarios = STOCK_DETAIL_VALUATION_SCENARIOS.map((meta) => ({
+    name: meta.label,
+    revenueGrowth: optionalDetailFormRate(formData, `${meta.key}.revenueGrowth`),
+    profitMargin: optionalDetailFormRate(formData, `${meta.key}.profitMargin`),
+    fcf: optionalDetailFormNumber(formData, `${meta.key}.fcf`),
+    discountRate: optionalDetailFormRate(formData, `${meta.key}.discountRate`),
+    reasonablePe: optionalDetailFormNumber(formData, `${meta.key}.reasonablePe`),
+    reasonablePfcf: optionalDetailFormNumber(formData, `${meta.key}.reasonablePfcf`),
+    shares: optionalDetailFormNumber(formData, `${meta.key}.shares`)
+  }));
+  const range = valuationRangeFromScenarios(scenarios, currentPrice, currencyCode);
+  await saveStockPayload(symbol, {
+    currentPrice,
+    currency: currencyCode,
+    valuation: {
+      currency: currencyCode,
+      currentPrice,
+      requiredMargin,
+      updatedAt: new Date().toISOString().slice(0, 10),
+      source: "人工详情页假设",
+      scenarios,
+      range
+    },
+    intrinsicValue: range.base,
+    fairValueRange: `${currency(range.low, currencyCode)} - ${currency(range.high, currencyCode)}`,
+    marginOfSafety: range.marginOfSafety
+  });
+}
+
+async function saveStockHoldLog(form) {
+  const formData = new FormData(form);
+  const symbol = normalizeSymbol(form.dataset.symbol);
+  const detail = String(formData.get("detail") ?? "").trim();
+  if (!detail) throw new Error("日志理由不能为空");
+  const decision = String(formData.get("decision") || "继续持有").trim();
+  if (USE_BACKEND) {
+    setLoadedState(await requestJSON("/api/decision-logs", {
+      method: "POST",
+      body: JSON.stringify({
+        type: decision === "复盘" ? "review" : "hold",
+        symbol,
+        decision,
+        detail
+      })
+    }));
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+    return;
+  }
+  state.decisionLogs ??= [];
+  state.decisionLogs.push({
+    id: Date.now(),
+    date: new Date().toISOString(),
+    type: decision === "复盘" ? "review" : "hold",
+    symbol,
+    decision,
+    detail
+  });
+  saveState();
+  render();
+}
+
 function candidateFromSunny30Form(formData) {
   const symbol = normalizeSymbol(formData.get("symbol"));
   const existingHolding = (state.holdings ?? []).find((holding) => normalizeSymbol(holding.symbol) === symbol);
@@ -6626,12 +7167,12 @@ async function saveSunny30Candidate(formData) {
   const candidate = candidateFromSunny30Form(formData);
 
   if (USE_BACKEND) {
-    state = await requestJSON("/api/candidates", {
+    setLoadedState(await requestJSON("/api/stocks", {
       method: "POST",
       body: JSON.stringify(candidate)
-    });
+    }));
     localStorage.removeItem(STORAGE_KEY);
-    render("portfolio");
+    render("screener");
     return;
   }
 
@@ -6642,23 +7183,51 @@ async function saveSunny30Candidate(formData) {
   nextCandidate.action ||= "纳入晴仓30长期跟踪；等待质量和安全边际补充";
   upsertCandidate(nextCandidate);
   saveState();
-  render("portfolio");
+  render("screener");
 }
 
 async function deleteSunny30Candidate(symbol) {
   const normalized = normalizeSymbol(symbol);
   if (!normalized) return;
+  const existing = sunny30Universe(computePositions()).find((stock) => normalizeSymbol(stock.symbol) === normalized);
+  if (existing && !sunny30CanDelete(existing)) {
+    throw new Error("持仓标的不能从选股页删除，请先在持仓页处理");
+  }
 
   if (USE_BACKEND) {
-    state = await requestJSON(`/api/candidates/${encodeURIComponent(normalized)}`, { method: "DELETE" });
+    setLoadedState(await requestJSON(`/api/stocks/${encodeURIComponent(normalized)}`, { method: "DELETE" }));
     localStorage.removeItem(STORAGE_KEY);
-    render("portfolio");
+    render("screener");
     return;
   }
 
   removeCandidate(normalized);
   saveState();
-  render("portfolio");
+  render("screener");
+}
+
+async function saveScreeningWeights(formData) {
+  const weights = SCREENING_WEIGHT_FIELDS.reduce((next, field) => {
+    next[field.key] = Number(formData.get(field.key));
+    if (!Number.isFinite(next[field.key]) || next[field.key] < 0) throw new Error(`${field.label}权重无效`);
+    return next;
+  }, {});
+  const total = SCREENING_WEIGHT_FIELDS.reduce((sum, field) => sum + weights[field.key], 0);
+  if (total !== 100) throw new Error("筛选权重合计必须为 100");
+
+  if (USE_BACKEND) {
+    setLoadedState(await requestJSON("/api/screening-weights", {
+      method: "PUT",
+      body: JSON.stringify(weights)
+    }));
+    localStorage.removeItem(STORAGE_KEY);
+    render("screener");
+    return;
+  }
+
+  state.screeningWeights = weights;
+  saveState();
+  render("screener");
 }
 
 function categoryLabelFromValue(value) {
@@ -6676,25 +7245,17 @@ async function saveStockCategory(symbol, value) {
   if (!holding && !candidate) throw new Error(`未找到 ${normalized}`);
 
   if (USE_BACKEND) {
-    let nextState = state;
-    if (holding) {
-      nextState = await requestJSON(`/api/holdings/${encodeURIComponent(normalized)}`, {
-        method: "PUT",
-        body: JSON.stringify({ ...holding, category })
-      });
-    }
-    if (candidate) {
-      nextState = await requestJSON("/api/candidates", {
-        method: "POST",
-        body: JSON.stringify({
-          ...candidate,
-          symbol: normalized,
-          name: candidate.name || holding?.name || normalized,
-          category
-        })
-      });
-    }
-    state = nextState;
+    const payload = stockPayloadFromLegacy({
+      ...(candidate ?? {}),
+      ...(holding ?? {}),
+      symbol: normalized,
+      name: candidate?.name || holding?.name || normalized,
+      category
+    });
+    setLoadedState(await requestJSON(`/api/stocks/${encodeURIComponent(normalized)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    }));
     localStorage.removeItem(STORAGE_KEY);
     render();
     return category;
@@ -6708,32 +7269,14 @@ async function saveStockCategory(symbol, value) {
 }
 
 function tradeFromSimpleForm(formData) {
-  const assetType = String(formData.get("assetType") ?? "stock").trim().toLowerCase() === "fund" ? "fund" : "stock";
   const nameInput = String(formData.get("name") ?? "").trim();
   const signedShares = Number(formData.get("shares"));
   const price = Number(formData.get("price"));
-  if (!nameInput) throw new Error(assetType === "fund" ? "请填写基金名称" : "请填写股票名称");
-  if (!Number.isFinite(signedShares) || signedShares === 0) throw new Error(assetType === "fund" ? "份额不能为 0；买入填正数，卖出填负数" : "股数不能为 0；买入填正数，卖出填负数");
-  if (!Number.isFinite(price) || price <= 0) throw new Error(assetType === "fund" ? "成交净值必须大于 0" : "成交价必须大于 0");
-
-  if (assetType === "fund") {
-    const fund = findTradeFund(nameInput);
-    const side = signedShares < 0 ? "sell" : "buy";
-    if (!fund && side === "sell") throw new Error(`未找到“${nameInput}”对应的基金持仓`);
-    const shares = Math.abs(signedShares);
-    return {
-      id: Date.now(),
-      date: new Date().toISOString().slice(0, 10),
-      assetType: "fund",
-      symbol: fund?.symbol || nameInput,
-      name: fund?.name || nameInput,
-      side,
-      shares,
-      price,
-      currency: String(fund?.currency || "CNY").toUpperCase(),
-      currentPrice: Number(fund?.currentNav) > 0 ? Number(fund.currentNav) : price
-    };
-  }
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!nameInput) throw new Error("请填写股票名称");
+  if (!Number.isFinite(signedShares) || signedShares === 0) throw new Error("股数不能为 0；买入填正数，卖出填负数");
+  if (!Number.isFinite(price) || price <= 0) throw new Error("成交价必须大于 0");
+  if (!reason) throw new Error("请填写买入、卖出或继续持有的人工理由");
 
   const stock = findTradeStock(nameInput);
   if (!stock) throw new Error(`未找到“${nameInput}”，请先把它加入持仓或晴仓30`);
@@ -6753,7 +7296,8 @@ function tradeFromSimpleForm(formData) {
     shares,
     price,
     currency: currencyCode,
-    currentPrice
+    currentPrice,
+    reason
   };
 }
 
@@ -6763,62 +7307,10 @@ async function addTrade(formData) {
   const currencyCode = trade.currency;
 
   if (USE_BACKEND) {
-    state = await requestJSON("/api/trades", {
+    setLoadedState(await requestJSON("/api/trades", {
       method: "POST",
       body: JSON.stringify(trade)
-    });
-    saveState();
-    render();
-    return;
-  }
-
-  if (trade.assetType === "fund") {
-    state.funds ??= [];
-    let fund = state.funds.find((item) => normalizeFundKey(item.symbol) === normalizeFundKey(symbol));
-    if (!fund) {
-      if (side === "sell") throw new Error("未找到可卖出的基金持仓");
-      fund = {
-        symbol,
-        name: trade.name,
-        shares: 0,
-        cost: price,
-        currentNav: trade.currentPrice,
-        currentNavDate: trade.date,
-        currency: currencyCode,
-        category: "未分类",
-        updatedAt: trade.date
-      };
-      state.funds.push(fund);
-    }
-
-    if (side === "buy") {
-      const totalCost = fund.shares * fund.cost + shares * price;
-      fund.shares += shares;
-      fund.cost = totalCost / fund.shares;
-    } else {
-      fund.shares = Math.max(0, fund.shares - shares);
-    }
-
-    fund.name = trade.name || fund.name;
-    fund.currency = currencyCode;
-    fund.currentNav = trade.currentPrice;
-    fund.currentNavDate = trade.date;
-    fund.updatedAt = trade.date;
-    state.trades.push(trade);
-    state.cash += side === "sell" ? shares * price * fx(currencyCode) : -(shares * price * fx(currencyCode));
-    appendClientDecisionLog({
-      type: "trade",
-      symbol,
-      name: fund.name,
-      price,
-      currency: currencyCode,
-      decision: `${side === "buy" ? "买入" : "卖出"} ${fund.name}`,
-      discipline: fund.category || "基金持仓管理",
-      detail: `${side === "buy" ? "买入" : "卖出"} ${shares} 份额；成交净值 ${currencyCode} ${price.toFixed(4)}；录入净值 ${currencyCode} ${trade.currentPrice.toFixed(4)}`
-    });
-    if (side === "sell" && fund.shares === 0) {
-      state.funds = state.funds.filter((item) => normalizeFundKey(item.symbol) !== normalizeFundKey(symbol));
-    }
+    }));
     saveState();
     render();
     return;
@@ -6878,7 +7370,7 @@ async function addTrade(formData) {
     currency: currencyCode,
     decision: `${sideText} ${holding.name}`,
     discipline: plan?.discipline || holding.status || "未记录纪律",
-    detail: `${sideText} ${shares} 股；成交价 ${currencyCode} ${price.toFixed(4)}；录入最新价 ${currencyCode} ${trade.currentPrice.toFixed(4)}`
+    detail: `${sideText} ${shares} 股；成交价 ${currencyCode} ${price.toFixed(4)}；录入最新价 ${currencyCode} ${trade.currentPrice.toFixed(4)}；理由：${trade.reason}`
   });
   if (side === "sell" && holding.shares === 0) {
     upsertCandidate(clearedCandidateFromHolding(holding));
@@ -6912,7 +7404,7 @@ async function importResearch() {
     body: JSON.stringify(pendingResearch)
   });
 
-  state = result.state;
+  setLoadedState(result.state);
   localStorage.removeItem(STORAGE_KEY);
   pendingResearch = null;
   elements.importResearchButton.disabled = true;
@@ -6929,11 +7421,11 @@ async function updateQuotes() {
 
   elements.updateQuotesButton.disabled = true;
   elements.updateQuotesButton.innerHTML = "<span>↻</span> 更新中";
-  setQuoteUpdateStatus("正在拉取股票行情、股息数据和基金最新净值...");
+  setQuoteUpdateStatus("正在拉取股票行情和股息数据...");
 
   try {
     const result = await requestJSON("/api/quotes/update", { method: "POST" });
-    state = result.state;
+    setLoadedState(result.state);
     localStorage.removeItem(STORAGE_KEY);
     syncCash();
     render();
@@ -6941,13 +7433,38 @@ async function updateQuotes() {
     const skipped = result.skipped ?? [];
     if (skipped.length) {
       const preview = skipped.slice(0, 3).map((item) => `${item.symbol} ${item.error}`).join("；");
-      setQuoteUpdateStatus(`已更新 ${result.updated} 项行情/净值，${skipped.length} 个失败：${preview}`, "error");
+      setQuoteUpdateStatus(`已更新 ${result.updated} 项行情，${skipped.length} 个失败：${preview}`, "error");
     } else {
-      setQuoteUpdateStatus(`已更新 ${result.updated} 项行情/净值`, "success");
+      setQuoteUpdateStatus(`已更新 ${result.updated} 项行情`, "success");
     }
   } finally {
     elements.updateQuotesButton.disabled = false;
     elements.updateQuotesButton.innerHTML = "<span>↻</span> 更新行情";
+  }
+}
+
+async function updateValuationHistory() {
+  if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能更新估值分位");
+  const button = elements.updateValuationHistoryButton;
+  const originalHTML = button?.innerHTML;
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = "<span>↻</span> 更新中";
+  }
+  setQuoteUpdateStatus("正在更新估值历史分位...");
+  try {
+    const result = await requestJSON("/api/valuation-history/update", { method: "POST" });
+    if (result.state) {
+      setLoadedState(result.state);
+      localStorage.removeItem(STORAGE_KEY);
+      render("valuation");
+    }
+    setQuoteUpdateStatus(`已写入 ${result.updated ?? 0} 只股票的估值分位历史`, "success");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = originalHTML;
+    }
   }
 }
 
@@ -6963,7 +7480,7 @@ async function updateIndustryMetrics(button) {
 
   try {
     const result = await requestJSON("/api/industries/update", { method: "POST" });
-    state = result.state;
+    setLoadedState(result.state);
     localStorage.removeItem(STORAGE_KEY);
     render();
 
@@ -6993,7 +7510,7 @@ async function updateFinancials(symbol, button) {
 
   try {
     const result = await requestJSON(`/api/financials/update/${encodeURIComponent(symbol)}`, { method: "POST" });
-    state = result.state;
+    setLoadedState(result.state);
     localStorage.removeItem(STORAGE_KEY);
     render();
     window.location.hash = stockHash(result.symbol);
@@ -7002,52 +7519,6 @@ async function updateFinancials(symbol, button) {
       button.disabled = false;
       button.innerHTML = originalHTML;
     }
-  }
-}
-
-function filenameFromContentDisposition(header, fallback) {
-  const raw = header ?? "";
-  const utf8Match = raw.match(/filename\*=UTF-8''([^;]+)/i);
-  if (utf8Match) return decodeURIComponent(utf8Match[1].replaceAll("\"", ""));
-
-  const asciiMatch = raw.match(/filename="?([^";]+)"?/i);
-  if (asciiMatch) return asciiMatch[1];
-
-  return fallback;
-}
-
-async function exportChatGPTContext() {
-  if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能导出档案");
-
-  elements.exportChatGPTButton.disabled = true;
-  elements.exportChatGPTButton.innerHTML = "<span>↓</span> 导出中";
-  setQuoteUpdateStatus("正在生成 ChatGPT 档案...");
-
-  try {
-    const response = await fetch("/api/chatgpt/export");
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: "导出档案失败" }));
-      throw new Error(error.error ?? "导出档案失败");
-    }
-
-    const blob = await response.blob();
-    const filename = filenameFromContentDisposition(
-      response.headers.get("Content-Disposition"),
-      "portfolio-context.zip"
-    );
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-
-    setQuoteUpdateStatus("ChatGPT 档案已导出", "success");
-  } finally {
-    elements.exportChatGPTButton.disabled = false;
-    elements.exportChatGPTButton.innerHTML = "<span>↓</span> 导出档案";
   }
 }
 
@@ -7068,57 +7539,6 @@ function openHoldingEditor(symbol) {
   elements.holdingDialog.showModal();
 }
 
-function openFundEditor(symbol) {
-  const fund = (state.funds ?? []).find((item) => normalizeFundKey(item.symbol) === normalizeFundKey(symbol));
-  if (!fund || !elements.fundForm) return;
-
-  const form = elements.fundForm;
-  form.symbol.value = fund.symbol;
-  form.name.value = fund.name ?? "";
-  form.category.value = fund.category ?? "";
-  form.currentNav.value = Number.isFinite(fund.currentNav) ? fund.currentNav : "";
-  form.currentNavDate.value = fund.currentNavDate ?? new Date().toISOString().slice(0, 10);
-  form.currency.value = fund.currency ?? "CNY";
-  elements.fundDialog.showModal();
-}
-
-async function saveFund(formData) {
-  const symbol = String(formData.get("symbol") ?? "").trim();
-  const fund = (state.funds ?? []).find((item) => normalizeFundKey(item.symbol) === normalizeFundKey(symbol));
-  if (!fund) return;
-
-  const patch = {
-    symbol,
-    name: String(formData.get("name") ?? "").trim(),
-    category: String(formData.get("category") ?? "").trim(),
-    currentNav: Number(formData.get("currentNav")),
-    currentNavDate: String(formData.get("currentNavDate") ?? "").trim(),
-    currency: String(formData.get("currency") ?? "CNY").trim().toUpperCase()
-  };
-  if (!Number.isFinite(patch.currentNav) || patch.currentNav <= 0) {
-    throw new Error("当前净值必须大于 0");
-  }
-
-  if (USE_BACKEND) {
-    state = await requestJSON(`/api/funds/${encodeURIComponent(symbol)}`, {
-      method: "PUT",
-      body: JSON.stringify(patch)
-    });
-    saveState();
-    render();
-    return;
-  }
-
-  fund.name = patch.name || fund.name;
-  fund.category = patch.category;
-  fund.currentNav = patch.currentNav;
-  fund.currentNavDate = patch.currentNavDate;
-  fund.currency = patch.currency || fund.currency || "CNY";
-  fund.updatedAt = new Date().toISOString().slice(0, 10);
-  saveState();
-  render();
-}
-
 async function saveHolding(formData) {
   const symbol = formData.get("symbol");
   const holding = state.holdings.find((item) => item.symbol === symbol);
@@ -7136,10 +7556,10 @@ async function saveHolding(formData) {
   };
 
   if (USE_BACKEND) {
-    state = await requestJSON(`/api/holdings/${encodeURIComponent(symbol)}`, {
+    setLoadedState(await requestJSON(`/api/stocks/${encodeURIComponent(symbol)}`, {
       method: "PUT",
-      body: JSON.stringify(patch)
-    });
+      body: JSON.stringify(stockPayloadFromLegacy({ ...holding, ...patch }))
+    }));
     saveState();
     render();
     return;
@@ -7157,19 +7577,14 @@ async function saveHolding(formData) {
   render();
 }
 
-function setTradeAssetType(assetType = "stock") {
-  const isFund = assetType === "fund";
-  if (elements.tradeForm) {
-    const radio = elements.tradeForm.querySelector(`input[name="assetType"][value="${isFund ? "fund" : "stock"}"]`);
-    if (radio) radio.checked = true;
-  }
-  if (elements.tradeNameLabel) elements.tradeNameLabel.textContent = isFund ? "基金名称" : "股票名称";
-  if (elements.tradePriceLabel) elements.tradePriceLabel.textContent = isFund ? "成交净值" : "成交价";
-  if (elements.tradeSharesLabel) elements.tradeSharesLabel.textContent = isFund ? "份额" : "股数";
-  if (elements.tradeNameInput) elements.tradeNameInput.placeholder = isFund ? "中欧红利优享混合" : "中海物业";
+function setTradeAssetType() {
+  if (elements.tradeNameLabel) elements.tradeNameLabel.textContent = "股票名称";
+  if (elements.tradePriceLabel) elements.tradePriceLabel.textContent = "成交价";
+  if (elements.tradeSharesLabel) elements.tradeSharesLabel.textContent = "股数";
+  if (elements.tradeNameInput) elements.tradeNameInput.placeholder = "中海物业";
   if (elements.tradeSharesInput) {
-    elements.tradeSharesInput.placeholder = isFund ? "买入填正数，卖出填负数" : "买入填正数，卖出填负数";
-    elements.tradeSharesInput.step = isFund ? "0.01" : "1";
+    elements.tradeSharesInput.placeholder = "买入填正数，卖出填负数";
+    elements.tradeSharesInput.step = "1";
   }
 }
 
@@ -7181,101 +7596,6 @@ document.querySelectorAll(".segment").forEach((button) => {
     render();
   });
 });
-
-function mobileActionButton(action, icon, label) {
-  return `
-    <button class="mobile-context-action" type="button" data-mobile-action="${escapeHTML(action)}">
-      <span>${escapeHTML(icon)}</span>
-      <strong>${escapeHTML(label)}</strong>
-    </button>
-  `;
-}
-
-function renderMobileContextActionbar(page) {
-  if (!elements.mobileContextActionbar) {
-    document.body.classList.remove("mobile-context-actions-active");
-    return;
-  }
-  const isPortfolio = page === "portfolio";
-  const isFunds = page === "funds";
-  const hasActions = isPortfolio || isFunds;
-  elements.mobileContextActionbar.hidden = !hasActions;
-  document.body.classList.toggle("mobile-context-actions-active", hasActions);
-
-  if (isPortfolio) {
-    elements.mobileContextActionbar.innerHTML = [
-      mobileActionButton("stockTrade", "＋", "交易"),
-      mobileActionButton("positionSort", "↕", "排序"),
-      mobileActionButton("positionFilter", "⌕", "筛选")
-    ].join("");
-    return;
-  }
-
-  if (isFunds) {
-    elements.mobileContextActionbar.innerHTML = [
-      mobileActionButton("fundTrade", "＋", "基金交易"),
-      mobileActionButton("fundSort", "↕", "排序")
-    ].join("");
-    return;
-  }
-
-  elements.mobileContextActionbar.innerHTML = "";
-}
-
-function mobileControlOption(target, option, currentValue) {
-  const active = option.value === currentValue;
-  return `
-    <button class="mobile-control-option ${active ? "active" : ""}" type="button" data-mobile-sort-target="${escapeHTML(target)}" data-mobile-sort-value="${escapeHTML(option.value)}" aria-pressed="${active ? "true" : "false"}">
-      <span>${escapeHTML(option.label)}</span>
-      ${active ? "<strong>当前</strong>" : ""}
-    </button>
-  `;
-}
-
-function mobileFilterOption(option, count) {
-  const active = option.value === positionMobileFilter;
-  return `
-    <button class="mobile-control-option ${active ? "active" : ""}" type="button" data-mobile-filter-value="${escapeHTML(option.value)}" aria-pressed="${active ? "true" : "false"}">
-      <span>${escapeHTML(option.label)}</span>
-      <strong>${escapeHTML(String(count))}</strong>
-    </button>
-  `;
-}
-
-function openMobileControlSheet(mode) {
-  if (!elements.mobilePortfolioControlsDialog || !elements.mobileControlOptions) return;
-  if (mode === "positionSort") {
-    elements.mobileControlTitle.textContent = "股票排序";
-    elements.mobileControlOptions.innerHTML = `
-      <div class="mobile-control-section">
-        <span>持仓决策表</span>
-        ${POSITION_MOBILE_SORT_OPTIONS.map((option) => mobileControlOption("position", option, positionMobileSortValue())).join("")}
-      </div>
-      <div class="mobile-control-section">
-        <span>晴仓30</span>
-        ${SUNNY30_MOBILE_SORT_OPTIONS.map((option) => mobileControlOption("sunny30", option, sunny30MobileSortValue())).join("")}
-      </div>
-    `;
-  } else if (mode === "positionFilter") {
-    const items = sortedPositions(computePositions());
-    elements.mobileControlTitle.textContent = "股票筛选";
-    elements.mobileControlOptions.innerHTML = `
-      <div class="mobile-control-section">
-        <span>持仓卡片</span>
-        ${POSITION_MOBILE_FILTERS.map((option) => mobileFilterOption(option, mobilePositionFilterCount(items, option.value))).join("")}
-      </div>
-    `;
-  } else if (mode === "fundSort") {
-    elements.mobileControlTitle.textContent = "基金排序";
-    elements.mobileControlOptions.innerHTML = `
-      <div class="mobile-control-section">
-        <span>基金持仓</span>
-        ${FUND_MOBILE_SORT_OPTIONS.map((option) => mobileControlOption("fund", option, fundMobileSort)).join("")}
-      </div>
-    `;
-  }
-  elements.mobilePortfolioControlsDialog.showModal();
-}
 
 document.querySelectorAll(".nav-item").forEach((button) => {
   button.addEventListener("click", () => {
@@ -7385,42 +7705,35 @@ function requestStockDetailActiveUpdate() {
 
 window.addEventListener("scroll", requestStockDetailActiveUpdate, { passive: true });
 
-function showEmbeddedMasters(target = "masters") {
-  showPage("portfolio");
-  requestAnimationFrame(() => {
-    document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-}
-
 function showPage(view) {
-  const isStockDetail = view.startsWith("stock=");
-  const isIndustryDetail = view.startsWith("industry=");
-  let nextView = isStockDetail ? "stock-detail" : isIndustryDetail ? "industry-detail" : pageTitles[view] ? view : "overview";
+  const route = routeInfo(view);
+  const isStockDetail = route.page === "stock-detail";
+  const isIndustryDetail = route.page === "industry-detail";
+  let nextView = route.page;
   if (!document.querySelector(`[data-page="${nextView}"]`)) {
     nextView = "overview";
   }
 
   document.querySelectorAll(".nav-item.active").forEach((item) => item.classList.remove("active"));
-  const activeNavView = isIndustryDetail ? "industry" : isStockDetail ? "portfolio" : nextView;
+  const activeNavView = isIndustryDetail ? "industry" : isStockDetail ? "holdings" : route.view;
   document.querySelectorAll(`.nav-item[data-view="${activeNavView}"]`).forEach((item) => item.classList.add("active"));
   document.querySelector(".page.active")?.classList.remove("active");
   document.querySelector(`[data-page="${nextView}"]`)?.classList.add("active");
-  elements.pageTitle.textContent = pageTitles[nextView];
-  renderMobileContextActionbar(nextView);
+  elements.pageTitle.textContent = pageTitles[route.view] || pageTitles[nextView];
   requestBackToTopUpdate();
 }
 
 function resetStockDetailRouteScroll() {
-  activeStockDetailSection = "detailSummary";
+  activeStockDetailSection = "detailInputs";
   requestAnimationFrame(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    setStockDetailActiveSection("detailSummary");
+    setStockDetailActiveSection("detailInputs");
     requestBackToTopUpdate();
   });
 }
 
 function savePortfolioReturnScroll() {
-  const activePortfolio = document.querySelector('.page[data-page="portfolio"].active');
+  const activePortfolio = document.querySelector('.page[data-page="holdings"].active, .page[data-page="screener"].active');
   if (!activePortfolio) return;
   sessionStorage.setItem(PORTFOLIO_RETURN_SCROLL_KEY, String(Math.max(0, Math.round(window.scrollY))));
 }
@@ -7439,29 +7752,11 @@ function handleRoute(rawHash) {
   const view = rawHash || "overview";
   const route = routeInfo(view);
   const previousRoute = activeRoute;
-  if (view === "masters") {
-    showEmbeddedMasters("masters");
-    render("portfolio");
-    activeRoute = route;
-    return;
-  }
-  if (view === "sunny30" || view === "candidates") {
-    showEmbeddedMasters("sunny30Section");
-    render("portfolio");
-    activeRoute = route;
-    return;
-  }
-  if (view === "positions") {
-    showPage("portfolio");
-    render("portfolio");
-    activeRoute = route;
-    return;
-  }
   showPage(view);
   render(view);
   if (route.page === "stock-detail") {
     resetStockDetailRouteScroll();
-  } else if (route.view === "portfolio" && previousRoute?.page === "stock-detail") {
+  } else if ((route.page === "holdings" || route.page === "screener") && previousRoute?.page === "stock-detail") {
     restorePortfolioReturnScroll();
   }
   activeRoute = route;
@@ -7517,61 +7812,6 @@ elements.sunny30MobileSort?.addEventListener("change", (event) => {
   renderSunny30(computePositions());
 });
 
-elements.fundMobileSort?.addEventListener("change", (event) => {
-  fundMobileSort = event.target.value;
-  renderFunds(computeFunds(), computePositions());
-});
-
-document.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-mobile-action]");
-  if (!button) return;
-  const action = button.dataset.mobileAction;
-  if (action === "stockTrade") {
-    setTradeAssetType("stock");
-    elements.tradeDialog.showModal();
-    return;
-  }
-  if (action === "fundTrade") {
-    setTradeAssetType("fund");
-    elements.tradeDialog.showModal();
-    return;
-  }
-  if (action === "positionSort" || action === "positionFilter" || action === "fundSort") {
-    openMobileControlSheet(action);
-  }
-});
-
-elements.mobileControlOptions?.addEventListener("click", (event) => {
-  const sortButton = event.target.closest("[data-mobile-sort-target]");
-  if (sortButton) {
-    const target = sortButton.dataset.mobileSortTarget;
-    const value = sortButton.dataset.mobileSortValue;
-    if (target === "position") {
-      positionSort = parseMobileSortValue(value);
-      renderPositions(computePositions());
-    } else if (target === "sunny30") {
-      sunny30Sort = parseMobileSortValue(value);
-      renderSunny30(computePositions());
-    } else if (target === "fund") {
-      fundMobileSort = value;
-      renderFunds(computeFunds(), computePositions());
-    }
-    elements.mobilePortfolioControlsDialog?.close();
-    return;
-  }
-
-  const filterButton = event.target.closest("[data-mobile-filter-value]");
-  if (filterButton) {
-    positionMobileFilter = filterButton.dataset.mobileFilterValue || "all";
-    renderPositions(computePositions());
-    elements.mobilePortfolioControlsDialog?.close();
-  }
-});
-
-document.querySelector("#closeMobilePortfolioControls")?.addEventListener("click", () => {
-  elements.mobilePortfolioControlsDialog?.close();
-});
-
 document.addEventListener("click", (event) => {
   const positionButton = event.target.closest("[data-toggle-position-card]");
   if (positionButton) {
@@ -7591,21 +7831,6 @@ document.addEventListener("click", (event) => {
     return;
   }
 
-  const fundButton = event.target.closest("[data-toggle-fund-card]");
-  if (fundButton) {
-    const symbol = normalizeFundKey(fundButton.dataset.toggleFundCard);
-    if (expandedFundCards.has(symbol)) expandedFundCards.delete(symbol);
-    else expandedFundCards.add(symbol);
-    renderFunds(computeFunds(), computePositions());
-  }
-});
-
-document.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-mobile-position-filter]");
-  if (!button) return;
-  const nextFilter = button.dataset.mobilePositionFilter || "all";
-  positionMobileFilter = positionMobileFilter === nextFilter ? "all" : nextFilter;
-  renderPositions(computePositions());
 });
 
 document.addEventListener("change", async (event) => {
@@ -7673,14 +7898,6 @@ elements.decisionLogToggle?.addEventListener("click", () => {
   elements.decisionLogToggle.textContent = collapsed ? "展开" : "收起";
 });
 
-elements.clearDecisionLogs?.addEventListener("click", async () => {
-  try {
-    await clearNonTradeDecisionLogs();
-  } catch (error) {
-    setQuoteUpdateStatus(error.message, "error");
-  }
-});
-
 document.addEventListener("click", (event) => {
   const button = event.target.closest("[data-detail-section]");
   if (!button) return;
@@ -7716,21 +7933,89 @@ document.addEventListener("click", async (event) => {
   }
 });
 
-document.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-edit-fund]");
+document.addEventListener("submit", async (event) => {
+  const form = event.target.closest("[data-screening-weights-form]");
+  if (!form) return;
+  event.preventDefault();
+  try {
+    await saveScreeningWeights(new FormData(form));
+    setQuoteUpdateStatus("选股排序权重已保存", "success");
+  } catch (error) {
+    window.alert(error.message);
+  }
+});
+
+document.addEventListener("submit", async (event) => {
+  const form = event.target.closest("[data-stock-human-input-form]");
+  if (!form) return;
+  event.preventDefault();
+  try {
+    await saveStockHumanInputs(form);
+    setQuoteUpdateStatus("人工判断已保存", "success");
+  } catch (error) {
+    window.alert(error.message);
+  }
+});
+
+document.addEventListener("submit", async (event) => {
+  const form = event.target.closest("[data-stock-valuation-form]");
+  if (!form) return;
+  event.preventDefault();
+  try {
+    await saveStockValuationInputs(form);
+    setQuoteUpdateStatus("估值假设已保存", "success");
+  } catch (error) {
+    window.alert(error.message);
+  }
+});
+
+document.addEventListener("submit", async (event) => {
+  const form = event.target.closest("[data-stock-hold-log-form]");
+  if (!form) return;
+  event.preventDefault();
+  try {
+    await saveStockHoldLog(form);
+    setQuoteUpdateStatus("决策日志已保存", "success");
+  } catch (error) {
+    window.alert(error.message);
+  }
+});
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-create-hold-log]");
   if (!button) return;
-  openFundEditor(button.dataset.editFund);
+  const symbol = normalizeSymbol(button.dataset.createHoldLog);
+  const stock = auditUniverse(computePositions()).find((item) => normalizeSymbol(item.symbol) === symbol);
+  const reason = window.prompt(`记录「${stock?.name || symbol}」继续持有理由`);
+  if (!reason || !reason.trim()) {
+    window.alert("继续持有日志必须填写人工理由");
+    return;
+  }
+  try {
+    button.disabled = true;
+    const range = stock ? valuationRangeView(stock) : {};
+    const marginText = Number.isFinite(range.margin) ? `安全边际 ${percent(range.margin * 100, false)}` : "安全边际待补";
+    setLoadedState(await requestJSON("/api/decision-logs", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "hold",
+        symbol,
+        decision: "继续持有",
+        detail: `${reason.trim()}；${marginText}`
+      })
+    }));
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+    setQuoteUpdateStatus(`已记录 ${stock?.name || symbol} 继续持有理由`, "success");
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    button.disabled = false;
+  }
 });
 
 document.querySelector("#openTradePanelSecondary").addEventListener("click", () => {
-  setTradeAssetType("stock");
-  elements.tradeDialog.showModal();
-});
-
-document.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-open-fund-trade]");
-  if (!button) return;
-  setTradeAssetType("fund");
+  setTradeAssetType();
   elements.tradeDialog.showModal();
 });
 
@@ -7741,8 +8026,6 @@ function openResearchDialog() {
   setResearchStatus("");
   elements.researchDialog.showModal();
 }
-
-document.querySelector("#openResearchPanel").addEventListener("click", openResearchDialog);
 
 document.addEventListener("click", (event) => {
   const button = event.target.closest("[data-open-research]");
@@ -7777,9 +8060,9 @@ elements.updateQuotesButton.addEventListener("click", async () => {
   }
 });
 
-elements.exportChatGPTButton.addEventListener("click", async () => {
+elements.updateValuationHistoryButton?.addEventListener("click", async () => {
   try {
-    await exportChatGPTContext();
+    await updateValuationHistory();
   } catch (error) {
     setQuoteUpdateStatus(error.message, "error");
   }
@@ -7799,14 +8082,6 @@ document.querySelector("#closeHoldingPanel").addEventListener("click", () => {
 
 document.querySelector("#cancelHolding").addEventListener("click", () => {
   elements.holdingDialog.close();
-});
-
-document.querySelector("#closeFundPanel")?.addEventListener("click", () => {
-  elements.fundDialog.close();
-});
-
-document.querySelector("#cancelFund")?.addEventListener("click", () => {
-  elements.fundDialog.close();
 });
 
 elements.openSunny30CandidateButton?.addEventListener("click", openSunny30CandidateDialog);
@@ -7838,25 +8113,10 @@ elements.tradeForm.addEventListener("submit", async (event) => {
   }
 });
 
-elements.tradeForm?.addEventListener("change", (event) => {
-  if (event.target?.name !== "assetType") return;
-  setTradeAssetType(event.target.value);
-});
-
 elements.holdingForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await saveHolding(new FormData(elements.holdingForm));
   elements.holdingDialog.close();
-});
-
-elements.fundForm?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try {
-    await saveFund(new FormData(elements.fundForm));
-    elements.fundDialog.close();
-  } catch (error) {
-    window.alert(error.message);
-  }
 });
 
 elements.sunny30CandidateForm?.addEventListener("submit", async (event) => {

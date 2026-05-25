@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>晴仓记 · 清新冒险看板</title>
-    <link rel="stylesheet" href="./styles.css?v=sunny-quest-category-v2" />
+    <link rel="stylesheet" href="./styles.css?v=stock-decision-desk-v9" />
   </head>
   <body>
     <aside class="sidebar">
@@ -21,21 +21,21 @@
           <span class="nav-icon">⌂</span>
           总览
         </button>
-        <button class="nav-item" data-view="portfolio" title="股票">
+        <button class="nav-item" data-view="screener" title="选股与估值">
           <span class="nav-icon">▦</span>
-          股票
+          选股
         </button>
-        <button class="nav-item" data-view="funds" title="基金">
+        <button class="nav-item" data-view="holdings" title="持仓">
           <span class="nav-icon">◌</span>
-          基金
+          持仓
+        </button>
+        <button class="nav-item" data-view="logs" title="日志">
+          <span class="nav-icon">＋</span>
+          日志
         </button>
         <button class="nav-item" data-view="industry" title="研究台">
           <span class="nav-icon">○</span>
           研究台
-        </button>
-        <button class="nav-item" data-view="trades" title="交易页">
-          <span class="nav-icon">＋</span>
-          交易页
         </button>
       </nav>
 
@@ -52,6 +52,7 @@
           <h1 id="pageTitle">晴仓记</h1>
         </div>
         <div class="topbar-actions">
+          <button class="ghost-button" id="updateQuotesButton" type="button">更新行情</button>
           <button class="privacy-toggle-button" id="privacyToggle" type="button" aria-label="隐藏持仓数据" aria-pressed="false" title="隐藏持仓数据">
             <span class="privacy-toggle-icon" aria-hidden="true"></span>
           </button>
@@ -59,97 +60,91 @@
       </header>
 
       <section class="page active" data-page="overview">
-        <section class="executive-hero panel" id="actionConclusion" aria-label="当前组合结论">
-          <div class="executive-hero-main">
-            <p class="eyebrow">Dual Strategy</p>
-            <strong id="actionConclusionStatus">继续等待</strong>
-            <span id="actionConclusionDetail">等待行情和安全边际信号</span>
-          </div>
-          <div class="executive-hero-side">
-            <span id="quoteUpdateStatus">行情待更新</span>
-            <div class="overview-actions">
-            <button class="ghost-button" id="openResearchPanel" type="button">
-              <span>⇪</span>
-              导入分析
-            </button>
-            <button class="ghost-button" id="exportChatGPTContext" type="button">
-              <span>↓</span>
-              导出档案
-            </button>
-            <button class="primary-button" id="updateQuotesButton" type="button">
-              <span>↻</span>
-              更新行情
-            </button>
+        <section class="panel overview-cockpit" aria-label="总览状态带">
+          <div class="overview-conclusion wait" id="actionConclusion" aria-label="当前组合结论">
+            <div class="executive-hero-main">
+              <p class="eyebrow">Overview</p>
+              <strong id="actionConclusionStatus">继续等待</strong>
+              <span id="actionConclusionDetail">等待行情和安全边际信号</span>
             </div>
+          </div>
+
+          <section class="metrics-grid overview-metrics-strip" aria-label="组合核心指标">
+            <article class="metric executive-metric">
+              <span>总资产</span>
+              <strong id="totalAssetsMetric">¥0.00</strong>
+              <small>股票 + 现金</small>
+            </article>
+            <article class="metric executive-metric">
+              <span>持仓市值</span>
+              <strong id="totalValue">¥0.00</strong>
+              <small id="positionCount">0 只股票</small>
+            </article>
+            <article class="metric executive-metric">
+              <span>持仓总盈亏</span>
+              <strong id="totalPositionPnl">¥0.00</strong>
+              <small id="totalPositionPnlRate">相对成本 0.00%</small>
+            </article>
+            <article class="metric executive-metric">
+              <span>今日盈亏</span>
+              <strong id="dayChange">¥0.00</strong>
+              <small id="dayChangeRate">0.00%</small>
+            </article>
+            <article class="metric executive-metric">
+              <span>预计年股息</span>
+              <strong id="annualDividend">¥0.00</strong>
+              <small id="portfolioDividendYield">组合税后股息率 0.00%</small>
+            </article>
+          </section>
+
+          <section class="overview-exposure" aria-label="股票现金行业暴露">
+            <p class="eyebrow">Exposure</p>
+            <div class="exposure-bar" id="assetAllocationBar" aria-hidden="true"></div>
+            <div class="overview-exposure-list" id="assetAllocationLegend"></div>
+          </section>
+        </section>
+
+        <section class="decision-cockpit-title">
+          <div>
+            <h2>决策台</h2>
+            <p>只列会改变行动的事项：价格、财报、仓位、买入逻辑偏离。</p>
           </div>
         </section>
 
-        <section class="metrics-grid executive-metrics" aria-label="核心指标">
-          <article class="metric executive-metric">
-            <span>总资产</span>
-            <strong id="totalFunds">¥0.00</strong>
-            <small>股票 + 基金 + 现金</small>
-          </article>
-          <article class="metric executive-metric">
-            <span>持仓市值</span>
-            <strong id="totalValue">¥0.00</strong>
-            <small id="positionCount">0 只股票</small>
-          </article>
-          <article class="metric executive-metric">
-            <span>持仓总盈亏</span>
-            <strong id="totalPositionPnl">¥0.00</strong>
-            <small id="totalPositionPnlRate">相对成本 0.00%</small>
-          </article>
-          <article class="metric executive-metric">
-            <span>今日盈亏</span>
-            <strong id="dayChange">¥0.00</strong>
-            <small id="dayChangeRate">0.00%</small>
-          </article>
-          <article class="metric executive-metric">
-            <span>预计年股息</span>
-            <strong id="annualDividend">¥0.00</strong>
-            <small id="portfolioDividendYield">组合税后股息率 0.00%</small>
-          </article>
-          <article class="metric executive-metric">
-            <span>数据体检</span>
-            <strong id="dataQualityMetric">0 项</strong>
-            <small id="dataQualityDetail">关键数据完整</small>
-          </article>
+        <section class="decision-cockpit-grid" aria-label="股票决策台">
+          <section class="panel decision-queue-panel">
+            <div class="panel-head compact">
+              <div>
+                <h3>今日行动队列</h3>
+              </div>
+              <span class="cockpit-tag" id="decisionQueueCount">待判断</span>
+            </div>
+            <div class="next-actions-list" id="committeeConsensus"></div>
+          </section>
+
+          <section class="panel buy-candidates-panel">
+            <div class="panel-head compact">
+              <h3>买入候选</h3>
+              <span class="cockpit-tag blue">否决后排序</span>
+            </div>
+            <div class="cockpit-signal-list" id="overviewBuyCandidates"></div>
+          </section>
+
+          <section class="panel risk-review-panel">
+            <div class="panel-head compact">
+              <h3>风险与复盘</h3>
+              <span class="cockpit-tag red">偏离信号</span>
+            </div>
+            <div class="cockpit-signal-list" id="overviewRiskReview"></div>
+          </section>
         </section>
 
-        <section class="panel asset-allocation-panel" aria-label="资产配置">
-          <div class="allocation-donut-wrap" aria-label="股票基金现金占比饼图">
-            <svg class="allocation-donut" viewBox="0 0 190 190" role="img">
-              <title>股票、基金、现金资产占比</title>
-              <circle class="allocation-donut-bg" cx="95" cy="95" r="72"></circle>
-              <g id="assetAllocationDonut"></g>
-            </svg>
-            <div class="allocation-donut-center">
-              <span id="allocationCenterLabel">基金占比</span>
-              <strong id="allocationCenterValue">0.0%</strong>
-            </div>
-          </div>
-          <div class="asset-allocation-copy">
-            <p class="eyebrow">Asset Allocation</p>
-            <h2 id="assetAllocationTitle">股票、基金、现金配置</h2>
-            <p id="assetAllocationSummary">基金仓位会在这里展示，基金页负责具体净值、份额和交易流水管理。</p>
-            <div class="asset-allocation-legend" id="assetAllocationLegend"></div>
-          </div>
-        </section>
-
-        <section class="panel next-actions-panel">
-          <div class="panel-head compact">
-            <div>
-              <p class="eyebrow">Next Actions</p>
-              <h2>下一步动作</h2>
-            </div>
-            <a class="ghost-button compact-link" href="#masters">查看持仓决策</a>
-          </div>
-          <div class="next-actions-list" id="committeeConsensus"></div>
-        </section>
+        <span id="quoteUpdateStatus" hidden>行情待更新</span>
+        <span id="dataQualityMetric" hidden>0 项</span>
+        <span id="dataQualityDetail" hidden>关键数据完整</span>
       </section>
 
-      <section class="page" data-page="portfolio">
+      <section class="page" data-page="holdings">
         <div class="main-panel" id="masters">
           <div class="panel-head">
             <div>
@@ -229,13 +224,15 @@
             </table>
           </div>
         </div>
+      </section>
 
+      <section class="page" data-page="screener">
         <section id="sunny30Section" class="stock-page-sunny30" aria-label="晴仓30">
-          <section class="panel sunny30-panel" aria-label="晴仓30表格">
+          <section class="panel sunny30-panel" aria-label="选股池表格">
             <div class="panel-head">
               <div>
-                <p class="eyebrow">Sunny 30 Matrix</p>
-                <h2>晴仓30 · 股票本身数据</h2>
+                <p class="eyebrow">Stock Screener</p>
+                <h2>少量股票池 · 硬否决优先</h2>
               </div>
               <button class="primary-button compact-link" id="openSunny30Candidate" type="button">
                 <span>＋</span>
@@ -244,20 +241,15 @@
             </div>
 
             <div class="sunny30-summary" id="sunny30Summary"></div>
+            <div class="screening-weights-panel" id="screeningWeightsPanel"></div>
 
             <div class="mobile-sort-control" aria-label="晴仓30排序">
               <label for="sunny30MobileSort">排序</label>
               <select id="sunny30MobileSort">
                 <option value="name:asc">股票名正序</option>
                 <option value="name:desc">股票名反序</option>
-                <option value="type:asc">类型正序</option>
-                <option value="type:desc">类型反序</option>
-                <option value="return:desc">综合回报率高到低</option>
-                <option value="return:asc">综合回报率低到高</option>
                 <option value="quality:desc">公司质量高到低</option>
                 <option value="quality:asc">公司质量低到高</option>
-                <option value="moat:desc">护城河高到低</option>
-                <option value="moat:asc">护城河低到高</option>
                 <option value="margin:desc">安全边际高到低</option>
                 <option value="margin:asc">安全边际低到高</option>
                 <option value="dayChange:desc">今日涨跌高到低</option>
@@ -280,26 +272,14 @@
                       </button>
                     </th>
                     <th>
-                      <button class="position-sort-button" type="button" data-sunny30-sort="type" aria-label="按类型排序">
-                        <span>类型</span>
-                        <strong>↕</strong>
-                      </button>
-                    </th>
-                    <th>
-                      <button class="position-sort-button" type="button" data-sunny30-sort="return" aria-label="按综合回报率排序">
-                        <span>综合回报率</span>
+                      <button class="position-sort-button" type="button" data-sunny30-sort="screening" aria-label="按选股评分排序">
+                        <span>选股评分</span>
                         <strong>↕</strong>
                       </button>
                     </th>
                     <th>
                       <button class="position-sort-button" type="button" data-sunny30-sort="quality" aria-label="按公司质量排序">
-                        <span>公司质量</span>
-                        <strong>↕</strong>
-                      </button>
-                    </th>
-                    <th>
-                      <button class="position-sort-button" type="button" data-sunny30-sort="moat" aria-label="按护城河排序">
-                        <span>护城河</span>
+                        <span>五项子分</span>
                         <strong>↕</strong>
                       </button>
                     </th>
@@ -329,49 +309,19 @@
             </div>
           </section>
         </section>
-      </section>
 
-      <section class="page" data-page="funds">
-        <section class="panel fund-management-panel">
+        <section class="panel valuation-module-panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Fund Management</p>
-              <h2>基金管理</h2>
+              <p class="eyebrow">Valuation Range</p>
+              <h2>估值区间</h2>
             </div>
+            <button class="primary-button compact-link" id="updateValuationHistory" type="button">
+              <span>↻</span>
+              更新估值分位
+            </button>
           </div>
-
-          <div class="fund-summary-grid" id="fundSummary"></div>
-
-          <div class="mobile-sort-control mobile-fund-sort-control" aria-label="基金排序">
-            <label for="fundMobileSort">排序</label>
-            <select id="fundMobileSort">
-              <option value="marketValue:desc">市值高到低</option>
-              <option value="pnl:desc">盈亏高到低</option>
-              <option value="pnl:asc">盈亏低到高</option>
-              <option value="share:desc">资产占比高到低</option>
-              <option value="name:asc">名称正序</option>
-            </select>
-          </div>
-
-          <div class="mobile-card-list mobile-fund-card-list" id="fundMobileCards"></div>
-
-          <div class="table-wrap">
-            <table class="fund-table">
-              <thead>
-                <tr>
-                  <th>基金</th>
-                  <th>类型</th>
-                  <th>市值/净值</th>
-                  <th>份额/成本</th>
-                  <th>盈亏</th>
-                  <th>资产占比</th>
-                  <th>更新时间</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody id="fundsBody"></tbody>
-            </table>
-          </div>
+          <div class="valuation-module-list" id="valuationModuleList"></div>
         </section>
       </section>
 
@@ -398,20 +348,6 @@
           <div class="trade-list trade-list-page" id="tradeList"></div>
         </section>
 
-        <section class="panel fund-trades-panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Fund Trades</p>
-              <h2>基金交易流水</h2>
-            </div>
-            <button class="primary-button" id="openFundTradePanel" type="button" data-open-fund-trade>
-              <span>＋</span>
-              新增基金交易
-            </button>
-          </div>
-          <div class="trade-list trade-list-page" id="fundTradeList"></div>
-        </section>
-
         <section class="panel decision-log-panel collapsed" id="decisionLogPanel">
           <div class="panel-head compact">
             <div>
@@ -419,7 +355,6 @@
               <h2>决策日志</h2>
             </div>
             <div class="decision-log-controls">
-              <button class="ghost-button compact-link danger" id="clearDecisionLogs" type="button">清理日志</button>
               <button class="ghost-button compact-link" id="decisionLogToggle" type="button">展开</button>
               <div class="log-filter-tabs" id="decisionLogFilters" aria-label="决策日志筛选">
                 <button class="active" type="button" data-log-filter="all">全部</button>
@@ -443,21 +378,21 @@
         <span class="nav-icon">⌂</span>
         <span>总览</span>
       </button>
-      <button class="mobile-tabbar-item nav-item" type="button" data-view="portfolio" title="股票">
+      <button class="mobile-tabbar-item nav-item" type="button" data-view="screener" title="选股与估值">
         <span class="nav-icon">▦</span>
-        <span>股票</span>
+        <span>选股</span>
       </button>
-      <button class="mobile-tabbar-item nav-item" type="button" data-view="funds" title="基金">
+      <button class="mobile-tabbar-item nav-item" type="button" data-view="holdings" title="持仓">
         <span class="nav-icon">◌</span>
-        <span>基金</span>
+        <span>持仓</span>
+      </button>
+      <button class="mobile-tabbar-item nav-item" type="button" data-view="logs" title="日志">
+        <span class="nav-icon">＋</span>
+        <span>日志</span>
       </button>
       <button class="mobile-tabbar-item nav-item" type="button" data-view="industry" title="研究台">
         <span class="nav-icon">○</span>
         <span>研究</span>
-      </button>
-      <button class="mobile-tabbar-item nav-item" type="button" data-view="trades" title="交易页">
-        <span class="nav-icon">＋</span>
-        <span>交易</span>
       </button>
     </nav>
 
@@ -475,17 +410,6 @@
           <button class="icon-button" type="button" id="closeTradePanel" title="关闭">×</button>
         </div>
 
-        <div class="asset-type-toggle" aria-label="交易类型">
-          <label>
-            <input type="radio" name="assetType" value="stock" checked />
-            <span>股票</span>
-          </label>
-          <label>
-            <input type="radio" name="assetType" value="fund" />
-            <span>基金</span>
-          </label>
-        </div>
-
         <div class="form-grid">
           <label>
             <span id="tradeNameLabel">股票名称</span>
@@ -500,52 +424,15 @@
             <span id="tradeSharesLabel">股数</span>
             <input id="tradeSharesInput" name="shares" type="number" step="0.01" placeholder="买入填正数，卖出填负数" required />
           </label>
+          <label class="form-grid-wide">
+            决策理由
+            <textarea name="reason" rows="3" placeholder="写清楚买入、卖出或继续持有的理由" required></textarea>
+          </label>
         </div>
 
         <div class="dialog-actions">
           <button type="button" class="ghost-button" id="cancelTrade">取消</button>
           <button type="submit" class="primary-button">保存交易</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog class="trade-dialog" id="fundDialog">
-      <form id="fundForm" method="dialog">
-        <div class="dialog-head">
-          <div>
-            <p class="eyebrow">Fund NAV</p>
-            <h2>更新基金净值</h2>
-          </div>
-          <button class="icon-button" type="button" id="closeFundPanel" title="关闭">×</button>
-        </div>
-
-        <input type="hidden" name="symbol" />
-        <div class="form-grid">
-          <label>
-            基金名称
-            <input name="name" required />
-          </label>
-          <label>
-            类型
-            <input name="category" placeholder="权益 / 债券 / 货币" />
-          </label>
-          <label>
-            当前净值
-            <input name="currentNav" type="number" min="0.0001" step="0.0001" required />
-          </label>
-          <label>
-            净值日期
-            <input name="currentNavDate" type="date" />
-          </label>
-          <label>
-            币种
-            <input name="currency" placeholder="CNY" />
-          </label>
-        </div>
-
-        <div class="dialog-actions">
-          <button type="button" class="ghost-button" id="cancelFund">取消</button>
-          <button type="submit" class="primary-button">保存净值</button>
         </div>
       </form>
     </dialog>
@@ -693,6 +580,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=sunny-quest-category-v2"></script>
+    <script src="./app.js?v=stock-decision-desk-v8"></script>
   </body>
 </html>

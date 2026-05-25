@@ -85,6 +85,8 @@ type FinancialValuation struct {
 	PB            *float64     `json:"pb,omitempty"`
 	PEG           *float64     `json:"peg,omitempty"`
 	DividendYield *float64     `json:"dividendYield,omitempty"`
+	PEPercentile  *float64     `json:"pePercentile,omitempty"`
+	PBPercentile  *float64     `json:"pbPercentile,omitempty"`
 	PERange       *MetricRange `json:"peRange,omitempty"`
 	PBRange       *MetricRange `json:"pbRange,omitempty"`
 	SourceNote    string       `json:"sourceNote,omitempty"`

@@ -242,9 +242,10 @@ func runtimeQuoteList(records map[string]RuntimeQuote) []RuntimeQuote {
 }
 
 func persistentState(state AppState) AppState {
+	normalizePortfolioState(&state)
 	state.Holdings = append([]Holding(nil), state.Holdings...)
 	state.Candidates = append([]Candidate(nil), state.Candidates...)
-	state.Funds = append([]Fund(nil), state.Funds...)
+	state.Stocks = append([]Stock(nil), state.Stocks...)
 	state.Industries = nil
 	state.DataStatus = nil
 	for i := range state.Holdings {
@@ -253,7 +254,25 @@ func persistentState(state AppState) AppState {
 	for i := range state.Candidates {
 		clearCandidateRuntimeQuote(&state.Candidates[i])
 	}
+	for i := range state.Stocks {
+		clearStockRuntimeQuote(&state.Stocks[i])
+	}
 	return state
+}
+
+func clearStockRuntimeQuote(stock *Stock) {
+	stock.CurrentPrice = 0
+	stock.PreviousClose = 0
+	stock.TwentyDayClose = 0
+	stock.TwentyDayCloseDate = ""
+	stock.TwentyDayChange = nil
+	stock.MarketCap = nil
+	stock.MarketCapCurrency = ""
+	stock.CurrentPriceDate = ""
+	stock.PreviousCloseDate = ""
+	if strings.Contains(stock.UpdatedAt, "行情源") {
+		stock.UpdatedAt = ""
+	}
 }
 
 func clearHoldingRuntimeQuote(holding *Holding) {

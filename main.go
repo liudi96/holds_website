@@ -34,18 +34,19 @@ var (
 var bundledPortfolioJSON []byte
 
 type AppState struct {
-	TotalCapital float64            `json:"totalCapital"`
-	Cash         float64            `json:"cash"`
-	FX           map[string]float64 `json:"fx"`
-	Trades       []Trade            `json:"trades"`
-	DecisionLogs []DecisionLog      `json:"decisionLogs"`
-	Holdings     []Holding          `json:"holdings"`
-	Funds        []Fund             `json:"funds,omitempty"`
-	Plan         []PlanItem         `json:"plan"`
-	Candidates   []Candidate        `json:"candidates"`
-	Industries   []IndustryResearch `json:"industries,omitempty"`
-	Rules        []Rule             `json:"rules"`
-	DataStatus   *DataStatus        `json:"dataStatus,omitempty"`
+	TotalCapital     float64            `json:"totalCapital"`
+	Cash             float64            `json:"cash"`
+	FX               map[string]float64 `json:"fx"`
+	Trades           []Trade            `json:"trades"`
+	DecisionLogs     []DecisionLog      `json:"decisionLogs"`
+	Stocks           []Stock            `json:"stocks,omitempty"`
+	ScreeningWeights ScreeningWeights   `json:"screeningWeights"`
+	Holdings         []Holding          `json:"holdings,omitempty"`
+	Plan             []PlanItem         `json:"plan"`
+	Candidates       []Candidate        `json:"candidates,omitempty"`
+	Industries       []IndustryResearch `json:"industries,omitempty"`
+	Rules            []Rule             `json:"rules"`
+	DataStatus       *DataStatus        `json:"dataStatus,omitempty"`
 }
 
 type DataStatus struct {
@@ -84,18 +85,7 @@ type Trade struct {
 	Price        float64 `json:"price"`
 	Currency     string  `json:"currency"`
 	CurrentPrice float64 `json:"currentPrice"`
-}
-
-type Fund struct {
-	Symbol         string  `json:"symbol"`
-	Name           string  `json:"name"`
-	Shares         float64 `json:"shares"`
-	Cost           float64 `json:"cost"`
-	CurrentNAV     float64 `json:"currentNav"`
-	Currency       string  `json:"currency"`
-	Category       string  `json:"category,omitempty"`
-	CurrentNAVDate string  `json:"currentNavDate,omitempty"`
-	UpdatedAt      string  `json:"updatedAt,omitempty"`
+	Reason       string  `json:"reason,omitempty"`
 }
 
 type DecisionLog struct {
@@ -335,15 +325,20 @@ func main() {
 	mux.HandleFunc("GET /api/state", server.handleGetState)
 	mux.HandleFunc("POST /api/reset", server.handleReset)
 	mux.HandleFunc("POST /api/trades", server.handleCreateTrade)
+	mux.HandleFunc("POST /api/decision-logs", server.handleCreateDecisionLog)
 	mux.HandleFunc("POST /api/decision-logs/clear", server.handleClearDecisionLogs)
+	mux.HandleFunc("POST /api/stocks", server.handleUpsertStock)
+	mux.HandleFunc("PUT /api/stocks/", server.handleUpsertStock)
+	mux.HandleFunc("DELETE /api/stocks/", server.handleDeleteStock)
+	mux.HandleFunc("PUT /api/screening-weights", server.handleUpdateScreeningWeights)
 	mux.HandleFunc("POST /api/candidates", server.handleUpsertCandidate)
 	mux.HandleFunc("DELETE /api/candidates/", server.handleDeleteCandidate)
 	mux.HandleFunc("PUT /api/holdings/", server.handleUpdateHolding)
-	mux.HandleFunc("PUT /api/funds/", server.handleUpdateFund)
 	mux.HandleFunc("POST /api/research/preview", server.handlePreviewResearch)
 	mux.HandleFunc("POST /api/research/import", server.handleImportResearch)
 	mux.HandleFunc("GET /api/chatgpt/export", server.handleExportChatGPTContext)
 	mux.HandleFunc("POST /api/quotes/update", server.handleUpdateQuotes)
+	mux.HandleFunc("POST /api/valuation-history/update", server.handleUpdateValuationHistory)
 	mux.HandleFunc("POST /api/industries/update", server.handleUpdateIndustries)
 	mux.HandleFunc("POST /api/financials/update/", server.handleUpdateFinancials)
 	mux.HandleFunc("GET /api/health", server.handleHealth)
@@ -715,66 +710,6 @@ func (s *Server) handleUpdateHolding(w http.ResponseWriter, r *http.Request) {
 	writeError(w, http.StatusNotFound, "holding not found")
 }
 
-func (s *Server) handleUpdateFund(w http.ResponseWriter, r *http.Request) {
-	symbol := strings.TrimPrefix(r.URL.Path, "/api/funds/")
-	symbol = strings.TrimSpace(symbol)
-	if symbol == "" {
-		writeError(w, http.StatusBadRequest, "missing fund symbol")
-		return
-	}
-
-	var patch Fund
-	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid fund payload")
-		return
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	nextState, err := cloneAppState(s.state)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to prepare state")
-		return
-	}
-	idx := findFundIndex(nextState.Funds, symbol)
-	if idx == -1 {
-		writeError(w, http.StatusNotFound, "fund not found")
-		return
-	}
-
-	if _, err := backupPortfolioFile(); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to backup portfolio data")
-		return
-	}
-	fund := &nextState.Funds[idx]
-	if strings.TrimSpace(patch.Name) != "" {
-		fund.Name = strings.TrimSpace(patch.Name)
-	}
-	if strings.TrimSpace(patch.Currency) != "" {
-		fund.Currency = strings.ToUpper(strings.TrimSpace(patch.Currency))
-	}
-	fund.Category = strings.TrimSpace(patch.Category)
-	if patch.CurrentNAV > 0 {
-		fund.CurrentNAV = patch.CurrentNAV
-	}
-	if strings.TrimSpace(patch.CurrentNAVDate) != "" {
-		fund.CurrentNAVDate = strings.TrimSpace(patch.CurrentNAVDate)
-	}
-	fund.UpdatedAt = time.Now().Format("2006-01-02")
-
-	if err := saveState(nextState); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save state")
-		return
-	}
-	if err := hydrateState(&nextState); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load state")
-		return
-	}
-	s.state = nextState
-	writeJSON(w, http.StatusOK, s.state)
-}
-
 type tradeStockRef struct {
 	Symbol       string
 	Name         string
@@ -787,7 +722,7 @@ func (s *Server) resolveTradeInput(trade *Trade) error {
 	trade.Name = strings.TrimSpace(trade.Name)
 	trade.AssetType = normalizeAssetType(trade.AssetType)
 	if trade.AssetType == "fund" {
-		return s.resolveFundTradeInput(trade)
+		return errors.New("基金模块已删除，请只记录股票交易")
 	}
 
 	trade.Symbol = normalizeSymbol(trade.Symbol)
@@ -835,62 +770,6 @@ func (s *Server) resolveTradeInput(trade *Trade) error {
 	}
 	if trade.Currency == "" {
 		trade.Currency = inferCurrencyFromSymbol(trade.Symbol)
-	}
-	if trade.CurrentPrice <= 0 {
-		trade.CurrentPrice = trade.Price
-	}
-	return nil
-}
-
-func (s *Server) resolveFundTradeInput(trade *Trade) error {
-	trade.Symbol = strings.TrimSpace(trade.Symbol)
-	trade.Side = strings.ToLower(strings.TrimSpace(trade.Side))
-	trade.Currency = strings.ToUpper(strings.TrimSpace(trade.Currency))
-
-	if trade.Shares < 0 {
-		trade.Side = "sell"
-		trade.Shares = -trade.Shares
-	}
-	if trade.Side == "" {
-		trade.Side = "buy"
-	}
-
-	input := firstNonEmpty(trade.Symbol, trade.Name)
-	if trade.Side == "sell" {
-		fund, ok := s.findTradeFund(input)
-		if !ok || fund.Shares <= 0 {
-			return errors.New("未找到可卖出的基金持仓")
-		}
-		trade.Symbol = fund.Symbol
-		trade.Name = firstNonEmpty(fund.Name, trade.Name)
-		if trade.Currency == "" {
-			trade.Currency = fund.Currency
-		}
-		if trade.CurrentPrice <= 0 {
-			trade.CurrentPrice = fund.CurrentPrice
-		}
-	} else if fund, ok := s.findTradeFund(input); ok {
-		trade.Symbol = fund.Symbol
-		trade.Name = firstNonEmpty(fund.Name, trade.Name)
-		if trade.Currency == "" {
-			trade.Currency = fund.Currency
-		}
-		if trade.CurrentPrice <= 0 {
-			trade.CurrentPrice = fund.CurrentPrice
-		}
-	}
-
-	if trade.Name == "" {
-		trade.Name = strings.TrimSpace(trade.Symbol)
-	}
-	if trade.Name == "" {
-		return errors.New("请填写基金名称")
-	}
-	if trade.Symbol == "" {
-		trade.Symbol = fundSymbolFromName(trade.Name)
-	}
-	if trade.Currency == "" {
-		trade.Currency = "CNY"
 	}
 	if trade.CurrentPrice <= 0 {
 		trade.CurrentPrice = trade.Price
@@ -946,25 +825,6 @@ func (s *Server) findTradeStock(input string) (tradeStockRef, bool) {
 	return tradeStockRef{}, false
 }
 
-func (s *Server) findTradeFund(input string) (tradeStockRef, bool) {
-	text := strings.TrimSpace(input)
-	if text == "" {
-		return tradeStockRef{}, false
-	}
-	normalized := normalizeFundSymbol(text)
-	for _, fund := range s.state.Funds {
-		if normalizeFundSymbol(fund.Symbol) == normalized {
-			return tradeStockRef{Symbol: fund.Symbol, Name: fund.Name, Currency: fund.Currency, CurrentPrice: fund.CurrentNAV, Shares: fund.Shares}, true
-		}
-	}
-	for _, fund := range s.state.Funds {
-		if tradeNameMatches(fund.Name, text) {
-			return tradeStockRef{Symbol: fund.Symbol, Name: fund.Name, Currency: fund.Currency, CurrentPrice: fund.CurrentNAV, Shares: fund.Shares}, true
-		}
-	}
-	return tradeStockRef{}, false
-}
-
 func tradeNameMatches(name string, input string) bool {
 	name = strings.TrimSpace(name)
 	input = strings.TrimSpace(input)
@@ -976,14 +836,6 @@ func normalizeAssetType(assetType string) string {
 		return "fund"
 	}
 	return "stock"
-}
-
-func normalizeFundSymbol(symbol string) string {
-	return strings.ToUpper(strings.TrimSpace(symbol))
-}
-
-func fundSymbolFromName(name string) string {
-	return strings.TrimSpace(name)
 }
 
 func inferCurrencyFromSymbol(symbol string) string {
@@ -1149,16 +1001,6 @@ func findCandidateIndex(candidates []Candidate, symbol string) int {
 	return -1
 }
 
-func findFundIndex(funds []Fund, symbol string) int {
-	normalized := normalizeFundSymbol(symbol)
-	for i := range funds {
-		if normalizeFundSymbol(funds[i].Symbol) == normalized {
-			return i
-		}
-	}
-	return -1
-}
-
 func upsertCandidate(candidates []Candidate, candidate Candidate) []Candidate {
 	idx := findCandidateIndex(candidates, candidate.Symbol)
 	if idx == -1 {
@@ -1181,11 +1023,6 @@ func (s *Server) applyTrade(trade Trade) {
 }
 
 func applyTradeToState(state *AppState, trade Trade) {
-	if normalizeAssetType(trade.AssetType) == "fund" {
-		applyFundTradeToState(state, trade)
-		return
-	}
-
 	idx := findHoldingIndex(state.Holdings, trade.Symbol)
 
 	if idx == -1 {
@@ -1244,75 +1081,19 @@ func applyTradeToState(state *AppState, trade Trade) {
 	} else {
 		state.Cash += cashDelta
 	}
-}
-
-func (s *Server) applyFundTrade(trade Trade) {
-	applyFundTradeToState(&s.state, trade)
-}
-
-func applyFundTradeToState(state *AppState, trade Trade) {
-	idx := findFundIndex(state.Funds, trade.Symbol)
-
-	if idx == -1 {
-		if trade.Side == "sell" {
-			return
-		}
-		state.Funds = append(state.Funds, Fund{
-			Symbol:         trade.Symbol,
-			Name:           trade.Name,
-			Shares:         0,
-			Cost:           trade.Price,
-			CurrentNAV:     trade.CurrentPrice,
-			Currency:       trade.Currency,
-			Category:       "未分类",
-			CurrentNAVDate: trade.Date,
-			UpdatedAt:      trade.Date,
-		})
-		idx = len(state.Funds) - 1
-	}
-
-	fund := &state.Funds[idx]
-	if trade.Side == "buy" {
-		totalCost := fund.Shares*fund.Cost + trade.Shares*trade.Price
-		fund.Shares += trade.Shares
-		if fund.Shares > 0 {
-			fund.Cost = totalCost / fund.Shares
-		}
-	} else {
-		fund.Shares -= trade.Shares
-		if fund.Shares < 0 {
-			fund.Shares = 0
-		}
-	}
-
-	if strings.TrimSpace(trade.Name) != "" {
-		fund.Name = strings.TrimSpace(trade.Name)
-	}
-	fund.Currency = trade.Currency
-	fund.CurrentNAV = trade.CurrentPrice
-	fund.CurrentNAVDate = trade.Date
-	fund.UpdatedAt = trade.Date
-	if trade.Side == "sell" && fund.Shares == 0 {
-		state.Funds = append(state.Funds[:idx], state.Funds[idx+1:]...)
-	}
-	state.Trades = append(state.Trades, trade)
-
-	multiplier := state.FX[trade.Currency]
-	if multiplier == 0 {
-		multiplier = 1
-	}
-	cashDelta := trade.Shares * trade.Price * multiplier
-	if trade.Side == "buy" {
-		state.Cash -= cashDelta
-	} else {
-		state.Cash += cashDelta
-	}
+	syncStocksFromLegacy(state)
 }
 
 func validateTrade(trade Trade) error {
+	if normalizeAssetType(trade.AssetType) == "fund" {
+		return errors.New("fund trades are no longer supported")
+	}
 	side := strings.ToLower(strings.TrimSpace(trade.Side))
 	if side != "buy" && side != "sell" {
 		return errors.New("side must be buy or sell")
+	}
+	if strings.TrimSpace(trade.Reason) == "" {
+		return errors.New("reason is required")
 	}
 	if strings.TrimSpace(trade.Symbol) == "" {
 		return errors.New("symbol is required")
@@ -1396,15 +1177,8 @@ func appendTradeDecisionLog(state *AppState, trade Trade) {
 		sideText = "卖出"
 	}
 	decision = firstNonEmpty(decision, fmt.Sprintf("%s %s", sideText, firstNonEmpty(name, trade.Symbol)))
-	unit := "股"
-	priceLabel := "成交价"
-	currentLabel := "录入最新价"
-	if normalizeAssetType(trade.AssetType) == "fund" {
-		unit = "份额"
-		priceLabel = "成交净值"
-		currentLabel = "录入净值"
-	}
-	detail := fmt.Sprintf("%s %.2f %s；%s %s %.4f；%s %s %.4f", sideText, trade.Shares, unit, priceLabel, strings.ToUpper(trade.Currency), trade.Price, currentLabel, strings.ToUpper(trade.Currency), trade.CurrentPrice)
+	reason := strings.TrimSpace(trade.Reason)
+	detail := fmt.Sprintf("%s %.2f 股；成交价 %s %.4f；录入最新价 %s %.4f；理由：%s", sideText, trade.Shares, strings.ToUpper(trade.Currency), trade.Price, strings.ToUpper(trade.Currency), trade.CurrentPrice, reason)
 
 	appendDecisionLog(state, DecisionLog{
 		Type:       "trade",
@@ -1479,15 +1253,6 @@ func decisionLogContext(state *AppState, symbol string) (string, *float64, strin
 		plan := findPlanForDecisionLog(state, candidate.Symbol, candidate.Name)
 		discipline := firstNonEmpty(planDiscipline(plan), candidate.Status)
 		return candidate.Name, pricePointer(candidate.CurrentPrice), candidate.Currency, firstNonEmpty(candidate.Action, candidate.Status), discipline
-	}
-
-	normalizedFundSymbol := normalizeFundSymbol(symbol)
-	for i := range state.Funds {
-		fund := state.Funds[i]
-		if normalizeFundSymbol(fund.Symbol) != normalizedFundSymbol {
-			continue
-		}
-		return fund.Name, pricePointer(fund.CurrentNAV), fund.Currency, "更新基金持仓", firstNonEmpty(fund.Category, "基金持仓管理")
 	}
 
 	plan := findPlanForDecisionLog(state, symbol, "")
@@ -1707,6 +1472,7 @@ func loadState() (AppState, error) {
 	if err := json.Unmarshal(body, &state); err != nil {
 		return AppState{}, err
 	}
+	normalizePortfolioState(&state)
 	if isEmptyPortfolioState(state) {
 		state, err = bundledState()
 		if err != nil {
@@ -1727,6 +1493,7 @@ func bundledState() (AppState, error) {
 	if err := json.Unmarshal(bundledPortfolioJSON, &state); err != nil {
 		return AppState{}, err
 	}
+	normalizePortfolioState(&state)
 	if isEmptyPortfolioState(state) {
 		return defaultState(), nil
 	}
@@ -1736,6 +1503,7 @@ func bundledState() (AppState, error) {
 func isEmptyPortfolioState(state AppState) bool {
 	return state.TotalCapital == 0 &&
 		state.Cash == 0 &&
+		len(state.Stocks) == 0 &&
 		len(state.Holdings) == 0 &&
 		len(state.Candidates) == 0 &&
 		len(state.Trades) == 0 &&
@@ -1743,9 +1511,11 @@ func isEmptyPortfolioState(state AppState) bool {
 }
 
 func hydrateState(state *AppState) error {
+	normalizePortfolioState(state)
 	if err := mergeRuntimeQuotes(state); err != nil {
 		return err
 	}
+	syncStocksFromLegacy(state)
 	industries, err := loadIndustries()
 	if err != nil {
 		return err
@@ -1793,6 +1563,7 @@ func cloneAppState(state AppState) (AppState, error) {
 	if err := json.Unmarshal(body, &cloned); err != nil {
 		return AppState{}, err
 	}
+	normalizePortfolioState(&cloned)
 	return cloned, nil
 }
 
@@ -1838,7 +1609,7 @@ func ptr(value float64) *float64 {
 }
 
 func defaultState() AppState {
-	return AppState{
+	state := AppState{
 		TotalCapital: 1150000,
 		Cash:         477238.13560642325,
 		FX:           map[string]float64{"CNY": 1, "HKD": 0.8716, "USD": 7.1},
@@ -1875,4 +1646,6 @@ func defaultState() AppState {
 			{Dimension: "财务质量", Score: 25, Standard: "ROE/ROIC、自由现金流、资产负债表、利润率、应收/存货/资本开支"},
 		},
 	}
+	normalizePortfolioState(&state)
+	return state
 }
