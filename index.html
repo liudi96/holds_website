@@ -163,8 +163,10 @@
               <option value="category:desc">分类反序</option>
               <option value="marketValue:desc">市值高到低</option>
               <option value="marketValue:asc">市值低到高</option>
-              <option value="pnl:desc">盈亏高到低</option>
-              <option value="pnl:asc">盈亏低到高</option>
+              <option value="dayChange:desc">今日盈亏高到低</option>
+              <option value="dayChange:asc">今日盈亏低到高</option>
+              <option value="pnl:desc">总盈亏高到低</option>
+              <option value="pnl:asc">总盈亏低到高</option>
               <option value="return:desc">综合回报率高到低</option>
               <option value="return:asc">综合回报率低到高</option>
               <option value="margin:desc">安全边际高到低</option>
@@ -194,8 +196,14 @@
                     </button>
                   </th>
                   <th>
-                    <button class="position-sort-button" type="button" data-position-sort="pnl" aria-label="按盈亏排序">
-                      <span>盈亏</span>
+                    <button class="position-sort-button" type="button" data-position-sort="dayChange" aria-label="按今日盈亏排序">
+                      <span>今日盈亏</span>
+                      <strong>↕</strong>
+                    </button>
+                  </th>
+                  <th>
+                    <button class="position-sort-button" type="button" data-position-sort="pnl" aria-label="按总盈亏排序">
+                      <span>总盈亏</span>
                       <strong>↕</strong>
                     </button>
                   </th>

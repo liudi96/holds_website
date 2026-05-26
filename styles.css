@@ -1656,6 +1656,50 @@ table {
   text-align: center;
 }
 
+.page[data-page="holdings"] .decision-table {
+  min-width: 1160px;
+}
+
+.page[data-page="holdings"] .decision-table th:nth-child(1),
+.page[data-page="holdings"] .decision-table td:nth-child(1) {
+  width: 210px;
+}
+
+.page[data-page="holdings"] .decision-table th:nth-child(2),
+.page[data-page="holdings"] .decision-table td:nth-child(2) {
+  width: 82px;
+}
+
+.page[data-page="holdings"] .decision-table th:nth-child(3),
+.page[data-page="holdings"] .decision-table td:nth-child(3) {
+  width: 124px;
+}
+
+.page[data-page="holdings"] .decision-table th:nth-child(4),
+.page[data-page="holdings"] .decision-table td:nth-child(4),
+.page[data-page="holdings"] .decision-table th:nth-child(5),
+.page[data-page="holdings"] .decision-table td:nth-child(5) {
+  width: 112px;
+}
+
+.page[data-page="holdings"] .decision-table th:nth-child(6),
+.page[data-page="holdings"] .decision-table td:nth-child(6) {
+  width: 124px;
+}
+
+.page[data-page="holdings"] .decision-table th:nth-child(7),
+.page[data-page="holdings"] .decision-table td:nth-child(7),
+.page[data-page="holdings"] .decision-table th:nth-child(8),
+.page[data-page="holdings"] .decision-table td:nth-child(8) {
+  width: 104px;
+}
+
+.page[data-page="holdings"] .decision-table th:nth-child(9),
+.page[data-page="holdings"] .decision-table td:nth-child(9) {
+  width: 132px;
+  text-align: center;
+}
+
 th,
 td {
   padding: 14px 18px;

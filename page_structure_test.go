@@ -104,6 +104,21 @@ func TestScreenerMarksRejectedStocksInsteadOfHardRejectColumn(t *testing.T) {
 	requireContains(t, css, `.screening-reject-name strong`)
 }
 
+func TestHoldingsDecisionTableSeparatesTodayAndTotalPnl(t *testing.T) {
+	html := readTextFile(t, "index.html")
+	js := readTextFile(t, "app.js")
+	holdingsTable := extractBetween(t, html, `<table class="decision-table">`, `</table>`)
+
+	requireContains(t, holdingsTable, `data-position-sort="dayChange"`)
+	requireContains(t, holdingsTable, `<span>今日盈亏</span>`)
+	requireContains(t, holdingsTable, `<span>总盈亏</span>`)
+	requireContains(t, js, `data-label="今日盈亏"`)
+	requireContains(t, js, `data-label="总盈亏"`)
+	requireContains(t, js, `renderMobileStat("总盈亏"`)
+	requireNotContains(t, js, `data-label="盈亏"`)
+	requireNotContains(t, js, `renderMobileStat("累计盈亏"`)
+}
+
 func TestStockDetailOwnsEditableHumanInputs(t *testing.T) {
 	js := readTextFile(t, "app.js")
 

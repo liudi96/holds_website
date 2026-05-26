@@ -1982,6 +1982,7 @@ function positionSortValue(item, key) {
   const { stock, strategy } = item;
   if (key === "category") return positionCategory(stock, strategy).order;
   if (key === "marketValue") return finiteNumber(stock.marketValueCny);
+  if (key === "dayChange") return finiteNumber(stock.dayChange);
   if (key === "pnl") return finiteNumber(stock.pnlCny);
   if (key === "return") return finiteNumber(strategy?.shield?.value);
   if (key === "owner") return strategy?.ownerAudit?.hasAudit ? finiteNumber(strategy.ownerAudit.score) : null;
@@ -2103,7 +2104,7 @@ function renderPositionMobileCards(items, totalValue) {
         <div class="mobile-card-core">
           ${renderMobileStat("今日盈亏", privateText(currency(stock.dayChange)), dayClass, privateText(dayRate))}
           ${renderMobileStat("安全边际", Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-", `health-pill ${marginTone}`)}
-          ${renderMobileStat("累计盈亏", privateText(currency(stock.pnlCny)), pnlClass, privateText(percent(stock.pnlRate)))}
+          ${renderMobileStat("总盈亏", privateText(currency(stock.pnlCny)), pnlClass, privateText(percent(stock.pnlRate)))}
         </div>
         <div class="mobile-card-expanded">
           <div class="mobile-card-detail-grid">
@@ -2760,6 +2761,20 @@ function decisionMarketCell(stock) {
   return `<strong>${escapeHTML(privateText(currency(stock.marketValueCny)))}</strong><br /><small class="quote-date">${priceText} · ${escapeHTML(dateText)}</small>`;
 }
 
+function decisionDayPnlCell(stock) {
+  if (stock.sourceType !== "holding") {
+    return { className: "", html: `<strong>-</strong><br /><small>未持仓</small>` };
+  }
+  const dayChange = finiteNumber(stock.dayChange);
+  const dayRate = Number.isFinite(dayChange) && stock.marketValueCny
+    ? percent((dayChange / stock.marketValueCny) * 100)
+    : "无昨收";
+  return {
+    className: Number.isFinite(dayChange) ? privateClass(dayChange >= 0 ? "positive" : "negative") : "",
+    html: `<span class="decision-primary">${escapeHTML(privateText(Number.isFinite(dayChange) ? currency(dayChange) : "-"))}</span><br /><small>${escapeHTML(privateText(dayRate))}</small>`
+  };
+}
+
 function decisionPnlCell(stock) {
   if (stock.sourceType !== "holding") {
     return { className: "", html: `<strong>-</strong><br /><small>未持仓</small>` };
@@ -3301,12 +3316,13 @@ function renderPositions(positions) {
   renderPositionMobileCards(filtered, totalValue);
 
   if (!filtered.length) {
-    elements.positionsBody.innerHTML = `<tr><td colspan="8" class="empty-state">暂无符合条件的标的</td></tr>`;
+    elements.positionsBody.innerHTML = `<tr><td colspan="9" class="empty-state">暂无符合条件的标的</td></tr>`;
     return;
   }
 
   elements.positionsBody.innerHTML = filtered
     .map(({ stock, strategy }) => {
+      const dayPnl = decisionDayPnlCell(stock);
       const pnl = decisionPnlCell(stock);
       const health = decisionHealthCell(stock, totalValue);
       const sourceClass = marketKind(stock) === "HK" ? "hk" : "";
@@ -3334,7 +3350,10 @@ function renderPositions(positions) {
           <td data-label="市值/现价">
             ${decisionMarketCell(stock)}
           </td>
-          <td data-label="盈亏" class="${pnl.className}">
+          <td data-label="今日盈亏" class="${dayPnl.className}">
+            ${dayPnl.html}
+          </td>
+          <td data-label="总盈亏" class="${pnl.className}">
             ${pnl.html}
           </td>
           <td data-label="综合回报率">
