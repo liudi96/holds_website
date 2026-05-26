@@ -198,6 +198,68 @@ func TestHandleCreateDecisionLogAddsEvidenceSnapshot(t *testing.T) {
 	}
 }
 
+func TestHandleDeleteTradeRemovesTradeAndReversesBuy(t *testing.T) {
+	withTempPortfolioData(t)
+	server := Server{state: AppState{
+		FX:   map[string]float64{"HKD": 0.9},
+		Cash: 96220,
+		Trades: []Trade{{
+			ID:           123,
+			Date:         "2026-05-26",
+			AssetType:    "stock",
+			Symbol:       "0700.HK",
+			Name:         "腾讯控股",
+			Side:         "buy",
+			Shares:       10,
+			Price:        420,
+			CurrentPrice: 430,
+			Currency:     "HKD",
+			Reason:       "误新增",
+		}},
+		DecisionLogs: []DecisionLog{{
+			ID:       456,
+			Date:     "2026-05-26",
+			Type:     "trade",
+			Symbol:   "0700.HK",
+			Name:     "腾讯控股",
+			Decision: "买入 腾讯控股",
+			Detail:   "买入 10 股；成交价 HKD 420.0000；录入最新价 HKD 430.0000；理由：误新增",
+		}},
+		Stocks: []Stock{{
+			Symbol:       "0700.HK",
+			Name:         "腾讯控股",
+			CurrentPrice: 430,
+			Currency:     "HKD",
+			Position:     &StockPosition{Shares: 10, Cost: 420},
+		}},
+	}}
+	normalizePortfolioState(&server.state)
+	req := httptest.NewRequest(http.MethodDelete, "/api/trades/123", nil)
+	rec := httptest.NewRecorder()
+
+	server.handleDeleteTrade(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if len(server.state.Trades) != 0 {
+		t.Fatalf("trade should be deleted: %+v", server.state.Trades)
+	}
+	if len(server.state.DecisionLogs) != 0 {
+		t.Fatalf("generated trade log should be deleted: %+v", server.state.DecisionLogs)
+	}
+	if server.state.Cash != 100000 {
+		t.Fatalf("cash = %.2f, want 100000", server.state.Cash)
+	}
+	stock := findStock(server.state.Stocks, "0700.HK")
+	if stock == nil {
+		t.Fatal("stock should remain in tracking pool")
+	}
+	if stock.Position != nil && stock.Position.Shares > 0 {
+		t.Fatalf("position should be reversed: %+v", stock.Position)
+	}
+}
+
 func TestHandleUpdateValuationHistoryWritesRuntimeBook(t *testing.T) {
 	withTempPortfolioData(t)
 	oldFetcher := fetchValuationMonthlyCloses

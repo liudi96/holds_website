@@ -325,6 +325,7 @@ func main() {
 	mux.HandleFunc("GET /api/state", server.handleGetState)
 	mux.HandleFunc("POST /api/reset", server.handleReset)
 	mux.HandleFunc("POST /api/trades", server.handleCreateTrade)
+	mux.HandleFunc("DELETE /api/trades/", server.handleDeleteTrade)
 	mux.HandleFunc("POST /api/decision-logs", server.handleCreateDecisionLog)
 	mux.HandleFunc("POST /api/decision-logs/clear", server.handleClearDecisionLogs)
 	mux.HandleFunc("POST /api/stocks", server.handleUpsertStock)
@@ -472,6 +473,48 @@ func (s *Server) handleCreateTrade(w http.ResponseWriter, r *http.Request) {
 	s.state = nextState
 
 	writeJSON(w, http.StatusCreated, s.state)
+}
+
+func (s *Server) handleDeleteTrade(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/api/trades/"))
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "missing trade id")
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	nextState, err := cloneAppState(s.state)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to prepare state")
+		return
+	}
+
+	tradeIndex := -1
+	var trade Trade
+	for i, item := range nextState.Trades {
+		if fmt.Sprintf("%d", item.ID) == id {
+			tradeIndex = i
+			trade = item
+			break
+		}
+	}
+	if tradeIndex == -1 {
+		writeError(w, http.StatusNotFound, "trade not found")
+		return
+	}
+
+	nextState.Trades = append(nextState.Trades[:tradeIndex], nextState.Trades[tradeIndex+1:]...)
+	reverseTradeFromState(&nextState, trade)
+	removeGeneratedTradeLog(&nextState, trade)
+
+	if err := saveAndHydrateState(&nextState); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	s.state = nextState
+	writeJSON(w, http.StatusOK, s.state)
 }
 
 func (s *Server) handleClearDecisionLogs(w http.ResponseWriter, r *http.Request) {
@@ -1082,6 +1125,87 @@ func applyTradeToState(state *AppState, trade Trade) {
 		state.Cash += cashDelta
 	}
 	syncStocksFromLegacy(state)
+}
+
+func reverseTradeFromState(state *AppState, trade Trade) {
+	normalizePortfolioState(state)
+	idx := findHoldingIndex(state.Holdings, trade.Symbol)
+	side := strings.ToLower(strings.TrimSpace(trade.Side))
+	if side == "buy" {
+		if idx >= 0 {
+			holding := &state.Holdings[idx]
+			if holding.Shares <= trade.Shares+0.000001 {
+				candidate := clearedCandidateFromHolding(*holding)
+				state.Candidates = upsertCandidate(state.Candidates, candidate)
+				state.Holdings = append(state.Holdings[:idx], state.Holdings[idx+1:]...)
+			} else {
+				totalCost := holding.Shares*holding.Cost - trade.Shares*trade.Price
+				holding.Shares -= trade.Shares
+				if holding.Shares > 0 && totalCost > 0 {
+					holding.Cost = totalCost / holding.Shares
+				}
+			}
+		}
+		state.Cash += tradeCashValue(state, trade)
+	} else if side == "sell" {
+		if idx == -1 {
+			candidateIdx := findCandidateIndex(state.Candidates, trade.Symbol)
+			if candidateIdx >= 0 {
+				holding := holdingFromCandidate(state.Candidates[candidateIdx], trade.Price)
+				state.Candidates = removeCandidate(state.Candidates, trade.Symbol)
+				state.Holdings = append(state.Holdings, holding)
+				idx = len(state.Holdings) - 1
+			}
+		}
+		if idx >= 0 {
+			holding := &state.Holdings[idx]
+			holding.Shares += trade.Shares
+			holding.CurrentPrice = trade.CurrentPrice
+			if strings.TrimSpace(holding.Currency) == "" {
+				holding.Currency = trade.Currency
+			}
+			if strings.TrimSpace(holding.Name) == "" {
+				holding.Name = trade.Name
+			}
+		}
+		state.Cash -= tradeCashValue(state, trade)
+	}
+	syncStocksFromLegacy(state)
+}
+
+func tradeCashValue(state *AppState, trade Trade) float64 {
+	multiplier := state.FX[strings.ToUpper(strings.TrimSpace(trade.Currency))]
+	if multiplier == 0 {
+		multiplier = 1
+	}
+	return trade.Shares * trade.Price * multiplier
+}
+
+func removeGeneratedTradeLog(state *AppState, trade Trade) {
+	for i := len(state.DecisionLogs) - 1; i >= 0; i-- {
+		if tradeDecisionLogMatches(state.DecisionLogs[i], trade) {
+			state.DecisionLogs = append(state.DecisionLogs[:i], state.DecisionLogs[i+1:]...)
+			return
+		}
+	}
+}
+
+func tradeDecisionLogMatches(logItem DecisionLog, trade Trade) bool {
+	if strings.TrimSpace(logItem.Type) != "trade" {
+		return false
+	}
+	if normalizeSymbol(logItem.Symbol) != normalizeSymbol(trade.Symbol) {
+		return false
+	}
+	sideText := "买入"
+	if strings.EqualFold(strings.TrimSpace(trade.Side), "sell") {
+		sideText = "卖出"
+	}
+	if !strings.Contains(logItem.Decision, sideText) && !strings.Contains(logItem.Detail, sideText) {
+		return false
+	}
+	reason := strings.TrimSpace(trade.Reason)
+	return reason == "" || strings.Contains(logItem.Detail, reason)
 }
 
 func validateTrade(trade Trade) error {

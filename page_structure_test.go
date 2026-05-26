@@ -118,6 +118,16 @@ func TestStockDetailOwnsEditableHumanInputs(t *testing.T) {
 	requireContains(t, js, `saveStockValuationInputs`)
 }
 
+func TestTradeListHasTrashDeleteAction(t *testing.T) {
+	js := readTextFile(t, "app.js")
+	css := readTextFile(t, "styles.css")
+
+	requireContains(t, js, `data-delete-trade`)
+	requireContains(t, js, `aria-label="删除交易记录`)
+	requireContains(t, js, `deleteTradeRecord`)
+	requireContains(t, css, `.trade-delete-button`)
+}
+
 func extractBetween(t *testing.T, content, start, end string) string {
 	t.Helper()
 	startIndex := strings.Index(content, start)

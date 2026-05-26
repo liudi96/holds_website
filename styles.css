@@ -2380,7 +2380,7 @@ tbody tr:hover {
 }
 
 .trade-list-page .trade-item {
-  grid-template-columns: minmax(170px, 0.9fr) minmax(110px, 0.42fr) minmax(190px, 0.68fr) minmax(190px, 0.66fr);
+  grid-template-columns: minmax(170px, 0.9fr) minmax(110px, 0.42fr) minmax(190px, 0.68fr) minmax(190px, 0.66fr) 34px;
   align-items: center;
   gap: 8px 26px;
   padding: 11px 0;
@@ -2398,6 +2398,32 @@ tbody tr:hover {
 .trade-list-page .trade-item > small:last-child {
   justify-self: end;
   text-align: right;
+}
+
+.trade-delete-button {
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  justify-self: end;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.trade-delete-button svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.trade-delete-button:hover,
+.trade-delete-button:focus-visible {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: var(--red);
 }
 
 .page[data-page="trades"] .decision-log-panel {
@@ -4499,7 +4525,7 @@ label textarea {
   }
 
   .trade-list-page .trade-item {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto 34px;
     gap: 4px 12px;
     padding: 10px 0;
   }
@@ -4518,6 +4544,12 @@ label textarea {
   .trade-list-page .trade-item > small:last-child {
     justify-self: end;
     text-align: right;
+  }
+
+  .trade-list-page .trade-delete-button {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    align-self: center;
   }
 
   .candidate-page,

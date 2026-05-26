@@ -3402,6 +3402,11 @@ function renderTrades() {
           <span class="${privateClass(sideClass)}">${escapeHTML(privateText(currency(trade.price, trade.currency)))}</span>
           <small>${trade.date} · ${escapeHTML(trade.name)}</small>
           <small>${escapeHTML(privateText(`${trade.shares} 股`))} · 最新价 ${escapeHTML(privateText(currency(trade.currentPrice, trade.currency)))}</small>
+          <button class="trade-delete-button" type="button" data-delete-trade="${escapeHTML(trade.id)}" aria-label="删除交易记录 ${escapeHTML(trade.symbol)} ${escapeHTML(trade.date)}">
+            <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+              <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 7v8h2v-8h-2Zm4 0v8h2v-8h-2ZM7 8h10l-.7 12H7.7L7 8Z" />
+            </svg>
+          </button>
         </div>
       `;
     })
@@ -7380,6 +7385,22 @@ async function addTrade(formData) {
   render();
 }
 
+async function deleteTradeRecord(id) {
+  const tradeId = String(id ?? "").trim();
+  if (!tradeId) return;
+
+  if (USE_BACKEND) {
+    setLoadedState(await requestJSON(`/api/trades/${encodeURIComponent(tradeId)}`, { method: "DELETE" }));
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+    return;
+  }
+
+  state.trades = (state.trades ?? []).filter((trade) => String(trade.id) !== tradeId);
+  saveState();
+  render();
+}
+
 async function previewResearch() {
   if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能导入到 portfolio.json");
 
@@ -7930,6 +7951,22 @@ document.addEventListener("click", async (event) => {
     await updateIndustryMetrics(button);
   } catch (error) {
     setQuoteUpdateStatus(error.message, "error");
+  }
+});
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-delete-trade]");
+  if (!button) return;
+  const id = button.dataset.deleteTrade;
+  if (!window.confirm("确认删除这条交易记录？")) return;
+  try {
+    button.disabled = true;
+    await deleteTradeRecord(id);
+    setQuoteUpdateStatus("交易记录已删除", "success");
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    button.disabled = false;
   }
 });
 
