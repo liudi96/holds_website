@@ -6,11 +6,13 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 )
 
 type RuntimeQuoteBook struct {
-	UpdatedAt string                  `json:"updatedAt,omitempty"`
-	Quotes    map[string]RuntimeQuote `json:"quotes"`
+	UpdatedAt       string                   `json:"updatedAt,omitempty"`
+	Quotes          map[string]RuntimeQuote  `json:"quotes"`
+	ETFRuleStatuses map[string]ETFRuleStatus `json:"etfRuleStatuses,omitempty"`
 }
 
 type RuntimeQuote struct {
@@ -48,6 +50,9 @@ func loadRuntimeQuoteBook() (RuntimeQuoteBook, error) {
 	if book.Quotes == nil {
 		book.Quotes = map[string]RuntimeQuote{}
 	}
+	if book.ETFRuleStatuses == nil {
+		book.ETFRuleStatuses = map[string]ETFRuleStatus{}
+	}
 	normalized := make(map[string]RuntimeQuote, len(book.Quotes))
 	for key, record := range book.Quotes {
 		symbol := normalizeSymbol(firstNonEmpty(record.Symbol, key))
@@ -58,6 +63,16 @@ func loadRuntimeQuoteBook() (RuntimeQuoteBook, error) {
 		normalized[symbol] = record
 	}
 	book.Quotes = normalized
+	normalizedETFStatuses := make(map[string]ETFRuleStatus, len(book.ETFRuleStatuses))
+	for key, status := range book.ETFRuleStatuses {
+		symbol := normalizeFundSymbol(firstNonEmpty(status.Symbol, key))
+		if symbol == "" {
+			continue
+		}
+		status.Symbol = symbol
+		normalizedETFStatuses[symbol] = status
+	}
+	book.ETFRuleStatuses = normalizedETFStatuses
 	return book, nil
 }
 
@@ -79,6 +94,48 @@ func saveRuntimeQuoteRecords(records []RuntimeQuote, updatedAt string) error {
 		book.Quotes[symbol] = record
 	}
 	return saveRuntimeQuoteBook(book)
+}
+
+func saveRuntimeMarketData(records []RuntimeQuote, statuses []ETFRuleStatus, updatedAt string) error {
+	book, err := loadRuntimeQuoteBook()
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(updatedAt) != "" {
+		book.UpdatedAt = strings.TrimSpace(updatedAt)
+	}
+	if book.Quotes == nil {
+		book.Quotes = map[string]RuntimeQuote{}
+	}
+	if book.ETFRuleStatuses == nil {
+		book.ETFRuleStatuses = map[string]ETFRuleStatus{}
+	}
+	for _, record := range records {
+		symbol := normalizeSymbol(record.Symbol)
+		if symbol == "" {
+			continue
+		}
+		record.Symbol = symbol
+		preserveRuntimeTwentyDayQuote(&record, book.Quotes[symbol])
+		book.Quotes[symbol] = record
+	}
+	for _, status := range statuses {
+		symbol := normalizeFundSymbol(status.Symbol)
+		if symbol == "" {
+			continue
+		}
+		status.Symbol = symbol
+		status = mergeETFRuleStatusWithExisting(status, book.ETFRuleStatuses[symbol], runtimeQuoteBookUpdateTime(updatedAt))
+		book.ETFRuleStatuses[symbol] = status
+	}
+	return saveRuntimeQuoteBook(book)
+}
+
+func runtimeQuoteBookUpdateTime(updatedAt string) time.Time {
+	if parsed, err := time.ParseInLocation("2006-01-02 15:04:05", strings.TrimSpace(updatedAt), time.Local); err == nil {
+		return parsed
+	}
+	return time.Now()
 }
 
 func preserveRuntimeTwentyDayQuote(record *RuntimeQuote, existing RuntimeQuote) {
@@ -119,6 +176,13 @@ func mergeRuntimeQuotes(state *AppState) error {
 			applyRuntimeQuoteToCandidate(&state.Candidates[i], record)
 		}
 	}
+	for i := range state.Funds {
+		record, ok := book.Quotes[normalizeFundSymbol(state.Funds[i].Symbol)]
+		if ok {
+			applyRuntimeQuoteToFund(&state.Funds[i], record)
+		}
+	}
+	state.ETFRuleStatuses = runtimeETFRuleStatusList(book.ETFRuleStatuses)
 	return nil
 }
 
@@ -246,8 +310,9 @@ func persistentState(state AppState) AppState {
 	state.Holdings = append([]Holding(nil), state.Holdings...)
 	state.Candidates = append([]Candidate(nil), state.Candidates...)
 	state.Stocks = append([]Stock(nil), state.Stocks...)
-	state.Industries = nil
+	state.Funds = append([]Fund(nil), state.Funds...)
 	state.DataStatus = nil
+	state.ETFRuleStatuses = nil
 	for i := range state.Holdings {
 		clearHoldingRuntimeQuote(&state.Holdings[i])
 	}
@@ -257,7 +322,38 @@ func persistentState(state AppState) AppState {
 	for i := range state.Stocks {
 		clearStockRuntimeQuote(&state.Stocks[i])
 	}
+	for i := range state.Funds {
+		clearFundRuntimeQuote(&state.Funds[i])
+	}
 	return state
+}
+
+func applyRuntimeQuoteToFund(fund *Fund, record RuntimeQuote) {
+	if record.CurrentPrice > 0 {
+		fund.CurrentPrice = record.CurrentPrice
+	}
+	if record.PreviousClose > 0 {
+		fund.PreviousClose = record.PreviousClose
+	}
+	fund.CurrentPriceDate = firstNonEmpty(record.CurrentPriceDate, fund.CurrentPriceDate)
+	fund.PreviousCloseDate = firstNonEmpty(record.PreviousCloseDate, fund.PreviousCloseDate)
+	if strings.TrimSpace(fund.Currency) == "" {
+		fund.Currency = strings.ToUpper(strings.TrimSpace(record.Currency))
+	}
+	if strings.TrimSpace(record.UpdatedAt) != "" {
+		fund.UpdatedAt = record.UpdatedAt
+	}
+	*fund = normalizeFund(*fund)
+}
+
+func clearFundRuntimeQuote(fund *Fund) {
+	fund.CurrentPrice = 0
+	fund.PreviousClose = 0
+	fund.CurrentPriceDate = ""
+	fund.PreviousCloseDate = ""
+	if strings.Contains(fund.UpdatedAt, "行情") || strings.Contains(fund.UpdatedAt, "quote") || strings.Contains(fund.UpdatedAt, "NAV") {
+		fund.UpdatedAt = ""
+	}
 }
 
 func clearStockRuntimeQuote(stock *Stock) {

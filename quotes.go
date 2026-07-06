@@ -67,6 +67,15 @@ type quote struct {
 	DividendFiscalYear string
 }
 
+type fundGZResponse struct {
+	FundCode string `json:"fundcode"`
+	Name     string `json:"name"`
+	JZDate   string `json:"jzrq"`
+	NAV      string `json:"dwjz"`
+	Estimate string `json:"gsz"`
+	GZTime   string `json:"gztime"`
+}
+
 type dailyClose struct {
 	Price float64
 	Date  string
@@ -83,9 +92,9 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
-	updated, skipped, quoteRecords := updateQuotes(&state, &http.Client{Timeout: 12 * time.Second}, now)
-	if len(quoteRecords) > 0 {
-		if err := saveRuntimeQuoteRecords(quoteRecords, now.Format("2006-01-02 15:04:05")); err != nil {
+	updated, skipped, quoteRecords, etfRuleStatuses := updateQuotes(&state, &http.Client{Timeout: 12 * time.Second}, now)
+	if len(quoteRecords) > 0 || len(etfRuleStatuses) > 0 {
+		if err := saveRuntimeMarketData(quoteRecords, etfRuleStatuses, now.Format("2006-01-02 15:04:05")); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to save runtime quotes")
 			return
 		}
@@ -103,7 +112,7 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []QuoteSkip, []RuntimeQuote) {
+func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []QuoteSkip, []RuntimeQuote, []ETFRuleStatus) {
 	updated := 0
 	skipped := []QuoteSkip{}
 	quoteRecords := map[string]RuntimeQuote{}
@@ -145,7 +154,27 @@ func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []Q
 		updated++
 	}
 
-	return updated, skipped, runtimeQuoteList(quoteRecords)
+	for i := range state.Funds {
+		fund := &state.Funds[i]
+		if strings.TrimSpace(fund.Symbol) == "" {
+			continue
+		}
+
+		quote, err := fetchFundQuoteCached(client, cache, fallbackCache, fallbackErr, *fund)
+		if err != nil {
+			skipped = append(skipped, QuoteSkip{Type: "fund", Symbol: fund.Symbol, Name: fund.Name, Error: err.Error()})
+			continue
+		}
+
+		applyFundQuote(fund, quote, updateLabel)
+		quoteRecords[normalizeFundSymbol(fund.Symbol)] = runtimeQuoteFromQuote(fund.Symbol, quote, updateLabel)
+		updated++
+	}
+
+	etfRuleStatuses, etfRuleSkipped := updateETFRuleStatuses(client, now)
+	skipped = append(skipped, etfRuleSkipped...)
+
+	return updated, skipped, runtimeQuoteList(quoteRecords), etfRuleStatuses
 }
 
 func quoteSymbols(state *AppState) []string {
@@ -162,6 +191,16 @@ func quoteSymbols(state *AppState) []string {
 		normalized := normalizeSymbol(candidate.Symbol)
 		if normalized != "" && !seen[normalized] {
 			symbols = append(symbols, candidate.Symbol)
+			seen[normalized] = true
+		}
+	}
+	for _, fund := range state.Funds {
+		if normalizeFundType(fund.FundType, fund.Symbol) != fundTypeETF {
+			continue
+		}
+		normalized := normalizeFundSymbol(fund.Symbol)
+		if normalized != "" && !seen[normalized] {
+			symbols = append(symbols, fund.Symbol)
 			seen[normalized] = true
 		}
 	}
@@ -190,6 +229,24 @@ func fetchQuoteCached(client *http.Client, cache map[string]quote, fallbackCache
 	}
 
 	quote, err := fetchQuote(client, normalized, fallbackCache, fallbackErr)
+	if err != nil {
+		return quote, err
+	}
+	cache[normalized] = quote
+	return quote, nil
+}
+
+func fetchFundQuoteCached(client *http.Client, cache map[string]quote, fallbackCache map[string]quote, fallbackErr error, fund Fund) (quote, error) {
+	fund = normalizeFund(fund)
+	if fund.FundType == fundTypeETF {
+		return fetchQuoteCached(client, cache, fallbackCache, fallbackErr, fund.Symbol)
+	}
+
+	normalized := normalizeFundSymbol(fund.Symbol)
+	if cached, ok := cache[normalized]; ok {
+		return cached, nil
+	}
+	quote, err := fetchOTCFundQuote(client, fund)
 	if err != nil {
 		return quote, err
 	}
@@ -235,6 +292,24 @@ func applyCandidateQuote(candidate *Candidate, quote quote, updateLabel string) 
 		candidate.Currency = strings.ToUpper(strings.TrimSpace(quote.Currency))
 	}
 	candidate.UpdatedAt = quoteUpdateLabel(updateLabel, quote)
+}
+
+func applyFundQuote(fund *Fund, quote quote, updateLabel string) {
+	fund.CurrentPrice = quote.Price
+	if quote.PreviousClose > 0 {
+		fund.PreviousClose = quote.PreviousClose
+	}
+	fund.CurrentPriceDate = quote.PriceDate
+	fund.PreviousCloseDate = quote.PreviousCloseDate
+	if strings.TrimSpace(fund.Currency) == "" {
+		fund.Currency = strings.ToUpper(strings.TrimSpace(quote.Currency))
+	}
+	if quote.SourceName != "" || quote.SourceSymbol != "" {
+		fund.UpdatedAt = quoteUpdateLabel(updateLabel, quote)
+	} else {
+		fund.UpdatedAt = updateLabel
+	}
+	*fund = normalizeFund(*fund)
 }
 
 func quoteUpdateLabel(updateLabel string, quote quote) string {
@@ -388,6 +463,76 @@ func fetchQuote(client *http.Client, symbol string, fallbackCache map[string]quo
 	}
 
 	return quote, fmt.Errorf("yahoo: %v; fallback: no quote for %s", yahooErr, symbol)
+}
+
+func fetchOTCFundQuote(client *http.Client, fund Fund) (quote, error) {
+	code := normalizeFundSymbol(fund.Symbol)
+	if code == "" {
+		return quote{}, errors.New("fund symbol is required")
+	}
+	endpoint := "https://fundgz.1234567.com.cn/js/" + url.PathEscape(code) + ".js"
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return quote{}, err
+	}
+	req.Header.Set("User-Agent", "holds-website fund quote updater")
+	req.Header.Set("Referer", "https://fund.eastmoney.com/")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return quote{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return quote{}, fmt.Errorf("fund quote request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil {
+		return quote{}, err
+	}
+	payload, err := parseFundGZQuote(body)
+	if err != nil {
+		return quote{}, err
+	}
+	price, err := strconv.ParseFloat(strings.TrimSpace(payload.NAV), 64)
+	if err != nil || price <= 0 {
+		return quote{}, fmt.Errorf("invalid fund NAV %q", payload.NAV)
+	}
+	previousClose := fund.CurrentPrice
+	previousDate := fund.CurrentPriceDate
+	if previousClose <= 0 {
+		previousClose = price
+		previousDate = payload.JZDate
+	}
+	return quote{
+		Price:             price,
+		PreviousClose:     previousClose,
+		PriceDate:         payload.JZDate,
+		PreviousCloseDate: previousDate,
+		Currency:          "CNY",
+		SourceSymbol:      firstNonEmpty(payload.FundCode, code),
+		SourceName:        "Eastmoney fund NAV",
+	}, nil
+}
+
+func parseFundGZQuote(body []byte) (fundGZResponse, error) {
+	text := strings.TrimSpace(string(body))
+	start := strings.Index(text, "(")
+	end := strings.LastIndex(text, ")")
+	if start < 0 || end <= start {
+		return fundGZResponse{}, errors.New("invalid fund quote JSONP")
+	}
+	rawJSON := strings.TrimSpace(text[start+1 : end])
+	var payload fundGZResponse
+	if err := json.Unmarshal([]byte(rawJSON), &payload); err != nil {
+		return fundGZResponse{}, err
+	}
+	if strings.TrimSpace(payload.FundCode) == "" || strings.TrimSpace(payload.NAV) == "" {
+		return fundGZResponse{}, errors.New("empty fund quote response")
+	}
+	return payload, nil
 }
 
 func fetchYahooQuote(client *http.Client, symbol string) (quote, error) {
@@ -559,6 +704,10 @@ func fetchEastmoneyDailyCloses(client *http.Client, symbol string, limit int) ([
 	if err != nil {
 		return nil, err
 	}
+	return fetchEastmoneyDailyClosesBySecID(client, sourceSymbol, limit)
+}
+
+func fetchEastmoneyDailyClosesBySecID(client *http.Client, sourceSymbol string, limit int) ([]dailyClose, error) {
 	if limit <= 0 {
 		limit = 30
 	}

@@ -15,19 +15,17 @@ import (
 )
 
 const (
-	defaultDataDir                 = "data"
-	portfolioDataDirEnv            = "PORTFOLIO_DATA_DIR"
-	portfolioDataFileName          = "portfolio.json"
-	runtimeQuotesFileName          = "quotes.json"
-	runtimeIndustryMetricsFileName = "industry_metrics.json"
-	decisionLogLimit               = 500
+	defaultDataDir        = "data"
+	portfolioDataDirEnv   = "PORTFOLIO_DATA_DIR"
+	portfolioDataFileName = "portfolio.json"
+	runtimeQuotesFileName = "quotes.json"
+	decisionLogLimit      = 500
 )
 
 var (
-	dataDir                    = resolveDataDir()
-	dataFile                   = filepath.Join(dataDir, portfolioDataFileName)
-	runtimeQuotesFile          = filepath.Join(dataDir, "runtime", runtimeQuotesFileName)
-	runtimeIndustryMetricsFile = filepath.Join(dataDir, "runtime", runtimeIndustryMetricsFileName)
+	dataDir           = resolveDataDir()
+	dataFile          = filepath.Join(dataDir, portfolioDataFileName)
+	runtimeQuotesFile = filepath.Join(dataDir, "runtime", runtimeQuotesFileName)
 )
 
 //go:embed data/portfolio.json
@@ -40,24 +38,24 @@ type AppState struct {
 	Trades           []Trade            `json:"trades"`
 	DecisionLogs     []DecisionLog      `json:"decisionLogs"`
 	Stocks           []Stock            `json:"stocks,omitempty"`
+	Funds            []Fund             `json:"funds,omitempty"`
+	ETFRuleStatuses  []ETFRuleStatus    `json:"etfRuleStatuses,omitempty"`
 	ScreeningWeights ScreeningWeights   `json:"screeningWeights"`
 	Holdings         []Holding          `json:"holdings,omitempty"`
 	Plan             []PlanItem         `json:"plan"`
 	Candidates       []Candidate        `json:"candidates,omitempty"`
-	Industries       []IndustryResearch `json:"industries,omitempty"`
 	Rules            []Rule             `json:"rules"`
 	DataStatus       *DataStatus        `json:"dataStatus,omitempty"`
 }
 
 type DataStatus struct {
-	Status                 string            `json:"status"`
-	DataDir                string            `json:"dataDir"`
-	Writable               bool              `json:"writable"`
-	BackupCount            int               `json:"backupCount"`
-	Portfolio              DataFileStatus    `json:"portfolio"`
-	RuntimeQuotes          DataFileStatus    `json:"runtimeQuotes"`
-	RuntimeIndustryMetrics DataFileStatus    `json:"runtimeIndustryMetrics"`
-	Issues                 []DataStatusIssue `json:"issues,omitempty"`
+	Status        string            `json:"status"`
+	DataDir       string            `json:"dataDir"`
+	Writable      bool              `json:"writable"`
+	BackupCount   int               `json:"backupCount"`
+	Portfolio     DataFileStatus    `json:"portfolio"`
+	RuntimeQuotes DataFileStatus    `json:"runtimeQuotes"`
+	Issues        []DataStatusIssue `json:"issues,omitempty"`
 }
 
 type DataFileStatus struct {
@@ -331,6 +329,9 @@ func main() {
 	mux.HandleFunc("POST /api/stocks", server.handleUpsertStock)
 	mux.HandleFunc("PUT /api/stocks/", server.handleUpsertStock)
 	mux.HandleFunc("DELETE /api/stocks/", server.handleDeleteStock)
+	mux.HandleFunc("POST /api/funds", server.handleUpsertFund)
+	mux.HandleFunc("PUT /api/funds/", server.handleUpsertFund)
+	mux.HandleFunc("DELETE /api/funds/", server.handleDeleteFund)
 	mux.HandleFunc("PUT /api/screening-weights", server.handleUpdateScreeningWeights)
 	mux.HandleFunc("POST /api/candidates", server.handleUpsertCandidate)
 	mux.HandleFunc("DELETE /api/candidates/", server.handleDeleteCandidate)
@@ -340,7 +341,6 @@ func main() {
 	mux.HandleFunc("GET /api/chatgpt/export", server.handleExportChatGPTContext)
 	mux.HandleFunc("POST /api/quotes/update", server.handleUpdateQuotes)
 	mux.HandleFunc("POST /api/valuation-history/update", server.handleUpdateValuationHistory)
-	mux.HandleFunc("POST /api/industries/update", server.handleUpdateIndustries)
 	mux.HandleFunc("POST /api/financials/update/", server.handleUpdateFinancials)
 	mux.HandleFunc("GET /api/health", server.handleHealth)
 	mux.HandleFunc("GET /api/data/status", server.handleDataStatus)
@@ -764,8 +764,24 @@ type tradeStockRef struct {
 func (s *Server) resolveTradeInput(trade *Trade) error {
 	trade.Name = strings.TrimSpace(trade.Name)
 	trade.AssetType = normalizeAssetType(trade.AssetType)
-	if trade.AssetType == "fund" {
-		return errors.New("基金模块已删除，请只记录股票交易")
+	if trade.AssetType == assetTypeFund {
+		trade.Symbol = normalizeFundSymbol(trade.Symbol)
+		trade.Side = strings.ToLower(strings.TrimSpace(trade.Side))
+		trade.Currency = strings.ToUpper(strings.TrimSpace(trade.Currency))
+		if trade.Shares < 0 {
+			trade.Side = "sell"
+			trade.Shares = -trade.Shares
+		}
+		if trade.Side == "" {
+			trade.Side = "buy"
+		}
+		if err := s.resolveFundTradeInput(trade); err != nil {
+			return err
+		}
+		if trade.CurrentPrice <= 0 {
+			trade.CurrentPrice = trade.Price
+		}
+		return nil
 	}
 
 	trade.Symbol = normalizeSymbol(trade.Symbol)
@@ -1066,6 +1082,11 @@ func (s *Server) applyTrade(trade Trade) {
 }
 
 func applyTradeToState(state *AppState, trade Trade) {
+	if normalizeAssetType(trade.AssetType) == assetTypeFund {
+		applyFundTradeToState(state, trade)
+		return
+	}
+
 	idx := findHoldingIndex(state.Holdings, trade.Symbol)
 
 	if idx == -1 {
@@ -1129,6 +1150,11 @@ func applyTradeToState(state *AppState, trade Trade) {
 
 func reverseTradeFromState(state *AppState, trade Trade) {
 	normalizePortfolioState(state)
+	if normalizeAssetType(trade.AssetType) == assetTypeFund {
+		reverseFundTradeFromState(state, trade)
+		return
+	}
+
 	idx := findHoldingIndex(state.Holdings, trade.Symbol)
 	side := strings.ToLower(strings.TrimSpace(trade.Side))
 	if side == "buy" {
@@ -1209,9 +1235,6 @@ func tradeDecisionLogMatches(logItem DecisionLog, trade Trade) bool {
 }
 
 func validateTrade(trade Trade) error {
-	if normalizeAssetType(trade.AssetType) == "fund" {
-		return errors.New("fund trades are no longer supported")
-	}
 	side := strings.ToLower(strings.TrimSpace(trade.Side))
 	if side != "buy" && side != "sell" {
 		return errors.New("side must be buy or sell")
@@ -1303,6 +1326,10 @@ func appendTradeDecisionLog(state *AppState, trade Trade) {
 	decision = firstNonEmpty(decision, fmt.Sprintf("%s %s", sideText, firstNonEmpty(name, trade.Symbol)))
 	reason := strings.TrimSpace(trade.Reason)
 	detail := fmt.Sprintf("%s %.2f 股；成交价 %s %.4f；录入最新价 %s %.4f；理由：%s", sideText, trade.Shares, strings.ToUpper(trade.Currency), trade.Price, strings.ToUpper(trade.Currency), trade.CurrentPrice, reason)
+
+	if normalizeAssetType(trade.AssetType) == assetTypeFund {
+		detail = fmt.Sprintf("%s %.2f fund shares; price %s %.4f; latest %s %.4f; reason: %s", sideText, trade.Shares, strings.ToUpper(trade.Currency), trade.Price, strings.ToUpper(trade.Currency), trade.CurrentPrice, reason)
+	}
 
 	appendDecisionLog(state, DecisionLog{
 		Type:       "trade",
@@ -1428,12 +1455,11 @@ func firstNonEmpty(values ...string) string {
 
 func buildDataStatus() DataStatus {
 	status := DataStatus{
-		Status:                 "ok",
-		DataDir:                dataDir,
-		Portfolio:              fileStatus(dataFile, nil),
-		RuntimeQuotes:          fileStatus(runtimeQuotesFile, runtimeQuotesUpdatedAt),
-		RuntimeIndustryMetrics: fileStatus(runtimeIndustryMetricsFile, runtimeIndustryMetricsUpdatedAt),
-		BackupCount:            backupCount(),
+		Status:        "ok",
+		DataDir:       dataDir,
+		Portfolio:     fileStatus(dataFile, nil),
+		RuntimeQuotes: fileStatus(runtimeQuotesFile, runtimeQuotesUpdatedAt),
+		BackupCount:   backupCount(),
 	}
 	if err := checkDataDirWritable(); err != nil {
 		status.Writable = false
@@ -1463,7 +1489,7 @@ func buildDataStatus() DataStatus {
 		status.Issues = append(status.Issues, DataStatusIssue{
 			Tone:   "warn",
 			Title:  "行情缓存缺失",
-			Detail: "更新行情前会使用 portfolio.json 内的旧价格，建议进入总览点击“更新行情”。",
+			Detail: "更新行情前会使用 portfolio.json 内的旧价格；进入总览页后会自动拉取一次最新行情。",
 		})
 	} else if isFileStale(status.RuntimeQuotes.ModifiedAt, 72*time.Hour) {
 		status.Issues = append(status.Issues, DataStatusIssue{
@@ -1472,14 +1498,6 @@ func buildDataStatus() DataStatus {
 			Detail: "行情缓存超过 72 小时未更新，持仓市值和安全边际可能滞后。",
 		})
 	}
-	if status.RuntimeIndustryMetrics.Exists && isFileStale(status.RuntimeIndustryMetrics.ModifiedAt, 45*24*time.Hour) {
-		status.Issues = append(status.Issues, DataStatusIssue{
-			Tone:   "info",
-			Title:  "行业指标缓存较旧",
-			Detail: "行业外部指标超过 45 天未更新，可在研究台刷新行业数据。",
-		})
-	}
-
 	for _, issue := range status.Issues {
 		if issue.Tone == "error" {
 			status.Status = "error"
@@ -1514,16 +1532,6 @@ func fileStatus(path string, updatedAt func([]byte) string) DataFileStatus {
 
 func runtimeQuotesUpdatedAt(body []byte) string {
 	var book RuntimeQuoteBook
-	if err := json.Unmarshal(body, &book); err != nil {
-		return ""
-	}
-	return strings.TrimSpace(book.UpdatedAt)
-}
-
-func runtimeIndustryMetricsUpdatedAt(body []byte) string {
-	var book struct {
-		UpdatedAt string `json:"updatedAt"`
-	}
 	if err := json.Unmarshal(body, &book); err != nil {
 		return ""
 	}
@@ -1628,6 +1636,7 @@ func isEmptyPortfolioState(state AppState) bool {
 	return state.TotalCapital == 0 &&
 		state.Cash == 0 &&
 		len(state.Stocks) == 0 &&
+		len(state.Funds) == 0 &&
 		len(state.Holdings) == 0 &&
 		len(state.Candidates) == 0 &&
 		len(state.Trades) == 0 &&
@@ -1640,15 +1649,6 @@ func hydrateState(state *AppState) error {
 		return err
 	}
 	syncStocksFromLegacy(state)
-	industries, err := loadIndustries()
-	if err != nil {
-		return err
-	}
-	industries, err = mergeRuntimeIndustryMetrics(industries)
-	if err != nil {
-		return err
-	}
-	state.Industries = industries
 	status := buildDataStatus()
 	state.DataStatus = &status
 	return nil

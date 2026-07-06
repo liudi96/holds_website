@@ -34,7 +34,7 @@ type Stock struct {
 	TargetBuyPrice      *float64              `json:"targetBuyPrice,omitempty"`
 	PriceLevels         *PriceLevels          `json:"priceLevels,omitempty"`
 	ValuationConfidence string                `json:"valuationConfidence,omitempty"`
-	BuyLogic           string                `json:"buyLogic,omitempty"`
+	BuyLogic            string                `json:"buyLogic,omitempty"`
 	BusinessModel       *float64              `json:"businessModel,omitempty"`
 	Moat                *float64              `json:"moat,omitempty"`
 	Governance          *float64              `json:"governance,omitempty"`
@@ -83,13 +83,13 @@ type ScreeningDataPoint struct {
 }
 
 type ValuationAssumptions struct {
-	Currency     string              `json:"currency,omitempty"`
-	CurrentPrice float64             `json:"currentPrice,omitempty"`
-	RequiredMargin *float64          `json:"requiredMargin,omitempty"`
-	UpdatedAt    string              `json:"updatedAt,omitempty"`
-	Source       string              `json:"source,omitempty"`
-	Scenarios    []ValuationScenario `json:"scenarios,omitempty"`
-	Range        *ValuationRange     `json:"range,omitempty"`
+	Currency       string              `json:"currency,omitempty"`
+	CurrentPrice   float64             `json:"currentPrice,omitempty"`
+	RequiredMargin *float64            `json:"requiredMargin,omitempty"`
+	UpdatedAt      string              `json:"updatedAt,omitempty"`
+	Source         string              `json:"source,omitempty"`
+	Scenarios      []ValuationScenario `json:"scenarios,omitempty"`
+	Range          *ValuationRange     `json:"range,omitempty"`
 }
 
 type ValuationScenario struct {
@@ -146,6 +146,7 @@ func normalizePortfolioState(state *AppState) {
 	if len(state.Stocks) == 0 {
 		state.Stocks = stocksFromLegacy(state.Holdings, state.Candidates)
 	}
+	state.Funds = normalizeFunds(state.Funds)
 	rebuildLegacyBuckets(state)
 	if state.ScreeningWeights == (ScreeningWeights{}) {
 		state.ScreeningWeights = DefaultScreeningWeights()
@@ -515,9 +516,10 @@ func (state AppState) MarshalJSON() ([]byte, error) {
 		Trades           []Trade            `json:"trades"`
 		DecisionLogs     []DecisionLog      `json:"decisionLogs"`
 		Stocks           []Stock            `json:"stocks"`
+		Funds            []Fund             `json:"funds,omitempty"`
+		ETFRuleStatuses  []ETFRuleStatus    `json:"etfRuleStatuses,omitempty"`
 		ScreeningWeights ScreeningWeights   `json:"screeningWeights"`
 		Plan             []PlanItem         `json:"plan"`
-		Industries       []IndustryResearch `json:"industries,omitempty"`
 		Rules            []Rule             `json:"rules"`
 		DataStatus       *DataStatus        `json:"dataStatus,omitempty"`
 	}
@@ -528,9 +530,10 @@ func (state AppState) MarshalJSON() ([]byte, error) {
 		Trades:           state.Trades,
 		DecisionLogs:     state.DecisionLogs,
 		Stocks:           state.Stocks,
+		Funds:            state.Funds,
+		ETFRuleStatuses:  state.ETFRuleStatuses,
 		ScreeningWeights: state.ScreeningWeights,
 		Plan:             state.Plan,
-		Industries:       state.Industries,
 		Rules:            state.Rules,
 		DataStatus:       state.DataStatus,
 	})

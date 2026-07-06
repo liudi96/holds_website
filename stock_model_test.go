@@ -101,10 +101,10 @@ func TestScreeningWeightsDefaultAndValidation(t *testing.T) {
 	}
 }
 
-func TestTradeValidationRejectsFundsAndMissingReason(t *testing.T) {
+func TestTradeValidationAcceptsFundsAndRejectsMissingReason(t *testing.T) {
 	fundTrade := Trade{AssetType: "fund", Symbol: "004814.OF", Name: "中欧红利优享混合", Side: "buy", Shares: 100, Price: 1.2, CurrentPrice: 1.2, Currency: "CNY", Reason: "配置基金"}
-	if err := validateTrade(fundTrade); err == nil {
-		t.Fatal("expected fund trade to be rejected")
+	if err := validateTrade(fundTrade); err != nil {
+		t.Fatalf("fund trade should be accepted: %v", err)
 	}
 
 	stockTrade := Trade{AssetType: "stock", Symbol: "0700.HK", Name: "腾讯控股", Side: "buy", Shares: 100, Price: 420, CurrentPrice: 420, Currency: "HKD"}

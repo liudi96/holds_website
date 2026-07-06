@@ -28,15 +28,15 @@ PORT=8081 go run .
 PORTFOLIO_DATA_DIR=/data/holds go run .
 ```
 
-服务会从该目录读写 `portfolio.json`、`runtime/quotes.json`、`runtime/industry_metrics.json` 和 `backups/`。如果目录里没有 `portfolio.json`，启动时会用仓库内置数据初始化一份。所有组合数据写入都会先写临时文件再原子替换，交易、持仓编辑、基金编辑和研究导入会自动备份旧文件。
+服务会从该目录读写 `portfolio.json`、`runtime/quotes.json` 和 `backups/`。如果目录里没有 `portfolio.json`，启动时会用仓库内置数据初始化一份。所有组合数据写入都会先写临时文件再原子替换，交易、持仓编辑、基金编辑和研究导入会自动备份旧文件。
 
 ## 更新行情
 
-推荐在总览页点击“更新行情”。网站会优先拉取 Yahoo Finance 日线收盘价；如果云服务器 IP 被 Yahoo 限流，会自动切换到腾讯实时行情，必要时再尝试东方财富。
+进入总览页时，网站会自动触发一次行情和基金净值更新。网站会优先拉取 Yahoo Finance 日线收盘价；如果云服务器 IP 被 Yahoo 限流，会自动切换到腾讯实时行情，必要时再尝试东方财富。基金里，场内 ETF 复用证券行情路径，场外公募基金拉取天天基金净值。
 
-行情更新优先写入运行时文件 `runtime/quotes.json`，不会污染 `portfolio.json` 里的静态研究档案；基金净值会同步写回组合数据。页面读取状态时会自动把 `portfolio.json` 和 runtime 行情合并，安全边际按 `(内在价值 - 最新价) / 内在价值` 实时重算。
+行情和基金净值优先写入运行时文件 `runtime/quotes.json`，不会污染 `portfolio.json` 里的静态研究档案。页面读取状态时会自动把 `portfolio.json` 和 runtime 行情合并，安全边际按 `(内在价值 - 最新价) / 内在价值` 实时重算。
 
-也可以用命令行更新：
+也可以用命令行更新股票行情和基金净值：
 
 ```bash
 go run ./cmd/update-quotes
@@ -79,10 +79,6 @@ go run ./cmd/import-research data/research/0700.HK.json
 ```bash
 go run ./cmd/import-research -dry-run data/research/0700.HK.json
 ```
-
-## 研究台
-
-研究台读取 `data/industries/*.json`。第一版用于展示行业档案、关键研究问题、指标追踪占位和相关标的，不会把行业档案写入 `data/portfolio.json`。
 
 ## 检查
 

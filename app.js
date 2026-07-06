@@ -8,6 +8,8 @@ const seedState = {
   fx: { CNY: 1, HKD: 0.8716, USD: 7.1 },
   trades: [],
   decisionLogs: [],
+  funds: [],
+  etfRuleStatuses: [],
   holdings: [
     {
       symbol: "0700.HK",
@@ -186,59 +188,6 @@ const seedState = {
       targetBuyPrice: 19.5
     }
   ],
-  industries: [
-    {
-      id: "coal",
-      name: "煤炭",
-      category: "周期资源",
-      status: "待建立行业框架",
-      updatedAt: "2026-05-12",
-      summary: "行业研究档案占位。后续补充煤价、供需、库存、进口、政策和代表公司跟踪。",
-      keywords: ["煤炭", "动力煤", "焦煤"],
-      linkedSymbols: [],
-      keyQuestions: ["煤价中枢是否上移或下移", "供给约束是否仍有效", "高分红可持续性是否被资本开支侵蚀"],
-      metrics: [
-        { name: "动力煤价格", unit: "元/吨", latestValue: null, asOf: "", source: "", comment: "预留煤价追踪" }
-      ],
-      notes: [
-        { date: "2026-05-12", title: "行业页占位", summary: "后续按煤炭行业具体研究设计指标和内容。" }
-      ]
-    },
-    {
-      id: "oil",
-      name: "石油",
-      category: "周期资源",
-      status: "待建立行业框架",
-      updatedAt: "2026-05-12",
-      summary: "行业研究档案占位。后续补充油价、资本开支、储量、桶油成本和分红纪律跟踪。",
-      keywords: ["石油", "油气", "海上油气"],
-      linkedSymbols: ["0883.HK"],
-      keyQuestions: ["油价假设是否足够保守", "桶油成本和储量替代率是否稳定", "分红与回购是否穿越周期"],
-      metrics: [
-        { name: "Brent 原油", unit: "美元/桶", latestValue: null, asOf: "", source: "", comment: "预留油价追踪" }
-      ],
-      notes: [
-        { date: "2026-05-12", title: "行业页占位", summary: "后续按石油行业具体研究设计指标和内容。" }
-      ]
-    },
-    {
-      id: "paper",
-      name: "造纸",
-      category: "周期制造",
-      status: "待建立行业框架",
-      updatedAt: "2026-05-12",
-      summary: "行业研究档案占位。后续补充纸价、木浆、废纸、库存、开工率和下游需求跟踪。",
-      keywords: ["造纸", "纸浆", "箱板纸", "文化纸"],
-      linkedSymbols: [],
-      keyQuestions: ["纸价和浆价剪刀差是否改善", "库存周期处于哪个阶段", "行业新增产能是否压制盈利"],
-      metrics: [
-        { name: "纸浆价格", unit: "元/吨", latestValue: null, asOf: "", source: "", comment: "预留纸价/浆价追踪" }
-      ],
-      notes: [
-        { date: "2026-05-12", title: "行业页占位", summary: "后续按造纸行业具体研究设计指标和内容。" }
-      ]
-    }
-  ],
   rules: [
     { dimension: "商业模式", score: 30, standard: "需求刚性、收入可重复、定价权、资本开支、行业空间" },
     { dimension: "护城河", score: 25, standard: "品牌/规模/网络效应/牌照/成本优势、份额稳定、利润率优于同行" },
@@ -323,26 +272,82 @@ const STOCK_DETAIL_VALUATION_SCENARIOS = [
   { key: "bull", label: "乐观" }
 ];
 
-const RESEARCH_DESK_FILTERS = [
-  { value: "all", label: "全部" },
-  { value: "queue", label: "队列" },
-  { value: "opportunity", label: "机会" },
-  { value: "data", label: "数据" },
-  { value: "industry", label: "行业" }
+const ETF_RULE_LEVELS = [
+  { key: "quarter", label: "0.25倍", tone: "neutral" },
+  { key: "half", label: "0.5倍", tone: "watch" },
+  { key: "one", label: "1倍", tone: "core" },
+  { key: "oneHalf", label: "1.5倍", tone: "boost" },
+  { key: "two", label: "2倍", tone: "risk" }
+];
+
+const ETF_RULE_NO_SELECTION = { key: "none", label: "未选择", tone: "neutral" };
+
+const ETF_RULE_TRACKER_RULES = [
+  {
+    symbol: "022434",
+    name: "南方中证A500ETF联接A",
+    conditions: {
+      quarter: "滚动PE分位>80%；若回撤<5%且高估则保持限速",
+      half: "滚动PE分位60%—80%",
+      one: "滚动PE分位40%—60%；低估确认不足时下调至此",
+      oneHalf: "滚动PE分位20%—40%；回撤<12%则降为1倍",
+      two: "滚动PE分位<20%；回撤<18%则降为1.5倍"
+    },
+    monthly: { quarter: 5000, half: 10000, one: 20000, oneHalf: 30000, two: 40000 },
+    weekly: { quarter: 1250, half: 2500, one: 5000, oneHalf: 7500, two: 10000 }
+  },
+  {
+    symbol: "018738",
+    name: "博时标普500ETF联接E(人民币)",
+    conditions: {
+      quarter: "CAPE分位>95%；最低档不再下调",
+      half: "CAPE分位80%—95%；或正常估值回撤<5%后限速",
+      one: "CAPE分位40%—80%；低估确认不足时下调至此",
+      oneHalf: "CAPE分位20%—40%；回撤<15%则降为1倍",
+      two: "CAPE分位<20%；回撤<20%则降为1.5倍"
+    },
+    monthly: { quarter: 4000, half: 8000, one: 16000, oneHalf: 24000, two: 32000 },
+    weekly: { quarter: 1000, half: 2000, one: 4000, oneHalf: 6000, two: 8000 }
+  },
+  {
+    symbol: "008163",
+    name: "南方标普红利低波50ETF联接A",
+    conditions: {
+      quarter: "股息率<4.7%；或股息率分位<20%",
+      half: "股息率4.7%—5.0%；或股息率分位20%—40%",
+      one: "股息率5.0%—5.8%；低位确认不足时下调至此",
+      oneHalf: "股息率5.8%—6.2%；回撤<8%则降为1倍",
+      two: "股息率>6.2%；回撤<12%则降为1.5倍"
+    },
+    monthly: { quarter: 3000, half: 6000, one: 12000, oneHalf: 18000, two: 24000 },
+    weekly: { quarter: 750, half: 1500, one: 3000, oneHalf: 4500, two: 6000 }
+  },
+  {
+    symbol: "021000",
+    name: "南方纳斯达克100指数发起(QDII)I",
+    conditions: {
+      quarter: "Forward PE分位>85%；或70%—85%且回撤<5%后限速",
+      half: "Forward PE分位70%—85%；或40%—70%且回撤<5%后限速",
+      one: "Forward PE分位40%—70%；或20%—40%且回撤<20%后限速",
+      oneHalf: "Forward PE分位20%—40%；或<20%且回撤<30%后限速",
+      two: "Forward PE分位<20%；且回撤≥30%"
+    },
+    monthly: { quarter: 2000, half: 4000, one: 8000, oneHalf: 12000, two: 16000 },
+    weekly: { quarter: 500, half: 1000, one: 2000, oneHalf: 3000, two: 4000 }
+  }
 ];
 
 let state = loadState();
 let activeFilter = "all";
 let positionSort = { key: "", direction: "desc" };
 let sunny30Sort = { key: "quality", direction: "desc" };
-let researchDeskFilter = "all";
 const expandedPositionCards = new Set();
 const expandedSunny30Cards = new Set();
 const expandedStockDetailSections = new Set(["detailInputs", "detailSummary", "detailValuation", "detailFinancials"]);
-const expandedResearchDeskSections = new Set(["queue", "opportunity"]);
 let activeStockDetailSection = "detailInputs";
 let holdingsMasked = localStorage.getItem(HOLDINGS_PRIVACY_KEY) === "1";
 let pendingResearch = null;
+let autoQuoteUpdateInFlight = false;
 let candidateSort = "consensus";
 let candidateFilter = "all";
 let decisionLogFilter = "all";
@@ -350,21 +355,20 @@ let masterMatrixSort = { key: "margin", direction: "desc" };
 let masterMatrixFilter = "all";
 let backendStateError = "";
 let backendAvailable = false;
+let tradeAssetType = "stock";
+let overviewPnlRange = "day";
 const pageTitles = {
   overview: "晴仓记",
-  screener: "选股估值",
-  holdings: "持仓",
+  holdings: "股票",
+  funds: "基金",
   logs: "日志",
-  industry: "研究台",
   trades: "日志",
-  "industry-detail": "行业分析",
   "stock-detail": "股票分析详情"
 };
 let activeRoute = routeInfo(window.location.hash.slice(1));
 
 const elements = {
   pageTitle: document.querySelector("#pageTitle"),
-  positionCategorySummary: document.querySelector("#positionCategorySummary"),
   positionMobileSort: document.querySelector("#positionMobileSort"),
   positionMobileCards: document.querySelector("#positionMobileCards"),
   sunny30Summary: document.querySelector("#sunny30Summary"),
@@ -373,22 +377,24 @@ const elements = {
   sunny30MobileCards: document.querySelector("#sunny30MobileCards"),
   sunny30Body: document.querySelector("#sunny30Body"),
   positionsBody: document.querySelector("#positionsBody"),
+  fundsBody: document.querySelector("#fundsBody"),
+  fundMobileCards: document.querySelector("#fundMobileCards"),
+  fundSummary: document.querySelector("#fundSummary"),
+  etfRuleTracker: document.querySelector("#etfRuleTracker"),
   tradeList: document.querySelector("#tradeList"),
   allocationChart: document.querySelector("#allocationChart"),
   assetAllocationBar: document.querySelector("#assetAllocationBar"),
+  assetAllocationPie: document.querySelector("#assetAllocationPie"),
   assetAllocationDonut: document.querySelector("#assetAllocationDonut"),
   allocationCenterLabel: document.querySelector("#allocationCenterLabel"),
   allocationCenterValue: document.querySelector("#allocationCenterValue"),
   assetAllocationTitle: document.querySelector("#assetAllocationTitle"),
   assetAllocationSummary: document.querySelector("#assetAllocationSummary"),
   assetAllocationLegend: document.querySelector("#assetAllocationLegend"),
-  valuationModuleList: document.querySelector("#valuationModuleList"),
-  updateValuationHistoryButton: document.querySelector("#updateValuationHistory"),
   overviewPlanList: document.querySelector("#overviewPlanList"),
-  committeeConsensus: document.querySelector("#committeeConsensus"),
-  decisionQueueCount: document.querySelector("#decisionQueueCount"),
-  overviewBuyCandidates: document.querySelector("#overviewBuyCandidates"),
-  overviewRiskReview: document.querySelector("#overviewRiskReview"),
+  overviewPnlBars: document.querySelector("#overviewPnlBars"),
+  overviewPnlRangeTabs: document.querySelector("#overviewPnlRangeTabs"),
+  overviewPnlRangeLabel: document.querySelector("#overviewPnlRangeLabel"),
   disciplineDashboard: document.querySelector("#disciplineDashboard"),
   dataQualityList: document.querySelector("#dataQualityList"),
   decisionLogList: document.querySelector("#decisionLogList"),
@@ -403,11 +409,13 @@ const elements = {
   buffettList: document.querySelector("#buffettList"),
   candidateList: document.querySelector("#candidateList"),
   candidateSort: document.querySelector("#candidateSort"),
-  industryList: document.querySelector("#industryList"),
-  industryDetail: document.querySelector("#industryDetail"),
   stockDetail: document.querySelector("#stockDetail"),
   totalAssetsMetric: document.querySelector("#totalAssetsMetric"),
   totalValue: document.querySelector("#totalValue"),
+  stockMarketValue: document.querySelector("#stockMarketValue"),
+  stockMarketDetail: document.querySelector("#stockMarketDetail"),
+  fundMarketValue: document.querySelector("#fundMarketValue"),
+  fundMarketDetail: document.querySelector("#fundMarketDetail"),
   totalPositionPnl: document.querySelector("#totalPositionPnl"),
   totalPositionPnlRate: document.querySelector("#totalPositionPnlRate"),
   dayChange: document.querySelector("#dayChange"),
@@ -416,13 +424,9 @@ const elements = {
   portfolioDividendYield: document.querySelector("#portfolioDividendYield"),
   dataQualityMetric: document.querySelector("#dataQualityMetric"),
   dataQualityDetail: document.querySelector("#dataQualityDetail"),
-  actionConclusion: document.querySelector("#actionConclusion"),
-  actionConclusionStatus: document.querySelector("#actionConclusionStatus"),
-  actionConclusionDetail: document.querySelector("#actionConclusionDetail"),
   positionCount: document.querySelector("#positionCount"),
   recordCount: document.querySelector("#recordCount"),
   privacyToggle: document.querySelector("#privacyToggle"),
-  updateQuotesButton: document.querySelector("#updateQuotesButton"),
   quoteUpdateStatus: document.querySelector("#quoteUpdateStatus"),
   tradeDialog: document.querySelector("#tradeDialog"),
   tradeForm: document.querySelector("#tradeForm"),
@@ -432,6 +436,8 @@ const elements = {
   tradeSharesLabel: document.querySelector("#tradeSharesLabel"),
   tradeNameInput: document.querySelector("#tradeNameInput"),
   tradeSharesInput: document.querySelector("#tradeSharesInput"),
+  tradeAssetTypeInput: document.querySelector("#tradeAssetTypeInput"),
+  tradeAssetTypeButtons: document.querySelectorAll("[data-trade-asset-type]"),
   openSunny30CandidateButton: document.querySelector("#openSunny30Candidate"),
   sunny30CandidateDialog: document.querySelector("#sunny30CandidateDialog"),
   sunny30CandidateForm: document.querySelector("#sunny30CandidateForm"),
@@ -531,13 +537,14 @@ function normalizedLoadedState(rawState) {
     ...structuredClone(seedState),
     ...(rawState ?? {}),
     stocks,
+    funds: Array.isArray(rawState?.funds) ? rawState.funds : [],
+    etfRuleStatuses: Array.isArray(rawState?.etfRuleStatuses) ? rawState.etfRuleStatuses : [],
     holdings,
     candidates,
     trades: Array.isArray(rawState?.trades) ? rawState.trades : [],
     decisionLogs: Array.isArray(rawState?.decisionLogs) ? rawState.decisionLogs : [],
     screeningWeights: rawState?.screeningWeights ?? { quality: 30, cashFlow: 25, valuation: 20, shareholderReturn: 15, growth: 10 },
     plan: Array.isArray(rawState?.plan) ? rawState.plan : [],
-    industries: Array.isArray(rawState?.industries) ? rawState.industries : [],
     rules: Array.isArray(rawState?.rules) ? rawState.rules : []
   };
 }
@@ -622,7 +629,8 @@ function mergeStaticRuntimeQuotes(nextState, quoteBook) {
   return {
     ...nextState,
     holdings: (nextState.holdings ?? []).map((holding) => applyStaticRuntimeQuote(holding, quoteFor(holding.symbol))),
-    candidates: (nextState.candidates ?? []).map((candidate) => applyStaticRuntimeQuote(candidate, quoteFor(candidate.symbol)))
+    candidates: (nextState.candidates ?? []).map((candidate) => applyStaticRuntimeQuote(candidate, quoteFor(candidate.symbol))),
+    funds: (nextState.funds ?? []).map((fund) => applyStaticRuntimeQuote(fund, quoteFor(fund.symbol)))
   };
 }
 
@@ -651,7 +659,6 @@ function staticDataStatus(apiError, quoteBook) {
       exists: quoteCount > 0,
       updatedAt: String(quoteBook?.updatedAt ?? "")
     },
-    runtimeIndustryMetrics: { path: "data/runtime/industry_metrics.json", exists: false },
     issues
   };
 }
@@ -735,9 +742,6 @@ function stockHash(symbol) {
   return `#stock=${encodeURIComponent(symbol)}`;
 }
 
-function industryHash(id) {
-  return `#industry=${encodeURIComponent(id)}`;
-}
 
 function normalizeSymbol(symbol) {
   const text = String(symbol ?? "").trim().toUpperCase();
@@ -756,6 +760,37 @@ function normalizeSymbol(symbol) {
 
 function normalizeAssetType(assetType) {
   return String(assetType ?? "").trim().toLowerCase() === "fund" ? "fund" : "stock";
+}
+
+function normalizeFundSymbol(symbol) {
+  return normalizeSymbol(symbol).replace(/\.OF$/, "");
+}
+
+function normalizeFundType(fundType, symbol) {
+  const value = String(fundType ?? "").trim().toLowerCase();
+  if (value === "etf") return "etf";
+  const normalized = normalizeFundSymbol(symbol);
+  return normalized.endsWith(".SH") || normalized.endsWith(".SZ") ? "etf" : "otc";
+}
+
+function isFundSymbolLike(symbol) {
+  const normalized = normalizeFundSymbol(symbol);
+  if (/^\d{6}$/.test(normalized)) return true;
+  if (/^\d{4,6}\.(SH|SZ|HK)$/.test(normalized)) return true;
+  return false;
+}
+
+function parseFundTradeInput(input) {
+  const text = String(input ?? "").trim();
+  if (!text) return { symbol: "", name: "" };
+  const [first, ...rest] = text.split(/\s+/);
+  if (isFundSymbolLike(first)) {
+    return { symbol: normalizeFundSymbol(first), name: rest.join(" ").trim() };
+  }
+  if (isFundSymbolLike(text)) {
+    return { symbol: normalizeFundSymbol(text), name: "" };
+  }
+  return { symbol: normalizeFundSymbol(text), name: text };
 }
 
 function escapeHTML(value) {
@@ -1749,11 +1784,61 @@ function computePositions() {
     });
 }
 
-function assetSummary(positions = computePositions()) {
+function computeFundPositions() {
+  const realizedPnl = realizedFundPnlBySymbol();
+  return (state.funds ?? [])
+    .filter((fund) => (finiteNumber(fund.shares) ?? 0) > 0)
+    .map((fund) => {
+      const symbol = normalizeFundSymbol(fund.symbol);
+      const shares = finiteNumber(fund.shares) ?? 0;
+      const cost = finiteNumber(fund.cost) ?? 0;
+      const currentPrice = finiteNumber(fund.currentPrice);
+      const previousClose = finiteNumber(fund.previousClose);
+      const hasCurrentPrice = Number.isFinite(currentPrice) && currentPrice > 0;
+      const marketValueLocal = hasCurrentPrice ? shares * currentPrice : 0;
+      const costValueLocal = shares * cost;
+      const marketValueCny = marketValueLocal * fx(fund.currency);
+      const costValueCny = costValueLocal * fx(fund.currency);
+      const unrealizedPnlCny = hasCurrentPrice ? marketValueCny - costValueCny : null;
+      const realized = realizedPnl.get(symbol) || { pnlCny: 0, costCny: 0 };
+      const pnlCny = Number.isFinite(unrealizedPnlCny)
+        ? unrealizedPnlCny + realized.pnlCny
+        : Math.abs(realized.pnlCny) > 0 ? realized.pnlCny : null;
+      const pnlCostValueCny = costValueCny + realized.costCny;
+      const closeForDayChange = Number.isFinite(previousClose) && previousClose > 0 ? previousClose : currentPrice;
+      const dayChange = hasCurrentPrice && Number.isFinite(closeForDayChange)
+        ? shares * (currentPrice - closeForDayChange) * fx(fund.currency)
+        : null;
+
+      return {
+        ...fund,
+        assetType: "fund",
+        fundType: normalizeFundType(fund.fundType, fund.symbol),
+        symbol,
+        shares,
+        cost,
+        currentPrice,
+        previousClose,
+        marketValueLocal,
+        marketValueCny,
+        costValueCny,
+        realizedCostCny: realized.costCny,
+        pnlCostValueCny,
+        unrealizedPnlCny,
+        realizedPnlCny: realized.pnlCny,
+        pnlCny,
+        pnlRate: pnlCostValueCny && Number.isFinite(pnlCny) ? (pnlCny / pnlCostValueCny) * 100 : null,
+        dayChange
+      };
+    });
+}
+
+function assetSummary(positions = computePositions(), fundPositions = computeFundPositions()) {
   const stockValue = positions.reduce((sum, item) => sum + (finiteNumber(item.marketValueCny) ?? 0), 0);
+  const fundValue = fundPositions.reduce((sum, item) => sum + (finiteNumber(item.marketValueCny) ?? 0), 0);
   const cashValue = finiteNumber(state.cash) ?? 0;
-  const totalAssets = stockValue + cashValue;
-  return { stockValue, cashValue, totalAssets };
+  const equityValue = stockValue + fundValue;
+  return { stockValue, fundValue, cashValue, equityValue };
 }
 
 function sortedStockTrades() {
@@ -1853,6 +1938,103 @@ function realizedStockPnlBySymbol() {
   return realized;
 }
 
+function sortedFundTrades() {
+  return [...(state.trades ?? [])]
+    .map((trade, index) => ({ ...trade, index }))
+    .filter((trade) => normalizeAssetType(trade.assetType) === "fund" && normalizeFundSymbol(trade.symbol))
+    .sort((a, b) => {
+      const idA = finiteNumber(a.id);
+      const idB = finiteNumber(b.id);
+      if (Number.isFinite(idA) && Number.isFinite(idB) && idA !== idB) return idA - idB;
+      const dateCompare = String(a.date ?? "").localeCompare(String(b.date ?? ""));
+      return dateCompare || a.index - b.index;
+    });
+}
+
+function realizedFundPnlBySymbol() {
+  const trades = sortedFundTrades();
+  const openingLots = new Map();
+
+  (state.funds ?? []).forEach((fund) => {
+    const symbol = normalizeFundSymbol(fund.symbol);
+    const shares = finiteNumber(fund.shares) ?? 0;
+    const cost = finiteNumber(fund.cost) ?? 0;
+    if (!symbol || shares <= 0) return;
+    openingLots.set(symbol, {
+      shares,
+      cost,
+      currency: String(fund.currency || "CNY").toUpperCase()
+    });
+  });
+
+  [...trades].reverse().forEach((trade) => {
+    const symbol = normalizeFundSymbol(trade.symbol);
+    const shares = finiteNumber(trade.shares) ?? 0;
+    const price = finiteNumber(trade.price);
+    const side = String(trade.side ?? "").trim().toLowerCase();
+    if (!symbol || shares <= 0 || !Number.isFinite(price)) return;
+    const lot = openingLots.get(symbol) || {
+      shares: 0,
+      cost: price,
+      currency: String(trade.currency || "CNY").toUpperCase()
+    };
+
+    if (side === "buy") {
+      const previousShares = lot.shares - shares;
+      if (previousShares > 0) {
+        const previousCostTotal = lot.shares * lot.cost - shares * price;
+        lot.shares = previousShares;
+        if (Number.isFinite(previousCostTotal)) lot.cost = previousCostTotal / previousShares;
+      } else {
+        lot.shares = 0;
+        lot.cost = price;
+      }
+      openingLots.set(symbol, lot);
+      return;
+    }
+
+    if (side === "sell") {
+      lot.shares += shares;
+      openingLots.set(symbol, lot);
+    }
+  });
+
+  const lots = new Map([...openingLots.entries()].map(([symbol, lot]) => [symbol, { ...lot }]));
+  const realized = new Map();
+
+  trades.forEach((trade) => {
+    const symbol = normalizeFundSymbol(trade.symbol);
+    const shares = finiteNumber(trade.shares) ?? 0;
+    const price = finiteNumber(trade.price);
+    const side = String(trade.side ?? "").trim().toLowerCase();
+    if (!symbol || shares <= 0 || !Number.isFinite(price)) return;
+    const currencyCode = String(trade.currency || lots.get(symbol)?.currency || "CNY").toUpperCase();
+    const lot = lots.get(symbol) || { shares: 0, cost: price, currency: currencyCode };
+
+    if (side === "buy") {
+      const totalCost = lot.shares * lot.cost + shares * price;
+      lot.shares += shares;
+      if (lot.shares > 0) lot.cost = totalCost / lot.shares;
+      lot.currency = currencyCode;
+      lots.set(symbol, lot);
+      return;
+    }
+
+    if (side === "sell") {
+      const multiplier = fx(currencyCode);
+      const entry = realized.get(symbol) || { pnlCny: 0, costCny: 0 };
+      entry.pnlCny += shares * (price - lot.cost) * multiplier;
+      entry.costCny += shares * lot.cost * multiplier;
+      realized.set(symbol, entry);
+      lot.shares = Math.max(0, lot.shares - shares);
+      lot.currency = currencyCode;
+      lots.set(symbol, lot);
+    }
+  });
+
+  return realized;
+}
+
 function syncCash() {
   if (Number.isFinite(state.cash)) return;
 
@@ -1861,7 +2043,12 @@ function syncCash() {
     const currentPrice = finiteNumber(holding.currentPrice) ?? 0;
     return sum + shares * currentPrice * fx(holding.currency);
   }, 0);
-  state.cash = state.totalCapital - investedStocks;
+  const investedFunds = (state.funds ?? []).reduce((sum, fund) => {
+    const shares = finiteNumber(fund.shares) ?? 0;
+    const currentPrice = finiteNumber(fund.currentPrice) ?? 0;
+    return sum + shares * currentPrice * fx(fund.currency);
+  }, 0);
+  state.cash = state.totalCapital - investedStocks - investedFunds;
 }
 
 function getFilteredPositions(positions) {
@@ -1950,39 +2137,13 @@ function stockDetailCategoryControl(stock) {
   `;
 }
 
-function renderPositionCategorySummary(positions) {
-  if (!elements.positionCategorySummary) return;
-  const totalValue = positions.reduce((sum, stock) => sum + (finiteNumber(stock.marketValueCny) ?? 0), 0);
-  const summary = POSITION_CATEGORY_ORDER.reduce((result, key) => {
-    result[key] = { value: 0, count: 0 };
-    return result;
-  }, {});
-
-  positions.forEach((stock) => {
-    const category = positionCategory(stock);
-    summary[category.key].value += finiteNumber(stock.marketValueCny) ?? 0;
-    summary[category.key].count += 1;
-  });
-
-  elements.positionCategorySummary.innerHTML = POSITION_CATEGORY_ORDER.map((key) => {
-    const category = POSITION_CATEGORY_META[key];
-    const item = summary[key];
-    const share = totalValue > 0 ? item.value / totalValue : 0;
-    return `
-      <div class="position-category-summary-cell ${category.tone}">
-        <span>${escapeHTML(category.label)}</span>
-        <strong>${escapeHTML(privateText(percent(share * 100, false)))}</strong>
-        <small>${escapeHTML(privateText(`${item.count} 只 · ${wholeCurrency(item.value)}`))}</small>
-      </div>
-    `;
-  }).join("");
-}
-
 function positionSortValue(item, key) {
   const { stock, strategy } = item;
-  if (key === "category") return positionCategory(stock, strategy).order;
+  if (key === "shares") return finiteNumber(stock.shares);
   if (key === "marketValue") return finiteNumber(stock.marketValueCny);
+  if (key === "currentPrice") return finiteNumber(stock.currentPrice);
   if (key === "dayChange") return finiteNumber(stock.dayChange);
+  if (key === "twentyDayChange") return sunny30TwentyDayRatio(stock);
   if (key === "pnl") return finiteNumber(stock.pnlCny);
   if (key === "return") return finiteNumber(strategy?.shield?.value);
   if (key === "owner") return strategy?.ownerAudit?.hasAudit ? finiteNumber(strategy.ownerAudit.score) : null;
@@ -2011,7 +2172,7 @@ function sortedPositions(positions) {
 }
 
 function positionSortDefaultDirection(key) {
-  return key === "category" ? "asc" : "desc";
+  return "desc";
 }
 
 function positionMobileSortValue() {
@@ -2070,13 +2231,11 @@ function renderPositionMobileCards(items, totalValue) {
   elements.positionMobileCards.innerHTML = mobileItems.map(({ stock, strategy }) => {
     const symbol = normalizeSymbol(stock.symbol);
     const expanded = expandedPositionCards.has(symbol);
-    const category = positionCategory(stock, strategy);
     const health = decisionHealthCell(stock, totalValue);
-    const marginTone = decisionMarginTone(strategy.margin);
     const returnTone = strategy.shield.passed ? "core" : "reduce";
-    const ownerTone = decisionToneClass(strategy.ownerAudit.tone);
     const dayClass = privateClass(stock.dayChange >= 0 ? "positive" : "negative");
     const pnlClass = privateClass(stock.pnlCny >= 0 ? "positive" : "negative");
+    const twentyDayChange = sunny30TwentyDayChange(stock);
     const dayRate = stock.marketValueCny ? percent((stock.dayChange / stock.marketValueCny) * 100) : "";
     const weight = totalValue ? (stock.marketValueCny / totalValue) * 100 : 0;
     const currentPrice = Number.isFinite(stock.currentPrice) && stock.currentPrice > 0
@@ -2084,7 +2243,6 @@ function renderPositionMobileCards(items, totalValue) {
       : "-";
     const quoteDate = stock.currentPriceDate || "收盘日未知";
     const sourceClass = marketKind(stock) === "HK" ? "hk" : "";
-    const ownerText = strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "待评分";
     return `
       <article class="mobile-position-card ${expanded ? "is-expanded" : ""}">
         <div class="mobile-card-toggle" aria-expanded="${expanded ? "true" : "false"}">
@@ -2096,22 +2254,21 @@ function renderPositionMobileCards(items, totalValue) {
             <small>${escapeHTML(stock.symbol)} · ${escapeHTML(currentPrice)} · ${escapeHTML(quoteDate)}</small>
           </a>
           <button class="mobile-card-pills mobile-card-inline-toggle" type="button" data-toggle-position-card="${escapeHTML(symbol)}" aria-label="${expanded ? "收起" : "展开"}${escapeHTML(stock.name)}卡片">
-            ${positionCategoryPill(category)}
-            <span class="health-status-score ${health.tone}">${escapeHTML(health.scoreText)}</span>
+            <span class="health-status-score ${health.tone}">${escapeHTML(privateText(currency(stock.marketValueCny)))}</span>
           </button>
           <button class="mobile-card-chevron mobile-card-inline-toggle" type="button" data-toggle-position-card="${escapeHTML(symbol)}">${expanded ? "收起" : "展开"}</button>
         </div>
         <div class="mobile-card-core">
           ${renderMobileStat("今日盈亏", privateText(currency(stock.dayChange)), dayClass, privateText(dayRate))}
-          ${renderMobileStat("安全边际", Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-", `health-pill ${marginTone}`)}
+          ${renderMobileStat("20日涨跌幅", privateText(twentyDayChange.text), privateClass(twentyDayChange.className))}
           ${renderMobileStat("总盈亏", privateText(currency(stock.pnlCny)), pnlClass, privateText(percent(stock.pnlRate)))}
         </div>
         <div class="mobile-card-expanded">
           <div class="mobile-card-detail-grid">
-            ${renderMobileDetail("市值/现价", privateText(currency(stock.marketValueCny)), `${currentPrice} · ${quoteDate}`)}
-            ${renderMobileDetail("持股/成本", privateText(`${stock.shares} 股`), `成本 ${privateText(currency(stock.cost, stock.currency))}`)}
+            ${renderMobileDetail("股数", privateText(`${stock.shares.toLocaleString("zh-CN")} 股`), `成本 ${privateText(currency(stock.cost, stock.currency))}`)}
+            ${renderMobileDetail("市值", privateText(currency(stock.marketValueCny)), privateText(currency(stock.marketValueLocal, stock.currency)))}
+            ${renderMobileDetail("现价", currentPrice, quoteDate)}
             ${renderMobileDetail("综合回报率", privateText(`${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}`), "", `health-pill ${returnTone}`)}
-            ${renderMobileDetail("长期评分", ownerText, "", `health-pill ${ownerTone}`)}
             ${renderMobileDetail("仓位", privateText(`${weight.toFixed(1)}%`), privateText(health.title))}
           </div>
           <a class="ghost-button compact-link mobile-card-link" href="${stockHash(stock.symbol)}">查看详情</a>
@@ -2628,55 +2785,281 @@ function consensusLabel(stock, totalValue = 0) {
   return consensusText(consensusCount(stock, totalValue));
 }
 
-function renderMetrics(positions) {
-  const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
-  const holdingsValue = totalValue;
+function overviewHoldingStats(positions, fundPositions = computeFundPositions()) {
+  const stockValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const fundValue = fundPositions.reduce((sum, item) => sum + item.marketValueCny, 0);
+  const totalValue = stockValue + fundValue;
   const totalCost = positions.reduce((sum, item) => {
     return sum + (finiteNumber(item.pnlCostValueCny) ?? finiteNumber(item.costValueCny) ?? 0);
+  }, 0) + fundPositions.reduce((sum, item) => {
+    return sum + (finiteNumber(item.pnlCostValueCny) ?? finiteNumber(item.costValueCny) ?? 0);
   }, 0);
-  const totalPositionPnl = positions.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
-  const totalPositionPnlRate = totalCost ? (totalPositionPnl / totalCost) * 100 : 0;
+  const stockPnl = positions.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
+  const fundPnl = fundPositions.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
+  const totalPositionPnl = stockPnl + fundPnl;
   const cashValue = finiteNumber(state.cash) ?? 0;
-  const totalAssets = holdingsValue + cashValue;
-  const dayChange = positions.reduce((sum, item) => sum + item.dayChange, 0);
-  const dividends = dividendSummary(positions);
-  const dividendYield = totalValue ? dividends.annualCashCny / totalValue : 0;
-
-  elements.totalAssetsMetric.textContent = privateText(wholeCurrency(totalAssets));
-  elements.totalValue.textContent = privateText(wholeCurrency(holdingsValue));
-  if (elements.totalPositionPnl) {
-    elements.totalPositionPnl.textContent = privateText(wholeCurrency(totalPositionPnl));
-    elements.totalPositionPnl.className = privateClass(totalPositionPnl >= 0 ? "positive" : "negative");
-  }
-  if (elements.totalPositionPnlRate) {
-    elements.totalPositionPnlRate.textContent = privateText(`相对成本 ${percent(totalPositionPnlRate)}`);
-    elements.totalPositionPnlRate.className = privateClass(totalPositionPnl >= 0 ? "positive" : "negative");
-  }
-  if (elements.dayChange) {
-    elements.dayChange.textContent = privateText(wholeCurrency(dayChange));
-    elements.dayChange.className = privateClass(dayChange >= 0 ? "positive" : "negative");
-  }
-  if (elements.dayChangeRate) {
-    elements.dayChangeRate.textContent = privateText(percent(totalValue ? (dayChange / totalValue) * 100 : 0));
-    elements.dayChangeRate.className = privateClass(dayChange >= 0 ? "positive" : "negative");
-  }
-  elements.annualDividend.textContent = privateText(wholeCurrency(dividends.annualCashCny));
-  elements.portfolioDividendYield.textContent = privateText(dividends.topContributor
-    ? `组合税后股息率 ${percent(dividendYield * 100, false)} · 高风险 ${percent(dividends.annualCashCny ? (dividends.highRiskCashCny / dividends.annualCashCny) * 100 : 0, false)}`
-    : "组合税后股息率 0.00%");
-  elements.positionCount.textContent = privateText(`${positions.length} 只股票`);
-  elements.recordCount.textContent = privateText(`${state.stocks?.length ?? state.holdings.length + state.candidates.length} 只股票 · ${state.trades.length} 条交易`);
+  return {
+    stockValue,
+    fundValue,
+    cashValue,
+    totalHoldingsValue: totalValue,
+    totalAssets: totalValue,
+    totalCost,
+    stockPnl,
+    fundPnl,
+    totalPositionPnl,
+    totalPositionPnlRate: totalCost ? (totalPositionPnl / totalCost) * 100 : 0
+  };
 }
 
-function renderAssetAllocation(positions) {
-  if ((!elements.assetAllocationDonut && !elements.assetAllocationBar) || !elements.assetAllocationLegend) return;
-  const { stockValue, cashValue, totalAssets } = assetSummary(positions);
-  const chartCash = Math.max(cashValue, 0);
-  const chartTotal = stockValue + chartCash;
+function positionTwentyDayPnl(position) {
+  const shares = finiteNumber(position?.shares) ?? 0;
+  const currentPrice = finiteNumber(position?.currentPrice);
+  const twentyDayClose = finiteNumber(position?.twentyDayClose);
+  if (shares > 0 && Number.isFinite(currentPrice) && Number.isFinite(twentyDayClose) && currentPrice > 0 && twentyDayClose > 0) {
+    return shares * (currentPrice - twentyDayClose) * fx(position.currency);
+  }
+  const ratio = finiteNumber(position?.twentyDayChange);
+  const marketValue = finiteNumber(position?.marketValueCny);
+  if (Number.isFinite(ratio) && ratio > -0.98 && Number.isFinite(marketValue)) {
+    return marketValue * (ratio / (1 + ratio));
+  }
+  return null;
+}
+
+function overviewPnlValue(items, range) {
+  if (range === "day") {
+    return items.reduce((sum, item) => sum + (finiteNumber(item.dayChange) ?? 0), 0);
+  }
+  if (range === "month") {
+    return items.reduce((sum, item) => sum + (finiteNumber(positionTwentyDayPnl(item)) ?? 0), 0);
+  }
+  return items.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
+}
+
+function overviewPnlRangeMeta(range = overviewPnlRange) {
+  if (range === "month") return { key: "month", label: "月", detail: "最近12月", count: 12 };
+  if (range === "year") return { key: "year", label: "年", detail: "最近5年", count: 5 };
+  return { key: "day", label: "日", detail: "最近20个交易日", count: 20 };
+}
+
+function dateOnly(value) {
+  const text = String(value ?? "").trim();
+  const match = text.match(/\d{4}-\d{2}-\d{2}/);
+  return match ? match[0] : "";
+}
+
+function dateFromKey(key) {
+  const text = dateOnly(key);
+  if (!text) return null;
+  const [year, month, day] = text.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function dateKey(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function monthKey(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 7);
+}
+
+function addUtcDays(date, days) {
+  const next = new Date(date.getTime());
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+function addUtcMonths(date, months) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
+}
+
+function addUtcYears(date, years) {
+  return new Date(Date.UTC(date.getUTCFullYear() + years, 0, 1));
+}
+
+function latestOverviewDate(positions, fundPositions) {
+  const dates = [...positions, ...fundPositions]
+    .flatMap((item) => [item.currentPriceDate, item.previousCloseDate, item.twentyDayCloseDate])
+    .map(dateFromKey)
+    .filter(Boolean)
+    .sort((a, b) => b.getTime() - a.getTime());
+  return dates[0] ?? new Date();
+}
+
+function overviewPeriodItems(range, count, anchorDate) {
+  if (range === "day") {
+    const items = [];
+    let cursor = anchorDate;
+    while (items.length < count) {
+      const day = cursor.getUTCDay();
+      if (day !== 0 && day !== 6) {
+        const key = dateKey(cursor);
+        items.push({ key, label: key.slice(5).replace("-", "/") });
+      }
+      cursor = addUtcDays(cursor, -1);
+    }
+    return items.reverse();
+  }
+  if (range === "month") {
+    const base = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), 1));
+    return Array.from({ length: count }, (_, index) => {
+      const itemDate = addUtcMonths(base, index - count + 1);
+      const key = monthKey(itemDate);
+      return { key, label: key.slice(2).replace("-", "/") };
+    });
+  }
+  const base = new Date(Date.UTC(anchorDate.getUTCFullYear(), 0, 1));
+  return Array.from({ length: count }, (_, index) => {
+    const itemDate = addUtcYears(base, index - count + 1);
+    const key = String(itemDate.getUTCFullYear());
+    return { key, label: key };
+  });
+}
+
+function overviewHistoryEntries() {
+  return [
+    ...(Array.isArray(state.pnlHistory) ? state.pnlHistory : []),
+    ...(Array.isArray(state.portfolioPnlHistory) ? state.portfolioPnlHistory : []),
+    ...(Array.isArray(state.performanceHistory) ? state.performanceHistory : []),
+    ...(Array.isArray(state.history?.pnl) ? state.history.pnl : [])
+  ];
+}
+
+function overviewHistoryValue(entry) {
+  return finiteNumber(entry?.pnlCny)
+    ?? finiteNumber(entry?.pnl)
+    ?? finiteNumber(entry?.profitCny)
+    ?? finiteNumber(entry?.profit)
+    ?? finiteNumber(entry?.changeCny)
+    ?? finiteNumber(entry?.change)
+    ?? finiteNumber(entry?.value);
+}
+
+function overviewHistoryKey(entry, range) {
+  const raw = String(entry?.date ?? entry?.period ?? entry?.month ?? entry?.year ?? "").trim();
+  if (!raw) return "";
+  if (range === "year") return raw.slice(0, 4);
+  if (range === "month") return raw.slice(0, 7);
+  return dateOnly(raw);
+}
+
+function overviewHistoryValueForPeriod(periodKey, range) {
+  return overviewHistoryEntries().reduce((sum, entry) => {
+    if (overviewHistoryKey(entry, range) !== periodKey) return sum;
+    const value = overviewHistoryValue(entry);
+    return Number.isFinite(value) ? sum + value : sum;
+  }, 0);
+}
+
+function overviewFallbackPnlValue(periodKey, range, anchorDate, positions, fundPositions, stats) {
+  if (overviewHistoryEntries().length) return 0;
+  const anchorDay = dateKey(anchorDate);
+  const anchorMonth = monthKey(new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), 1)));
+  const anchorYear = String(anchorDate.getUTCFullYear());
+  if (range === "day" && periodKey === anchorDay) {
+    return overviewPnlValue(positions, "day") + overviewPnlValue(fundPositions, "day");
+  }
+  if (range === "month" && periodKey === anchorMonth) {
+    return overviewPnlValue(positions, "month") + overviewPnlValue(fundPositions, "month");
+  }
+  if (range === "year" && periodKey === anchorYear) {
+    return stats.totalPositionPnl;
+  }
+  return 0;
+}
+
+function overviewPnlSeries(positions, fundPositions, rangeMeta, stats) {
+  const anchorDate = latestOverviewDate(positions, fundPositions);
+  return overviewPeriodItems(rangeMeta.key, rangeMeta.count, anchorDate).map((item) => {
+    const historyValue = overviewHistoryValueForPeriod(item.key, rangeMeta.key);
+    const fallbackValue = overviewFallbackPnlValue(item.key, rangeMeta.key, anchorDate, positions, fundPositions, stats);
+    return {
+      ...item,
+      value: historyValue + fallbackValue
+    };
+  });
+}
+
+function renderMetrics(positions, fundPositions = computeFundPositions()) {
+  const stats = overviewHoldingStats(positions, fundPositions);
+  const dividends = dividendSummary(positions);
+  const dividendYield = stats.totalHoldingsValue ? dividends.annualCashCny / stats.totalHoldingsValue : 0;
+
+  if (elements.totalAssetsMetric) elements.totalAssetsMetric.textContent = privateText(wholeCurrency(stats.totalHoldingsValue));
+  if (elements.totalValue) elements.totalValue.textContent = privateText(wholeCurrency(stats.totalHoldingsValue));
+  if (elements.stockMarketValue) elements.stockMarketValue.textContent = privateText(wholeCurrency(stats.stockValue));
+  if (elements.stockMarketDetail) elements.stockMarketDetail.textContent = privateText(`${positions.length} 只股票`);
+  if (elements.fundMarketValue) elements.fundMarketValue.textContent = privateText(wholeCurrency(stats.fundValue));
+  if (elements.fundMarketDetail) elements.fundMarketDetail.textContent = privateText(`${fundPositions.length} 只基金`);
+  if (elements.totalPositionPnl) {
+    elements.totalPositionPnl.textContent = privateText(wholeCurrency(stats.totalPositionPnl));
+    elements.totalPositionPnl.className = privateClass(stats.totalPositionPnl >= 0 ? "positive" : "negative");
+  }
+  if (elements.totalPositionPnlRate) {
+    elements.totalPositionPnlRate.textContent = privateText(`相对成本 ${percent(stats.totalPositionPnlRate)}`);
+    elements.totalPositionPnlRate.className = privateClass(stats.totalPositionPnl >= 0 ? "positive" : "negative");
+  }
+  if (elements.annualDividend) elements.annualDividend.textContent = privateText(wholeCurrency(dividends.annualCashCny));
+  if (elements.portfolioDividendYield) elements.portfolioDividendYield.textContent = privateText(dividends.topContributor
+    ? `组合税后股息率 ${percent(dividendYield * 100, false)} · 高风险 ${percent(dividends.annualCashCny ? (dividends.highRiskCashCny / dividends.annualCashCny) * 100 : 0, false)}`
+    : "组合税后股息率 0.00%");
+  if (elements.positionCount) elements.positionCount.textContent = privateText(`${positions.length} 只股票 · ${fundPositions.length} 只基金`);
+  if (elements.recordCount) elements.recordCount.textContent = privateText(`${state.stocks?.length ?? state.holdings.length + state.candidates.length} 只股票 · ${(state.funds ?? []).length} 只基金 · ${state.trades.length} 条交易`);
+}
+
+function renderOverviewPnlChart(positions, fundPositions = computeFundPositions()) {
+  if (!elements.overviewPnlBars) return;
+  const rangeMeta = overviewPnlRangeMeta();
+  const stats = overviewHoldingStats(positions, fundPositions);
+  const series = overviewPnlSeries(positions, fundPositions, rangeMeta, stats);
+  const totalValue = series.reduce((sum, item) => sum + item.value, 0);
+  const denominator = rangeMeta.key === "year" ? stats.totalCost : stats.totalHoldingsValue;
+  const maxAbs = Math.max(...series.map((item) => Math.abs(item.value)), 1);
+  if (elements.overviewPnlRangeLabel) elements.overviewPnlRangeLabel.textContent = `${rangeMeta.label} · ${rangeMeta.detail}`;
+  if (elements.dayChange) {
+    elements.dayChange.textContent = privateText(wholeCurrency(totalValue));
+    elements.dayChange.className = privateClass(totalValue >= 0 ? "positive" : "negative");
+  }
+  if (elements.dayChangeRate) {
+    elements.dayChangeRate.textContent = privateText(percent(denominator ? (totalValue / denominator) * 100 : 0));
+    elements.dayChangeRate.className = privateClass(totalValue >= 0 ? "positive" : "negative");
+  }
+  elements.overviewPnlRangeTabs?.querySelectorAll("[data-overview-pnl-range]").forEach((button) => {
+    const active = button.dataset.overviewPnlRange === rangeMeta.key;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  elements.overviewPnlBars.innerHTML = `
+    <div class="overview-pnl-chart" data-range="${escapeHTML(rangeMeta.key)}" style="--bar-count: ${series.length}">
+      ${series.map((item) => {
+    const positive = item.value >= 0;
+    const height = Math.min(48, (Math.abs(item.value) / maxAbs) * 48);
+    const barStyle = positive ? `bottom: 50%; height: ${height.toFixed(2)}%` : `top: 50%; height: ${height.toFixed(2)}%`;
+    return `
+        <div class="overview-pnl-period ${positive ? "positive" : "negative"}">
+          <div class="overview-pnl-column" aria-hidden="true">
+            <i class="${positive ? "positive" : "negative"}" style="${barStyle}"></i>
+          </div>
+          <span>${escapeHTML(item.label)}</span>
+          <strong class="${privateClass(positive ? "positive" : "negative")}">${escapeHTML(privateText(wholeCurrency(item.value)))}</strong>
+        </div>
+      `;
+  }).join("")}
+    </div>
+  `;
+}
+
+function renderAssetAllocation(positions, fundPositions = computeFundPositions()) {
+  if ((!elements.assetAllocationDonut && !elements.assetAllocationBar && !elements.assetAllocationPie) || !elements.assetAllocationLegend) return;
+  const { stockValue, fundValue, equityValue } = assetSummary(positions, fundPositions);
+  const chartTotal = stockValue + fundValue;
   const circumference = 2 * Math.PI * 72;
   const segments = [
     { key: "stock", label: "股票", value: stockValue, chartValue: stockValue, color: "#087f5b" },
-    { key: "cash", label: "现金", value: cashValue, chartValue: chartCash, color: "#d69b2d" }
+    { key: "fund", label: "基金", value: fundValue, chartValue: fundValue, color: "#2563eb" }
   ];
   if (elements.assetAllocationDonut) {
     let offset = 0;
@@ -2698,33 +3081,37 @@ function renderAssetAllocation(positions) {
         }).join("")
       : "";
   }
+  if (elements.assetAllocationPie) {
+    if (!holdingsMasked && chartTotal > 0) {
+      let start = 0;
+      const stops = segments.map((segment) => {
+        const end = start + (segment.chartValue / chartTotal) * 100;
+        const part = `${segment.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+        start = end;
+        return part;
+      });
+      elements.assetAllocationPie.style.background = `conic-gradient(${stops.join(", ")})`;
+    } else {
+      elements.assetAllocationPie.style.background = "#edf2ef";
+    }
+  }
 
-  const stockShare = totalAssets > 0 ? (stockValue / totalAssets) * 100 : 0;
+  const stockShare = equityValue > 0 ? (stockValue / equityValue) * 100 : 0;
   if (elements.allocationCenterLabel) elements.allocationCenterLabel.textContent = "股票占比";
   if (elements.allocationCenterValue) elements.allocationCenterValue.textContent = privateText(`${stockShare.toFixed(1)}%`);
-  if (elements.assetAllocationTitle) elements.assetAllocationTitle.textContent = "股票 / 现金配置";
-  if (elements.assetAllocationSummary) elements.assetAllocationSummary.textContent = "按当前股票市值和现金余额拆分总资产；行业暴露和单票风险在持仓页复盘。";
+  if (elements.assetAllocationTitle) elements.assetAllocationTitle.textContent = "股票 / 基金配置";
+  if (elements.assetAllocationSummary) elements.assetAllocationSummary.textContent = "按当前股票市值和基金市值拆分权益资产；行业暴露和单票风险在股票页复盘。";
   const exposureRows = segments.map((segment) => {
-    const share = totalAssets > 0 ? (segment.value / totalAssets) * 100 : 0;
-    const negativeNote = segment.key === "cash" && segment.value < 0 ? " · 现金为负" : "";
+    const share = equityValue > 0 ? (segment.value / equityValue) * 100 : 0;
     return `
       <div class="overview-exposure-row asset-allocation-legend-item">
         <span class="allocation-dot" style="background: ${segment.color}"></span>
         <span>${escapeHTML(segment.label)}</span>
-        <span>${escapeHTML(privateText(`${wholeCurrency(segment.value)}${negativeNote}`))}</span>
+        <span>${escapeHTML(privateText(wholeCurrency(segment.value)))}</span>
         <strong>${escapeHTML(privateText(`${share.toFixed(1)}%`))}</strong>
       </div>
     `;
   });
-  const topIndustryText = topGroups(positions, (item) => firstIndustry(item.industry) || "未分类", (item) => item.marketValueCny)
-    .map((item) => item.name)
-    .join(" / ") || "-";
-  exposureRows.push(`
-    <div class="overview-exposure-row industry-row">
-      <span>前三行业</span>
-      <strong>${escapeHTML(topIndustryText)}</strong>
-    </div>
-  `);
   elements.assetAllocationLegend.innerHTML = exposureRows.join("");
 }
 
@@ -2744,21 +3131,32 @@ function decisionMarginTone(value) {
 
 function decisionStockMeta(stock) {
   if (stock.sourceType === "holding") {
-    return `${stock.symbol} · ${privateText(`${stock.shares} 股`)} · 成本 ${privateText(currency(stock.cost, stock.currency))}`;
+    return stock.symbol;
   }
   return `${stock.symbol} · 跟踪 · ${displayText(firstIndustry(stock.industry), "未分类")}`;
 }
 
-function decisionMarketCell(stock) {
+function decisionSharesCell(stock) {
+  if (stock.sourceType !== "holding") {
+    return `<strong>-</strong><br /><small>未持仓</small>`;
+  }
+  return `<strong>${escapeHTML(privateText(Number.isFinite(stock.shares) ? stock.shares.toLocaleString("zh-CN") : "-"))}</strong><br /><small>${escapeHTML(privateText(`成本 ${currency(stock.cost, stock.currency)}`))}</small>`;
+}
+
+function decisionMarketValueCell(stock) {
+  if (stock.sourceType !== "holding") {
+    return `<strong>-</strong><br /><small>未持仓</small>`;
+  }
+  return `<strong>${escapeHTML(privateText(currency(stock.marketValueCny)))}</strong><br /><small>${escapeHTML(privateText(currency(stock.marketValueLocal, stock.currency)))}</small>`;
+}
+
+function decisionCurrentPriceCell(stock) {
   const currentPrice = finiteNumber(stock.currentPrice);
   const priceText = Number.isFinite(currentPrice) && currentPrice > 0
     ? currency(currentPrice, stock.currency)
     : "-";
   const dateText = stock.currentPriceDate || "收盘日未知";
-  if (stock.sourceType !== "holding") {
-    return `<strong>-</strong><br /><small class="quote-date">${priceText} · ${escapeHTML(dateText)}</small>`;
-  }
-  return `<strong>${escapeHTML(privateText(currency(stock.marketValueCny)))}</strong><br /><small class="quote-date">${priceText} · ${escapeHTML(dateText)}</small>`;
+  return `<strong>${escapeHTML(priceText)}</strong><br /><small class="quote-date">${escapeHTML(dateText)}</small>`;
 }
 
 function decisionDayPnlCell(stock) {
@@ -2772,6 +3170,15 @@ function decisionDayPnlCell(stock) {
   return {
     className: Number.isFinite(dayChange) ? privateClass(dayChange >= 0 ? "positive" : "negative") : "",
     html: `<span class="decision-primary">${escapeHTML(privateText(Number.isFinite(dayChange) ? currency(dayChange) : "-"))}</span><br /><small>${escapeHTML(privateText(dayRate))}</small>`
+  };
+}
+
+function decisionTwentyDayChangeCell(stock) {
+  const change = sunny30TwentyDayChange(stock);
+  const dateText = stock.twentyDayCloseDate || "20日前收盘未知";
+  return {
+    className: privateClass(change.className),
+    html: `<span class="decision-primary">${escapeHTML(privateText(change.text))}</span><br /><small>${escapeHTML(dateText)}</small>`
   };
 }
 
@@ -3079,25 +3486,26 @@ function renderScreeningWeightsPanel(stocks) {
   const profiles = stocks.map((stock) => screeningProfile(stock));
   const rejectedCount = profiles.filter((profile) => !profile.pass).length;
   elements.screeningWeightsPanel.innerHTML = `
-    <form class="screening-weights-form" data-screening-weights-form>
-      <div class="screening-rule-copy">
-        <strong>先硬否决，再排序</strong>
-        <span>默认口径：质量 30、现金流 25、估值 20、股东回报 15、成长 10。总和必须为 100。</span>
-      </div>
-      <div class="screening-weight-grid">
-        ${SCREENING_WEIGHT_FIELDS.map((field) => `
-          <label>
-            <span>${escapeHTML(field.label)}</span>
-            <input name="${escapeHTML(field.key)}" type="number" min="0" max="100" step="1" value="${escapeHTML(String(weights[field.key]))}" />
-          </label>
-        `).join("")}
-      </div>
-      <div class="screening-weight-actions">
-        <span class="${total === 100 ? "positive" : "negative"}">合计 ${escapeHTML(String(total))}</span>
-        <span>硬否决 ${escapeHTML(String(rejectedCount))} 只</span>
-        <button class="ghost-button compact-link" type="submit">保存权重</button>
-      </div>
-    </form>
+    <details class="screening-weights-compact">
+      <summary>
+        <span>排序权重</span>
+        <strong class="${total === 100 ? "positive" : "negative"}">合计 ${escapeHTML(String(total))}</strong>
+        <em>硬否决 ${escapeHTML(String(rejectedCount))} 只</em>
+      </summary>
+      <form class="screening-weights-form" data-screening-weights-form>
+        <div class="screening-weight-grid">
+          ${SCREENING_WEIGHT_FIELDS.map((field) => `
+            <label>
+              <span>${escapeHTML(field.label)}</span>
+              <input name="${escapeHTML(field.key)}" type="number" min="0" max="100" step="1" value="${escapeHTML(String(weights[field.key]))}" />
+            </label>
+          `).join("")}
+        </div>
+        <div class="screening-weight-actions">
+          <button class="ghost-button compact-link" type="submit">保存权重</button>
+        </div>
+      </form>
+    </details>
   `;
 }
 
@@ -3312,11 +3720,10 @@ function renderPositions(positions) {
   const filtered = sortedPositions(positions);
   const totalValue = positions.reduce((sum, item) => sum + item.marketValueCny, 0);
   updatePositionSortControls();
-  renderPositionCategorySummary(positions);
   renderPositionMobileCards(filtered, totalValue);
 
   if (!filtered.length) {
-    elements.positionsBody.innerHTML = `<tr><td colspan="9" class="empty-state">暂无符合条件的标的</td></tr>`;
+    elements.positionsBody.innerHTML = `<tr><td colspan="8" class="empty-state">暂无符合条件的标的</td></tr>`;
     return;
   }
 
@@ -3324,12 +3731,9 @@ function renderPositions(positions) {
     .map(({ stock, strategy }) => {
       const dayPnl = decisionDayPnlCell(stock);
       const pnl = decisionPnlCell(stock);
-      const health = decisionHealthCell(stock, totalValue);
+      const twentyDayChange = decisionTwentyDayChangeCell(stock);
       const sourceClass = marketKind(stock) === "HK" ? "hk" : "";
-      const marginTone = decisionMarginTone(strategy.margin);
       const returnTone = strategy.shield.passed ? "core" : "reduce";
-      const ownerTone = decisionToneClass(strategy.ownerAudit.tone);
-      const category = positionCategory(stock, strategy);
       const stockMeta = decisionStockMeta(stock);
       const stockTooltip = `${stock.name} · ${stockMeta}`;
 
@@ -3344,14 +3748,20 @@ function renderPositions(positions) {
               </a>
             </div>
           </td>
-          <td data-label="分类">
-            ${positionCategoryPill(category)}
+          <td data-label="股数">
+            ${decisionSharesCell(stock)}
           </td>
-          <td data-label="市值/现价">
-            ${decisionMarketCell(stock)}
+          <td data-label="市值">
+            ${decisionMarketValueCell(stock)}
+          </td>
+          <td data-label="现价">
+            ${decisionCurrentPriceCell(stock)}
           </td>
           <td data-label="今日盈亏" class="${dayPnl.className}">
             ${dayPnl.html}
+          </td>
+          <td data-label="20日涨跌幅" class="${twentyDayChange.className}">
+            ${twentyDayChange.html}
           </td>
           <td data-label="总盈亏" class="${pnl.className}">
             ${pnl.html}
@@ -3359,22 +3769,245 @@ function renderPositions(positions) {
           <td data-label="综合回报率">
             <span class="health-pill ${returnTone}">${displayDividendRatio(strategy.shield.value)} / ${displayDividendRatio(strategy.shield.target)}</span>
           </td>
-          <td data-label="安全边际">
-            <span class="health-pill ${marginTone}">${Number.isFinite(strategy.margin) ? percent(strategy.margin * 100, false) : "-"}</span>
-          </td>
-          <td data-label="长期评分">
-            <span class="health-pill ${ownerTone}">${strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "待评分"}</span>
-          </td>
-          <td data-label="健康状态">
-            <div class="health-status-cell" title="${escapeHTML(health.title)}">
-              <strong class="health-status-score ${health.tone}">${escapeHTML(health.scoreText)}</strong>
-              <small class="health-status-weight">${escapeHTML(health.weightText)}</small>
-            </div>
-          </td>
         </tr>
       `;
     })
     .join("");
+}
+
+function fundTypeLabel(fund) {
+  return normalizeFundType(fund?.fundType, fund?.symbol) === "etf" ? "ETF" : "场外基金";
+}
+
+function etfRuleEntry(symbol) {
+  const status = etfRuleStatus(symbol);
+  const statusLevel = status?.complete && ETF_RULE_LEVELS.some((item) => item.key === status?.level) ? status.level : "";
+  const level = statusLevel || ETF_RULE_NO_SELECTION.key;
+  return {
+    level,
+    source: statusLevel ? "auto" : "none"
+  };
+}
+
+function etfRuleLevelMeta(level) {
+  return ETF_RULE_LEVELS.find((item) => item.key === level) ?? ETF_RULE_NO_SELECTION;
+}
+
+function etfRuleStatus(symbol) {
+  const normalized = normalizeFundSymbol(symbol);
+  return (state.etfRuleStatuses ?? []).find((item) => normalizeFundSymbol(item.symbol) === normalized) ?? null;
+}
+
+function etfRuleMetricText(metric) {
+  if (!metric?.available) return metric?.error ? `待数据：${metric.error}` : "待数据";
+  const value = finiteNumber(metric.value);
+  if (!Number.isFinite(value)) return "待数据";
+  const unit = String(metric.unit ?? "").trim();
+  const formatted = value.toLocaleString("zh-CN", { maximumFractionDigits: 2 });
+  return `${formatted}${unit}`;
+}
+
+function renderEtfRuleLiveStatus(rule, entry) {
+  const status = etfRuleStatus(rule.symbol);
+  if (!status) {
+    return `
+      <div class="etf-rule-live pending">
+        <span>自动水位</span>
+        <strong>等待更新净值</strong>
+        <small>进入总览页后自动拉取判断条件。</small>
+      </div>
+    `;
+  }
+  const statusMeta = etfRuleLevelMeta(status.level);
+  const statusLabel = status.complete ? (status.levelLabel || statusMeta.label || "待数据") : "待确认";
+  const metrics = (status.metrics ?? []).map(renderEtfRuleMetric).join("");
+  return `
+    <div class="etf-rule-live ${status.complete ? "complete" : "pending"}">
+      <div>
+        <span>自动水位</span>
+        <strong>${escapeHTML(statusLabel)}${status.complete && status.weeklyAmount ? ` · ${escapeHTML(etfRuleMoney(status.weeklyAmount, "/周"))}` : ""}</strong>
+        <small>${escapeHTML(status.reason || "等待更多指标确认")} · ${escapeHTML(status.asOf || status.updatedAt || "-")}</small>
+      </div>
+      <div class="etf-rule-live-metrics">${metrics}</div>
+    </div>
+  `;
+}
+
+function renderEtfRuleMetric(metric) {
+  return `
+    <div class="etf-rule-metric ${metric?.available ? "" : "pending"}" title="${escapeHTML(metric?.label || metric?.key || "")}">
+      <span>${escapeHTML(metric?.label || metric?.key || "指标")}</span>
+      <strong>${escapeHTML(etfRuleMetricText(metric))}</strong>
+      <small>${escapeHTML(metric?.asOf || "-")}</small>
+    </div>
+  `;
+}
+
+function etfRuleAmount(rule, level, period) {
+  if (level === "none") return 0;
+  return finiteNumber(rule?.[period]?.[level]) ?? 0;
+}
+
+function etfRuleMoney(value, suffix = "") {
+  const number = finiteNumber(value) ?? 0;
+  if (number <= 0) return "-";
+  return privateText(`¥${number.toLocaleString("zh-CN", { maximumFractionDigits: 0 })}${suffix}`);
+}
+
+function etfRuleTrackerTotals() {
+  return ETF_RULE_TRACKER_RULES.reduce((totals, rule) => {
+    const entry = etfRuleEntry(rule.symbol);
+    totals.weekly += etfRuleAmount(rule, entry.level, "weekly");
+    totals.monthly += etfRuleAmount(rule, entry.level, "monthly");
+    if (entry.level !== "none") totals.active += 1;
+    return totals;
+  }, { weekly: 0, monthly: 0, active: 0 });
+}
+
+function renderEtfRuleConditionItem(rule, level) {
+  const entry = etfRuleEntry(rule.symbol);
+  const meta = etfRuleLevelMeta(level);
+  const active = entry.level === level;
+  return `
+    <div class="etf-rule-condition ${meta.tone} ${active ? "active" : ""}">
+      <span>${escapeHTML(meta.label)}条件</span>
+      <strong>${escapeHTML(rule.conditions[level])}</strong>
+      <small>${escapeHTML(etfRuleMoney(rule.weekly[level], "/周"))} · ${escapeHTML(etfRuleMoney(rule.monthly[level], "/月"))}</small>
+    </div>
+  `;
+}
+
+function renderEtfRuleRulebook(rule) {
+  return `
+    <details class="etf-rule-rulebook">
+      <summary>五档规则</summary>
+      <div class="etf-rule-conditions">
+        ${ETF_RULE_LEVELS.map((level) => renderEtfRuleConditionItem(rule, level.key)).join("")}
+      </div>
+    </details>
+  `;
+}
+
+function renderEtfRuleCard(rule) {
+  const entry = etfRuleEntry(rule.symbol);
+  const meta = etfRuleLevelMeta(entry.level);
+  const weekly = etfRuleAmount(rule, entry.level, "weekly");
+  const monthly = etfRuleAmount(rule, entry.level, "monthly");
+  return `
+    <article class="etf-rule-card">
+      <div class="etf-rule-card-head">
+        <div>
+          <strong>${escapeHTML(rule.name)}</strong>
+          <span>${escapeHTML(rule.symbol)}</span>
+        </div>
+        <em class="${meta.tone}">${escapeHTML(meta.label)}</em>
+      </div>
+      <div class="etf-rule-selected">
+        <div>
+          <span>本周计划</span>
+          <strong>${escapeHTML(etfRuleMoney(weekly, "/周"))}</strong>
+        </div>
+        <div>
+          <span>月度节奏</span>
+          <strong>${escapeHTML(etfRuleMoney(monthly, "/月"))}</strong>
+        </div>
+      </div>
+      ${renderEtfRuleLiveStatus(rule, entry)}
+      ${renderEtfRuleRulebook(rule)}
+    </article>
+  `;
+}
+
+function renderEtfRuleTracker() {
+  if (!elements.etfRuleTracker) return;
+  const totals = etfRuleTrackerTotals();
+  elements.etfRuleTracker.innerHTML = `
+    <div class="etf-rule-tracker">
+      <div class="panel-head compact etf-rule-head">
+        <div>
+          <p class="eyebrow">ETF Rules</p>
+          <h2>ETF追踪</h2>
+        </div>
+      </div>
+      <div class="etf-rule-summary">
+        <div><span>周计划</span><strong>${escapeHTML(etfRuleMoney(totals.weekly, "/周"))}</strong></div>
+        <div><span>月计划</span><strong>${escapeHTML(etfRuleMoney(totals.monthly, "/月"))}</strong></div>
+        <div><span>自动触发</span><strong>${escapeHTML(`${totals.active}/4`)}</strong></div>
+      </div>
+      <div class="etf-rule-grid">
+        ${ETF_RULE_TRACKER_RULES.map(renderEtfRuleCard).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderFunds(fundPositions = computeFundPositions()) {
+  if (!elements.fundsBody) return;
+  const funds = [...fundPositions].sort((a, b) => (b.marketValueCny ?? 0) - (a.marketValueCny ?? 0));
+  const totalValue = funds.reduce((sum, item) => sum + (finiteNumber(item.marketValueCny) ?? 0), 0);
+  const totalPnl = funds.reduce((sum, item) => sum + (finiteNumber(item.pnlCny) ?? 0), 0);
+  if (elements.fundSummary) {
+    elements.fundSummary.textContent = privateText(`${funds.length} 只基金 · ${wholeCurrency(totalValue)} · 盈亏 ${wholeCurrency(totalPnl)}`);
+  }
+
+  if (!funds.length) {
+    elements.fundsBody.innerHTML = `<tr><td colspan="9" class="empty-state">暂无基金</td></tr>`;
+    if (elements.fundMobileCards) {
+      elements.fundMobileCards.innerHTML = `<div class="empty-state compact-empty">暂无基金</div>`;
+    }
+    return;
+  }
+
+  elements.fundsBody.innerHTML = funds.map((fund) => {
+    const pnlClass = (finiteNumber(fund.pnlCny) ?? 0) >= 0 ? "positive" : "negative";
+    const dayClass = (finiteNumber(fund.dayChange) ?? 0) >= 0 ? "positive" : "negative";
+    return `
+      <tr>
+        <td>
+          <div class="stock-cell fund-cell">
+            <span class="ticker fund-ticker">${escapeHTML(fund.symbol.slice(0, 6))}</span>
+            <span class="stock-name">
+              <strong>${escapeHTML(fund.name || fund.symbol)}</strong>
+              <span>${escapeHTML(fund.symbol)}</span>
+            </span>
+          </div>
+        </td>
+        <td data-label="类型">${escapeHTML(fundTypeLabel(fund))}</td>
+        <td data-label="份额">${escapeHTML(privateText(fund.shares.toLocaleString("zh-CN", { maximumFractionDigits: 2 })))}</td>
+        <td data-label="成本净值">${escapeHTML(privateText(currency(fund.cost, fund.currency)))}</td>
+        <td data-label="最新净值">${escapeHTML(privateText(currency(fund.currentPrice, fund.currency)))}</td>
+        <td data-label="市值">${escapeHTML(privateText(wholeCurrency(fund.marketValueCny)))}</td>
+        <td data-label="持仓盈亏" class="${privateClass(pnlClass)}">
+          ${escapeHTML(privateText(`${wholeCurrency(fund.pnlCny)} / ${percent(fund.pnlRate, false)}`))}
+        </td>
+        <td data-label="今日变动" class="${privateClass(dayClass)}">${escapeHTML(privateText(wholeCurrency(fund.dayChange)))}</td>
+        <td data-label="净值日期">${escapeHTML(fund.currentPriceDate || fund.previousCloseDate || "-")}</td>
+      </tr>
+    `;
+  }).join("");
+
+  if (elements.fundMobileCards) {
+    elements.fundMobileCards.innerHTML = funds.map((fund) => {
+      const pnlClass = (finiteNumber(fund.pnlCny) ?? 0) >= 0 ? "positive" : "negative";
+      return `
+        <article class="mobile-position-card fund-mobile-card">
+          <div class="mobile-card-main">
+            <div>
+              <strong>${escapeHTML(fund.name || fund.symbol)}</strong>
+              <span>${escapeHTML(fund.symbol)} · ${escapeHTML(fundTypeLabel(fund))}</span>
+            </div>
+            <strong>${escapeHTML(privateText(wholeCurrency(fund.marketValueCny)))}</strong>
+          </div>
+          <div class="mobile-card-stats">
+            ${renderMobileStat("份额", privateText(fund.shares.toLocaleString("zh-CN", { maximumFractionDigits: 2 })))}
+            ${renderMobileStat("成本净值", privateText(currency(fund.cost, fund.currency)))}
+            ${renderMobileStat("最新净值", privateText(currency(fund.currentPrice, fund.currency)))}
+            ${renderMobileStat("持仓盈亏", privateText(`${wholeCurrency(fund.pnlCny)} / ${percent(fund.pnlRate, false)}`), privateClass(pnlClass))}
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
 }
 
 function renderAllocation(positions) {
@@ -3403,7 +4036,6 @@ function renderAllocation(positions) {
 
 function renderTrades() {
   const recentTrades = [...state.trades]
-    .filter((trade) => normalizeAssetType(trade.assetType) !== "fund")
     .reverse();
 
   if (!recentTrades.length) {
@@ -3415,12 +4047,13 @@ function renderTrades() {
     .map((trade) => {
       const sideClass = trade.side === "buy" ? "positive" : "negative";
       const sideText = trade.side === "buy" ? "买入" : "卖出";
+      const unit = normalizeAssetType(trade.assetType) === "fund" ? "份" : "股";
       return `
         <div class="trade-item">
           <strong>${escapeHTML(trade.symbol)} · ${sideText}</strong>
           <span class="${privateClass(sideClass)}">${escapeHTML(privateText(currency(trade.price, trade.currency)))}</span>
           <small>${trade.date} · ${escapeHTML(trade.name)}</small>
-          <small>${escapeHTML(privateText(`${trade.shares} 股`))} · 最新价 ${escapeHTML(privateText(currency(trade.currentPrice, trade.currency)))}</small>
+          <small>${escapeHTML(privateText(`${trade.shares} ${unit}`))} · 最新价 ${escapeHTML(privateText(currency(trade.currentPrice, trade.currency)))}</small>
           <button class="trade-delete-button" type="button" data-delete-trade="${escapeHTML(trade.id)}" aria-label="删除交易记录 ${escapeHTML(trade.symbol)} ${escapeHTML(trade.date)}">
             <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
               <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 7v8h2v-8h-2Zm4 0v8h2v-8h-2ZM7 8h10l-.7 12H7.7L7 8Z" />
@@ -3476,66 +4109,6 @@ function fallbackValuationScenarios(stock) {
     { name: "基准", revenueGrowth, profitMargin, fcf, discountRate: 0.095, reasonablePe: Number.isFinite(pe) ? pe : null },
     { name: "乐观", revenueGrowth: revenueGrowth * 1.2, profitMargin: profitMargin * 1.05, fcf: Number.isFinite(fcf) ? fcf * 1.15 : null, discountRate: 0.085, reasonablePe: Number.isFinite(pe) ? pe * 1.1 : null }
   ];
-}
-
-function valuationScenarioCell(stock) {
-  const currencyCode = stock?.valuation?.currency || latestAnnualFinancial(stock).currency || stock?.currency || "CNY";
-  return `
-    <div class="valuation-scenario-grid">
-      ${fallbackValuationScenarios(stock).map((scenario) => `
-        <div>
-          <strong>${escapeHTML(scenario.name || "情景")}</strong>
-          <span>收入 ${financialRatio(scenario.revenueGrowth)}</span>
-          <span>利润率 ${financialRatio(scenario.profitMargin)}</span>
-          <span>FCF ${Number.isFinite(finiteNumber(scenario.fcf)) ? financialAmount(scenario.fcf, currencyCode) : "-"}</span>
-          <span>折现 ${financialRatio(scenario.discountRate)}</span>
-          <span>PE ${financialMultiple(scenario.reasonablePe)} / FCF ${financialMultiple(scenario.reasonablePfcf)}</span>
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
-
-function renderValuationModule(positions) {
-  if (!elements.valuationModuleList) return;
-  const stocks = auditUniverse(positions)
-    .map((stock) => ({ ...stock, screening: screeningProfile(stock), valuationRange: valuationRangeView(stock) }))
-    .sort((a, b) => compareNullableNumbers(a.valuationRange.margin, b.valuationRange.margin, "desc") || compareNullableStrings(a.name, b.name, "asc"));
-
-  if (!stocks.length) {
-    elements.valuationModuleList.innerHTML = `<div class="empty-state">暂无股票池标的</div>`;
-    return;
-  }
-
-  elements.valuationModuleList.innerHTML = stocks.map((stock) => {
-    const range = stock.valuationRange;
-    const marginTone = decisionMarginTone(range.margin);
-    const priceText = Number.isFinite(finiteNumber(stock.currentPrice)) ? currency(stock.currentPrice, stock.currency) : "-";
-    const rangeText = Number.isFinite(finiteNumber(range.low)) && Number.isFinite(finiteNumber(range.high))
-      ? `${currency(range.low, range.currency)} - ${currency(range.high, range.currency)}`
-      : "估值区间待补充";
-    return `
-      <article class="valuation-card">
-        <div class="valuation-card-head">
-          <a class="stock-name stock-link" href="${stockHash(stock.symbol)}">
-            <strong>${escapeHTML(stock.name)}</strong>
-            <span>${escapeHTML(stock.symbol)} · ${escapeHTML(displayText(firstIndustry(stock.industry), "未分类"))}</span>
-          </a>
-          <span class="health-pill ${marginTone}">${Number.isFinite(range.margin) ? percent(range.margin * 100, false) : "安全边际待补"}</span>
-        </div>
-        <div class="valuation-range-grid">
-          <div><span>现价</span><strong>${escapeHTML(privateText(priceText))}</strong></div>
-          <div><span>估值区间</span><strong>${escapeHTML(privateText(rangeText))}</strong><small>${escapeHTML(range.source)}</small></div>
-          <div><span>基准值</span><strong>${Number.isFinite(finiteNumber(range.base)) ? escapeHTML(privateText(currency(range.base, range.currency))) : "-"}</strong></div>
-          <div><span>选股分</span><strong>${escapeHTML(String(stock.screening.score))}/100</strong><small>${escapeHTML(stock.screening.pass ? "通过硬否决" : stock.screening.rejects.join(" / "))}</small></div>
-        </div>
-        ${valuationScenarioCell(stock)}
-        <div class="valuation-card-actions">
-          <button class="ghost-button compact-link" type="button" data-create-hold-log="${escapeHTML(stock.symbol)}">记录继续持有</button>
-        </div>
-      </article>
-    `;
-  }).join("");
 }
 
 function findStockForPlanItem(item) {
@@ -3841,6 +4414,7 @@ function buildActionConclusion(positions) {
 }
 
 function renderActionConclusion(positions) {
+  if (!elements.actionConclusion || !elements.actionConclusionStatus || !elements.actionConclusionDetail) return;
   const conclusion = buildActionConclusion(positions);
   elements.actionConclusion.className = `overview-conclusion ${conclusion.tone}`;
   elements.actionConclusionStatus.textContent = conclusion.status;
@@ -4037,6 +4611,7 @@ function renderOverviewRiskReview(positions) {
 }
 
 function renderCommitteeOverview(positions) {
+  if (!elements.committeeConsensus) return;
   const actions = buildOpportunitySignals(positions)
     .filter(isOverviewActionSignal)
     .slice(0, 6)
@@ -4476,874 +5051,6 @@ function fcfMatrixText(stock, netCash) {
 
 function firstIndustry(industry) {
   return String(industry ?? "").split("/").map((item) => item.trim()).find(Boolean) || "未分类";
-}
-
-function normalizeIndustryId(value) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function industryRecords() {
-  return Array.isArray(state.industries) ? state.industries : [];
-}
-
-function findIndustryRecord(id) {
-  const normalized = normalizeIndustryId(id);
-  return industryRecords().find((item) => normalizeIndustryId(item.id || item.name) === normalized) ?? null;
-}
-
-function industryMetricText(metric) {
-  if (metric?.valueText) return metric.valueText;
-  const value = finiteNumber(metric?.latestValue);
-  if (Number.isFinite(value)) {
-    return `${value}${metric?.unit ? ` ${metric.unit}` : ""}`;
-  }
-  return displayText(metric?.valueText, "待录入");
-}
-
-function industryMetricTone(metric) {
-  const value = String(metric?.tone ?? "").trim().toLowerCase();
-  if (/strong|positive|good|improve|up|改善|向好|增长/.test(value)) return "strong";
-  if (/risk|negative|bad|down|下降|承压|恶化|风险/.test(value)) return "risk";
-  if (/watch|mixed|neutral|观察|分化|待验证/.test(value)) return "watch";
-  return "watch";
-}
-
-function metricSeries(metric) {
-  return Array.isArray(metric?.series)
-    ? metric.series
-      .map((point) => ({
-        date: String(point?.date ?? "").trim(),
-        value: finiteNumber(point?.value)
-      }))
-      .filter((point) => point.date && Number.isFinite(point.value))
-      .sort((a, b) => a.date.localeCompare(b.date))
-    : [];
-}
-
-function chartValue(value) {
-  const number = finiteNumber(value);
-  if (!Number.isFinite(number)) return "-";
-  const abs = Math.abs(number);
-  if (abs >= 1000) return number.toFixed(0);
-  if (abs >= 100) return number.toFixed(1);
-  if (abs >= 10) return number.toFixed(1);
-  return number.toFixed(2);
-}
-
-function renderLineChart(series, options = {}) {
-  const points = series.filter((point) => Number.isFinite(point.value));
-  if (points.length < 2) {
-    return `
-      <div class="line-chart-empty">
-        ${escapeHTML(points.length === 1 ? `近24个月只有 1 个有效点：${points[0].date} ${chartValue(points[0].value)}` : "近24个月趋势数据不足，等待更新。")}
-      </div>
-    `;
-  }
-  const width = options.width ?? 320;
-  const height = options.height ?? 138;
-  const left = options.left ?? 34;
-  const right = options.right ?? 10;
-  const top = options.top ?? 12;
-  const bottom = options.bottom ?? 24;
-  const values = points.map((point) => point.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || Math.max(1, Math.abs(max) * 0.1);
-  const yMin = min - span * 0.12;
-  const yMax = max + span * 0.12;
-  const plotWidth = width - left - right;
-  const plotHeight = height - top - bottom;
-  const coords = points.map((point, index) => {
-    const x = left + (plotWidth * index) / (points.length - 1);
-    const y = top + ((yMax - point.value) / (yMax - yMin)) * plotHeight;
-    return { ...point, x, y };
-  });
-  const line = coords.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" ");
-  const area = `${line} L ${coords[coords.length - 1].x.toFixed(1)} ${top + plotHeight} L ${coords[0].x.toFixed(1)} ${top + plotHeight} Z`;
-  const first = coords[0];
-  const last = coords[coords.length - 1];
-  const midY = top + plotHeight / 2;
-  return `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHTML(options.label || "趋势折线图")}">
-      <line class="grid-line" x1="${left}" x2="${width - right}" y1="${top}" y2="${top}" />
-      <line class="grid-line" x1="${left}" x2="${width - right}" y1="${midY}" y2="${midY}" />
-      <line class="grid-line" x1="${left}" x2="${width - right}" y1="${top + plotHeight}" y2="${top + plotHeight}" />
-      ${options.hideAxis ? "" : `
-        <text class="chart-label" x="0" y="${top + 4}">${escapeHTML(chartValue(yMax))}</text>
-        <text class="chart-label" x="0" y="${top + plotHeight + 3}">${escapeHTML(chartValue(yMin))}</text>
-      `}
-      <path class="chart-area" d="${area}" />
-      <path class="chart-line" d="${line}" />
-      <circle class="chart-dot" cx="${first.x.toFixed(1)}" cy="${first.y.toFixed(1)}" r="${options.dotRadius ?? 4}" />
-      <circle class="chart-dot" cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="${options.lastDotRadius ?? 4.5}" />
-      ${options.hideLabels ? "" : `
-        <text class="chart-value" x="${Math.max(left, last.x - 42).toFixed(1)}" y="${Math.max(14, last.y - 9).toFixed(1)}">${escapeHTML(chartValue(last.value))}</text>
-        <text class="chart-label" x="${left}" y="${height - 4}">${escapeHTML(first.date)}</text>
-        <text class="chart-label" text-anchor="end" x="${width - right}" y="${height - 4}">${escapeHTML(last.date)}</text>
-      `}
-    </svg>
-  `;
-}
-
-function stockMatchesIndustry(stock, industry) {
-  const explicitSymbols = new Set((industry.linkedSymbols ?? []).map(normalizeSymbol).filter(Boolean));
-  if (explicitSymbols.has(normalizeSymbol(stock.symbol))) return true;
-
-  const keywords = [industry.name, ...(industry.keywords ?? [])]
-    .map((item) => String(item ?? "").trim())
-    .filter(Boolean);
-  if (!keywords.length) return false;
-
-  const haystack = [stock.industry, stock.name, stock.symbol].filter(Boolean).join(" ");
-  return keywords.some((keyword) => haystack.includes(keyword));
-}
-
-function industryStocks(industry, positions) {
-  return decisionUniverse(positions)
-    .filter((stock) => stockMatchesIndustry(stock, industry))
-    .sort((a, b) => {
-      const valueA = finiteNumber(a.marketValueCny) ?? 0;
-      const valueB = finiteNumber(b.marketValueCny) ?? 0;
-      return valueB - valueA || a.name.localeCompare(b.name, "zh-CN");
-    });
-}
-
-function industryExposure(stocks) {
-  return stocks
-    .filter((stock) => stock.sourceType === "holding")
-    .reduce((sum, stock) => sum + (finiteNumber(stock.marketValueCny) ?? 0), 0);
-}
-
-function industryCompanyAnalyses(industry, stocks) {
-  const analyses = Array.isArray(industry?.companyAnalyses) ? industry.companyAnalyses : [];
-  if (analyses.length) return analyses;
-  return stocks.map((stock) => ({
-    symbol: stock.symbol,
-    name: stock.name,
-    stance: stock.status,
-    summary: stock.action || stock.notes || "由当前持仓/候选标的自动生成财报趋势卡。"
-  }));
-}
-
-function renderIndustryMetric(metric) {
-  const series = metricSeries(metric);
-  const latest = series[series.length - 1] ?? null;
-  return `
-    <article class="industry-line-metric ${industryMetricTone(metric)}">
-      <span>${escapeHTML(displayText(metric?.name, "未命名指标"))}</span>
-      <strong>${escapeHTML(industryMetricText(metric))}</strong>
-      <div class="industry-line-chart">
-        ${renderLineChart(series, { label: displayText(metric?.name, "行业趋势折线图") })}
-        <div class="chart-caption">
-          <span>${escapeHTML(series.length >= 2 ? `近24个月 · ${series.length} 个有效点` : "近24个月 · 等待更多数据")}</span>
-          <span>${escapeHTML(latest ? `最新 ${chartValue(latest.value)}${metric?.unit || ""}` : "最新值待更新")}</span>
-        </div>
-      </div>
-      ${metric?.trendText ? `<p>${escapeHTML(metric.trendText)}</p>` : metric?.comment ? `<p>${escapeHTML(metric.comment)}</p>` : ""}
-      <small>${escapeHTML([metric?.asOf, metric?.source].filter(Boolean).join(" · ") || "来源待补充")}</small>
-    </article>
-  `;
-}
-
-function renderIndustryStockChip(stock) {
-  const sourceText = stock.sourceType === "holding" ? "持仓" : "跟踪";
-  return `
-    <a class="industry-stock-chip" href="${stockHash(stock.symbol)}">
-      <strong>${escapeHTML(stock.name)}</strong>
-      <span>${escapeHTML(stock.symbol)} · ${escapeHTML(sourceText)}</span>
-    </a>
-  `;
-}
-
-function industryTrendTone(direction) {
-  const value = String(direction ?? "").trim().toLowerCase();
-  if (!value) return "neutral";
-  if (/strong|positive|improve|改善|扩张|增长|净现金|稳定/.test(value)) return "strong";
-  if (/risk|negative|down|下降|承压|恶化|风险/.test(value)) return "risk";
-  if (/watch|review|mixed|分化|观察|放缓|待验证/.test(value)) return "watch";
-  return "neutral";
-}
-
-function annualFinancialSeries(stock, key) {
-  return financialAnnuals(stock)
-    .map((item) => ({
-      date: String(item?.fiscalYear || item?.reportDate || "").slice(0, 4),
-      value: finiteNumber(item?.[key])
-    }))
-    .filter((point) => point.date && Number.isFinite(point.value))
-    .sort((a, b) => a.date.localeCompare(b.date));
-}
-
-function latestAndPreviousAnnual(stock) {
-  const annual = financialAnnuals(stock);
-  return {
-    latest: annual[0] ?? {},
-    previous: annual[1] ?? {},
-    oldest: annual[annual.length - 1] ?? {}
-  };
-}
-
-function yoyText(value, label = "同比") {
-  const number = finiteNumber(value);
-  return Number.isFinite(number) ? `${label}${number >= 0 ? "+" : ""}${financialRatio(number)}` : "";
-}
-
-function directionFromChange(current, previous, strong = 0.03, risk = -0.03) {
-  const now = finiteNumber(current);
-  const before = finiteNumber(previous);
-  if (!Number.isFinite(now) || !Number.isFinite(before) || before === 0) return "watch";
-  const change = (now - before) / Math.abs(before);
-  if (change >= strong) return "strong";
-  if (change <= risk) return "risk";
-  return "watch";
-}
-
-function directionFromValue(value, strong, risk) {
-  const number = finiteNumber(value);
-  if (!Number.isFinite(number)) return "watch";
-  if (number >= strong) return "strong";
-  if (number <= risk) return "risk";
-  return "watch";
-}
-
-function computedCompanyTrends(stock) {
-  if (!stock || !financialAnnuals(stock).length) return [];
-  const { latest, previous, oldest } = latestAndPreviousAnnual(stock);
-  const currencyCode = latestFinancialCurrency(stock);
-  const dividendYield = calculatedDividendYield(stock);
-  const margin = calculatedMarginOfSafety(stock) ?? finiteNumber(stock.marginOfSafety);
-  const trends = [];
-
-  const revenueSeries = annualFinancialSeries(stock, "revenue");
-  trends.push({
-    label: "收入",
-    value: `${financialAmount(oldest.revenue, currencyCode)} → ${financialAmount(latest.revenue, currencyCode)}`,
-    direction: Number.isFinite(finiteNumber(latest.revenueYoY)) ? directionFromValue(latest.revenueYoY, 0.05, 0) : directionFromChange(latest.revenue, previous.revenue),
-    note: yoyText(latest.revenueYoY) || "多年财报口径自动生成。",
-    series: revenueSeries
-  });
-
-  trends.push({
-    label: "归母利润",
-    value: `${financialAmount(oldest.netProfit, currencyCode)} → ${financialAmount(latest.netProfit, currencyCode)}`,
-    direction: Number.isFinite(finiteNumber(latest.netProfitYoY)) ? directionFromValue(latest.netProfitYoY, 0.05, 0) : directionFromChange(latest.netProfit, previous.netProfit),
-    note: yoyText(latest.netProfitYoY) || "对比最新年度和上年利润变化。",
-    series: annualFinancialSeries(stock, "netProfit")
-  });
-
-  trends.push({
-    label: "OCF / 收入",
-    value: financialRatio(latest.operatingCashFlowToRevenue),
-    direction: directionFromValue(latest.operatingCashFlowToRevenue, 0.15, 0.08),
-    note: previous.operatingCashFlowToRevenue
-      ? `上年 ${financialRatio(previous.operatingCashFlowToRevenue)}，观察现金转化。`
-      : "观察收入是否真实转化为经营现金流。",
-    series: annualFinancialSeries(stock, "operatingCashFlowToRevenue")
-  });
-
-  trends.push({
-    label: "自由现金流",
-    value: financialAmount(latest.freeCashFlow, currencyCode),
-    direction: directionFromValue(latest.freeCashFlow, 0, -1),
-    note: previous.freeCashFlow ? `上年 ${financialAmount(previous.freeCashFlow, currencyCode)}。` : "用于验证分红和防守属性。",
-    series: annualFinancialSeries(stock, "freeCashFlow")
-  });
-
-  trends.push({
-    label: "毛利率",
-    value: financialRatio(latest.grossMargin),
-    direction: directionFromChange(latest.grossMargin, previous.grossMargin, 0.02, -0.02),
-    note: previous.grossMargin ? `上年 ${financialRatio(previous.grossMargin)}，观察价格、成本和结构。` : "观察价格、成本和产品结构变化。",
-    series: annualFinancialSeries(stock, "grossMargin")
-  });
-
-  trends.push({
-    label: "ROE / ROIC",
-    value: `${financialRatio(latest.roe)} / ${financialRatio(latest.roic)}`,
-    direction: directionFromValue(Math.min(finiteNumber(latest.roe) ?? 0, finiteNumber(latest.roic) ?? 0), 0.12, 0.06),
-    note: "资本回报用于判断是否仍是高质量资产。",
-    series: annualFinancialSeries(stock, "roic")
-  });
-
-  trends.push({
-    label: "净现金",
-    value: financialAmount(latest.netCash, currencyCode),
-    direction: directionFromValue(latest.netCash, 0, -1),
-    note: "狭义现金及短投减有息债务，需结合行业属性折价。",
-    series: annualFinancialSeries(stock, "netCash")
-  });
-
-  trends.push({
-    label: "股息率 / 安全边际",
-    value: `${displayDividendRatio(dividendYield)} / ${Number.isFinite(margin) ? percent(margin * 100, false) : "-"}`,
-    direction: Number.isFinite(margin) && margin >= 0.15 ? "strong" : Number.isFinite(margin) && margin < 0.05 ? "risk" : "watch",
-    note: "回报和买点纪律由当前价格、分红和内在价值实时计算。",
-    series: []
-  });
-
-  return trends;
-}
-
-function renderCompanySparkline(series) {
-  const points = Array.isArray(series) ? series.filter((point) => Number.isFinite(point.value)) : [];
-  if (points.length < 2) return "";
-  return `
-    <div class="industry-sparkline">
-      ${renderLineChart(points, { width: 180, height: 46, left: 4, right: 4, top: 5, bottom: 5, hideAxis: true, hideLabels: true, dotRadius: 2.5, lastDotRadius: 3, label: "年度趋势" })}
-    </div>
-  `;
-}
-
-function renderIndustryCompanyAnalysis(analysis, stocks) {
-  const symbol = normalizeSymbol(analysis?.symbol);
-  const stock = stocks.find((item) => normalizeSymbol(item.symbol) === symbol);
-  const name = displayText(analysis?.name, stock?.name || symbol || "未命名标的");
-  const trends = computedCompanyTrends(stock);
-  const judgments = Array.isArray(analysis?.judgments) ? analysis.judgments : [];
-  const watchpoints = Array.isArray(analysis?.watchpoints) ? analysis.watchpoints : [];
-  const sourceText = stock?.sourceType === "holding" ? "持仓" : stock?.sourceType === "candidate" ? "跟踪" : "未关联持仓";
-
-  return `
-    <article class="industry-company-card">
-      <div class="industry-company-head">
-        <div>
-          <span>${escapeHTML([symbol, sourceText].filter(Boolean).join(" · "))}</span>
-          ${symbol ? `<a href="${stockHash(symbol)}">${escapeHTML(name)}</a>` : `<strong>${escapeHTML(name)}</strong>`}
-        </div>
-        <em>${escapeHTML(displayText(analysis?.stance, stock?.status || "待判断"))}</em>
-      </div>
-      <p>${escapeHTML(displayText(analysis?.summary, "后续补充该标的趋势和定性判断。"))}</p>
-      ${trends.length ? `
-        <div class="industry-trend-grid">
-          ${trends.map((trend) => `
-            <div class="industry-trend ${industryTrendTone(trend?.direction)}">
-              <span>${escapeHTML(displayText(trend?.label, "趋势"))}</span>
-              <strong>${escapeHTML(displayText(trend?.value, "-"))}</strong>
-              ${renderCompanySparkline(trend?.series)}
-              ${trend?.note ? `<small>${escapeHTML(trend.note)}</small>` : ""}
-            </div>
-          `).join("")}
-        </div>
-      ` : `<div class="line-chart-empty">未找到多年财报数据，先保留定性判断。</div>`}
-      ${judgments.length ? `
-        <div class="industry-company-block">
-          <span>定性判断</span>
-          <ul>
-            ${judgments.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}
-          </ul>
-        </div>
-      ` : ""}
-      ${watchpoints.length ? `
-        <div class="industry-company-block watchpoints">
-          <span>后续观察</span>
-          <ul>
-            ${watchpoints.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}
-          </ul>
-        </div>
-      ` : ""}
-    </article>
-  `;
-}
-
-function researchDeskSectionVisible(section) {
-  return researchDeskFilter === "all" || researchDeskFilter === section;
-}
-
-function researchDeskDisplayDate(value) {
-  const text = String(value ?? "").trim();
-  if (!text) return "";
-  return text.slice(0, 10);
-}
-
-function researchDeskLatestDate(industries, updates) {
-  return [
-    ...industries.flatMap((industry) => [industry.updatedAt, industry.metricsUpdatedAt]),
-    ...updates.map((item) => item.date)
-  ]
-    .map(researchDeskDisplayDate)
-    .filter(Boolean)
-    .sort()
-    .at(-1) ?? "";
-}
-
-function buildResearchOpportunities() {
-  return sortedCandidates().slice(0, 8).map((candidate) => {
-    const strategy = strategyProfile(candidate);
-    const distance = candidateBuyDistance(candidate);
-    const confidence = confidenceMeta(candidate);
-    const plan = findPlanForStock(candidate);
-    return { candidate, strategy, distance, confidence, plan };
-  });
-}
-
-function researchQueueFromDataIssues(issues) {
-  return issues
-    .filter((issue) => issue.tone === "warn" || issue.tone === "error")
-    .slice(0, 5)
-    .map((issue) => ({
-      type: "data",
-      tone: issue.tone === "error" ? "risk" : "watch",
-      symbol: issue.symbol,
-      name: issue.name || issue.symbol || "数据状态",
-      label: "数据体检",
-      title: issue.title,
-      detail: issue.detail
-    }));
-}
-
-function researchQueueFromOpportunities(opportunities) {
-  return opportunities
-    .filter(({ candidate, strategy, distance, confidence }) => {
-      const margin = calculatedMarginOfSafety(candidate) ?? finiteNumber(candidate.marginOfSafety);
-      return strategy.bucket === "main" ||
-        strategy.shield.passed ||
-        (Number.isFinite(margin) && margin >= MAIN_DCF_MARGIN_TARGET) ||
-        (Number.isFinite(distance) && distance <= BUY_PROXIMITY) ||
-        confidence.tone === "risk";
-    })
-    .slice(0, 5)
-    .map(({ candidate, strategy, distance, confidence, plan }) => ({
-      type: "opportunity",
-      tone: strategy.bucket === "excluded" || confidence.tone === "risk" ? "risk" : strategy.tone,
-      symbol: candidate.symbol,
-      name: candidate.name,
-      label: "候选机会",
-      title: Number.isFinite(distance) && distance <= BUY_PROXIMITY ? "接近买点" : strategy.status,
-      detail: strategy.blockers.length ? strategy.blockers.join("；") : displayText(plan?.advice, candidate.action)
-    }));
-}
-
-function researchQueueFromFinancials(positions) {
-  return auditUniverse(positions)
-    .filter((stock) => !String(stock.financials?.updatedAt ?? "").trim())
-    .slice(0, 4)
-    .map((stock) => ({
-      type: "financials",
-      tone: "info",
-      symbol: stock.symbol,
-      name: stock.name,
-      label: "财务更新",
-      title: "缺财务更新时间",
-      detail: "详情页可点击“更新财务”补齐多年财务和估值口径。"
-    }));
-}
-
-function buildResearchQueue(positions, issues, opportunities) {
-  const items = [
-    ...researchQueueFromDataIssues(issues),
-    ...researchQueueFromOpportunities(opportunities),
-    ...researchQueueFromFinancials(positions)
-  ];
-  const seen = new Set();
-  return items.filter((item) => {
-    const key = `${item.type}:${normalizeSymbol(item.symbol) || item.name}:${item.title}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).slice(0, 10);
-}
-
-function buildResearchUpdates(positions) {
-  const stocks = auditUniverse(positions);
-  const stockMap = new Map(stocks.map((stock) => [normalizeSymbol(stock.symbol), stock]));
-  const updates = [];
-
-  stocks.forEach((stock) => {
-    (stock.researchUpdates ?? []).forEach((item) => {
-      updates.push({
-        symbol: stock.symbol,
-        name: stock.name,
-        date: item.importedAt || item.asOf || item.date,
-        title: item.title || item.event?.title || "研究更新",
-        detail: item.summary || item.notesAppend || item.event?.summary || displayText(stock.action, stock.status),
-        source: "研究导入"
-      });
-    });
-  });
-
-  (state.decisionLogs ?? [])
-    .filter((log) => log.type === "research")
-    .forEach((log) => {
-      const symbol = normalizeSymbol(log.symbol);
-      const stock = stockMap.get(symbol);
-      updates.push({
-        symbol,
-        name: log.name || stock?.name || symbol,
-        date: log.date || log.createdAt,
-        title: log.decision || "导入分析",
-        detail: log.detail || log.discipline || "",
-        source: "决策日志"
-      });
-    });
-
-  return updates
-    .filter((item) => item.date || item.title || item.detail)
-    .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")))
-    .slice(0, 8);
-}
-
-function researchDeskMetric(label, value, detail = "") {
-  return `
-    <article class="research-desk-metric">
-      <span>${escapeHTML(label)}</span>
-      <strong>${escapeHTML(value)}</strong>
-      <small>${escapeHTML(detail)}</small>
-    </article>
-  `;
-}
-
-function researchDeskFilters(counts) {
-  return `
-    <div class="research-desk-filter" aria-label="研究台筛选">
-      ${RESEARCH_DESK_FILTERS.map((filter) => {
-        const active = filter.value === researchDeskFilter;
-        const count = counts[filter.value] ?? 0;
-        return `
-          <button class="${active ? "active" : ""}" type="button" data-research-desk-filter="${filter.value}" aria-pressed="${active ? "true" : "false"}">
-            <span>${escapeHTML(filter.label)}</span>
-            <strong>${count}</strong>
-          </button>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
-function researchDeskSection(id, eyebrow, title, body, count = "") {
-  const expanded = expandedResearchDeskSections.has(id);
-  return `
-    <section class="research-desk-section ${expanded ? "" : "is-collapsed"}" data-research-desk-section="${escapeHTML(id)}">
-      <button class="research-desk-section-head" type="button" data-research-desk-toggle="${escapeHTML(id)}" aria-expanded="${expanded ? "true" : "false"}">
-        <span>
-          <small>${escapeHTML(eyebrow)}</small>
-          <strong>${escapeHTML(title)}</strong>
-        </span>
-        <em>${escapeHTML(count ? String(count) : expanded ? "收起" : "展开")}</em>
-      </button>
-      <div class="research-desk-section-body">
-        ${body}
-      </div>
-    </section>
-  `;
-}
-
-function renderResearchQueueItem(item) {
-  const content = `
-    <div class="research-queue-type">${escapeHTML(item.label)}</div>
-    <div class="research-queue-main">
-      <strong>${escapeHTML(item.name || item.symbol || "未命名")}</strong>
-      <span>${escapeHTML(item.title)}</span>
-      <small>${escapeHTML(item.detail || "等待补充下一步动作。")}</small>
-    </div>
-  `;
-  return item.symbol
-    ? `<a class="research-queue-item ${item.tone}" href="${stockHash(item.symbol)}">${content}</a>`
-    : `<div class="research-queue-item ${item.tone}">${content}</div>`;
-}
-
-function renderResearchOpportunityCard(item) {
-  const { candidate, strategy, distance, confidence, plan } = item;
-  const margin = calculatedMarginOfSafety(candidate) ?? finiteNumber(candidate.marginOfSafety);
-  const score = strategy.ownerAudit.hasAudit ? `${strategy.ownerAudit.score}/100` : "-";
-  return `
-    <a class="research-opportunity-card" href="${stockHash(candidate.symbol)}">
-      <div class="research-card-head">
-        <div>
-          <strong>${escapeHTML(candidate.name)}</strong>
-          <span>${escapeHTML(candidate.symbol)} · ${escapeHTML(displayText(candidate.industry, "未分类"))}</span>
-        </div>
-        <em>${escapeHTML(strategy.status)}</em>
-      </div>
-      <div class="research-card-metrics">
-        <span>综合回报 <strong>${escapeHTML(privateText(displayDividendRatio(strategy.shield.value)))}</strong></span>
-        <span>安全边际 <strong>${escapeHTML(privateText(Number.isFinite(margin) ? percent(margin * 100, false) : "-"))}</strong></span>
-        <span>买点距离 <strong>${escapeHTML(privateText(Number.isFinite(distance) ? displayBuyDistance(candidate) : "-"))}</strong></span>
-        <span>长期评分 <strong>${escapeHTML(score)}</strong></span>
-      </div>
-      <p>${escapeHTML(strategy.blockers.length ? strategy.blockers.join("；") : displayText(plan?.advice, candidate.action))}</p>
-      <small>${escapeHTML(confidence.text)} · ${escapeHTML(strategy.shield.source)}</small>
-    </a>
-  `;
-}
-
-function renderResearchDataIssue(issue) {
-  const tag = issue.sourceType === "holding" ? "持仓" : issue.sourceType === "candidate" ? "跟踪" : issue.sourceType === "data" ? "数据" : "Plan";
-  const content = `
-    <div class="research-card-head">
-      <div>
-        <strong>${escapeHTML(issue.title)}</strong>
-        <span>${escapeHTML(issue.name || issue.symbol || "数据状态")} ${issue.symbol ? `· ${escapeHTML(issue.symbol)}` : ""}</span>
-      </div>
-      <em>${escapeHTML(tag)}</em>
-    </div>
-    <p>${escapeHTML(issue.detail)}</p>
-  `;
-  return issue.symbol
-    ? `<a class="research-data-issue ${issue.tone}" href="${stockHash(issue.symbol)}">${content}</a>`
-    : `<div class="research-data-issue ${issue.tone}">${content}</div>`;
-}
-
-function renderResearchIndustryCard(industry, positions) {
-  const id = normalizeIndustryId(industry.id || industry.name);
-  const stocks = industryStocks(industry, positions);
-  const exposure = industryExposure(stocks);
-  const metrics = Array.isArray(industry.metrics) ? industry.metrics : [];
-  const companyAnalyses = industryCompanyAnalyses(industry, stocks);
-  const latestNote = Array.isArray(industry.notes) ? industry.notes[0] : null;
-  return `
-    <a class="research-industry-card" href="${industryHash(id)}">
-      <div class="research-card-head">
-        <div>
-          <span>${escapeHTML(displayText(industry.category, "行业档案"))}</span>
-          <strong>${escapeHTML(displayText(industry.name, id))}</strong>
-        </div>
-        <em>${escapeHTML(displayText(industry.status, "待完善"))}</em>
-      </div>
-      <p>${escapeHTML(displayText(industry.summary, "后续补充行业分析、关键指标和跟踪记录。"))}</p>
-      <div class="research-card-metrics">
-        <span>相关标的 <strong>${stocks.length}</strong></span>
-        <span>持仓暴露 <strong>${escapeHTML(privateText(currency(exposure)))}</strong></span>
-        <span>趋势指标 <strong>${metrics.length}</strong></span>
-        <span>标的分析 <strong>${companyAnalyses.length}</strong></span>
-      </div>
-      <small>${escapeHTML(latestNote ? `${latestNote.date || "未记录日期"} · ${latestNote.title || latestNote.summary || "研究记录"}` : "暂无研究记录")}</small>
-    </a>
-  `;
-}
-
-function renderResearchUpdateCard(item) {
-  const content = `
-    <div class="research-card-head">
-      <div>
-        <strong>${escapeHTML(item.title || "研究更新")}</strong>
-        <span>${escapeHTML(item.name || item.symbol || "未关联标的")}</span>
-      </div>
-      <em>${escapeHTML(researchDeskDisplayDate(item.date) || item.source)}</em>
-    </div>
-    <p>${escapeHTML(item.detail || "暂无摘要。")}</p>
-    <small>${escapeHTML(item.source)}</small>
-  `;
-  return item.symbol
-    ? `<a class="research-update-card" href="${stockHash(item.symbol)}">${content}</a>`
-    : `<div class="research-update-card">${content}</div>`;
-}
-
-function renderIndustryDesk(positions) {
-  if (!elements.industryList) return;
-  const industries = industryRecords()
-    .slice()
-    .sort((a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")) || String(a.name ?? "").localeCompare(String(b.name ?? ""), "zh-CN"));
-  const issues = buildDataQualityIssues(positions);
-  const warningCount = issues.filter((issue) => issue.tone === "warn" || issue.tone === "error").length;
-  const opportunities = buildResearchOpportunities();
-  const queue = buildResearchQueue(positions, issues, opportunities);
-  const updates = buildResearchUpdates(positions);
-  const latestDate = researchDeskLatestDate(industries, updates);
-  const counts = {
-    queue: queue.length,
-    opportunity: opportunities.length,
-    data: issues.length,
-    industry: industries.length
-  };
-  counts.all = counts.queue + counts.opportunity + counts.data + counts.industry;
-
-  const queueSection = researchDeskSection(
-    "queue",
-    "Research Queue",
-    "今日研究队列",
-    queue.length
-      ? `<div class="research-queue-list">${queue.map(renderResearchQueueItem).join("")}</div>`
-      : `<div class="empty-state compact-empty">当前没有高优先级研究任务</div>`,
-    queue.length
-  );
-  const opportunitySection = researchDeskSection(
-    "opportunity",
-    "Candidate Signals",
-    "候选机会",
-    opportunities.length
-      ? `<div class="research-opportunity-grid">${opportunities.map(renderResearchOpportunityCard).join("")}</div>`
-      : `<div class="empty-state compact-empty">当前暂无候选机会</div>`,
-    opportunities.length
-  );
-  const dataSection = researchDeskSection(
-    "data",
-    "Data Quality",
-    "数据体检",
-    issues.length
-      ? `<div class="research-data-list">${issues.slice(0, 12).map(renderResearchDataIssue).join("")}</div>`
-      : `<div class="empty-state compact-empty">关键研究数据完整</div>`,
-    warningCount ? `${warningCount} 项` : "通过"
-  );
-  const industrySection = researchDeskSection(
-    "industry",
-    "Industry Themes",
-    "行业主题",
-    industries.length
-      ? `<div class="research-industry-grid">${industries.map((industry) => renderResearchIndustryCard(industry, positions)).join("")}</div>`
-      : `<div class="empty-state compact-empty">暂无行业档案。可在 data/industries/ 下新增行业 JSON。</div>`,
-    industries.length
-  );
-  const updatesSection = researchDeskSection(
-    "updates",
-    "Recent Updates",
-    "最近研究更新",
-    updates.length
-      ? `<div class="research-update-list">${updates.map(renderResearchUpdateCard).join("")}</div>`
-      : `<div class="empty-state compact-empty">暂无研究更新记录</div>`,
-    updates.length
-  );
-
-  const dataInPrimary = researchDeskFilter === "data";
-  const primarySections = [
-    researchDeskSectionVisible("queue") ? queueSection : "",
-    researchDeskSectionVisible("opportunity") ? opportunitySection : "",
-    researchDeskSectionVisible("industry") ? industrySection : "",
-    dataInPrimary ? dataSection : ""
-  ].join("");
-  const secondarySections = [
-    !dataInPrimary && researchDeskSectionVisible("data") ? dataSection : "",
-    researchDeskFilter === "all" ? updatesSection : ""
-  ].join("");
-
-  elements.industryList.innerHTML = `
-    <div class="research-desk">
-      <section class="research-desk-hero">
-        <div class="research-desk-hero-main">
-          <p class="eyebrow">Research Command</p>
-          <h2>研究总控台</h2>
-          <span>把行业主题、跟踪机会、数据体检和近期研究更新放在同一个入口，优先处理会影响买入纪律和复盘结论的事项。</span>
-        </div>
-        <div class="research-desk-actions">
-          <button class="primary-button" type="button" data-open-research>
-            <span>＋</span>
-            导入分析
-          </button>
-          <button class="ghost-button" type="button" data-update-industries>
-            <span>↻</span>
-            更新行业数据
-          </button>
-        </div>
-        <div class="research-desk-metrics">
-          ${researchDeskMetric("行业档案", `${industries.length}`, "主题研究")}
-          ${researchDeskMetric("跟踪标的", `${state.candidates?.length ?? 0}`, "晴仓30候选")}
-          ${researchDeskMetric("待处理问题", warningCount ? `${warningCount} 项` : "通过", issues.length ? `总计 ${issues.length}` : "关键数据完整")}
-          ${researchDeskMetric("最近更新", latestDate || "-", latestDate ? "研究/行业记录" : "暂无记录")}
-        </div>
-      </section>
-
-      ${researchDeskFilters(counts)}
-
-      <div class="research-desk-grid ${secondarySections ? "" : "single-column"}">
-        <main class="research-desk-primary">
-          ${primarySections || `<div class="empty-state compact-empty">当前筛选下暂无内容</div>`}
-        </main>
-        <aside class="research-desk-secondary">
-          ${secondarySections}
-        </aside>
-      </div>
-    </div>
-  `;
-}
-
-function renderIndustryDetail(positions, id) {
-  if (!elements.industryDetail) return;
-  const industry = findIndustryRecord(id);
-  if (!industry) {
-    elements.industryDetail.innerHTML = `
-      <section class="panel">
-        <div class="empty-state">未找到该行业档案</div>
-      </section>
-    `;
-    return;
-  }
-
-  const stocks = industryStocks(industry, positions);
-  const keyQuestions = Array.isArray(industry.keyQuestions) ? industry.keyQuestions : [];
-  const companyAnalyses = industryCompanyAnalyses(industry, stocks);
-  const metrics = Array.isArray(industry.metrics) ? industry.metrics : [];
-  const exposure = industryExposure(stocks);
-  const updateText = [industry.metricsUpdatedAt, industry.updatedAt].map((item) => String(item ?? "").trim()).find(Boolean) || "";
-
-  elements.industryDetail.innerHTML = `
-    <section class="industry-detail-hero">
-      <a class="ghost-button detail-back" href="#industry">返回研究台</a>
-      <div>
-        <p class="eyebrow">${escapeHTML(displayText(industry.category, "Industry"))}</p>
-        <h2>${escapeHTML(displayText(industry.name, "未命名行业"))}</h2>
-      </div>
-      <div class="detail-hero-meta">
-        <span>${escapeHTML(displayText(industry.status, "待完善"))}</span>
-        <small>${escapeHTML(updateText ? `更新 ${updateText}` : "更新时间待补充")}</small>
-      </div>
-    </section>
-
-    <section class="metrics-grid industry-metrics-summary">
-      ${metricCard("持仓暴露", privateText(currency(exposure)), "按当前市值折人民币")}
-      ${metricCard("标的分析", `${companyAnalyses.length}`, "趋势与定性判断")}
-      ${metricCard("覆盖公司", stocks.map((stock) => stock.name).join(" / ") || "-", "行业内当前关注对象")}
-      ${metricCard("趋势指标", `${metrics.length}`, industry.metricsUpdatedAt ? "runtime 行业数据" : "等待行业数据更新")}
-    </section>
-
-    <section class="panel industry-summary-panel">
-      <div class="panel-head compact">
-        <div>
-          <p class="eyebrow">Thesis</p>
-          <h2>行业结论</h2>
-        </div>
-        <button class="primary-button" type="button" data-update-industries>
-          <span>↻</span>
-          更新行业数据
-        </button>
-      </div>
-      <div class="industry-summary-body">
-        <p>${escapeHTML(displayText(industry.summary, "后续补充行业景气、供需、成本、政策、估值和代表公司分析。"))}</p>
-        <div class="industry-question-list">
-          ${keyQuestions.length
-            ? keyQuestions.map((item) => `<span>${escapeHTML(item)}</span>`).join("")
-            : `<span>后续补充关键研究问题</span>`}
-        </div>
-        ${industry.discipline ? `
-          <div class="industry-discipline">
-            <span>执行纪律</span>
-            <p>${escapeHTML(industry.discipline)}</p>
-          </div>
-        ` : ""}
-      </div>
-    </section>
-
-    <section class="panel industry-trend-panel">
-      <div class="panel-head compact">
-        <div>
-          <p class="eyebrow">External Metrics</p>
-          <h2>行业趋势数据</h2>
-        </div>
-        <small>${escapeHTML(industry.metricsUpdatedAt ? `runtime 更新 ${industry.metricsUpdatedAt}` : "尚未生成 runtime 行业数据")}</small>
-      </div>
-      <div class="industry-line-metric-grid">
-        ${metrics.length
-          ? metrics.map(renderIndustryMetric).join("")
-          : `<div class="empty-state compact-empty">暂无行业趋势数据。点击“更新行业数据”后写入 data/runtime/industry_metrics.json。</div>`}
-      </div>
-    </section>
-
-    ${companyAnalyses.length ? `
-      <section class="panel industry-company-panel">
-        <div class="panel-head compact">
-          <div>
-            <p class="eyebrow">Company Trends</p>
-            <h2>标的趋势分析</h2>
-          </div>
-        </div>
-        <div class="industry-company-grid">
-          ${companyAnalyses.map((analysis) => renderIndustryCompanyAnalysis(analysis, stocks)).join("")}
-        </div>
-      </section>
-    ` : ""}
-  `;
 }
 
 function topGroups(items, keyGetter, valueGetter, limit = 3) {
@@ -6441,7 +6148,7 @@ function stockDetailValuationInputPanel(stock) {
             `).join("")}
           </div>
           <div class="stock-detail-form-actions">
-            <span>保存后写入估值区间，选股页和总览继续只读展示。</span>
+            <span>保存后写入估值区间，详情页和总览继续只读展示。</span>
             <button class="primary-button compact-link" type="submit">保存估值假设</button>
           </div>
         </form>
@@ -6598,7 +6305,7 @@ function renderStockDetail(positions, symbol) {
       <aside class="stock-detail-summary">
         <section class="stock-detail-decision-hero">
           <div class="stock-detail-hero-actions">
-            <a class="ghost-button detail-back" href="#holdings">返回持仓</a>
+            <a class="ghost-button detail-back" href="#holdings">返回股票</a>
             <button class="ghost-button compact-link" type="button" data-update-financials="${escapeHTML(stock.symbol)}">
               <span>↻</span>
               更新财务
@@ -6765,13 +6472,18 @@ function renderStockDetail(positions, symbol) {
 function renderTradeStockNames() {
   if (!elements.tradeStockNames) return;
   const seen = new Set();
+  const sourceItems = tradeAssetType === "fund"
+    ? (state.funds ?? []).map((fund) => ({ ...fund, optionType: fundTypeLabel(fund) }))
+    : [
+        ...(state.holdings ?? []).map((stock) => ({ ...stock, optionType: "股票" })),
+        ...(state.candidates ?? []).map((stock) => ({ ...stock, optionType: "跟踪" }))
+      ];
   const items = [
-    ...(state.holdings ?? []).map((stock) => ({ ...stock, optionType: "股票" })),
-    ...(state.candidates ?? []).map((stock) => ({ ...stock, optionType: "跟踪" }))
+    ...sourceItems
   ]
     .filter((item) => item?.name && item?.symbol)
     .filter((item) => {
-      const key = `stock:${normalizeSymbol(item.symbol)}`;
+      const key = `${tradeAssetType}:${tradeAssetType === "fund" ? normalizeFundSymbol(item.symbol) : normalizeSymbol(item.symbol)}`;
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -6783,17 +6495,17 @@ function renderTradeStockNames() {
 
 function routeInfo(rawHash = window.location.hash.slice(1)) {
   const view = rawHash || "overview";
-  if (view === "screener" || view === "valuation" || view === "sunny30" || view === "candidates") {
-    return { view: "screener", page: "screener" };
+  if (view === "screener" || view === "sunny30" || view === "candidates") {
+    return { view: "overview", page: "overview" };
   }
   if (view === "holdings" || view === "masters" || view === "positions") {
     return { view: "holdings", page: "holdings" };
   }
+  if (view === "funds" || view === "fund-holdings" || view === "funds-holdings") {
+    return { view: "funds", page: "funds" };
+  }
   if (view === "logs") {
     return { view, page: "trades" };
-  }
-  if (view.startsWith("industry=")) {
-    return { view, page: "industry-detail", id: decodeURIComponent(view.slice("industry=".length)) };
   }
   if (view.startsWith("stock=")) {
     return { view, page: "stock-detail", id: decodeURIComponent(view.slice("stock=".length)) };
@@ -6803,12 +6515,13 @@ function routeInfo(rawHash = window.location.hash.slice(1)) {
 
 function renderContext() {
   const positions = computePositions();
-  return { positions };
+  const fundPositions = computeFundPositions();
+  return { positions, fundPositions };
 }
 
 function renderRecordCount() {
   if (!elements.recordCount) return;
-  elements.recordCount.textContent = privateText(`${state.stocks?.length ?? state.holdings.length + state.candidates.length} 只股票 · ${state.trades.length} 条交易`);
+  elements.recordCount.textContent = privateText(`${state.stocks?.length ?? state.holdings.length + state.candidates.length} 只股票 · ${(state.funds ?? []).length} 只基金 · ${state.trades.length} 条交易`);
 }
 
 function renderLoadingState() {
@@ -6816,6 +6529,8 @@ function renderLoadingState() {
   [
     elements.totalAssetsMetric,
     elements.totalValue,
+    elements.stockMarketValue,
+    elements.fundMarketValue,
     elements.totalPositionPnl,
     elements.dayChange,
     elements.annualDividend,
@@ -6836,17 +6551,17 @@ function renderLoadingState() {
 
 function render(rawHash = window.location.hash.slice(1)) {
   const route = routeInfo(rawHash);
-  const { positions } = renderContext();
+  const { positions, fundPositions } = renderContext();
 
   renderTradeStockNames();
-  renderQuoteUpdateStatus(positions);
+  renderQuoteUpdateStatus(positions, fundPositions);
   renderRecordCount();
 
   if (route.page === "overview") {
-    renderMetrics(positions);
-    renderAssetAllocation(positions);
-    renderDecisionArea(positions);
-    renderCommitteeOverview(positions);
+    renderMetrics(positions, fundPositions);
+    renderOverviewPnlChart(positions, fundPositions);
+    renderAssetAllocation(positions, fundPositions);
+    renderEtfRuleTracker();
     return;
   }
   if (route.page === "holdings") {
@@ -6855,17 +6570,8 @@ function render(rawHash = window.location.hash.slice(1)) {
     renderPlanAndCandidates();
     return;
   }
-  if (route.page === "screener") {
-    renderSunny30(positions);
-    renderValuationModule(positions);
-    return;
-  }
-  if (route.page === "industry") {
-    renderIndustryDesk(positions);
-    return;
-  }
-  if (route.page === "industry-detail") {
-    renderIndustryDetail(positions, route.id);
+  if (route.page === "funds") {
+    renderFunds(fundPositions);
     return;
   }
   if (route.page === "trades") {
@@ -6888,6 +6594,22 @@ function findTradeStock(input) {
     stocks.find((stock) => String(stock.name ?? "").trim() === text) ||
     stocks.find((stock) => {
       const name = String(stock.name ?? "").trim();
+      return name && (name.includes(text) || text.includes(name));
+    }) ||
+    null
+  );
+}
+
+function findTradeFund(input) {
+  const text = String(input ?? "").trim();
+  if (!text) return null;
+  const normalized = normalizeFundSymbol(text);
+  const funds = state.funds ?? [];
+  return (
+    funds.find((fund) => normalizeFundSymbol(fund.symbol) === normalized) ||
+    funds.find((fund) => String(fund.name ?? "").trim() === text) ||
+    funds.find((fund) => {
+      const name = String(fund.name ?? "").trim();
       return name && (name.includes(text) || text.includes(name));
     }) ||
     null
@@ -7196,7 +6918,7 @@ async function saveSunny30Candidate(formData) {
       body: JSON.stringify(candidate)
     }));
     localStorage.removeItem(STORAGE_KEY);
-    render("screener");
+    render("overview");
     return;
   }
 
@@ -7207,7 +6929,7 @@ async function saveSunny30Candidate(formData) {
   nextCandidate.action ||= "纳入晴仓30长期跟踪；等待质量和安全边际补充";
   upsertCandidate(nextCandidate);
   saveState();
-  render("screener");
+  render("overview");
 }
 
 async function deleteSunny30Candidate(symbol) {
@@ -7221,13 +6943,13 @@ async function deleteSunny30Candidate(symbol) {
   if (USE_BACKEND) {
     setLoadedState(await requestJSON(`/api/stocks/${encodeURIComponent(normalized)}`, { method: "DELETE" }));
     localStorage.removeItem(STORAGE_KEY);
-    render("screener");
+    render("overview");
     return;
   }
 
   removeCandidate(normalized);
   saveState();
-  render("screener");
+  render("overview");
 }
 
 async function saveScreeningWeights(formData) {
@@ -7245,13 +6967,13 @@ async function saveScreeningWeights(formData) {
       body: JSON.stringify(weights)
     }));
     localStorage.removeItem(STORAGE_KEY);
-    render("screener");
+    render("overview");
     return;
   }
 
   state.screeningWeights = weights;
   saveState();
-  render("screener");
+  render("overview");
 }
 
 function categoryLabelFromValue(value) {
@@ -7302,6 +7024,30 @@ function tradeFromSimpleForm(formData) {
   if (!Number.isFinite(price) || price <= 0) throw new Error("成交价必须大于 0");
   if (!reason) throw new Error("请填写买入、卖出或继续持有的人工理由");
 
+  if (tradeAssetType === "fund") {
+    const fund = findTradeFund(nameInput);
+    const parsed = parseFundTradeInput(nameInput);
+    const symbol = normalizeFundSymbol(fund?.symbol || parsed.symbol);
+    if (!symbol || (!fund && !isFundSymbolLike(symbol))) throw new Error("请输入基金代码，名称可以跟在代码后面");
+    const currencyCode = String(fund?.currency || "CNY").toUpperCase();
+    const currentPrice = Number(fund?.currentPrice) > 0 ? Number(fund.currentPrice) : price;
+    const side = signedShares < 0 ? "sell" : "buy";
+    const shares = Math.abs(signedShares);
+    return {
+      id: Date.now(),
+      date: new Date().toISOString().slice(0, 10),
+      assetType: "fund",
+      symbol,
+      name: fund?.name || parsed.name || symbol,
+      side,
+      shares,
+      price,
+      currency: currencyCode,
+      currentPrice,
+      reason
+    };
+  }
+
   const stock = findTradeStock(nameInput);
   if (!stock) throw new Error(`未找到“${nameInput}”，请先把它加入持仓或晴仓30`);
 
@@ -7335,6 +7081,46 @@ async function addTrade(formData) {
       method: "POST",
       body: JSON.stringify(trade)
     }));
+    saveState();
+    render();
+    return;
+  }
+
+  if (normalizeAssetType(trade.assetType) === "fund") {
+    state.funds ??= [];
+    let fund = state.funds.find((item) => normalizeFundSymbol(item.symbol) === normalizeFundSymbol(symbol));
+    if (!fund) {
+      if (side === "sell") throw new Error("未找到可卖出的基金");
+      fund = {
+        symbol,
+        name: trade.name,
+        fundType: normalizeFundType("", symbol),
+        shares: 0,
+        cost: price,
+        currentPrice: trade.currentPrice,
+        previousClose: trade.currentPrice,
+        currentPriceDate: new Date().toISOString().slice(0, 10),
+        previousCloseDate: new Date().toISOString().slice(0, 10),
+        currency: currencyCode
+      };
+      state.funds.push(fund);
+    }
+    if (side === "buy") {
+      const totalCost = fund.shares * fund.cost + shares * price;
+      fund.shares += shares;
+      fund.cost = totalCost / fund.shares;
+    } else {
+      fund.shares = Math.max(0, fund.shares - shares);
+    }
+    fund.name = trade.name || fund.name;
+    fund.currency = currencyCode;
+    fund.currentPrice = trade.currentPrice;
+    fund.previousClose = fund.previousClose > 0 ? fund.previousClose : trade.currentPrice;
+    state.trades.push(trade);
+    state.cash += side === "sell" ? shares * price * fx(currencyCode) : -(shares * price * fx(currencyCode));
+    if (side === "sell" && fund.shares === 0) {
+      state.funds = state.funds.filter((item) => normalizeFundSymbol(item.symbol) !== normalizeFundSymbol(symbol));
+    }
     saveState();
     render();
     return;
@@ -7459,83 +7245,32 @@ async function importResearch() {
 async function updateQuotes() {
   if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能更新行情");
 
-  elements.updateQuotesButton.disabled = true;
-  elements.updateQuotesButton.innerHTML = "<span>↻</span> 更新中";
-  setQuoteUpdateStatus("正在拉取股票行情和股息数据...");
+  setQuoteUpdateStatus("正在拉取股票行情、基金净值和股息数据...");
 
-  try {
-    const result = await requestJSON("/api/quotes/update", { method: "POST" });
-    setLoadedState(result.state);
-    localStorage.removeItem(STORAGE_KEY);
-    syncCash();
-    render();
+  const result = await requestJSON("/api/quotes/update", { method: "POST" });
+  setLoadedState(result.state);
+  localStorage.removeItem(STORAGE_KEY);
+  syncCash();
+  render();
 
-    const skipped = result.skipped ?? [];
-    if (skipped.length) {
-      const preview = skipped.slice(0, 3).map((item) => `${item.symbol} ${item.error}`).join("；");
-      setQuoteUpdateStatus(`已更新 ${result.updated} 项行情，${skipped.length} 个失败：${preview}`, "error");
-    } else {
-      setQuoteUpdateStatus(`已更新 ${result.updated} 项行情`, "success");
-    }
-  } finally {
-    elements.updateQuotesButton.disabled = false;
-    elements.updateQuotesButton.innerHTML = "<span>↻</span> 更新行情";
+  const skipped = result.skipped ?? [];
+  if (skipped.length) {
+    const preview = skipped.slice(0, 3).map((item) => `${item.symbol} ${item.error}`).join("；");
+    setQuoteUpdateStatus(`已更新 ${result.updated} 项行情，${skipped.length} 个失败：${preview}`, "error");
+  } else {
+    setQuoteUpdateStatus(`已更新 ${result.updated} 项行情`, "success");
   }
 }
 
-async function updateValuationHistory() {
-  if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能更新估值分位");
-  const button = elements.updateValuationHistoryButton;
-  const originalHTML = button?.innerHTML;
-  if (button) {
-    button.disabled = true;
-    button.innerHTML = "<span>↻</span> 更新中";
-  }
-  setQuoteUpdateStatus("正在更新估值历史分位...");
+async function autoUpdateQuotesOnOverview() {
+  if (!USE_BACKEND || !backendAvailable || autoQuoteUpdateInFlight) return;
+  autoQuoteUpdateInFlight = true;
   try {
-    const result = await requestJSON("/api/valuation-history/update", { method: "POST" });
-    if (result.state) {
-      setLoadedState(result.state);
-      localStorage.removeItem(STORAGE_KEY);
-      render("valuation");
-    }
-    setQuoteUpdateStatus(`已写入 ${result.updated ?? 0} 只股票的估值分位历史`, "success");
+    await updateQuotes();
+  } catch (error) {
+    setQuoteUpdateStatus(error.message, "error");
   } finally {
-    if (button) {
-      button.disabled = false;
-      button.innerHTML = originalHTML;
-    }
-  }
-}
-
-async function updateIndustryMetrics(button) {
-  if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能更新行业数据");
-
-  const originalHTML = button?.innerHTML;
-  if (button) {
-    button.disabled = true;
-    button.innerHTML = "<span>↻</span> 更新中";
-  }
-  setQuoteUpdateStatus("正在更新行业外部趋势数据...");
-
-  try {
-    const result = await requestJSON("/api/industries/update", { method: "POST" });
-    setLoadedState(result.state);
-    localStorage.removeItem(STORAGE_KEY);
-    render();
-
-    const skipped = result.skipped ?? [];
-    if (skipped.length) {
-      const preview = skipped.slice(0, 2).map((item) => `${item.industryId || item.source} ${item.error}`).join("；");
-      setQuoteUpdateStatus(`已更新 ${result.updated} 个行业趋势指标，${skipped.length} 个来源失败：${preview}`, "error");
-    } else {
-      setQuoteUpdateStatus(`已更新 ${result.updated} 个行业趋势指标`, "success");
-    }
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.innerHTML = originalHTML;
-    }
+    autoQuoteUpdateInFlight = false;
   }
 }
 
@@ -7618,23 +7353,46 @@ async function saveHolding(formData) {
 }
 
 function setTradeAssetType() {
-  if (elements.tradeNameLabel) elements.tradeNameLabel.textContent = "股票名称";
-  if (elements.tradePriceLabel) elements.tradePriceLabel.textContent = "成交价";
-  if (elements.tradeSharesLabel) elements.tradeSharesLabel.textContent = "股数";
-  if (elements.tradeNameInput) elements.tradeNameInput.placeholder = "中海物业";
+  const isFund = tradeAssetType === "fund";
+  if (elements.tradeAssetTypeInput) elements.tradeAssetTypeInput.value = tradeAssetType;
+  elements.tradeAssetTypeButtons?.forEach((button) => {
+    const active = button.dataset.tradeAssetType === tradeAssetType;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  if (elements.tradeNameLabel) elements.tradeNameLabel.textContent = isFund ? "基金代码/名称" : "股票名称";
+  if (elements.tradePriceLabel) elements.tradePriceLabel.textContent = isFund ? "成交净值" : "成交价";
+  if (elements.tradeSharesLabel) elements.tradeSharesLabel.textContent = isFund ? "份额" : "股数";
+  if (elements.tradeNameInput) elements.tradeNameInput.placeholder = isFund ? "000001 华夏成长" : "中海物业";
   if (elements.tradeSharesInput) {
     elements.tradeSharesInput.placeholder = "买入填正数，卖出填负数";
-    elements.tradeSharesInput.step = "1";
+    elements.tradeSharesInput.step = isFund ? "0.01" : "1";
   }
+  renderTradeStockNames();
 }
 
-document.querySelectorAll(".segment").forEach((button) => {
+document.querySelectorAll(".segment[data-filter]").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelector(".segment.active").classList.remove("active");
+    document.querySelector(".segment[data-filter].active").classList.remove("active");
     button.classList.add("active");
     activeFilter = button.dataset.filter;
     render();
   });
+});
+
+elements.tradeAssetTypeButtons?.forEach((button) => {
+  button.addEventListener("click", () => {
+    tradeAssetType = normalizeAssetType(button.dataset.tradeAssetType);
+    setTradeAssetType();
+  });
+});
+
+elements.overviewPnlRangeTabs?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-overview-pnl-range]");
+  if (!button) return;
+  overviewPnlRange = button.dataset.overviewPnlRange || "day";
+  const { positions, fundPositions } = renderContext();
+  renderOverviewPnlChart(positions, fundPositions);
 });
 
 document.querySelectorAll(".nav-item").forEach((button) => {
@@ -7748,17 +7506,17 @@ window.addEventListener("scroll", requestStockDetailActiveUpdate, { passive: tru
 function showPage(view) {
   const route = routeInfo(view);
   const isStockDetail = route.page === "stock-detail";
-  const isIndustryDetail = route.page === "industry-detail";
   let nextView = route.page;
   if (!document.querySelector(`[data-page="${nextView}"]`)) {
     nextView = "overview";
   }
 
   document.querySelectorAll(".nav-item.active").forEach((item) => item.classList.remove("active"));
-  const activeNavView = isIndustryDetail ? "industry" : isStockDetail ? "holdings" : route.view;
+  const activeNavView = isStockDetail ? "holdings" : route.view;
   document.querySelectorAll(`.nav-item[data-view="${activeNavView}"]`).forEach((item) => item.classList.add("active"));
   document.querySelector(".page.active")?.classList.remove("active");
   document.querySelector(`[data-page="${nextView}"]`)?.classList.add("active");
+  document.body.dataset.activePage = nextView;
   elements.pageTitle.textContent = pageTitles[route.view] || pageTitles[nextView];
   requestBackToTopUpdate();
 }
@@ -7773,7 +7531,7 @@ function resetStockDetailRouteScroll() {
 }
 
 function savePortfolioReturnScroll() {
-  const activePortfolio = document.querySelector('.page[data-page="holdings"].active, .page[data-page="screener"].active');
+  const activePortfolio = document.querySelector('.page[data-page="holdings"].active');
   if (!activePortfolio) return;
   sessionStorage.setItem(PORTFOLIO_RETURN_SCROLL_KEY, String(Math.max(0, Math.round(window.scrollY))));
 }
@@ -7794,9 +7552,12 @@ function handleRoute(rawHash) {
   const previousRoute = activeRoute;
   showPage(view);
   render(view);
+  if (route.page === "overview") {
+    autoUpdateQuotesOnOverview();
+  }
   if (route.page === "stock-detail") {
     resetStockDetailRouteScroll();
-  } else if ((route.page === "holdings" || route.page === "screener") && previousRoute?.page === "stock-detail") {
+  } else if (route.page === "holdings" && previousRoute?.page === "stock-detail") {
     restorePortfolioReturnScroll();
   }
   activeRoute = route;
@@ -7963,15 +7724,6 @@ document.addEventListener("click", async (event) => {
   }
 });
 
-document.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-update-industries]");
-  if (!button) return;
-  try {
-    await updateIndustryMetrics(button);
-  } catch (error) {
-    setQuoteUpdateStatus(error.message, "error");
-  }
-});
 
 document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-delete-trade]");
@@ -8087,41 +7839,6 @@ document.addEventListener("click", (event) => {
   const button = event.target.closest("[data-open-research]");
   if (!button) return;
   openResearchDialog();
-});
-
-document.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-research-desk-filter]");
-  if (!button) return;
-  researchDeskFilter = button.dataset.researchDeskFilter || "all";
-  renderIndustryDesk(computePositions());
-});
-
-document.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-research-desk-toggle]");
-  if (!button) return;
-  const section = button.dataset.researchDeskToggle;
-  if (expandedResearchDeskSections.has(section)) {
-    expandedResearchDeskSections.delete(section);
-  } else {
-    expandedResearchDeskSections.add(section);
-  }
-  renderIndustryDesk(computePositions());
-});
-
-elements.updateQuotesButton.addEventListener("click", async () => {
-  try {
-    await updateQuotes();
-  } catch (error) {
-    setQuoteUpdateStatus(error.message, "error");
-  }
-});
-
-elements.updateValuationHistoryButton?.addEventListener("click", async () => {
-  try {
-    await updateValuationHistory();
-  } catch (error) {
-    setQuoteUpdateStatus(error.message, "error");
-  }
 });
 
 document.querySelector("#closeTradePanel").addEventListener("click", () => {

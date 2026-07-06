@@ -335,13 +335,11 @@ func withTempPortfolioData(t *testing.T) {
 	oldDataDir := dataDir
 	oldDataFile := dataFile
 	oldRuntimeQuotesFile := runtimeQuotesFile
-	oldRuntimeIndustryMetricsFile := runtimeIndustryMetricsFile
 	oldRuntimeValuationHistoryFile := runtimeValuationHistoryFile
 	dir := t.TempDir()
 	dataDir = dir
 	dataFile = filepath.Join(dir, "portfolio.json")
 	runtimeQuotesFile = filepath.Join(dir, "runtime", "quotes.json")
-	runtimeIndustryMetricsFile = filepath.Join(dir, "runtime", "industry_metrics.json")
 	runtimeValuationHistoryFile = filepath.Join(dir, "runtime", "valuation_history.json")
 	if err := os.WriteFile(dataFile, []byte("{}\n"), 0o644); err != nil {
 		t.Fatalf("seed temp portfolio: %v", err)
@@ -350,7 +348,6 @@ func withTempPortfolioData(t *testing.T) {
 		dataDir = oldDataDir
 		dataFile = oldDataFile
 		runtimeQuotesFile = oldRuntimeQuotesFile
-		runtimeIndustryMetricsFile = oldRuntimeIndustryMetricsFile
 		runtimeValuationHistoryFile = oldRuntimeValuationHistoryFile
 	})
 }

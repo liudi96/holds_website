@@ -22,7 +22,7 @@ func readLayoutTestFile(t *testing.T, path string) string {
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
-	return string(content)
+	return strings.ReplaceAll(string(content), "\r\n", "\n")
 }
 
 func requireLayoutTestContains(t *testing.T, content, needle string) {
