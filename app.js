@@ -3034,6 +3034,14 @@ function overviewPnlSeries(positions, fundPositions, rangeMeta, stats) {
   });
 }
 
+function scrollOverviewPnlToLatest() {
+  const scroller = elements.overviewPnlBars;
+  if (!scroller) return;
+  window.requestAnimationFrame(() => {
+    scroller.scrollLeft = scroller.scrollWidth;
+  });
+}
+
 function renderMetrics(positions, fundPositions = computeFundPositions()) {
   const stats = overviewHoldingStats(positions, fundPositions);
   const dividends = dividendSummary(positions);
@@ -3101,6 +3109,7 @@ function renderOverviewPnlChart(positions, fundPositions = computeFundPositions(
   }).join("")}
     </div>
   `;
+  scrollOverviewPnlToLatest();
 }
 
 function renderAssetAllocation(positions, fundPositions = computeFundPositions()) {

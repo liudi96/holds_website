@@ -1700,6 +1700,56 @@ table {
   text-align: center;
 }
 
+.page[data-page="funds"] .fund-table {
+  min-width: 1180px;
+  table-layout: fixed;
+}
+
+.page[data-page="funds"] .fund-table th:nth-child(1),
+.page[data-page="funds"] .fund-table td:nth-child(1) {
+  width: 320px;
+}
+
+.page[data-page="funds"] .fund-table th:nth-child(2),
+.page[data-page="funds"] .fund-table td:nth-child(2) {
+  width: 92px;
+}
+
+.page[data-page="funds"] .fund-table th:nth-child(3),
+.page[data-page="funds"] .fund-table td:nth-child(3),
+.page[data-page="funds"] .fund-table th:nth-child(4),
+.page[data-page="funds"] .fund-table td:nth-child(4),
+.page[data-page="funds"] .fund-table th:nth-child(5),
+.page[data-page="funds"] .fund-table td:nth-child(5),
+.page[data-page="funds"] .fund-table th:nth-child(6),
+.page[data-page="funds"] .fund-table td:nth-child(6),
+.page[data-page="funds"] .fund-table th:nth-child(8),
+.page[data-page="funds"] .fund-table td:nth-child(8),
+.page[data-page="funds"] .fund-table th:nth-child(9),
+.page[data-page="funds"] .fund-table td:nth-child(9) {
+  width: 112px;
+}
+
+.page[data-page="funds"] .fund-table th:nth-child(7),
+.page[data-page="funds"] .fund-table td:nth-child(7) {
+  width: 150px;
+}
+
+.page[data-page="funds"] .fund-table .fund-cell {
+  align-items: flex-start;
+}
+
+.page[data-page="funds"] .fund-table .stock-name strong,
+.page[data-page="funds"] .fund-table .stock-name span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.page[data-page="funds"] .fund-table .stock-name strong {
+  line-height: 1.32;
+}
+
 th,
 td {
   padding: 14px 18px;
@@ -6998,6 +7048,7 @@ h1 {
   display: block;
   overflow-x: auto;
   padding: 14px;
+  scroll-padding-inline: 14px;
   scrollbar-width: thin;
 }
 
@@ -7075,6 +7126,7 @@ h1 {
 
 .overview-pnl-period strong {
   overflow: hidden;
+  max-width: 100%;
   font-size: 11px;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -7469,8 +7521,10 @@ h1 {
   }
 
   .overview-pnl-chart {
-    grid-template-columns: repeat(var(--bar-count), minmax(42px, 1fr));
-    min-width: calc(var(--bar-count) * 44px);
+    grid-template-columns: repeat(var(--bar-count), minmax(56px, 1fr));
+    gap: 6px;
+    min-width: calc(var(--bar-count) * 58px);
+    padding-right: 10px;
   }
 
   .overview-pnl-chart[data-range="year"] {
@@ -7479,11 +7533,24 @@ h1 {
   }
 
   .overview-pnl-period {
+    min-width: 56px;
     grid-template-rows: 104px auto auto;
+    gap: 5px;
   }
 
   .overview-pnl-column {
     height: 104px;
+  }
+
+  .overview-pnl-period > span,
+  .overview-pnl-period strong {
+    overflow: visible;
+    font-size: 10px;
+    text-overflow: clip;
+  }
+
+  .overview-pnl-period strong {
+    font-variant-numeric: tabular-nums;
   }
 
   .overview-allocation-panel .overview-exposure-row {

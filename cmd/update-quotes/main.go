@@ -411,6 +411,17 @@ type fundGZResponse struct {
 	GZTime   string `json:"gztime"`
 }
 
+type eastmoneyFundHistoryResponse struct {
+	Data struct {
+		LSJZList []eastmoneyFundNAV `json:"LSJZList"`
+	} `json:"Data"`
+}
+
+type eastmoneyFundNAV struct {
+	Date string `json:"FSRQ"`
+	NAV  string `json:"DWJZ"`
+}
+
 func fetchQuote(client *http.Client, symbol string, fallbackCache map[string]quote, fallbackErr error) (quote, error) {
 	quote, yahooErr := fetchYahooQuote(client, symbol)
 	if yahooErr == nil {
@@ -474,18 +485,20 @@ func fetchOTCFundQuote(client *http.Client, fund Fund) (quote, error) {
 	}
 	payload, err := parseFundGZQuote(body)
 	if err != nil {
-		return quote{}, err
+		historyQuote, historyErr := fetchOTCFundHistoryQuote(client, fund)
+		if historyErr == nil {
+			return historyQuote, nil
+		}
+		return quote{}, fmt.Errorf("fund realtime quote: %v; historical NAV: %v", err, historyErr)
 	}
 	price, err := strconv.ParseFloat(strings.TrimSpace(payload.NAV), 64)
 	if err != nil || price <= 0 {
 		return quote{}, fmt.Errorf("invalid fund NAV %q", payload.NAV)
 	}
-	previousClose := fund.CurrentPrice
-	previousDate := fund.CurrentPriceDate
-	if previousClose <= 0 {
-		previousClose = price
-		previousDate = payload.JZDate
+	if historyQuote, historyErr := fetchOTCFundHistoryQuote(client, fund); historyErr == nil && quoteDateAfter(historyQuote.PriceDate, payload.JZDate) {
+		return historyQuote, nil
 	}
+	previousClose, previousDate := fundPreviousClose(fund, price, payload.JZDate, 0, "")
 	return quote{
 		Price:             price,
 		PreviousClose:     previousClose,
@@ -497,6 +510,112 @@ func fetchOTCFundQuote(client *http.Client, fund Fund) (quote, error) {
 	}, nil
 }
 
+func fetchOTCFundHistoryQuote(client *http.Client, fund Fund) (quote, error) {
+	code := normalizeFundSymbol(fund.Symbol)
+	if code == "" {
+		return quote{}, errors.New("fund symbol is required")
+	}
+	endpoint := "https://api.fund.eastmoney.com/f10/lsjz?fundCode=" + url.QueryEscape(code) + "&pageIndex=1&pageSize=5"
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return quote{}, err
+	}
+	req.Header.Set("User-Agent", "holds-website fund quote updater")
+	req.Header.Set("Referer", "https://fundf10.eastmoney.com/")
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return quote{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return quote{}, fmt.Errorf("fund history request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 65536))
+	if err != nil {
+		return quote{}, err
+	}
+	var payload eastmoneyFundHistoryResponse
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return quote{}, err
+	}
+
+	var current eastmoneyFundNAV
+	var currentPrice float64
+	for _, item := range payload.Data.LSJZList {
+		price, err := strconv.ParseFloat(strings.TrimSpace(item.NAV), 64)
+		if err == nil && price > 0 && strings.TrimSpace(item.Date) != "" {
+			current = item
+			currentPrice = price
+			break
+		}
+	}
+	if currentPrice <= 0 {
+		return quote{}, errors.New("empty fund history NAV response")
+	}
+
+	var fallbackClose float64
+	var fallbackDate string
+	for _, item := range payload.Data.LSJZList {
+		if item.Date == current.Date {
+			continue
+		}
+		price, err := strconv.ParseFloat(strings.TrimSpace(item.NAV), 64)
+		if err == nil && price > 0 && strings.TrimSpace(item.Date) != "" {
+			fallbackClose = price
+			fallbackDate = item.Date
+			break
+		}
+	}
+
+	previousClose, previousDate := fundPreviousClose(fund, currentPrice, current.Date, fallbackClose, fallbackDate)
+	return quote{
+		Price:             currentPrice,
+		PreviousClose:     previousClose,
+		PriceDate:         current.Date,
+		PreviousCloseDate: previousDate,
+		Currency:          "CNY",
+		SourceSymbol:      code,
+		SourceName:        "Eastmoney fund historical NAV",
+	}, nil
+}
+
+func fundPreviousClose(fund Fund, currentPrice float64, currentDate string, fallbackClose float64, fallbackDate string) (float64, string) {
+	previousClose := fund.CurrentPrice
+	previousDate := strings.TrimSpace(fund.CurrentPriceDate)
+	if previousDate == strings.TrimSpace(currentDate) && fund.PreviousClose > 0 {
+		previousClose = fund.PreviousClose
+		previousDate = strings.TrimSpace(fund.PreviousCloseDate)
+	}
+	if previousClose <= 0 && fallbackClose > 0 {
+		previousClose = fallbackClose
+		previousDate = strings.TrimSpace(fallbackDate)
+	}
+	if previousClose <= 0 {
+		previousClose = currentPrice
+		previousDate = strings.TrimSpace(currentDate)
+	}
+	if previousDate == "" {
+		previousDate = strings.TrimSpace(currentDate)
+	}
+	return previousClose, previousDate
+}
+
+func quoteDateAfter(left string, right string) bool {
+	left = strings.TrimSpace(left)
+	right = strings.TrimSpace(right)
+	if left == "" {
+		return false
+	}
+	if right == "" {
+		return true
+	}
+	return left > right
+}
+
 func parseFundGZQuote(body []byte) (fundGZResponse, error) {
 	text := strings.TrimSpace(string(body))
 	start := strings.Index(text, "(")
@@ -505,6 +624,9 @@ func parseFundGZQuote(body []byte) (fundGZResponse, error) {
 		return fundGZResponse{}, errors.New("invalid fund quote JSONP")
 	}
 	rawJSON := strings.TrimSpace(text[start+1 : end])
+	if rawJSON == "" {
+		return fundGZResponse{}, errors.New("empty fund quote response")
+	}
 	var payload fundGZResponse
 	if err := json.Unmarshal([]byte(rawJSON), &payload); err != nil {
 		return fundGZResponse{}, err

@@ -96,3 +96,7 @@ kill $(lsof -tiTCP:8080 -sTCP:LISTEN)
 ## Server scheduled updates
 
 Use a systemd timer on the cloud server to call the backend update endpoint. See [docs/server-scheduled-update.md](docs/server-scheduled-update.md). The overview page only reads saved data and does not trigger market-data updates when opened.
+
+## Local scheduled updates
+
+Use Windows Task Scheduler to call the same backend update endpoint locally. See [docs/local-scheduled-update.md](docs/local-scheduled-update.md).

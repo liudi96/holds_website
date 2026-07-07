@@ -190,8 +190,14 @@ func TestQuotesUpdateIsServerScheduledNotAutomaticOnOverview(t *testing.T) {
 
 func TestOverviewDailyPnlStartsFromRecordedHistory(t *testing.T) {
 	js := readTextFile(t, "app.js")
+	css := readTextFile(t, "styles.css")
 
 	requireContains(t, js, `...(Array.isArray(state.pnlHistory) ? state.pnlHistory : [])`)
+	requireContains(t, js, `function scrollOverviewPnlToLatest()`)
+	requireContains(t, js, `scroller.scrollLeft = scroller.scrollWidth`)
+	requireContains(t, js, `scrollOverviewPnlToLatest();`)
+	requireContains(t, css, `grid-template-columns: repeat(var(--bar-count), minmax(56px, 1fr))`)
+	requireContains(t, css, `font-variant-numeric: tabular-nums`)
 
 	fallback := extractBetween(t, js, `function overviewFallbackPnlValue(periodKey, range, anchorDate, positions, fundPositions, stats) {`, `function overviewPnlSeries`)
 	requireContains(t, fallback, `if (range === "day")`)
