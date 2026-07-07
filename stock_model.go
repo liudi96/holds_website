@@ -515,6 +515,7 @@ func (state AppState) MarshalJSON() ([]byte, error) {
 		FX               map[string]float64 `json:"fx"`
 		Trades           []Trade            `json:"trades"`
 		DecisionLogs     []DecisionLog      `json:"decisionLogs"`
+		PnlHistory       []PnlHistoryEntry   `json:"pnlHistory,omitempty"`
 		Stocks           []Stock            `json:"stocks"`
 		Funds            []Fund             `json:"funds,omitempty"`
 		ETFRuleStatuses  []ETFRuleStatus    `json:"etfRuleStatuses,omitempty"`
@@ -529,6 +530,7 @@ func (state AppState) MarshalJSON() ([]byte, error) {
 		FX:               state.FX,
 		Trades:           state.Trades,
 		DecisionLogs:     state.DecisionLogs,
+		PnlHistory:       state.PnlHistory,
 		Stocks:           state.Stocks,
 		Funds:            state.Funds,
 		ETFRuleStatuses:  state.ETFRuleStatuses,

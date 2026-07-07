@@ -160,18 +160,34 @@ func TestTopbarDoesNotRenderRedundantDecisionShortcut(t *testing.T) {
 	requireNotContains(t, html, `记录决策`)
 }
 
-func TestQuotesUpdateIsAutomaticOnOverview(t *testing.T) {
+func TestQuotesUpdateIsServerScheduledNotAutomaticOnOverview(t *testing.T) {
 	html := readTextFile(t, "index.html")
 	js := readTextFile(t, "app.js")
 
 	requireNotContains(t, html, `id="updateQuotesButton"`)
 	requireNotContains(t, html, `更新行情/净值`)
 	requireNotContains(t, js, `updateQuotesButton`)
-	requireContains(t, js, `async function autoUpdateQuotesOnOverview()`)
-	requireContains(t, js, `if (route.page === "overview")`)
-	requireContains(t, js, `autoUpdateQuotesOnOverview();`)
-	requireContains(t, js, `autoQuoteUpdateInFlight`)
-	requireContains(t, js, `await updateQuotes();`)
+	requireContains(t, js, `async function updateQuotes()`)
+	requireContains(t, js, `requestJSON("/api/quotes/update", { method: "POST" })`)
+	requireNotContains(t, js, `async function autoUpdateQuotesOnOverview()`)
+	requireNotContains(t, js, `autoUpdateQuotesOnOverview();`)
+	requireNotContains(t, js, `autoQuoteUpdateInFlight`)
+	requireContains(t, js, `if (window.location.hash.slice(1) === view)`)
+	requireContains(t, js, `handleRoute(view);`)
+}
+
+func TestOverviewDailyPnlStartsFromRecordedHistory(t *testing.T) {
+	js := readTextFile(t, "app.js")
+
+	requireContains(t, js, `...(Array.isArray(state.pnlHistory) ? state.pnlHistory : [])`)
+
+	fallback := extractBetween(t, js, `function overviewFallbackPnlValue(periodKey, range, anchorDate, positions, fundPositions, stats) {`, `function overviewPnlSeries`)
+	requireContains(t, fallback, `if (range === "day")`)
+	requireContains(t, fallback, `return 0;`)
+	requireNotContains(t, js, `function overviewDailyFallbackPnlValue`)
+	requireNotContains(t, fallback, `currentPriceDate || item?.previousCloseDate`)
+	requireNotContains(t, fallback, `periodKey === anchorDay`)
+	requireNotContains(t, fallback, `overviewPnlValue(positions, "day") + overviewPnlValue(fundPositions, "day")`)
 }
 
 func TestRedundantMaintenanceEntrancesAreRemoved(t *testing.T) {
@@ -267,6 +283,56 @@ func TestTradeListHasTrashDeleteAction(t *testing.T) {
 	requireContains(t, js, `aria-label="删除交易记录`)
 	requireContains(t, js, `deleteTradeRecord`)
 	requireContains(t, css, `.trade-delete-button`)
+}
+
+func TestFundNavUsesFourDecimals(t *testing.T) {
+	js := readTextFile(t, "app.js")
+
+	requireContains(t, js, `function fundNav`)
+	requireContains(t, js, `function isExchangeFundCode`)
+	requireContains(t, js, `isExchangeFundCode(normalized) ? "etf" : "otc"`)
+	requireContains(t, js, `minimumFractionDigits: 4`)
+	requireContains(t, js, `maximumFractionDigits: 4`)
+
+	renderFunds := extractBetween(t, js, `function renderFunds(fundPositions = computeFundPositions()) {`, `function renderAllocation(positions) {`)
+	requireContains(t, renderFunds, `data-label="成本净值">${escapeHTML(privateText(fundNav(fund.cost, fund.currency)))}`)
+	requireContains(t, renderFunds, `data-label="最新净值">${escapeHTML(privateText(fundNav(fund.currentPrice, fund.currency)))}`)
+	requireContains(t, renderFunds, `renderMobileStat("成本净值", privateText(fundNav(fund.cost, fund.currency)))`)
+	requireContains(t, renderFunds, `renderMobileStat("最新净值", privateText(fundNav(fund.currentPrice, fund.currency)))`)
+	requireNotContains(t, renderFunds, `currency(fund.cost, fund.currency)`)
+	requireNotContains(t, renderFunds, `currency(fund.currentPrice, fund.currency)`)
+
+	renderTrades := extractBetween(t, js, `function renderTrades() {`, `function parseValuationRangeText(text) {`)
+	requireContains(t, renderTrades, `const isFundTrade = normalizeAssetType(trade.assetType) === "fund";`)
+	requireContains(t, renderTrades, `const tradePriceText = isFundTrade ? fundNav(trade.price, trade.currency) : currency(trade.price, trade.currency);`)
+	requireContains(t, renderTrades, `const currentPriceText = isFundTrade ? fundNav(trade.currentPrice, trade.currency) : currency(trade.currentPrice, trade.currency);`)
+	requireContains(t, renderTrades, `const currentLabel = isFundTrade ? "最新净值" : "最新价";`)
+}
+
+func TestStockTradeCreatesDirectHoldingWithoutTrackingPool(t *testing.T) {
+	html := readTextFile(t, "index.html")
+	js := readTextFile(t, "app.js")
+
+	requireContains(t, html, `股票代码/名称`)
+	requireContains(t, html, `placeholder="9926.HK 康方生物"`)
+	requireContains(t, js, `function parseStockTradeInput`)
+	requireContains(t, js, `请输入股票代码，名称可以跟在代码后面，例如 9926.HK 康方生物`)
+	requireNotContains(t, js, `请先把它加入持仓或晴仓30`)
+
+	tradeNames := extractBetween(t, js, `function renderTradeStockNames() {`, `function routeInfo`)
+	requireContains(t, tradeNames, `optionType: "持仓"`)
+	requireNotContains(t, tradeNames, `state.candidates`)
+	requireNotContains(t, tradeNames, `optionType: "跟踪"`)
+
+	tradeForm := extractBetween(t, js, `function tradeFromSimpleForm(formData) {`, `async function addTrade(formData)`)
+	requireContains(t, tradeForm, `parseStockTradeInput(nameInput)`)
+	requireNotContains(t, tradeForm, `state.candidates`)
+	requireNotContains(t, tradeForm, `晴仓30`)
+
+	addTrade := extractBetween(t, js, `async function addTrade(formData) {`, `async function deleteTradeRecord`)
+	requireNotContains(t, addTrade, `removeCandidate(symbol)`)
+	requireNotContains(t, addTrade, `upsertCandidate(clearedCandidateFromHolding`)
+	requireNotContains(t, addTrade, `holdingFromCandidate`)
 }
 
 func extractBetween(t *testing.T, content, start, end string) string {

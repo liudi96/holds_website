@@ -100,6 +100,24 @@ func TestNormalizeFundSymbolStripsOF(t *testing.T) {
 	}
 }
 
+func TestExchangeFundCodeIsETFAndGetsQuoteSuffix(t *testing.T) {
+	if got := normalizeFundType("", "563020"); got != fundTypeETF {
+		t.Fatalf("normalizeFundType(563020) = %q, want etf", got)
+	}
+	if got := fundQuoteSymbol("563020"); got != "563020.SH" {
+		t.Fatalf("fundQuoteSymbol(563020) = %q, want 563020.SH", got)
+	}
+	if got := normalizeFundType("", "159919"); got != fundTypeETF {
+		t.Fatalf("normalizeFundType(159919) = %q, want etf", got)
+	}
+	if got := fundQuoteSymbol("159919"); got != "159919.SZ" {
+		t.Fatalf("fundQuoteSymbol(159919) = %q, want 159919.SZ", got)
+	}
+	if got := normalizeFundType("", "008163"); got != fundTypeOTC {
+		t.Fatalf("normalizeFundType(008163) = %q, want otc", got)
+	}
+}
+
 func TestResolveFundTradeInputParsesCodeAndName(t *testing.T) {
 	server := Server{state: AppState{FX: map[string]float64{"CNY": 1}}}
 	trade := Trade{

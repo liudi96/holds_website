@@ -1,0 +1,11 @@
+[Unit]
+Description=Update holds website market data
+After=network-online.target holds-website.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/oneshot/holds_website
+Environment=HOLDS_WEBSITE_URL=http://127.0.0.1:8080
+Environment=HOLDS_UPDATE_TIMEOUT=180
+ExecStart=/bin/bash /root/oneshot/holds_website/scripts/update-market-data.sh

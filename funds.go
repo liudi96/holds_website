@@ -78,7 +78,35 @@ func normalizeFundType(fundType string, symbol string) string {
 	if strings.HasSuffix(normalized, ".SH") || strings.HasSuffix(normalized, ".SZ") {
 		return fundTypeETF
 	}
+	if isExchangeFundCode(normalized) {
+		return fundTypeETF
+	}
 	return fundTypeOTC
+}
+
+func isExchangeFundCode(symbol string) bool {
+	code := strings.TrimSpace(symbol)
+	if !allDigits(code) || len(code) != 6 {
+		return false
+	}
+	return strings.HasPrefix(code, "5") ||
+		strings.HasPrefix(code, "15") ||
+		strings.HasPrefix(code, "16") ||
+		strings.HasPrefix(code, "18")
+}
+
+func fundQuoteSymbol(symbol string) string {
+	normalized := normalizeFundSymbol(symbol)
+	if strings.HasSuffix(normalized, ".SH") || strings.HasSuffix(normalized, ".SZ") || strings.HasSuffix(normalized, ".HK") {
+		return normalized
+	}
+	if !isExchangeFundCode(normalized) {
+		return normalized
+	}
+	if strings.HasPrefix(normalized, "5") {
+		return normalized + ".SH"
+	}
+	return normalized + ".SZ"
 }
 
 func normalizeFund(fund Fund) Fund {

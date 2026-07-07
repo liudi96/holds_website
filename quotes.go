@@ -5,11 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	pnlHistoryStartDate  = "2026-07-07"
+	pnlHistoryKlineLimit = 520
+	pnlHistoryMaxEntries = 1400
 )
 
 type QuoteUpdateResponse struct {
@@ -92,7 +100,8 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
-	updated, skipped, quoteRecords, etfRuleStatuses := updateQuotes(&state, &http.Client{Timeout: 12 * time.Second}, now)
+	client := &http.Client{Timeout: 12 * time.Second}
+	updated, skipped, quoteRecords, etfRuleStatuses := updateQuotes(&state, client, now)
 	if len(quoteRecords) > 0 || len(etfRuleStatuses) > 0 {
 		if err := saveRuntimeMarketData(quoteRecords, etfRuleStatuses, now.Format("2006-01-02 15:04:05")); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to save runtime quotes")
@@ -101,6 +110,11 @@ func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := hydrateState(&state); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load state")
+		return
+	}
+	recordDailyPnlHistory(&state, client, now)
+	if err := saveState(state); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save pnl history")
 		return
 	}
 
@@ -177,6 +191,288 @@ func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []Q
 	return updated, skipped, runtimeQuoteList(quoteRecords), etfRuleStatuses
 }
 
+type pnlHistoryAccumulator struct {
+	StockPnlCny   float64
+	FundPnlCny    float64
+	TotalValueCny float64
+}
+
+func recordDailyPnlHistory(state *AppState, client *http.Client, now time.Time) {
+	if state == nil {
+		return
+	}
+	if client == nil {
+		client = &http.Client{Timeout: 12 * time.Second}
+	}
+
+	maxDate := now.Format("2006-01-02")
+	points := make(map[string]*pnlHistoryAccumulator)
+	for _, holding := range state.Holdings {
+		if holding.Shares <= 0 || strings.TrimSpace(holding.Symbol) == "" {
+			continue
+		}
+		closes, err := fetchDailyClosesForPnl(client, holding.Symbol, pnlHistoryKlineLimit)
+		if err != nil {
+			continue
+		}
+		addDailyClosePnl(points, closes, func(date string) float64 {
+			return sharesOnDate(state, "stock", holding.Symbol, date, holding.Shares)
+		}, fxRate(state, holding.Currency), false, maxDate)
+	}
+	for _, fund := range state.Funds {
+		if fund.Shares <= 0 || strings.TrimSpace(fund.Symbol) == "" {
+			continue
+		}
+		fund = normalizeFund(fund)
+		if fund.FundType != fundTypeETF {
+			continue
+		}
+		closes, err := fetchDailyClosesForPnl(client, fundQuoteSymbol(fund.Symbol), pnlHistoryKlineLimit)
+		if err != nil {
+			continue
+		}
+		addDailyClosePnl(points, closes, func(date string) float64 {
+			return sharesOnDate(state, assetTypeFund, fund.Symbol, date, fund.Shares)
+		}, fxRate(state, fund.Currency), true, maxDate)
+	}
+
+	updatedAt := now.Format("2006-01-02 15:04:05")
+	for date, point := range points {
+		upsertPnlHistoryEntry(state, PnlHistoryEntry{
+			Date:          date,
+			PnlCny:        roundMoney(point.StockPnlCny + point.FundPnlCny),
+			StockPnlCny:   roundMoney(point.StockPnlCny),
+			FundPnlCny:    roundMoney(point.FundPnlCny),
+			TotalValueCny: roundMoney(point.TotalValueCny),
+			UpdatedAt:     updatedAt,
+		})
+	}
+	recordDailyPnlSnapshot(state, now)
+	prunePnlHistory(state)
+}
+
+func fetchDailyClosesForPnl(client *http.Client, symbol string, limit int) ([]dailyClose, error) {
+	closes, err := fetchTencentDailyCloses(client, symbol, limit)
+	if err == nil && len(closes) >= 2 {
+		return closes, nil
+	}
+	closes, eastmoneyErr := fetchEastmoneyDailyCloses(client, symbol, limit)
+	if eastmoneyErr == nil && len(closes) >= 2 {
+		return closes, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return nil, eastmoneyErr
+}
+
+func addDailyClosePnl(points map[string]*pnlHistoryAccumulator, closes []dailyClose, sharesForDate func(string) float64, rate float64, isFund bool, maxDate string) {
+	if points == nil || sharesForDate == nil || rate <= 0 || len(closes) < 2 {
+		return
+	}
+	sort.Slice(closes, func(i, j int) bool {
+		return closes[i].Date < closes[j].Date
+	})
+	for i := 1; i < len(closes); i++ {
+		previous := closes[i-1]
+		current := closes[i]
+		if current.Date < pnlHistoryStartDate || (maxDate != "" && current.Date > maxDate) {
+			continue
+		}
+		if previous.Price <= 0 || current.Price <= 0 {
+			continue
+		}
+		shares := sharesForDate(current.Date)
+		if shares <= 0 {
+			continue
+		}
+		point := points[current.Date]
+		if point == nil {
+			point = &pnlHistoryAccumulator{}
+			points[current.Date] = point
+		}
+		pnl := shares * (current.Price - previous.Price) * rate
+		value := shares * current.Price * rate
+		if isFund {
+			point.FundPnlCny += pnl
+		} else {
+			point.StockPnlCny += pnl
+		}
+		point.TotalValueCny += value
+	}
+}
+
+func sharesOnDate(state *AppState, assetType string, symbol string, date string, fallbackShares float64) float64 {
+	if state == nil {
+		return fallbackShares
+	}
+	date = strings.TrimSpace(date)
+	if date == "" {
+		return fallbackShares
+	}
+	assetType = normalizeAssetType(assetType)
+	total := 0.0
+	hasRelevantTrades := false
+	for _, trade := range state.Trades {
+		if normalizeAssetType(trade.AssetType) != assetType || trade.Shares <= 0 {
+			continue
+		}
+		if normalizeTradeSymbolForAssetType(trade.Symbol, assetType) != normalizeTradeSymbolForAssetType(symbol, assetType) {
+			continue
+		}
+		hasRelevantTrades = true
+		tradeDate := tradeDateOnly(trade.Date)
+		if tradeDate == "" || tradeDate > date {
+			continue
+		}
+		switch strings.ToLower(strings.TrimSpace(trade.Side)) {
+		case "sell":
+			total -= trade.Shares
+		default:
+			total += trade.Shares
+		}
+	}
+	if !hasRelevantTrades {
+		return fallbackShares
+	}
+	if total < 0 {
+		return 0
+	}
+	return total
+}
+
+func normalizeTradeSymbolForAssetType(symbol string, assetType string) string {
+	if normalizeAssetType(assetType) == assetTypeFund {
+		return normalizeFundSymbol(symbol)
+	}
+	return normalizeSymbol(symbol)
+}
+
+func tradeDateOnly(value string) string {
+	value = strings.TrimSpace(value)
+	if len(value) >= len("2006-01-02") {
+		value = value[:len("2006-01-02")]
+	}
+	if _, err := time.Parse("2006-01-02", value); err != nil {
+		return ""
+	}
+	return value
+}
+
+func recordDailyPnlSnapshot(state *AppState, now time.Time) {
+	if state == nil {
+		return
+	}
+	date := now.Format("2006-01-02")
+	if date < pnlHistoryStartDate {
+		return
+	}
+	updatedAt := now.Format("2006-01-02 15:04:05")
+	stockPnl, stockValue := dailyHoldingPnl(state)
+	fundPnl, fundValue := dailyFundPnl(state)
+	entry := PnlHistoryEntry{
+		Date:          date,
+		PnlCny:        roundMoney(stockPnl + fundPnl),
+		StockPnlCny:   roundMoney(stockPnl),
+		FundPnlCny:    roundMoney(fundPnl),
+		TotalValueCny: roundMoney(stockValue + fundValue),
+		UpdatedAt:     updatedAt,
+	}
+	upsertPnlHistoryEntry(state, entry)
+}
+
+func dailyHoldingPnl(state *AppState) (float64, float64) {
+	totalPnl := 0.0
+	totalValue := 0.0
+	for _, holding := range state.Holdings {
+		shares := holding.Shares
+		currentPrice := holding.CurrentPrice
+		previousClose := holding.PreviousClose
+		if shares <= 0 || currentPrice <= 0 {
+			continue
+		}
+		rate := fxRate(state, holding.Currency)
+		totalValue += shares * currentPrice * rate
+		if previousClose > 0 {
+			totalPnl += shares * (currentPrice - previousClose) * rate
+		}
+	}
+	return totalPnl, totalValue
+}
+
+func dailyFundPnl(state *AppState) (float64, float64) {
+	totalPnl := 0.0
+	totalValue := 0.0
+	for _, fund := range state.Funds {
+		shares := fund.Shares
+		currentPrice := fund.CurrentPrice
+		previousClose := fund.PreviousClose
+		if shares <= 0 || currentPrice <= 0 {
+			continue
+		}
+		rate := fxRate(state, fund.Currency)
+		totalValue += shares * currentPrice * rate
+		if previousClose > 0 {
+			totalPnl += shares * (currentPrice - previousClose) * rate
+		}
+	}
+	return totalPnl, totalValue
+}
+
+func fxRate(state *AppState, currency string) float64 {
+	if state == nil {
+		return 1
+	}
+	rate := state.FX[strings.ToUpper(strings.TrimSpace(currency))]
+	if rate <= 0 {
+		return 1
+	}
+	return rate
+}
+
+func upsertPnlHistoryEntry(state *AppState, entry PnlHistoryEntry) {
+	if strings.TrimSpace(entry.Date) == "" {
+		return
+	}
+	if entry.Date < pnlHistoryStartDate {
+		return
+	}
+	for i := range state.PnlHistory {
+		if strings.TrimSpace(state.PnlHistory[i].Date) == entry.Date {
+			state.PnlHistory[i] = entry
+			prunePnlHistory(state)
+			return
+		}
+	}
+	state.PnlHistory = append(state.PnlHistory, entry)
+	prunePnlHistory(state)
+}
+
+func prunePnlHistory(state *AppState) {
+	if state == nil || len(state.PnlHistory) == 0 {
+		return
+	}
+	filtered := state.PnlHistory[:0]
+	for _, entry := range state.PnlHistory {
+		entry.Date = strings.TrimSpace(entry.Date)
+		if entry.Date == "" || entry.Date < pnlHistoryStartDate {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	state.PnlHistory = filtered
+	sort.Slice(state.PnlHistory, func(i, j int) bool {
+		return state.PnlHistory[i].Date < state.PnlHistory[j].Date
+	})
+	if len(state.PnlHistory) > pnlHistoryMaxEntries {
+		state.PnlHistory = state.PnlHistory[len(state.PnlHistory)-pnlHistoryMaxEntries:]
+	}
+}
+
+func roundMoney(value float64) float64 {
+	return math.Round(value*100) / 100
+}
+
 func quoteSymbols(state *AppState) []string {
 	symbols := []string{}
 	seen := map[string]bool{}
@@ -198,9 +494,10 @@ func quoteSymbols(state *AppState) []string {
 		if normalizeFundType(fund.FundType, fund.Symbol) != fundTypeETF {
 			continue
 		}
-		normalized := normalizeFundSymbol(fund.Symbol)
+		quoteSymbol := fundQuoteSymbol(fund.Symbol)
+		normalized := normalizeSymbol(quoteSymbol)
 		if normalized != "" && !seen[normalized] {
-			symbols = append(symbols, fund.Symbol)
+			symbols = append(symbols, quoteSymbol)
 			seen[normalized] = true
 		}
 	}
@@ -239,7 +536,7 @@ func fetchQuoteCached(client *http.Client, cache map[string]quote, fallbackCache
 func fetchFundQuoteCached(client *http.Client, cache map[string]quote, fallbackCache map[string]quote, fallbackErr error, fund Fund) (quote, error) {
 	fund = normalizeFund(fund)
 	if fund.FundType == fundTypeETF {
-		return fetchQuoteCached(client, cache, fallbackCache, fallbackErr, fund.Symbol)
+		return fetchQuoteCached(client, cache, fallbackCache, fallbackErr, fundQuoteSymbol(fund.Symbol))
 	}
 
 	normalized := normalizeFundSymbol(fund.Symbol)

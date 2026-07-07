@@ -347,7 +347,6 @@ const expandedStockDetailSections = new Set(["detailInputs", "detailSummary", "d
 let activeStockDetailSection = "detailInputs";
 let holdingsMasked = localStorage.getItem(HOLDINGS_PRIVACY_KEY) === "1";
 let pendingResearch = null;
-let autoQuoteUpdateInFlight = false;
 let candidateSort = "consensus";
 let candidateFilter = "all";
 let decisionLogFilter = "all";
@@ -711,6 +710,17 @@ function currency(value, currencyCode = "CNY") {
   }).format(number);
 }
 
+function fundNav(value, currencyCode = "CNY") {
+  const number = finiteNumber(value);
+  if (number === null) return "-";
+  return new Intl.NumberFormat("zh-CN", {
+    style: "currency",
+    currency: currencyCode,
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4
+  }).format(number);
+}
+
 function wholeCurrency(value, currencyCode = "CNY") {
   const number = finiteNumber(value);
   if (number === null) return "-";
@@ -766,11 +776,16 @@ function normalizeFundSymbol(symbol) {
   return normalizeSymbol(symbol).replace(/\.OF$/, "");
 }
 
+function isExchangeFundCode(symbol) {
+  const code = String(symbol ?? "").trim();
+  return /^\d{6}$/.test(code) && (/^5/.test(code) || /^15/.test(code) || /^16/.test(code) || /^18/.test(code));
+}
+
 function normalizeFundType(fundType, symbol) {
   const value = String(fundType ?? "").trim().toLowerCase();
   if (value === "etf") return "etf";
   const normalized = normalizeFundSymbol(symbol);
-  return normalized.endsWith(".SH") || normalized.endsWith(".SZ") ? "etf" : "otc";
+  return normalized.endsWith(".SH") || normalized.endsWith(".SZ") || isExchangeFundCode(normalized) ? "etf" : "otc";
 }
 
 function isFundSymbolLike(symbol) {
@@ -778,6 +793,40 @@ function isFundSymbolLike(symbol) {
   if (/^\d{6}$/.test(normalized)) return true;
   if (/^\d{4,6}\.(SH|SZ|HK)$/.test(normalized)) return true;
   return false;
+}
+
+function normalizeStockTradeSymbol(symbol) {
+  const text = String(symbol ?? "").trim().toUpperCase();
+  if (!text) return "";
+  if (/^\d{4,5}$/.test(text)) {
+    return `${String(Number(text)).padStart(4, "0")}.HK`;
+  }
+  if (/^\d{6}$/.test(text)) {
+    return `${text}.${text.startsWith("6") ? "SH" : "SZ"}`;
+  }
+  return normalizeSymbol(text);
+}
+
+function isStockSymbolLike(symbol) {
+  const text = String(symbol ?? "").trim().toUpperCase();
+  if (/^\d{4,5}$/.test(text) || /^\d{6}$/.test(text)) return true;
+  const normalized = normalizeStockTradeSymbol(text);
+  if (/^\d{4,5}\.HK$/.test(normalized)) return true;
+  if (/^\d{6}\.(SH|SZ)$/.test(normalized)) return true;
+  return false;
+}
+
+function parseStockTradeInput(input) {
+  const text = String(input ?? "").trim();
+  if (!text) return { symbol: "", name: "" };
+  const [first, ...rest] = text.split(/\s+/);
+  if (isStockSymbolLike(first)) {
+    return { symbol: normalizeStockTradeSymbol(first), name: rest.join(" ").trim() };
+  }
+  if (isStockSymbolLike(text)) {
+    return { symbol: normalizeStockTradeSymbol(text), name: "" };
+  }
+  return { symbol: "", name: text };
 }
 
 function parseFundTradeInput(input) {
@@ -2956,11 +3005,10 @@ function overviewHistoryValueForPeriod(periodKey, range) {
 
 function overviewFallbackPnlValue(periodKey, range, anchorDate, positions, fundPositions, stats) {
   if (overviewHistoryEntries().length) return 0;
-  const anchorDay = dateKey(anchorDate);
   const anchorMonth = monthKey(new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), 1)));
   const anchorYear = String(anchorDate.getUTCFullYear());
-  if (range === "day" && periodKey === anchorDay) {
-    return overviewPnlValue(positions, "day") + overviewPnlValue(fundPositions, "day");
+  if (range === "day") {
+    return 0;
   }
   if (range === "month" && periodKey === anchorMonth) {
     return overviewPnlValue(positions, "month") + overviewPnlValue(fundPositions, "month");
@@ -3974,8 +4022,8 @@ function renderFunds(fundPositions = computeFundPositions()) {
         </td>
         <td data-label="类型">${escapeHTML(fundTypeLabel(fund))}</td>
         <td data-label="份额">${escapeHTML(privateText(fund.shares.toLocaleString("zh-CN", { maximumFractionDigits: 2 })))}</td>
-        <td data-label="成本净值">${escapeHTML(privateText(currency(fund.cost, fund.currency)))}</td>
-        <td data-label="最新净值">${escapeHTML(privateText(currency(fund.currentPrice, fund.currency)))}</td>
+        <td data-label="成本净值">${escapeHTML(privateText(fundNav(fund.cost, fund.currency)))}</td>
+        <td data-label="最新净值">${escapeHTML(privateText(fundNav(fund.currentPrice, fund.currency)))}</td>
         <td data-label="市值">${escapeHTML(privateText(wholeCurrency(fund.marketValueCny)))}</td>
         <td data-label="持仓盈亏" class="${privateClass(pnlClass)}">
           ${escapeHTML(privateText(`${wholeCurrency(fund.pnlCny)} / ${percent(fund.pnlRate, false)}`))}
@@ -4000,8 +4048,8 @@ function renderFunds(fundPositions = computeFundPositions()) {
           </div>
           <div class="mobile-card-stats">
             ${renderMobileStat("份额", privateText(fund.shares.toLocaleString("zh-CN", { maximumFractionDigits: 2 })))}
-            ${renderMobileStat("成本净值", privateText(currency(fund.cost, fund.currency)))}
-            ${renderMobileStat("最新净值", privateText(currency(fund.currentPrice, fund.currency)))}
+            ${renderMobileStat("成本净值", privateText(fundNav(fund.cost, fund.currency)))}
+            ${renderMobileStat("最新净值", privateText(fundNav(fund.currentPrice, fund.currency)))}
             ${renderMobileStat("持仓盈亏", privateText(`${wholeCurrency(fund.pnlCny)} / ${percent(fund.pnlRate, false)}`), privateClass(pnlClass))}
           </div>
         </article>
@@ -4047,13 +4095,17 @@ function renderTrades() {
     .map((trade) => {
       const sideClass = trade.side === "buy" ? "positive" : "negative";
       const sideText = trade.side === "buy" ? "买入" : "卖出";
-      const unit = normalizeAssetType(trade.assetType) === "fund" ? "份" : "股";
+      const isFundTrade = normalizeAssetType(trade.assetType) === "fund";
+      const unit = isFundTrade ? "份" : "股";
+      const tradePriceText = isFundTrade ? fundNav(trade.price, trade.currency) : currency(trade.price, trade.currency);
+      const currentPriceText = isFundTrade ? fundNav(trade.currentPrice, trade.currency) : currency(trade.currentPrice, trade.currency);
+      const currentLabel = isFundTrade ? "最新净值" : "最新价";
       return `
         <div class="trade-item">
           <strong>${escapeHTML(trade.symbol)} · ${sideText}</strong>
-          <span class="${privateClass(sideClass)}">${escapeHTML(privateText(currency(trade.price, trade.currency)))}</span>
+          <span class="${privateClass(sideClass)}">${escapeHTML(privateText(tradePriceText))}</span>
           <small>${trade.date} · ${escapeHTML(trade.name)}</small>
-          <small>${escapeHTML(privateText(`${trade.shares} ${unit}`))} · 最新价 ${escapeHTML(privateText(currency(trade.currentPrice, trade.currency)))}</small>
+          <small>${escapeHTML(privateText(`${trade.shares} ${unit}`))} · ${currentLabel} ${escapeHTML(privateText(currentPriceText))}</small>
           <button class="trade-delete-button" type="button" data-delete-trade="${escapeHTML(trade.id)}" aria-label="删除交易记录 ${escapeHTML(trade.symbol)} ${escapeHTML(trade.date)}">
             <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
               <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 7v8h2v-8h-2Zm4 0v8h2v-8h-2ZM7 8h10l-.7 12H7.7L7 8Z" />
@@ -6474,10 +6526,7 @@ function renderTradeStockNames() {
   const seen = new Set();
   const sourceItems = tradeAssetType === "fund"
     ? (state.funds ?? []).map((fund) => ({ ...fund, optionType: fundTypeLabel(fund) }))
-    : [
-        ...(state.holdings ?? []).map((stock) => ({ ...stock, optionType: "股票" })),
-        ...(state.candidates ?? []).map((stock) => ({ ...stock, optionType: "跟踪" }))
-      ];
+    : (state.holdings ?? []).map((stock) => ({ ...stock, optionType: "持仓" }));
   const items = [
     ...sourceItems
   ]
@@ -6521,7 +6570,7 @@ function renderContext() {
 
 function renderRecordCount() {
   if (!elements.recordCount) return;
-  elements.recordCount.textContent = privateText(`${state.stocks?.length ?? state.holdings.length + state.candidates.length} 只股票 · ${(state.funds ?? []).length} 只基金 · ${state.trades.length} 条交易`);
+  elements.recordCount.textContent = privateText(`${state.holdings.length} 只股票 · ${(state.funds ?? []).length} 只基金 · ${state.trades.length} 条交易`);
 }
 
 function renderLoadingState() {
@@ -6587,8 +6636,9 @@ function render(rawHash = window.location.hash.slice(1)) {
 function findTradeStock(input) {
   const text = String(input ?? "").trim();
   if (!text) return null;
-  const normalized = normalizeSymbol(text);
-  const stocks = [...(state.holdings ?? []), ...(state.candidates ?? [])];
+  const parsed = parseStockTradeInput(text);
+  const normalized = normalizeStockTradeSymbol(parsed.symbol || text);
+  const stocks = state.holdings ?? [];
   return (
     stocks.find((stock) => normalizeSymbol(stock.symbol) === normalized) ||
     stocks.find((stock) => String(stock.name ?? "").trim() === text) ||
@@ -7048,20 +7098,22 @@ function tradeFromSimpleForm(formData) {
     };
   }
 
-  const stock = findTradeStock(nameInput);
-  if (!stock) throw new Error(`未找到“${nameInput}”，请先把它加入持仓或晴仓30`);
-
-  const symbol = normalizeSymbol(stock.symbol);
-  const currencyCode = inferTradeCurrency(stock);
-  const currentPrice = Number(stock.currentPrice) > 0 ? Number(stock.currentPrice) : price;
   const side = signedShares < 0 ? "sell" : "buy";
+  const stock = findTradeStock(nameInput);
+  const parsed = parseStockTradeInput(nameInput);
+  if (!stock && side === "sell") throw new Error("未找到可卖出的持仓");
+  if (!stock && !parsed.symbol) throw new Error("请输入股票代码，名称可以跟在代码后面，例如 9926.HK 康方生物");
+
+  const symbol = normalizeSymbol(stock?.symbol || parsed.symbol);
+  const currencyCode = stock ? inferTradeCurrency(stock) : inferTradeCurrency({ symbol });
+  const currentPrice = Number(stock?.currentPrice) > 0 ? Number(stock.currentPrice) : price;
   const shares = Math.abs(signedShares);
   return {
     id: Date.now(),
     date: new Date().toISOString().slice(0, 10),
     assetType: "stock",
     symbol,
-    name: stock.name || nameInput,
+    name: stock?.name || parsed.name || symbol,
     side,
     shares,
     price,
@@ -7129,32 +7181,27 @@ async function addTrade(formData) {
   let holding = state.holdings.find((item) => normalizeSymbol(item.symbol) === symbol);
   if (!holding) {
     if (side === "sell") throw new Error("未找到可卖出的持仓");
-    const candidate = state.candidates.find((item) => normalizeSymbol(item.symbol) === symbol);
-    holding = candidate
-      ? { ...candidate, shares: 0, cost: price }
-      : {
-          symbol,
-          name: trade.name,
-          shares: 0,
-          cost: price,
-          currentPrice: trade.currentPrice,
-          previousClose: trade.currentPrice,
-          currentPriceDate: new Date().toISOString().slice(0, 10),
-          previousCloseDate: new Date().toISOString().slice(0, 10),
-          currency: currencyCode,
-          action: "",
-          status: "",
-          marginOfSafety: null,
-          qualityScore: null,
-          industry: "",
-          notes: ""
-        };
-    removeCandidate(symbol);
+    holding = {
+      symbol,
+      name: trade.name,
+      shares: 0,
+      cost: price,
+      currentPrice: trade.currentPrice,
+      previousClose: trade.currentPrice,
+      currentPriceDate: new Date().toISOString().slice(0, 10),
+      previousCloseDate: new Date().toISOString().slice(0, 10),
+      currency: currencyCode,
+      action: "",
+      status: "",
+      marginOfSafety: null,
+      qualityScore: null,
+      industry: "",
+      notes: ""
+    };
     state.holdings.push(holding);
   }
 
   if (side === "buy") {
-    removeCandidate(symbol);
     const totalCost = holding.shares * holding.cost + shares * price;
     holding.shares += shares;
     holding.cost = totalCost / holding.shares;
@@ -7183,7 +7230,6 @@ async function addTrade(formData) {
     detail: `${sideText} ${shares} 股；成交价 ${currencyCode} ${price.toFixed(4)}；录入最新价 ${currencyCode} ${trade.currentPrice.toFixed(4)}；理由：${trade.reason}`
   });
   if (side === "sell" && holding.shares === 0) {
-    upsertCandidate(clearedCandidateFromHolding(holding));
     state.holdings = state.holdings.filter((item) => normalizeSymbol(item.symbol) !== symbol);
   }
   saveState();
@@ -7259,18 +7305,6 @@ async function updateQuotes() {
     setQuoteUpdateStatus(`已更新 ${result.updated} 项行情，${skipped.length} 个失败：${preview}`, "error");
   } else {
     setQuoteUpdateStatus(`已更新 ${result.updated} 项行情`, "success");
-  }
-}
-
-async function autoUpdateQuotesOnOverview() {
-  if (!USE_BACKEND || !backendAvailable || autoQuoteUpdateInFlight) return;
-  autoQuoteUpdateInFlight = true;
-  try {
-    await updateQuotes();
-  } catch (error) {
-    setQuoteUpdateStatus(error.message, "error");
-  } finally {
-    autoQuoteUpdateInFlight = false;
   }
 }
 
@@ -7360,10 +7394,10 @@ function setTradeAssetType() {
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
-  if (elements.tradeNameLabel) elements.tradeNameLabel.textContent = isFund ? "基金代码/名称" : "股票名称";
+  if (elements.tradeNameLabel) elements.tradeNameLabel.textContent = isFund ? "基金代码/名称" : "股票代码/名称";
   if (elements.tradePriceLabel) elements.tradePriceLabel.textContent = isFund ? "成交净值" : "成交价";
   if (elements.tradeSharesLabel) elements.tradeSharesLabel.textContent = isFund ? "份额" : "股数";
-  if (elements.tradeNameInput) elements.tradeNameInput.placeholder = isFund ? "000001 华夏成长" : "中海物业";
+  if (elements.tradeNameInput) elements.tradeNameInput.placeholder = isFund ? "000001 华夏成长" : "9926.HK 康方生物";
   if (elements.tradeSharesInput) {
     elements.tradeSharesInput.placeholder = "买入填正数，卖出填负数";
     elements.tradeSharesInput.step = isFund ? "0.01" : "1";
@@ -7397,7 +7431,12 @@ elements.overviewPnlRangeTabs?.addEventListener("click", (event) => {
 
 document.querySelectorAll(".nav-item").forEach((button) => {
   button.addEventListener("click", () => {
-    window.location.hash = button.dataset.view;
+    const view = button.dataset.view;
+    if (window.location.hash.slice(1) === view) {
+      handleRoute(view);
+      return;
+    }
+    window.location.hash = view;
   });
 });
 
@@ -7552,9 +7591,6 @@ function handleRoute(rawHash) {
   const previousRoute = activeRoute;
   showPage(view);
   render(view);
-  if (route.page === "overview") {
-    autoUpdateQuotesOnOverview();
-  }
   if (route.page === "stock-detail") {
     resetStockDetailRouteScroll();
   } else if (route.page === "holdings" && previousRoute?.page === "stock-detail") {

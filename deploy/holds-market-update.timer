@@ -1,0 +1,11 @@
+[Unit]
+Description=Schedule holds website market data updates
+
+[Timer]
+OnCalendar=*-*-* 20:00:00
+OnCalendar=*-*-* 22:30:00
+Persistent=true
+Unit=holds-market-update.service
+
+[Install]
+WantedBy=timers.target

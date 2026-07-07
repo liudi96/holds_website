@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"testing"
+	"time"
 )
 
 func ptrFloat(value float64) *float64 {
@@ -128,6 +129,86 @@ func TestPersistentStateDoesNotMutateRuntimeQuotes(t *testing.T) {
 	}
 	if state.Candidates[0].MarketCap == nil || *state.Candidates[0].MarketCap != 1720000000000 || state.Candidates[0].MarketCapCurrency != "CNY" {
 		t.Fatalf("persistentState mutated source candidate market cap, got %+v", state.Candidates[0])
+	}
+}
+
+func TestRecordDailyPnlSnapshotUpsertsOneEntryPerDay(t *testing.T) {
+	state := AppState{
+		FX: map[string]float64{"HKD": 0.9, "CNY": 1},
+		Holdings: []Holding{{
+			Symbol:        "0700.HK",
+			Shares:        100,
+			CurrentPrice:  11,
+			PreviousClose: 10,
+			Currency:      "HKD",
+		}},
+		Funds: []Fund{{
+			Symbol:        "563020",
+			Shares:        1000,
+			CurrentPrice:  1.2,
+			PreviousClose: 1.1,
+			Currency:      "CNY",
+		}},
+	}
+	now := time.Date(2026, 7, 7, 9, 30, 0, 0, time.Local)
+
+	recordDailyPnlSnapshot(&state, now)
+
+	if len(state.PnlHistory) != 1 {
+		t.Fatalf("pnl history len = %d, want 1", len(state.PnlHistory))
+	}
+	entry := state.PnlHistory[0]
+	if entry.Date != "2026-07-07" || entry.PnlCny != 190 || entry.StockPnlCny != 90 || entry.FundPnlCny != 100 || entry.TotalValueCny != 2190 {
+		t.Fatalf("unexpected pnl entry: %+v", entry)
+	}
+
+	state.Holdings[0].CurrentPrice = 12
+	recordDailyPnlSnapshot(&state, now.Add(2*time.Hour))
+
+	if len(state.PnlHistory) != 1 {
+		t.Fatalf("pnl history should upsert same day, got %+v", state.PnlHistory)
+	}
+	if state.PnlHistory[0].PnlCny != 280 {
+		t.Fatalf("updated pnl = %.2f, want 280", state.PnlHistory[0].PnlCny)
+	}
+}
+
+func TestAddDailyClosePnlStartsAtConfiguredDate(t *testing.T) {
+	points := map[string]*pnlHistoryAccumulator{}
+	addDailyClosePnl(points, []dailyClose{
+		{Date: "2026-07-05", Price: 8},
+		{Date: "2026-07-06", Price: 9},
+		{Date: "2026-07-07", Price: 10},
+		{Date: "2026-07-08", Price: 12},
+	}, func(string) float64 {
+		return 100
+	}, 1, false, "2026-07-08")
+
+	if _, ok := points["2026-07-06"]; ok {
+		t.Fatalf("pnl history should not backfill before %s: %+v", pnlHistoryStartDate, points)
+	}
+	if points["2026-07-07"].StockPnlCny != 100 {
+		t.Fatalf("2026-07-07 pnl = %.2f, want 100", points["2026-07-07"].StockPnlCny)
+	}
+	if points["2026-07-08"].StockPnlCny != 200 {
+		t.Fatalf("2026-07-08 pnl = %.2f, want 200", points["2026-07-08"].StockPnlCny)
+	}
+}
+
+func TestSharesOnDateUsesTradeHistory(t *testing.T) {
+	state := AppState{Trades: []Trade{
+		{Date: "2026-07-08", AssetType: "stock", Symbol: "0700.HK", Side: "buy", Shares: 100},
+		{Date: "2026-07-10", AssetType: "stock", Symbol: "0700.HK", Side: "sell", Shares: 40},
+	}}
+
+	if shares := sharesOnDate(&state, "stock", "0700.HK", "2026-07-07", 999); shares != 0 {
+		t.Fatalf("shares before first trade = %.2f, want 0", shares)
+	}
+	if shares := sharesOnDate(&state, "stock", "0700.HK", "2026-07-08", 999); shares != 100 {
+		t.Fatalf("shares after buy = %.2f, want 100", shares)
+	}
+	if shares := sharesOnDate(&state, "stock", "0700.HK", "2026-07-10", 999); shares != 60 {
+		t.Fatalf("shares after sell = %.2f, want 60", shares)
 	}
 }
 

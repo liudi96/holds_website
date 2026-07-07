@@ -37,6 +37,7 @@ type AppState struct {
 	FX               map[string]float64 `json:"fx"`
 	Trades           []Trade            `json:"trades"`
 	DecisionLogs     []DecisionLog      `json:"decisionLogs"`
+	PnlHistory       []PnlHistoryEntry  `json:"pnlHistory,omitempty"`
 	Stocks           []Stock            `json:"stocks,omitempty"`
 	Funds            []Fund             `json:"funds,omitempty"`
 	ETFRuleStatuses  []ETFRuleStatus    `json:"etfRuleStatuses,omitempty"`
@@ -97,6 +98,15 @@ type DecisionLog struct {
 	Decision   string   `json:"decision"`
 	Discipline string   `json:"discipline"`
 	Detail     string   `json:"detail,omitempty"`
+}
+
+type PnlHistoryEntry struct {
+	Date          string  `json:"date"`
+	PnlCny        float64 `json:"pnlCny"`
+	StockPnlCny   float64 `json:"stockPnlCny,omitempty"`
+	FundPnlCny    float64 `json:"fundPnlCny,omitempty"`
+	TotalValueCny float64 `json:"totalValueCny,omitempty"`
+	UpdatedAt     string  `json:"updatedAt,omitempty"`
 }
 
 type Holding struct {
@@ -388,6 +398,12 @@ func (s *Server) handleGetState(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	state, err := loadState()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load state")
+		return
+	}
+	s.state = state
 	writeJSON(w, http.StatusOK, s.state)
 }
 
@@ -761,6 +777,60 @@ type tradeStockRef struct {
 	Shares       float64
 }
 
+func normalizeStockTradeSymbolInput(symbol string) string {
+	text := strings.ToUpper(strings.TrimSpace(symbol))
+	if text == "" {
+		return ""
+	}
+	if allDigits(text) {
+		if len(text) == 4 || len(text) == 5 {
+			return normalizeSymbol(text + ".HK")
+		}
+		if len(text) == 6 {
+			if strings.HasPrefix(text, "6") {
+				return text + ".SH"
+			}
+			return text + ".SZ"
+		}
+	}
+	return normalizeSymbol(text)
+}
+
+func isStockSymbolLike(symbol string) bool {
+	text := strings.ToUpper(strings.TrimSpace(symbol))
+	if text == "" {
+		return false
+	}
+	if allDigits(text) && (len(text) == 4 || len(text) == 5 || len(text) == 6) {
+		return true
+	}
+	normalized := normalizeStockTradeSymbolInput(text)
+	if strings.HasSuffix(normalized, ".HK") {
+		code := strings.TrimSuffix(normalized, ".HK")
+		return allDigits(code) && (len(code) == 4 || len(code) == 5)
+	}
+	if strings.HasSuffix(normalized, ".SH") || strings.HasSuffix(normalized, ".SZ") {
+		code := normalized[:len(normalized)-3]
+		return allDigits(code) && len(code) == 6
+	}
+	return false
+}
+
+func splitStockTradeInput(input string) (string, string) {
+	text := strings.TrimSpace(input)
+	if text == "" {
+		return "", ""
+	}
+	parts := strings.Fields(text)
+	if len(parts) > 1 && isStockSymbolLike(parts[0]) {
+		return normalizeStockTradeSymbolInput(parts[0]), strings.TrimSpace(strings.TrimPrefix(text, parts[0]))
+	}
+	if isStockSymbolLike(text) {
+		return normalizeStockTradeSymbolInput(text), ""
+	}
+	return "", text
+}
+
 func (s *Server) resolveTradeInput(trade *Trade) error {
 	trade.Name = strings.TrimSpace(trade.Name)
 	trade.AssetType = normalizeAssetType(trade.AssetType)
@@ -784,7 +854,7 @@ func (s *Server) resolveTradeInput(trade *Trade) error {
 		return nil
 	}
 
-	trade.Symbol = normalizeSymbol(trade.Symbol)
+	trade.Symbol = normalizeStockTradeSymbolInput(trade.Symbol)
 	trade.Side = strings.ToLower(strings.TrimSpace(trade.Side))
 	trade.Currency = strings.ToUpper(strings.TrimSpace(trade.Currency))
 
@@ -819,10 +889,19 @@ func (s *Server) resolveTradeInput(trade *Trade) error {
 		if trade.CurrentPrice <= 0 {
 			trade.CurrentPrice = stock.CurrentPrice
 		}
+	} else {
+		symbolInput, nameInput := splitStockTradeInput(input)
+		if !isStockSymbolLike(symbolInput) {
+			return errors.New("请输入股票代码，名称可以跟在代码后面，例如 9926.HK 康方生物")
+		}
+		trade.Symbol = normalizeStockTradeSymbolInput(symbolInput)
+		if trade.Name == "" || strings.EqualFold(strings.TrimSpace(trade.Name), strings.TrimSpace(input)) {
+			trade.Name = firstNonEmpty(nameInput, trade.Symbol)
+		}
 	}
 
 	if trade.Symbol == "" {
-		return errors.New("未找到股票名称，请先加入持仓或晴仓30")
+		return errors.New("请输入股票代码，名称可以跟在代码后面，例如 9926.HK 康方生物")
 	}
 	if trade.Name == "" {
 		trade.Name = trade.Symbol
@@ -841,14 +920,15 @@ func (s *Server) findTradeHolding(input string) (tradeStockRef, bool) {
 	if text == "" {
 		return tradeStockRef{}, false
 	}
-	normalized := normalizeSymbol(text)
+	symbolInput, nameInput := splitStockTradeInput(text)
+	normalized := normalizeStockTradeSymbolInput(firstNonEmpty(symbolInput, text))
 	for _, holding := range s.state.Holdings {
 		if normalizeSymbol(holding.Symbol) == normalized {
 			return tradeStockRef{Symbol: holding.Symbol, Name: holding.Name, Currency: holding.Currency, CurrentPrice: holding.CurrentPrice, Shares: holding.Shares}, true
 		}
 	}
 	for _, holding := range s.state.Holdings {
-		if tradeNameMatches(holding.Name, text) {
+		if tradeNameMatches(holding.Name, firstNonEmpty(nameInput, text)) {
 			return tradeStockRef{Symbol: holding.Symbol, Name: holding.Name, Currency: holding.Currency, CurrentPrice: holding.CurrentPrice, Shares: holding.Shares}, true
 		}
 	}
@@ -860,25 +940,16 @@ func (s *Server) findTradeStock(input string) (tradeStockRef, bool) {
 	if text == "" {
 		return tradeStockRef{}, false
 	}
-	normalized := normalizeSymbol(text)
+	symbolInput, _ := splitStockTradeInput(text)
+	normalized := normalizeStockTradeSymbolInput(firstNonEmpty(symbolInput, text))
 	for _, holding := range s.state.Holdings {
 		if normalizeSymbol(holding.Symbol) == normalized {
 			return tradeStockRef{Symbol: holding.Symbol, Name: holding.Name, Currency: holding.Currency, CurrentPrice: holding.CurrentPrice, Shares: holding.Shares}, true
 		}
 	}
-	for _, candidate := range s.state.Candidates {
-		if normalizeSymbol(candidate.Symbol) == normalized {
-			return tradeStockRef{Symbol: candidate.Symbol, Name: candidate.Name, Currency: candidate.Currency, CurrentPrice: candidate.CurrentPrice}, true
-		}
-	}
 	for _, holding := range s.state.Holdings {
 		if tradeNameMatches(holding.Name, text) {
 			return tradeStockRef{Symbol: holding.Symbol, Name: holding.Name, Currency: holding.Currency, CurrentPrice: holding.CurrentPrice, Shares: holding.Shares}, true
-		}
-	}
-	for _, candidate := range s.state.Candidates {
-		if tradeNameMatches(candidate.Name, text) {
-			return tradeStockRef{Symbol: candidate.Symbol, Name: candidate.Name, Currency: candidate.Currency, CurrentPrice: candidate.CurrentPrice}, true
 		}
 	}
 	return tradeStockRef{}, false
@@ -1090,27 +1161,19 @@ func applyTradeToState(state *AppState, trade Trade) {
 	idx := findHoldingIndex(state.Holdings, trade.Symbol)
 
 	if idx == -1 {
-		candidateIdx := findCandidateIndex(state.Candidates, trade.Symbol)
-		if trade.Side == "buy" && candidateIdx >= 0 {
-			holding := holdingFromCandidate(state.Candidates[candidateIdx], trade.Price)
-			state.Candidates = removeCandidate(state.Candidates, trade.Symbol)
-			state.Holdings = append(state.Holdings, holding)
-		} else {
-			state.Holdings = append(state.Holdings, Holding{
-				Symbol:       trade.Symbol,
-				Name:         trade.Name,
-				Shares:       0,
-				Cost:         trade.Price,
-				CurrentPrice: trade.CurrentPrice,
-				Currency:     trade.Currency,
-			})
-		}
+		state.Holdings = append(state.Holdings, Holding{
+			Symbol:       trade.Symbol,
+			Name:         trade.Name,
+			Shares:       0,
+			Cost:         trade.Price,
+			CurrentPrice: trade.CurrentPrice,
+			Currency:     trade.Currency,
+		})
 		idx = len(state.Holdings) - 1
 	}
 
 	holding := &state.Holdings[idx]
 	if trade.Side == "buy" {
-		state.Candidates = removeCandidate(state.Candidates, trade.Symbol)
 		totalCost := holding.Shares*holding.Cost + trade.Shares*trade.Price
 		holding.Shares += trade.Shares
 		if holding.Shares > 0 {
@@ -1129,8 +1192,6 @@ func applyTradeToState(state *AppState, trade Trade) {
 	holding.Currency = trade.Currency
 	holding.CurrentPrice = trade.CurrentPrice
 	if trade.Side == "sell" && holding.Shares == 0 {
-		candidate := clearedCandidateFromHolding(*holding)
-		state.Candidates = upsertCandidate(state.Candidates, candidate)
 		state.Holdings = append(state.Holdings[:idx], state.Holdings[idx+1:]...)
 	}
 	state.Trades = append(state.Trades, trade)
@@ -1161,8 +1222,6 @@ func reverseTradeFromState(state *AppState, trade Trade) {
 		if idx >= 0 {
 			holding := &state.Holdings[idx]
 			if holding.Shares <= trade.Shares+0.000001 {
-				candidate := clearedCandidateFromHolding(*holding)
-				state.Candidates = upsertCandidate(state.Candidates, candidate)
 				state.Holdings = append(state.Holdings[:idx], state.Holdings[idx+1:]...)
 			} else {
 				totalCost := holding.Shares*holding.Cost - trade.Shares*trade.Price
@@ -1175,13 +1234,15 @@ func reverseTradeFromState(state *AppState, trade Trade) {
 		state.Cash += tradeCashValue(state, trade)
 	} else if side == "sell" {
 		if idx == -1 {
-			candidateIdx := findCandidateIndex(state.Candidates, trade.Symbol)
-			if candidateIdx >= 0 {
-				holding := holdingFromCandidate(state.Candidates[candidateIdx], trade.Price)
-				state.Candidates = removeCandidate(state.Candidates, trade.Symbol)
-				state.Holdings = append(state.Holdings, holding)
-				idx = len(state.Holdings) - 1
-			}
+			state.Holdings = append(state.Holdings, Holding{
+				Symbol:       trade.Symbol,
+				Name:         trade.Name,
+				Shares:       0,
+				Cost:         trade.Price,
+				CurrentPrice: trade.CurrentPrice,
+				Currency:     trade.Currency,
+			})
+			idx = len(state.Holdings) - 1
 		}
 		if idx >= 0 {
 			holding := &state.Holdings[idx]

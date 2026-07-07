@@ -430,7 +430,7 @@ func fetchQuote(client *http.Client, symbol string, fallbackCache map[string]quo
 func fetchFundQuoteCached(client *http.Client, cache map[string]quote, fallbackCache map[string]quote, fallbackErr error, fund Fund) (quote, error) {
 	fund = normalizeFund(fund)
 	if fund.FundType == "etf" {
-		return fetchQuoteCached(client, cache, fallbackCache, fallbackErr, fund.Symbol)
+		return fetchQuoteCached(client, cache, fallbackCache, fallbackErr, fundQuoteSymbol(fund.Symbol))
 	}
 
 	normalized := normalizeFundSymbol(fund.Symbol)
@@ -1077,9 +1077,10 @@ func quoteSymbols(state *AppState) []string {
 		if normalizeFundType(fund.FundType, fund.Symbol) != "etf" {
 			continue
 		}
-		normalized := normalizeFundSymbol(fund.Symbol)
+		quoteSymbol := fundQuoteSymbol(fund.Symbol)
+		normalized := normalizeSymbol(quoteSymbol)
 		if normalized != "" && !seen[normalized] {
-			symbols = append(symbols, fund.Symbol)
+			symbols = append(symbols, quoteSymbol)
 			seen[normalized] = true
 		}
 	}
@@ -1316,7 +1317,47 @@ func normalizeFundType(fundType string, symbol string) string {
 	if strings.HasSuffix(normalized, ".SH") || strings.HasSuffix(normalized, ".SZ") {
 		return "etf"
 	}
+	if isExchangeFundCode(normalized) {
+		return "etf"
+	}
 	return "otc"
+}
+
+func isExchangeFundCode(symbol string) bool {
+	code := strings.TrimSpace(symbol)
+	if !allDigits(code) || len(code) != 6 {
+		return false
+	}
+	return strings.HasPrefix(code, "5") ||
+		strings.HasPrefix(code, "15") ||
+		strings.HasPrefix(code, "16") ||
+		strings.HasPrefix(code, "18")
+}
+
+func allDigits(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, char := range value {
+		if char < '0' || char > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func fundQuoteSymbol(symbol string) string {
+	normalized := normalizeFundSymbol(symbol)
+	if strings.HasSuffix(normalized, ".SH") || strings.HasSuffix(normalized, ".SZ") || strings.HasSuffix(normalized, ".HK") {
+		return normalized
+	}
+	if !isExchangeFundCode(normalized) {
+		return normalized
+	}
+	if strings.HasPrefix(normalized, "5") {
+		return normalized + ".SH"
+	}
+	return normalized + ".SZ"
 }
 
 func fundCurrency(symbol string) string {

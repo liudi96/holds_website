@@ -118,6 +118,43 @@ func TestTradeValidationAcceptsFundsAndRejectsMissingReason(t *testing.T) {
 	}
 }
 
+func TestResolveStockTradeInputParsesCodeAndName(t *testing.T) {
+	server := Server{state: AppState{FX: map[string]float64{"HKD": 0.9}}}
+	trade := Trade{
+		AssetType:    "stock",
+		Name:         "9926.HK 康方生物",
+		Side:         "buy",
+		Shares:       100,
+		Price:        45.2,
+		CurrentPrice: 45.2,
+		Reason:       "新开仓，先按小仓位跟踪执行",
+	}
+
+	if err := server.resolveTradeInput(&trade); err != nil {
+		t.Fatalf("resolveTradeInput() error = %v", err)
+	}
+	if trade.Symbol != "9926.HK" || trade.Name != "康方生物" || trade.Currency != "HKD" {
+		t.Fatalf("trade = %+v, want parsed stock code, name and HKD currency", trade)
+	}
+}
+
+func TestResolveStockTradeInputRejectsNameOnlyNewBuy(t *testing.T) {
+	server := Server{state: AppState{FX: map[string]float64{"HKD": 0.9}}}
+	trade := Trade{
+		AssetType:    "stock",
+		Name:         "康方生物",
+		Side:         "buy",
+		Shares:       100,
+		Price:        45.2,
+		CurrentPrice: 45.2,
+		Reason:       "新开仓，先按小仓位跟踪执行",
+	}
+
+	if err := server.resolveTradeInput(&trade); err == nil || !strings.Contains(err.Error(), "请输入股票代码") {
+		t.Fatalf("resolveTradeInput() error = %v, want stock-code requirement", err)
+	}
+}
+
 func TestApplyTradeToStateUpdatesUnifiedStocks(t *testing.T) {
 	state := AppState{
 		FX:   map[string]float64{"CNY": 1},
@@ -154,6 +191,41 @@ func TestApplyTradeToStateUpdatesUnifiedStocks(t *testing.T) {
 	}
 	if len(state.Trades) != 1 {
 		t.Fatalf("trade count = %d, want 1", len(state.Trades))
+	}
+}
+
+func TestApplyStockSellRemovesHoldingWithoutCandidate(t *testing.T) {
+	state := AppState{
+		FX:   map[string]float64{"HKD": 0.9},
+		Cash: 1000,
+		Holdings: []Holding{{
+			Symbol:       "9926.HK",
+			Name:         "康方生物",
+			Shares:       100,
+			Cost:         45,
+			CurrentPrice: 48,
+			Currency:     "HKD",
+		}},
+		Candidates: []Candidate{{Symbol: "0700.HK", Name: "腾讯控股"}},
+	}
+
+	applyTradeToState(&state, Trade{
+		AssetType:    "stock",
+		Symbol:       "9926.HK",
+		Name:         "康方生物",
+		Side:         "sell",
+		Shares:       100,
+		Price:        48,
+		CurrentPrice: 48,
+		Currency:     "HKD",
+		Reason:       "卖出后不再进入跟踪池",
+	})
+
+	if findHoldingIndex(state.Holdings, "9926.HK") != -1 {
+		t.Fatalf("sold-out holding should be removed: %+v", state.Holdings)
+	}
+	if len(state.Candidates) != 1 || state.Candidates[0].Symbol != "0700.HK" {
+		t.Fatalf("sell should not add candidate tracking entries: %+v", state.Candidates)
 	}
 }
 
