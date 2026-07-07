@@ -427,6 +427,9 @@ const elements = {
   recordCount: document.querySelector("#recordCount"),
   privacyToggle: document.querySelector("#privacyToggle"),
   quoteUpdateStatus: document.querySelector("#quoteUpdateStatus"),
+  etfBuyDialog: document.querySelector("#etfBuyDialog"),
+  etfBuyForm: document.querySelector("#etfBuyForm"),
+  etfBuyFundLabel: document.querySelector("#etfBuyFundLabel"),
   tradeDialog: document.querySelector("#tradeDialog"),
   tradeForm: document.querySelector("#tradeForm"),
   tradeStockNames: document.querySelector("#tradeStockNames"),
@@ -3846,6 +3849,11 @@ function etfRuleStatus(symbol) {
   return (state.etfRuleStatuses ?? []).find((item) => normalizeFundSymbol(item.symbol) === normalized) ?? null;
 }
 
+function etfRuleBySymbol(symbol) {
+  const normalized = normalizeFundSymbol(symbol);
+  return ETF_RULE_TRACKER_RULES.find((rule) => normalizeFundSymbol(rule.symbol) === normalized) ?? null;
+}
+
 function etfRuleMetricText(metric) {
   if (!metric?.available) return metric?.error ? `待数据：${metric.error}` : "待数据";
   const value = finiteNumber(metric.value);
@@ -3948,7 +3956,10 @@ function renderEtfRuleCard(rule) {
           <strong>${escapeHTML(rule.name)}</strong>
           <span>${escapeHTML(rule.symbol)}</span>
         </div>
-        <em class="${meta.tone}">${escapeHTML(meta.label)}</em>
+        <div class="etf-rule-card-actions">
+          <button class="etf-rule-buy-button" type="button" data-etf-rule-buy="${escapeHTML(rule.symbol)}" title="&#20080;&#20837; ${escapeHTML(rule.name)}" aria-label="&#20080;&#20837; ${escapeHTML(rule.name)}">&#20080;&#20837;</button>
+          <em class="${meta.tone}">${escapeHTML(meta.label)}</em>
+        </div>
       </div>
       <div class="etf-rule-selected">
         <div>
@@ -7123,8 +7134,67 @@ function tradeFromSimpleForm(formData) {
   };
 }
 
+function setEtfBuyField(name, value) {
+  const field = elements.etfBuyForm?.elements?.namedItem(name);
+  if (field) field.value = value;
+}
+
+function openEtfBuyDialog(symbol) {
+  const rule = etfRuleBySymbol(symbol);
+  if (!rule || !elements.etfBuyDialog || !elements.etfBuyForm) return;
+  const fund = findTradeFund(rule.symbol);
+  const entry = etfRuleEntry(rule.symbol);
+  const weekly = etfRuleAmount(rule, entry.level, "weekly");
+  const currentPrice = finiteNumber(fund?.currentPrice);
+
+  elements.etfBuyForm.reset();
+  setEtfBuyField("symbol", rule.symbol);
+  setEtfBuyField("name", rule.name);
+  setEtfBuyField("price", Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice.toFixed(4) : "");
+  setEtfBuyField("amount", weekly > 0 ? String(weekly) : "");
+  setEtfBuyField("reason", "ETF\u8ffd\u8e2a\u4e70\u5165\uff1a" + rule.name);
+  if (elements.etfBuyFundLabel) {
+    elements.etfBuyFundLabel.textContent = `${rule.name} ${rule.symbol}`;
+  }
+  elements.etfBuyDialog.showModal();
+}
+
+function tradeFromEtfRuleBuyForm(formData) {
+  const symbol = normalizeFundSymbol(formData.get("symbol"));
+  const rule = etfRuleBySymbol(symbol);
+  const fund = findTradeFund(symbol);
+  const price = Number(formData.get("price"));
+  const amount = Number(formData.get("amount"));
+  const reason = String(formData.get("reason") ?? "").trim();
+  const currentPrice = finiteNumber(fund?.currentPrice);
+  if (!rule) throw new Error("\u672a\u627e\u5230\u5bf9\u5e94\u7684ETF\u8ffd\u8e2a\u57fa\u91d1");
+  if (!Number.isFinite(price) || price <= 0) throw new Error("\u4e70\u5165\u51c0\u503c\u5fc5\u987b\u5927\u4e8e0");
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("\u4e70\u5165\u91d1\u989d\u5fc5\u987b\u5927\u4e8e0");
+  if (!reason) throw new Error("\u8bf7\u586b\u5199\u4e70\u5165\u7406\u7531");
+  return {
+    id: Date.now(),
+    date: new Date().toISOString().slice(0, 10),
+    assetType: "fund",
+    symbol: rule.symbol,
+    name: fund?.name || rule.name,
+    side: "buy",
+    shares: amount / price,
+    price,
+    currency: String(fund?.currency || "CNY").toUpperCase(),
+    currentPrice: Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice : price,
+    reason
+  };
+}
+
 async function addTrade(formData) {
-  const trade = tradeFromSimpleForm(formData);
+  return saveTradeRecord(tradeFromSimpleForm(formData));
+}
+
+async function saveEtfRuleBuy(formData) {
+  return saveTradeRecord(tradeFromEtfRuleBuyForm(formData));
+}
+
+async function saveTradeRecord(trade) {
   const { side, shares, price, symbol } = trade;
   const currencyCode = trade.currency;
 
@@ -7170,6 +7240,17 @@ async function addTrade(formData) {
     fund.previousClose = fund.previousClose > 0 ? fund.previousClose : trade.currentPrice;
     state.trades.push(trade);
     state.cash += side === "sell" ? shares * price * fx(currencyCode) : -(shares * price * fx(currencyCode));
+    const sideText = side === "buy" ? "\u4e70\u5165" : "\u5356\u51fa";
+    appendClientDecisionLog({
+      type: "trade",
+      symbol,
+      name: fund.name,
+      price,
+      currency: currencyCode,
+      decision: `${sideText} ${fund.name}`,
+      discipline: "\u57fa\u91d1\u4ea4\u6613",
+      detail: `${sideText} ${shares.toFixed(4)}\u4efd\uff1b\u6210\u4ea4\u51c0\u503c ${currencyCode} ${price.toFixed(4)}\uff1b\u6210\u4ea4\u91d1\u989d ${currencyCode} ${(shares * price).toFixed(2)}\uff1b\u7406\u7531\uff1a${trade.reason}`
+    });
     if (side === "sell" && fund.shares === 0) {
       state.funds = state.funds.filter((item) => normalizeFundSymbol(item.symbol) !== normalizeFundSymbol(symbol));
     }
@@ -7877,6 +7958,20 @@ document.addEventListener("click", (event) => {
   openResearchDialog();
 });
 
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-etf-rule-buy]");
+  if (!button) return;
+  openEtfBuyDialog(button.dataset.etfRuleBuy);
+});
+
+document.querySelector("#closeEtfBuyPanel")?.addEventListener("click", () => {
+  elements.etfBuyDialog?.close();
+});
+
+document.querySelector("#cancelEtfBuy")?.addEventListener("click", () => {
+  elements.etfBuyDialog?.close();
+});
+
 document.querySelector("#closeTradePanel").addEventListener("click", () => {
   elements.tradeDialog.close();
 });
@@ -7917,6 +8012,17 @@ elements.tradeForm.addEventListener("submit", async (event) => {
     await addTrade(new FormData(elements.tradeForm));
     elements.tradeForm.reset();
     elements.tradeDialog.close();
+  } catch (error) {
+    window.alert(error.message);
+  }
+});
+
+elements.etfBuyForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    await saveEtfRuleBuy(new FormData(elements.etfBuyForm));
+    elements.etfBuyForm.reset();
+    elements.etfBuyDialog.close();
   } catch (error) {
     window.alert(error.message);
   }

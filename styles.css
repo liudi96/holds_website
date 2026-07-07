@@ -2054,16 +2054,51 @@ tbody tr:hover {
   gap: 10px;
 }
 
-.etf-rule-card-head div {
+.etf-rule-card-head > div:not(.etf-rule-card-actions) {
   min-width: 0;
   display: grid;
   gap: 3px;
+}
+
+.etf-rule-card-head .etf-rule-card-actions {
+  display: inline-flex;
 }
 
 .etf-rule-card-head strong {
   color: var(--ink);
   font-size: 18px;
   line-height: 1.2;
+}
+
+.etf-rule-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.etf-rule-buy-button {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 9px;
+  border: 1px solid rgba(15, 139, 121, 0.18);
+  border-radius: 999px;
+  background: #e6f4ef;
+  color: var(--green);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.etf-rule-buy-button:hover,
+.etf-rule-buy-button:focus-visible {
+  border-color: rgba(15, 139, 121, 0.36);
+  background: #d9efe8;
+  outline: none;
 }
 
 .etf-rule-card-head em {
@@ -3408,6 +3443,28 @@ tbody tr:hover {
   padding: 20px;
 }
 
+.etf-buy-target {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faf9;
+}
+
+.etf-buy-target span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.etf-buy-target strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
 .research-dialog {
   width: min(780px, calc(100vw - 28px));
 }
@@ -3461,7 +3518,8 @@ label textarea {
   line-height: 1.5;
 }
 
-.wide-field {
+.wide-field,
+.form-grid-wide {
   grid-column: 1 / -1;
 }
 
@@ -7664,6 +7722,11 @@ body[data-active-page="screener"] .sidebar {
 }
 
 .etf-rule-card-head em {
+  min-height: 26px;
+  border-radius: 8px;
+}
+
+.etf-rule-buy-button {
   min-height: 26px;
   border-radius: 8px;
 }
