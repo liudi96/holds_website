@@ -230,6 +230,30 @@ func TestParseLeguleguIndexPERowsAndA500Percentile(t *testing.T) {
 	}
 }
 
+func TestParseFundDBIndexPEPercentile(t *testing.T) {
+	point, err := parseFundDBIndexPEPercentile([]byte(`{
+		"code": 0,
+		"message": "",
+		"data": {
+			"update_time": "2026-07-08",
+			"top_data": [
+				{"attribute":"close","name":"收盘价","new_percent_value":{"value":"93.7%"}},
+				{"attribute":"pe","name":"市盈率","new_percent_value":{"value":"86.69%"}},
+				{"attribute":"pb","name":"市净率","new_percent_value":{"value":"59.21%"}}
+			]
+		}
+	}`))
+	if err != nil {
+		t.Fatalf("parseFundDBIndexPEPercentile returned error: %v", err)
+	}
+	if point.Date != "2026-07-08" {
+		t.Fatalf("date = %q, want 2026-07-08", point.Date)
+	}
+	if !almostEqual(point.Percentile, 0.8669, 0.000001) {
+		t.Fatalf("percentile = %.6f, want 0.8669", point.Percentile)
+	}
+}
+
 func TestParseEastmoneyFundDividendsAndTrailingAmount(t *testing.T) {
 	events, err := parseEastmoneyFundDividends([]byte(`
 		<table>
@@ -262,33 +286,33 @@ func TestEastmoneyGlobalIndexSecID(t *testing.T) {
 	}
 }
 
-func TestEvaluateSP500RuleWithCAPEAndDrawdown(t *testing.T) {
-	cape := 0.82
+func TestEvaluateSP500RuleWithPEPercentileAndDrawdown(t *testing.T) {
+	pePercentile := 0.82
 	drawdown := 0.12
-	got := evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &cape, Drawdown: &drawdown})
+	got := evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
 	if got.Level != "half" || !got.Complete {
-		t.Fatalf("high CAPE should choose half by base rule, got %+v", got)
+		t.Fatalf("high PE percentile should choose half by base rule, got %+v", got)
 	}
 
-	cape = 0.50
+	pePercentile = 0.50
 	drawdown = 0.03
-	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &cape, Drawdown: &drawdown})
+	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
 	if got.Level != "half" || !got.Complete {
-		t.Fatalf("normal CAPE near high should downshift to half, got %+v", got)
+		t.Fatalf("normal PE percentile near high should downshift to half, got %+v", got)
 	}
 
-	cape = 0.50
+	pePercentile = 0.50
 	drawdown = 0.12
-	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &cape, Drawdown: &drawdown})
+	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
 	if got.Level != "one" || !got.Complete {
-		t.Fatalf("normal CAPE/drawdown should choose one, got %+v", got)
+		t.Fatalf("normal PE percentile/drawdown should choose one, got %+v", got)
 	}
 
-	cape = 0.10
+	pePercentile = 0.10
 	drawdown = 0.30
-	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &cape, Drawdown: &drawdown})
+	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
 	if got.Level != "two" || !got.Complete {
-		t.Fatalf("low CAPE/deep drawdown should choose two, got %+v", got)
+		t.Fatalf("low PE percentile/deep drawdown should choose two, got %+v", got)
 	}
 }
 
@@ -323,7 +347,7 @@ func TestRuntimeMarketDataPersistsETFRuleStatuses(t *testing.T) {
 	})
 
 	drawdown := 4.0
-	cape := 82.0
+	pePercentile := 82.0
 	err := saveRuntimeMarketData(nil, []ETFRuleStatus{{
 		Symbol:        "018738",
 		Name:          "博时标普500ETF联接E(人民币)",
@@ -334,7 +358,7 @@ func TestRuntimeMarketDataPersistsETFRuleStatuses(t *testing.T) {
 		Complete:      true,
 		Metrics: []ETFRuleMetric{
 			{Key: "drawdown252", Label: "近252交易日回撤", Value: &drawdown, Unit: "%", AsOf: "2026-07-03", Available: true},
-			{Key: "capePercentile", Label: "S&P 500 Shiller CAPE近10年分位", Value: &cape, Unit: "%", AsOf: "2026-07-02", Available: true},
+			{Key: "pePercentile", Label: "标普500 PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-02", Available: true},
 		},
 		Sources: []ETFRuleSource{{Name: "价格源"}, {Name: "估值源"}},
 	}}, "2026-07-06 08:00:00")
@@ -359,7 +383,7 @@ func TestMergeETFRuleStatusUsesFreshPreviousMetric(t *testing.T) {
 		Symbol: "022434",
 		Metrics: []ETFRuleMetric{
 			{Key: "drawdown252", Label: "近252交易日回撤", Value: &drawdown, Unit: "%", AsOf: "2026-07-03", Available: true},
-			{Key: "pePercentile", Label: "中证A500滚动PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-03", Available: true},
+			{Key: "pePercentile", Label: "中证A500 PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-03", Available: true},
 		},
 	}
 	next := ETFRuleStatus{
@@ -367,7 +391,7 @@ func TestMergeETFRuleStatusUsesFreshPreviousMetric(t *testing.T) {
 		LevelLabel: "待数据",
 		Metrics: []ETFRuleMetric{
 			{Key: "drawdown252", Label: "近252交易日回撤", Unit: "%", Available: false, Error: "temporary source error"},
-			{Key: "pePercentile", Label: "中证A500滚动PE分位", Unit: "%", Available: false, Error: "source not configured"},
+			{Key: "pePercentile", Label: "中证A500 PE分位", Unit: "%", Available: false, Error: "source not configured"},
 		},
 		Sources: []ETFRuleSource{{Name: "价格源"}, {Name: "估值源"}},
 	}
@@ -391,7 +415,7 @@ func TestMergeETFRuleStatusRejectsStalePreviousMetric(t *testing.T) {
 		Symbol: "022434",
 		Metrics: []ETFRuleMetric{
 			{Key: "drawdown252", Label: "近252交易日回撤", Value: &drawdown, Unit: "%", AsOf: "2026-06-20", Available: true},
-			{Key: "pePercentile", Label: "中证A500滚动PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-03", Available: true},
+			{Key: "pePercentile", Label: "中证A500 PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-03", Available: true},
 		},
 	}
 	next := ETFRuleStatus{
@@ -399,7 +423,7 @@ func TestMergeETFRuleStatusRejectsStalePreviousMetric(t *testing.T) {
 		LevelLabel: "待数据",
 		Metrics: []ETFRuleMetric{
 			{Key: "drawdown252", Label: "近252交易日回撤", Unit: "%", Available: false, Error: "temporary source error"},
-			{Key: "pePercentile", Label: "中证A500滚动PE分位", Unit: "%", Available: false, Error: "source not configured"},
+			{Key: "pePercentile", Label: "中证A500 PE分位", Unit: "%", Available: false, Error: "source not configured"},
 		},
 		Sources: []ETFRuleSource{{Name: "价格源"}, {Name: "估值源"}},
 	}
@@ -425,7 +449,7 @@ func TestETFRuleStatusConfidenceAcceptsFreshCompleteMetrics(t *testing.T) {
 		Complete:      true,
 		Metrics: []ETFRuleMetric{
 			{Key: "drawdown252", Label: "近252交易日回撤", Value: &drawdown, Unit: "%", AsOf: "2026-07-03", Available: true},
-			{Key: "pePercentile", Label: "中证A500滚动PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-03", Available: true},
+			{Key: "pePercentile", Label: "中证A500 PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-03", Available: true},
 		},
 		Sources: []ETFRuleSource{
 			{Name: "价格源"},
@@ -458,7 +482,7 @@ func TestETFRuleStatusConfidenceRejectsStaleMetrics(t *testing.T) {
 		Complete:      true,
 		Metrics: []ETFRuleMetric{
 			{Key: "drawdown252", Label: "近252交易日回撤", Value: &drawdown, Unit: "%", AsOf: "2026-06-20", Available: true},
-			{Key: "pePercentile", Label: "中证A500滚动PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-03", Available: true},
+			{Key: "pePercentile", Label: "中证A500 PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-03", Available: true},
 		},
 		Sources: []ETFRuleSource{
 			{Name: "价格源"},

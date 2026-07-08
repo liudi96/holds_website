@@ -131,11 +131,11 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 		requireContains(t, js, level)
 	}
 	for _, condition := range []string{
-		"滚动PE分位>80%；若回撤<5%且高估则保持限速",
-		"CAPE分位>95%；最低档不再下调",
-		"CAPE分位20%—40%；回撤<15%则降为1倍",
-		"Forward PE分位>85%；或70%—85%且回撤<5%后限速",
-		"Forward PE分位20%—40%；或<20%且回撤<30%后限速",
+		"PE分位>80%；若回撤<5%且高估则保持限速",
+		"PE分位>95%；最低档不再下调",
+		"PE分位20%—40%；回撤<15%则降为1倍",
+		"PE分位>85%；或70%—85%且回撤<5%后限速",
+		"PE分位20%—40%；或<20%且回撤<30%后限速",
 		`quarter: 4000, half: 8000, one: 16000, oneHalf: 24000, two: 32000`,
 		`quarter: 500, half: 1000, one: 2000, oneHalf: 3000, two: 4000`,
 	} {

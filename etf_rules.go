@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/json"
 	"errors"
@@ -54,6 +55,10 @@ const (
 	historyOfMarketSP500PEURL         = "https://historyofmarket.com/api/sp500/pe.json"
 	historyOfMarketNDXForwardPEURL    = "https://historyofmarket.com/api/ndx/forward-pe.json"
 	multplShillerCAPEURL              = "https://www.multpl.com/shiller-pe/table/by-year"
+	fundDBAPIHost                     = "https://api.jiucaishuo.com"
+	fundDBIndexPageURL                = "https://funddb.cn/site/index"
+	fundDBAPIVersion                  = "2.2.7"
+	fundDBAPIReqKey                   = "EWf45rlv#kfsr@k#gfksgkr"
 	primaryValuationMaxLagDays        = 3
 )
 
@@ -108,9 +113,9 @@ var etfRuleConfigs = []etfRuleConfig{
 		PriceSourceName:     "东方财富沪深行情K线",
 		PriceSourceURL:      "https://quote.eastmoney.com/",
 		ValuationMetricKey:  "pePercentile",
-		ValuationMetricName: "中证A500滚动PE分位",
-		ValuationSourceName: "乐咕乐股中证A500滚动PE分位",
-		ValuationSourceURL:  "https://legulegu.com/stockdata/index-ttm-lyr-pe?indexCode=000510.CSI",
+		ValuationMetricName: "中证A500 PE分位",
+		ValuationSourceName: "韭圈儿中证A500 PE分位（优先；乐咕乐股备援）",
+		ValuationSourceURL:  fundDBIndexPageURL,
 		Levels:              etfRuleLevels,
 		Monthly:             map[string]float64{"quarter": 5000, "half": 10000, "one": 20000, "oneHalf": 30000, "two": 40000},
 		Weekly:              map[string]float64{"quarter": 1250, "half": 2500, "one": 5000, "oneHalf": 7500, "two": 10000},
@@ -122,10 +127,10 @@ var etfRuleConfigs = []etfRuleConfig{
 		PriceSymbol:         "^GSPC",
 		PriceSourceName:     "Yahoo Finance标普500日线；Nasdaq官方SPY日线备援",
 		PriceSourceURL:      "https://finance.yahoo.com/quote/%5EGSPC/history/",
-		ValuationMetricKey:  "capePercentile",
-		ValuationMetricName: "S&P 500 Shiller CAPE近10年分位",
-		ValuationSourceName: "History of Market S&P 500 CAPE JSON（近10年分位）",
-		ValuationSourceURL:  "https://historyofmarket.com/api/sp500/pe.json",
+		ValuationMetricKey:  "pePercentile",
+		ValuationMetricName: "标普500 PE分位",
+		ValuationSourceName: "韭圈儿标普500 PE分位（优先；History of Market CAPE备援）",
+		ValuationSourceURL:  fundDBIndexPageURL,
 		Levels:              etfRuleLevels,
 		Monthly:             map[string]float64{"quarter": 4000, "half": 8000, "one": 16000, "oneHalf": 24000, "two": 32000},
 		Weekly:              map[string]float64{"quarter": 1000, "half": 2000, "one": 4000, "oneHalf": 6000, "two": 8000},
@@ -153,9 +158,9 @@ var etfRuleConfigs = []etfRuleConfig{
 		PriceSourceName:     "Nasdaq官方纳指100日线",
 		PriceSourceURL:      "https://api.nasdaq.com/api/quote/NDX/historical?assetclass=index",
 		ValuationMetricKey:  "pePercentile",
-		ValuationMetricName: "纳指100 Forward PE近10年分位",
-		ValuationSourceName: "History of Market Nasdaq 100 Forward PE JSON（近10年分位）",
-		ValuationSourceURL:  "https://historyofmarket.com/api/ndx/forward-pe.json",
+		ValuationMetricName: "纳指100 PE分位",
+		ValuationSourceName: "韭圈儿纳斯达克100 PE分位（优先；History of Market Forward PE备援）",
+		ValuationSourceURL:  fundDBIndexPageURL,
 		Levels:              etfRuleLevels,
 		Monthly:             map[string]float64{"quarter": 2000, "half": 4000, "one": 8000, "oneHalf": 12000, "two": 16000},
 		Weekly:              map[string]float64{"quarter": 500, "half": 1000, "one": 2000, "oneHalf": 3000, "two": 4000},
@@ -550,7 +555,7 @@ func fetchETFRuleValuation(client *http.Client, config etfRuleConfig) (etfRuleVa
 		value, date, err := fetchA500PEPercentile(client, time.Now())
 		return etfRuleValuation{Value: value, Date: date, Unit: "%", Kind: "percentile"}, err
 	case "018738":
-		value, date, err := fetchSP500CAPEPercentile(client)
+		value, date, err := fetchSP500PEPercentile(client)
 		return etfRuleValuation{Value: value, Date: date, Unit: "%", Kind: "percentile"}, err
 	case "008163":
 		value, date, err := fetchDividendLowVolYield(client)
@@ -563,6 +568,214 @@ func fetchETFRuleValuation(client *http.Client, config etfRuleConfig) (etfRuleVa
 	}
 }
 
+type fundDBIndexPEPoint struct {
+	Percentile float64
+	Date       string
+}
+
+func fetchFundDBIndexPEPercentile(client *http.Client, indexCode string, category string) (float64, string, error) {
+	payload := map[string]any{
+		"gu_code":     strings.TrimSpace(indexCode),
+		"pe_category": "pe",
+		"year":        10,
+		"category":    strings.TrimSpace(category),
+		"ver":         "new",
+	}
+	body, err := fundDBPost(client, "/v2/guzhi/newtubiaodata", payload)
+	if err != nil {
+		return 0, "", err
+	}
+	point, err := parseFundDBIndexPEPercentile(body)
+	if err != nil {
+		return 0, "", err
+	}
+	return point.Percentile, point.Date, nil
+}
+
+func parseFundDBIndexPEPercentile(body []byte) (fundDBIndexPEPoint, error) {
+	var payload struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		Data    struct {
+			UpdateTime string `json:"update_time"`
+			TopData    []struct {
+				Attribute       string `json:"attribute"`
+				Name            string `json:"name"`
+				NewPercentValue struct {
+					Value string `json:"value"`
+				} `json:"new_percent_value"`
+			} `json:"top_data"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return fundDBIndexPEPoint{}, err
+	}
+	if payload.Code != 0 {
+		return fundDBIndexPEPoint{}, fmt.Errorf("funddb guzhi response code %d: %s", payload.Code, strings.TrimSpace(payload.Message))
+	}
+	date := strings.TrimSpace(payload.Data.UpdateTime)
+	if _, err := time.Parse(etfRuleRuntimeTimestampDateLayout, date); err != nil {
+		return fundDBIndexPEPoint{}, fmt.Errorf("funddb missing update date: %s", date)
+	}
+	for _, item := range payload.Data.TopData {
+		if strings.TrimSpace(item.Attribute) != "pe" && !strings.Contains(item.Name, "市盈率") {
+			continue
+		}
+		percentile, err := parseFundDBPercentile(item.NewPercentValue.Value)
+		if err != nil {
+			return fundDBIndexPEPoint{}, err
+		}
+		return fundDBIndexPEPoint{Percentile: percentile, Date: date}, nil
+	}
+	return fundDBIndexPEPoint{}, errors.New("funddb missing PE percentile")
+}
+
+func parseFundDBPercentile(value string) (float64, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" || trimmed == "--" {
+		return 0, errors.New("funddb percentile is empty")
+	}
+	number, err := firstTextNumber(trimmed)
+	if err != nil {
+		return 0, err
+	}
+	if strings.Contains(trimmed, "%") || number > 1 {
+		number /= 100
+	}
+	if number < 0 || number > 1 || math.IsNaN(number) || math.IsInf(number, 0) {
+		return 0, fmt.Errorf("funddb percentile out of range: %s", value)
+	}
+	return number, nil
+}
+
+func fundDBPost(client *http.Client, path string, payload map[string]any) ([]byte, error) {
+	signed := fundDBSignedPayload(payload, time.Now())
+	body, err := json.Marshal(signed)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodPost, fundDBAPIHost+path, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
+	req.Header.Set("Content-Type", "application/json;charset=UTF-8")
+	req.Header.Set("Origin", "https://funddb.cn")
+	req.Header.Set("Referer", fundDBIndexPageURL)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website etf rule updater)")
+	requestClient := client
+	if requestClient == nil {
+		requestClient = &http.Client{Timeout: 20 * time.Second}
+	}
+	resp, err := requestClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err = io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("funddb request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	return body, nil
+}
+
+func fundDBSignedPayload(payload map[string]any, now time.Time) map[string]any {
+	signed := map[string]any{}
+	for key, value := range payload {
+		signed[key] = value
+	}
+	signed["type"] = "pc"
+	signed["version"] = fundDBAPIVersion
+	if _, ok := signed["authtoken"]; !ok {
+		signed["authtoken"] = ""
+	}
+	signed["act_time"] = now.UnixMilli()
+
+	keys := make([]string, 0, len(signed))
+	for key := range signed {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	signatureText := strings.Builder{}
+	for _, key := range keys {
+		valueText, include := fundDBSignatureValue(signed[key])
+		if include {
+			signatureText.WriteString(valueText)
+		}
+	}
+	signatureText.WriteString(fundDBAPIReqKey)
+	sum := md5.Sum([]byte(signatureText.String()))
+	fundDBApplySignatureFields(signed, fmt.Sprintf("%x", sum))
+	return signed
+}
+
+func fundDBSignatureValue(value any) (string, bool) {
+	switch typed := value.(type) {
+	case nil:
+		return "", false
+	case string:
+		return typed, strings.TrimSpace(typed) != ""
+	case bool:
+		if !typed {
+			return "", false
+		}
+		return "true", true
+	case int:
+		return strconv.Itoa(typed), true
+	case int64:
+		return strconv.FormatInt(typed, 10), true
+	case float64:
+		return strconv.FormatFloat(typed, 'f', -1, 64), true
+	case map[string]any, []any:
+		return "", false
+	default:
+		return fmt.Sprint(typed), true
+	}
+}
+
+func fundDBApplySignatureFields(payload map[string]any, signature string) {
+	if len(signature) < 32 {
+		return
+	}
+	part := func(start int, end int) string { return signature[start:end] }
+	payload["tirgkjfs"] = part(0, 2)
+	payload["abiokytke"] = part(21, 23)
+	payload["u54rg5d"] = part(2, 4)
+	payload["kf54ge7"] = part(31, 32)
+	payload["tiklsktr4"] = part(1, 2)
+	payload["lksytkjh"] = part(17, 21)
+	payload["sbnoywr"] = part(23, 25)
+	payload["bgd7h8tyu54"] = part(6, 8)
+	payload["y654b5fs3tr"] = part(11, 12)
+	payload["bioduytlw"] = part(5, 6)
+	payload["bd4uy742"] = part(26, 27)
+	payload["h67456y"] = part(16, 19)
+	payload["bvytikwqjk"] = part(6, 8)
+	payload["ngd4uy551"] = part(17, 19)
+	payload["bgiuytkw"] = part(9, 11)
+	payload["nd354uy4752"] = part(30, 31)
+	payload["ghtoiutkmlg"] = part(11, 14)
+	payload["bd24y6421f"] = part(24, 26)
+	payload["tbvdiuytk"] = part(16, 17)
+	payload["ibvytiqjek"] = part(14, 16)
+	payload["jnhf8u5231"] = part(9, 11)
+	payload["fjlkatj"] = part(2, 5)
+	payload["hy5641d321t"] = part(25, 27)
+	payload["iogojti"] = part(25, 26)
+	payload["ngd4yut78"] = part(12, 14)
+	payload["nkjhrew"] = part(26, 27)
+	payload["yt447e13f"] = part(8, 9)
+	payload["n3bf4uj7y7"] = part(18, 19)
+	payload["nbf4uj7y432"] = part(21, 23)
+	payload["yi854tew"] = part(29, 31)
+	payload["h13ey474"] = part(29, 32)
+	payload["quikgdky"] = part(27, 29)
+}
+
 type leguleguIndexPERow struct {
 	Date          string
 	TtmPE         float64
@@ -570,6 +783,78 @@ type leguleguIndexPERow struct {
 }
 
 func fetchA500PEPercentile(client *http.Client, now time.Time) (float64, string, error) {
+	percentile, date, fundDBErr := fetchFundDBIndexPEPercentile(client, "000510.SH", "")
+	if fundDBErr == nil && !valuationDateStale(date, now, primaryValuationMaxLagDays) {
+		return percentile, date, nil
+	}
+	if fundDBErr == nil {
+		fundDBErr = fmt.Errorf("funddb PE stale as of %s", date)
+	}
+	rows, err := fetchLeguleguA500PERows(client, now)
+	if err != nil {
+		if date != "" {
+			return percentile, date, nil
+		}
+		return 0, "", fmt.Errorf("funddb: %v; legulegu: %v", fundDBErr, err)
+	}
+	fallbackPercentile, fallbackDate, err := a500PEPercentileFromRows(rows)
+	if err != nil {
+		if date != "" {
+			return percentile, date, nil
+		}
+		return 0, "", fmt.Errorf("funddb: %v; legulegu: %v", fundDBErr, err)
+	}
+	if date != "" && !quoteDateAfter(fallbackDate, date) {
+		return percentile, date, nil
+	}
+	return fallbackPercentile, fallbackDate, nil
+}
+
+func fetchSP500PEPercentile(client *http.Client) (float64, string, error) {
+	now := time.Now()
+	percentile, date, fundDBErr := fetchFundDBIndexPEPercentile(client, "SPX.GI", "5")
+	if fundDBErr == nil && !valuationDateStale(date, now, primaryValuationMaxLagDays) {
+		return percentile, date, nil
+	}
+	if fundDBErr == nil {
+		fundDBErr = fmt.Errorf("funddb PE stale as of %s", date)
+	}
+	fallbackPercentile, fallbackDate, err := fetchSP500CAPEPercentile(client)
+	if err != nil {
+		if date != "" {
+			return percentile, date, nil
+		}
+		return 0, "", fmt.Errorf("funddb: %v; historyofmarket CAPE: %v", fundDBErr, err)
+	}
+	if date != "" && !quoteDateAfter(fallbackDate, date) {
+		return percentile, date, nil
+	}
+	return fallbackPercentile, fallbackDate, nil
+}
+
+func fetchNasdaq100PEPercentile(client *http.Client) (float64, string, error) {
+	now := time.Now()
+	percentile, date, fundDBErr := fetchFundDBIndexPEPercentile(client, "NDX.GI", "5")
+	if fundDBErr == nil && !valuationDateStale(date, now, primaryValuationMaxLagDays) {
+		return percentile, date, nil
+	}
+	if fundDBErr == nil {
+		fundDBErr = fmt.Errorf("funddb PE stale as of %s", date)
+	}
+	fallbackPercentile, fallbackDate, err := fetchNasdaq100ForwardPEPercentile(client)
+	if err != nil {
+		if date != "" {
+			return percentile, date, nil
+		}
+		return 0, "", fmt.Errorf("funddb: %v; historyofmarket forward PE: %v", fundDBErr, err)
+	}
+	if date != "" && !quoteDateAfter(fallbackDate, date) {
+		return percentile, date, nil
+	}
+	return fallbackPercentile, fallbackDate, nil
+}
+
+func fetchLeguleguA500PEPercentile(client *http.Client, now time.Time) (float64, string, error) {
 	rows, err := fetchLeguleguA500PERows(client, now)
 	if err != nil {
 		return 0, "", err
@@ -756,7 +1041,7 @@ func fetchSP500CAPEPercentile(client *http.Client) (float64, string, error) {
 	return fallbackPercentile, fallbackDate, nil
 }
 
-func fetchNasdaq100PEPercentile(client *http.Client) (float64, string, error) {
+func fetchNasdaq100ForwardPEPercentile(client *http.Client) (float64, string, error) {
 	percentile, date, err := fetchHistoryOfMarketNasdaq100ForwardPEPercentile(client)
 	if err == nil && !valuationDateStale(date, time.Now(), primaryValuationMaxLagDays) {
 		return percentile, date, nil
@@ -1270,45 +1555,45 @@ func evaluateA500Rule(inputs etfRuleInputs) etfRuleEvaluation {
 	drawdown := valueOrNaN(inputs.Drawdown)
 	valuation := valueOrNaN(inputs.ValuationPercentile)
 	if !known(valuation) {
-		return pendingRule("需要中证A500滚动PE分位决定基础倍数")
+		return pendingRule("需要中证A500 PE分位决定基础倍数")
 	}
 	base := percentileBaseLevel(valuation, 0.80, 0.60, 0.40, 0.20)
 	if !known(drawdown) {
-		return partialRule(base, "已按滚动PE分位得到基础倍数；回撤数据缺失，暂未做限速调整")
+		return partialRule(base, "已按PE分位得到基础倍数；回撤数据缺失，暂未做限速调整")
 	}
 	switch {
 	case valuation > 0.80 && drawdown < 0.05:
-		return completeRule(downshiftLevel(base), "滚动PE分位>80%且回撤<5%，高位限速")
+		return completeRule(downshiftLevel(base), "PE分位>80%且回撤<5%，高位限速")
 	case valuation >= 0.20 && valuation < 0.40 && drawdown < 0.12:
-		return completeRule("one", "滚动PE分位20%—40%但回撤<12%，低估确认不足")
+		return completeRule("one", "PE分位20%—40%但回撤<12%，低估确认不足")
 	case valuation < 0.20 && drawdown < 0.18:
-		return completeRule("oneHalf", "滚动PE分位<20%但回撤<18%，极低确认不足")
+		return completeRule("oneHalf", "PE分位<20%但回撤<18%，极低确认不足")
 	default:
-		return completeRule(base, "按滚动PE分位基础倍数执行，回撤未触发限速")
+		return completeRule(base, "按PE分位基础倍数执行，回撤未触发限速")
 	}
 }
 
 func evaluateSP500Rule(inputs etfRuleInputs) etfRuleEvaluation {
 	drawdown := valueOrNaN(inputs.Drawdown)
-	cape := valueOrNaN(inputs.ValuationPercentile)
-	if !known(cape) {
-		return pendingRule("需要标普500近10年CAPE分位决定基础倍数")
+	pePercentile := valueOrNaN(inputs.ValuationPercentile)
+	if !known(pePercentile) {
+		return pendingRule("需要标普500 PE分位决定基础倍数")
 	}
-	base := percentileBaseLevel(cape, 0.95, 0.80, 0.40, 0.20)
+	base := percentileBaseLevel(pePercentile, 0.95, 0.80, 0.40, 0.20)
 	if !known(drawdown) {
-		return partialRule(base, "已按CAPE分位得到基础倍数；回撤数据缺失，暂未做限速调整")
+		return partialRule(base, "已按PE分位得到基础倍数；回撤数据缺失，暂未做限速调整")
 	}
 	switch {
-	case cape > 0.80 && drawdown < 0.05:
-		return completeRule(downshiftLevel(base), "CAPE分位>80%且回撤<5%，高估限速")
-	case cape >= 0.40 && cape <= 0.80 && drawdown < 0.05:
-		return completeRule("half", "CAPE分位40%—80%但回撤<5%，正常估值高位限速")
-	case cape >= 0.20 && cape < 0.40 && drawdown < 0.15:
-		return completeRule("one", "CAPE分位20%—40%但回撤<15%，低估确认不足")
-	case cape < 0.20 && drawdown < 0.20:
-		return completeRule("oneHalf", "CAPE分位<20%但回撤<20%，极低确认不足")
+	case pePercentile > 0.80 && drawdown < 0.05:
+		return completeRule(downshiftLevel(base), "PE分位>80%且回撤<5%，高估限速")
+	case pePercentile >= 0.40 && pePercentile <= 0.80 && drawdown < 0.05:
+		return completeRule("half", "PE分位40%—80%但回撤<5%，正常估值高位限速")
+	case pePercentile >= 0.20 && pePercentile < 0.40 && drawdown < 0.15:
+		return completeRule("one", "PE分位20%—40%但回撤<15%，低估确认不足")
+	case pePercentile < 0.20 && drawdown < 0.20:
+		return completeRule("oneHalf", "PE分位<20%但回撤<20%，极低确认不足")
 	default:
-		return completeRule(base, "按CAPE分位基础倍数执行，回撤未触发限速")
+		return completeRule(base, "按PE分位基础倍数执行，回撤未触发限速")
 	}
 }
 
@@ -1338,23 +1623,23 @@ func evaluateNasdaq100Rule(inputs etfRuleInputs) etfRuleEvaluation {
 	drawdown := valueOrNaN(inputs.Drawdown)
 	pePercentile := valueOrNaN(inputs.ValuationPercentile)
 	if !known(pePercentile) {
-		return pendingRule("需要纳指100 Forward PE近10年分位决定基础倍数")
+		return pendingRule("需要纳指100 PE分位决定基础倍数")
 	}
 	base := percentileBaseLevel(pePercentile, 0.85, 0.70, 0.40, 0.20)
 	if !known(drawdown) {
-		return partialRule(base, "已按Forward PE分位得到基础倍数；回撤数据缺失，暂未做限速调整")
+		return partialRule(base, "已按PE分位得到基础倍数；回撤数据缺失，暂未做限速调整")
 	}
 	switch {
 	case pePercentile > 0.70 && drawdown < 0.05:
-		return completeRule(downshiftLevel(base), "Forward PE分位>70%且回撤<5%，高估限速")
+		return completeRule(downshiftLevel(base), "PE分位>70%且回撤<5%，高估限速")
 	case pePercentile >= 0.40 && pePercentile <= 0.70 && drawdown < 0.05:
-		return completeRule("half", "Forward PE分位40%—70%但回撤<5%，正常估值高位限速")
+		return completeRule("half", "PE分位40%—70%但回撤<5%，正常估值高位限速")
 	case pePercentile >= 0.20 && pePercentile < 0.40 && drawdown < 0.20:
-		return completeRule("one", "Forward PE分位20%—40%但回撤<20%，低估确认不足")
+		return completeRule("one", "PE分位20%—40%但回撤<20%，低估确认不足")
 	case pePercentile < 0.20 && drawdown < 0.30:
-		return completeRule("oneHalf", "Forward PE分位<20%但回撤<30%，极低确认不足")
+		return completeRule("oneHalf", "PE分位<20%但回撤<30%，极低确认不足")
 	default:
-		return completeRule(base, "按Forward PE分位基础倍数执行，回撤未触发限速")
+		return completeRule(base, "按PE分位基础倍数执行，回撤未触发限速")
 	}
 }
 

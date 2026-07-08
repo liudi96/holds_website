@@ -287,11 +287,11 @@ const ETF_RULE_TRACKER_RULES = [
     symbol: "022434",
     name: "南方中证A500ETF联接A",
     conditions: {
-      quarter: "滚动PE分位>80%；若回撤<5%且高估则保持限速",
-      half: "滚动PE分位60%—80%",
-      one: "滚动PE分位40%—60%；低估确认不足时下调至此",
-      oneHalf: "滚动PE分位20%—40%；回撤<12%则降为1倍",
-      two: "滚动PE分位<20%；回撤<18%则降为1.5倍"
+      quarter: "PE分位>80%；若回撤<5%且高估则保持限速",
+      half: "PE分位60%—80%",
+      one: "PE分位40%—60%；低估确认不足时下调至此",
+      oneHalf: "PE分位20%—40%；回撤<12%则降为1倍",
+      two: "PE分位<20%；回撤<18%则降为1.5倍"
     },
     monthly: { quarter: 5000, half: 10000, one: 20000, oneHalf: 30000, two: 40000 },
     weekly: { quarter: 1250, half: 2500, one: 5000, oneHalf: 7500, two: 10000 }
@@ -300,11 +300,11 @@ const ETF_RULE_TRACKER_RULES = [
     symbol: "018738",
     name: "博时标普500ETF联接E(人民币)",
     conditions: {
-      quarter: "CAPE分位>95%；最低档不再下调",
-      half: "CAPE分位80%—95%；或正常估值回撤<5%后限速",
-      one: "CAPE分位40%—80%；低估确认不足时下调至此",
-      oneHalf: "CAPE分位20%—40%；回撤<15%则降为1倍",
-      two: "CAPE分位<20%；回撤<20%则降为1.5倍"
+      quarter: "PE分位>95%；最低档不再下调",
+      half: "PE分位80%—95%；或正常估值回撤<5%后限速",
+      one: "PE分位40%—80%；低估确认不足时下调至此",
+      oneHalf: "PE分位20%—40%；回撤<15%则降为1倍",
+      two: "PE分位<20%；回撤<20%则降为1.5倍"
     },
     monthly: { quarter: 4000, half: 8000, one: 16000, oneHalf: 24000, two: 32000 },
     weekly: { quarter: 1000, half: 2000, one: 4000, oneHalf: 6000, two: 8000 }
@@ -326,11 +326,11 @@ const ETF_RULE_TRACKER_RULES = [
     symbol: "021000",
     name: "南方纳斯达克100指数发起(QDII)I",
     conditions: {
-      quarter: "Forward PE分位>85%；或70%—85%且回撤<5%后限速",
-      half: "Forward PE分位70%—85%；或40%—70%且回撤<5%后限速",
-      one: "Forward PE分位40%—70%；或20%—40%且回撤<20%后限速",
-      oneHalf: "Forward PE分位20%—40%；或<20%且回撤<30%后限速",
-      two: "Forward PE分位<20%；且回撤≥30%"
+      quarter: "PE分位>85%；或70%—85%且回撤<5%后限速",
+      half: "PE分位70%—85%；或40%—70%且回撤<5%后限速",
+      one: "PE分位40%—70%；或20%—40%且回撤<20%后限速",
+      oneHalf: "PE分位20%—40%；或<20%且回撤<30%后限速",
+      two: "PE分位<20%；且回撤≥30%"
     },
     monthly: { quarter: 2000, half: 4000, one: 8000, oneHalf: 12000, two: 16000 },
     weekly: { quarter: 500, half: 1000, one: 2000, oneHalf: 3000, two: 4000 }
