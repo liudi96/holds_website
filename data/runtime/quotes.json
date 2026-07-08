@@ -1,21 +1,21 @@
 {
-  "updatedAt": "2026-07-08 09:38:19",
+  "updatedAt": "2026-07-08 10:01:39",
   "quotes": {
     "000333.SZ": {
       "symbol": "000333.SZ",
-      "currentPrice": 78.99,
+      "currentPrice": 79.71,
       "previousClose": 79.12,
       "twentyDayClose": 78.638,
       "twentyDayCloseDate": "2026-06-09",
-      "twentyDayChange": 0.0044762074315215245,
-      "marketCap": 601386000000,
+      "twentyDayChange": 0.013632086268724896,
+      "marketCap": 606867000000,
       "marketCapCurrency": "CNY",
       "currentPriceDate": "2026-07-08",
-      "previousCloseDate": "2026-07-08",
+      "previousCloseDate": "2026-07-07",
       "currency": "CNY",
       "sourceSymbol": "sz000333",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-08 09:38:19；行情源 腾讯实时行情；代码 sz000333；币种 CNY；日期 2026-07-08/2026-07-08"
+      "updatedAt": "2026-07-08 10:01:39；行情源 腾讯实时行情；代码 sz000333；币种 CNY；日期 2026-07-07/2026-07-08"
     },
     "002027.SZ": {
       "symbol": "002027.SZ",
@@ -100,35 +100,35 @@
     },
     "0696.HK": {
       "symbol": "0696.HK",
-      "currentPrice": 8.11,
+      "currentPrice": 8.21,
       "previousClose": 8.24,
       "twentyDayClose": 8.95,
       "twentyDayCloseDate": "2026-06-08",
-      "twentyDayChange": -0.09385474860335195,
-      "marketCap": 23731560000,
+      "twentyDayChange": -0.08268156424580989,
+      "marketCap": 24024180000,
       "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-07-08",
-      "previousCloseDate": "2026-07-08",
+      "previousCloseDate": "2026-07-07",
       "currency": "HKD",
       "sourceSymbol": "hk00696",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-08 09:38:19；行情源 腾讯实时行情；代码 hk00696；币种 HKD；日期 2026-07-08/2026-07-08"
+      "updatedAt": "2026-07-08 10:01:39；行情源 腾讯实时行情；代码 hk00696；币种 HKD；日期 2026-07-07/2026-07-08"
     },
     "0700.HK": {
       "symbol": "0700.HK",
-      "currentPrice": 461.2,
+      "currentPrice": 471.4,
       "previousClose": 461.2,
       "twentyDayClose": 446.4,
       "twentyDayCloseDate": "2026-06-08",
-      "twentyDayChange": 0.03315412186379931,
-      "marketCap": 4193401380000,
+      "twentyDayChange": 0.05600358422939068,
+      "marketCap": 4286143559999.9995,
       "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-07-08",
-      "previousCloseDate": "2026-07-08",
+      "previousCloseDate": "2026-07-07",
       "currency": "HKD",
       "sourceSymbol": "hk00700",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-08 09:38:19；行情源 腾讯实时行情；代码 hk00700；币种 HKD；日期 2026-07-08/2026-07-08"
+      "updatedAt": "2026-07-08 10:01:39；行情源 腾讯实时行情；代码 hk00700；币种 HKD；日期 2026-07-07/2026-07-08"
     },
     "0883.HK": {
       "symbol": "0883.HK",
@@ -188,11 +188,11 @@
       "marketCap": 6124440000,
       "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-07-08",
-      "previousCloseDate": "2026-07-08",
+      "previousCloseDate": "2026-07-07",
       "currency": "HKD",
       "sourceSymbol": "hk01448",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-08 09:38:19；行情源 腾讯实时行情；代码 hk01448；币种 HKD；日期 2026-07-08/2026-07-08"
+      "updatedAt": "2026-07-08 10:01:39；行情源 腾讯实时行情；代码 hk01448；币种 HKD；日期 2026-07-07/2026-07-08"
     },
     "2020.HK": {
       "symbol": "2020.HK",
@@ -292,19 +292,19 @@
     },
     "600036.SH": {
       "symbol": "600036.SH",
-      "currentPrice": 37.62,
+      "currentPrice": 37.9,
       "previousClose": 37.55,
       "twentyDayClose": 38.49,
       "twentyDayCloseDate": "2026-06-09",
-      "twentyDayChange": -0.022603273577552728,
-      "marketCap": 948770999999.9999,
+      "twentyDayChange": -0.015328656793972549,
+      "marketCap": 955832000000,
       "marketCapCurrency": "CNY",
       "currentPriceDate": "2026-07-08",
-      "previousCloseDate": "2026-07-08",
+      "previousCloseDate": "2026-07-07",
       "currency": "CNY",
       "sourceSymbol": "sh600036",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-08 09:38:19；行情源 腾讯实时行情；代码 sh600036；币种 CNY；日期 2026-07-08/2026-07-08"
+      "updatedAt": "2026-07-08 10:01:39；行情源 腾讯实时行情；代码 sh600036；币种 CNY；日期 2026-07-07/2026-07-08"
     },
     "600309.SH": {
       "symbol": "600309.SH",
@@ -476,43 +476,43 @@
       "marketCap": 14696539999.999998,
       "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-07-08",
-      "previousCloseDate": "2026-07-08",
+      "previousCloseDate": "2026-07-07",
       "currency": "HKD",
       "sourceSymbol": "hk06049",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-08 09:38:19；行情源 腾讯实时行情；代码 hk06049；币种 HKD；日期 2026-07-08/2026-07-08"
+      "updatedAt": "2026-07-08 10:01:39；行情源 腾讯实时行情；代码 hk06049；币种 HKD；日期 2026-07-07/2026-07-08"
     },
     "7489.HK": {
       "symbol": "7489.HK",
-      "currentPrice": 3.12,
+      "currentPrice": 3.11,
       "previousClose": 3.12,
       "twentyDayClose": 5.05,
       "twentyDayCloseDate": "2026-06-08",
-      "twentyDayChange": -0.38217821782178213,
-      "marketCap": 11481600000,
+      "twentyDayChange": -0.38415841584158417,
+      "marketCap": 11444800000,
       "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-07-08",
-      "previousCloseDate": "2026-07-08",
+      "previousCloseDate": "2026-07-07",
       "currency": "HKD",
       "sourceSymbol": "hk07489",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-08 09:38:19；行情源 腾讯实时行情；代码 hk07489；币种 HKD；日期 2026-07-08/2026-07-08"
+      "updatedAt": "2026-07-08 10:01:39；行情源 腾讯实时行情；代码 hk07489；币种 HKD；日期 2026-07-07/2026-07-08"
     },
     "9926.HK": {
       "symbol": "9926.HK",
-      "currentPrice": 97.65,
+      "currentPrice": 99.95,
       "previousClose": 97.65,
       "twentyDayClose": 92.25,
       "twentyDayCloseDate": "2026-06-08",
-      "twentyDayChange": 0.05853658536585372,
-      "marketCap": 89949630000,
+      "twentyDayChange": 0.08346883468834691,
+      "marketCap": 92068260000,
       "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-07-08",
-      "previousCloseDate": "2026-07-08",
+      "previousCloseDate": "2026-07-07",
       "currency": "HKD",
       "sourceSymbol": "hk09926",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-08 09:38:19；行情源 腾讯实时行情；代码 hk09926；币种 HKD；日期 2026-07-08/2026-07-08"
+      "updatedAt": "2026-07-08 10:01:39；行情源 腾讯实时行情；代码 hk09926；币种 HKD；日期 2026-07-07/2026-07-08"
     },
     "9987.HK": {
       "symbol": "9987.HK",
@@ -532,19 +532,19 @@
     },
     "9992.HK": {
       "symbol": "9992.HK",
-      "currentPrice": 151.1,
+      "currentPrice": 148.4,
       "previousClose": 151.1,
       "twentyDayClose": 170.5,
       "twentyDayCloseDate": "2026-06-08",
-      "twentyDayChange": -0.11378299120234607,
-      "marketCap": 201223370000,
+      "twentyDayChange": -0.1296187683284457,
+      "marketCap": 197627720000,
       "marketCapCurrency": "HKD",
       "currentPriceDate": "2026-07-08",
-      "previousCloseDate": "2026-07-08",
+      "previousCloseDate": "2026-07-07",
       "currency": "HKD",
       "sourceSymbol": "hk09992",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-08 09:38:19；行情源 腾讯实时行情；代码 hk09992；币种 HKD；日期 2026-07-08/2026-07-08"
+      "updatedAt": "2026-07-08 10:01:39；行情源 腾讯实时行情；代码 hk09992；币种 HKD；日期 2026-07-07/2026-07-08"
     }
   },
   "etfRuleStatuses": {
