@@ -231,6 +231,15 @@ func TestNextMarketUpdateTimeRollsAfterEightPM(t *testing.T) {
 	}
 }
 
+func TestPreviousTradingDateSkipsWeekend(t *testing.T) {
+	if got := previousTradingDate("2026-07-08"); got != "2026-07-07" {
+		t.Fatalf("previous trading date = %s, want 2026-07-07", got)
+	}
+	if got := previousTradingDate("2026-07-06"); got != "2026-07-03" {
+		t.Fatalf("previous trading date after weekend = %s, want 2026-07-03", got)
+	}
+}
+
 func TestHasPnlHistoryEntry(t *testing.T) {
 	state := AppState{PnlHistory: []PnlHistoryEntry{{Date: "2026-07-07"}}}
 

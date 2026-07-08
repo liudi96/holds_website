@@ -1672,7 +1672,7 @@ func fetchEastmoneyQuote(client *http.Client, symbol string) (quote, error) {
 		MarketCap:         marketCap,
 		MarketCapCurrency: currencyForSymbol(symbol),
 		PriceDate:         priceDate,
-		PreviousCloseDate: priceDate,
+		PreviousCloseDate: previousTradingDate(priceDate),
 		Currency:          currencyForSymbol(symbol),
 		SourceSymbol:      sourceSymbol,
 		SourceName:        "东方财富实时行情",
@@ -1744,7 +1744,7 @@ func fetchTencentQuotes(client *http.Client, symbols []string) (map[string]quote
 			MarketCap:         marketCap,
 			MarketCapCurrency: currencyForSymbol(normalized),
 			PriceDate:         priceDate,
-			PreviousCloseDate: priceDate,
+			PreviousCloseDate: previousTradingDate(priceDate),
 			Currency:          currencyForSymbol(normalized),
 			SourceSymbol:      querySymbol,
 			SourceName:        "腾讯实时行情",
@@ -1797,6 +1797,19 @@ func tencentQuoteDate(value string) string {
 		}
 	}
 	return time.Now().Format("2006-01-02")
+}
+
+func previousTradingDate(value string) string {
+	date, err := time.Parse("2006-01-02", strings.TrimSpace(value))
+	if err != nil {
+		return strings.TrimSpace(value)
+	}
+	for {
+		date = date.AddDate(0, 0, -1)
+		if date.Weekday() != time.Saturday && date.Weekday() != time.Sunday {
+			return date.Format("2006-01-02")
+		}
+	}
 }
 
 func tencentSymbol(symbol string) (string, string, error) {
@@ -1888,7 +1901,7 @@ func fetchEastmoneyQuotes(client *http.Client, symbols []string) (map[string]quo
 			MarketCap:         optionalQuoteNumber(item, "f116"),
 			MarketCapCurrency: currencyForSymbol(normalized),
 			PriceDate:         priceDate,
-			PreviousCloseDate: priceDate,
+			PreviousCloseDate: previousTradingDate(priceDate),
 			Currency:          currencyForSymbol(normalized),
 			SourceSymbol:      sourceSymbol,
 			SourceName:        "东方财富实时行情",
