@@ -93,6 +93,49 @@ func TestPercentileFromHistoryOfMarketPointsUsesTenYearWindow(t *testing.T) {
 	}
 }
 
+func TestHistoryOfMarketPointsWithCurrentForwardUsesUpdatedDate(t *testing.T) {
+	points := historyOfMarketPointsWithCurrentForward([]historyOfMarketPoint{
+		{Date: "2016-07-07", Value: 10},
+		{Date: "2018-07-07", Value: 12},
+		{Date: "2020-07-07", Value: 20},
+		{Date: "2022-07-07", Value: 25},
+		{Date: "2026-05-18", Value: 28},
+	}, "2026-07-07", historyOfMarketCurrentValuation{Forward: 30})
+
+	percentile, date, err := percentileFromHistoryOfMarketPoints(points, 10, "Nasdaq 100 forward PE")
+	if err != nil {
+		t.Fatalf("percentileFromHistoryOfMarketPoints returned error: %v", err)
+	}
+	if date != "2026-07-07" {
+		t.Fatalf("date = %q, want 2026-07-07", date)
+	}
+	if !almostEqual(percentile, 1, 0.000001) {
+		t.Fatalf("percentile = %.6f, want 1", percentile)
+	}
+}
+
+func TestValuationDateStale(t *testing.T) {
+	now := time.Date(2026, 7, 8, 15, 30, 0, 0, time.UTC)
+	tests := []struct {
+		name string
+		date string
+		want bool
+	}{
+		{name: "old primary", date: "2026-07-02", want: true},
+		{name: "recent primary", date: "2026-07-07", want: false},
+		{name: "same day", date: "2026-07-08", want: false},
+		{name: "future date", date: "2026-07-09", want: false},
+		{name: "bad date", date: "bad-date", want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := valuationDateStale(tt.date, now, primaryValuationMaxLagDays); got != tt.want {
+				t.Fatalf("valuationDateStale(%q) = %v, want %v", tt.date, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseStooqDailyCSV(t *testing.T) {
 	rows, err := parseStooqDailyCSV([]byte("Date,Open,High,Low,Close,Volume\n2026-07-02,1,2,1,100.5,0\n2026-07-03,1,2,1,101.25,0\n"))
 	if err != nil {

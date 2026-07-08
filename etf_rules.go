@@ -54,6 +54,7 @@ const (
 	historyOfMarketSP500PEURL         = "https://historyofmarket.com/api/sp500/pe.json"
 	historyOfMarketNDXForwardPEURL    = "https://historyofmarket.com/api/ndx/forward-pe.json"
 	multplShillerCAPEURL              = "https://www.multpl.com/shiller-pe/table/by-year"
+	primaryValuationMaxLagDays        = 3
 )
 
 type etfRuleLevel struct {
@@ -728,25 +729,47 @@ func validPercentilePointer(value *float64) bool {
 
 func fetchSP500CAPEPercentile(client *http.Client) (float64, string, error) {
 	percentile, date, err := fetchHistoryOfMarketSP500CAPEPercentile(client)
-	if err == nil {
+	if err == nil && !valuationDateStale(date, time.Now(), primaryValuationMaxLagDays) {
 		return percentile, date, nil
 	}
 	historyErr := err
+	if historyErr == nil {
+		historyErr = fmt.Errorf("historyofmarket CAPE stale as of %s", date)
+	}
 	observations, err := fetchMultplMonthlyValues(client, multplShillerCAPEURL)
 	if err != nil {
+		if date != "" {
+			return percentile, date, nil
+		}
 		return 0, "", fmt.Errorf("historyofmarket: %v; multpl: %v", historyErr, err)
 	}
-	return capePercentileFromMonthlyValues(observations, 10)
+	fallbackPercentile, fallbackDate, err := capePercentileFromMonthlyValues(observations, 10)
+	if err != nil {
+		if date != "" {
+			return percentile, date, nil
+		}
+		return 0, "", fmt.Errorf("historyofmarket: %v; multpl: %v", historyErr, err)
+	}
+	if date != "" && !quoteDateAfter(fallbackDate, date) {
+		return percentile, date, nil
+	}
+	return fallbackPercentile, fallbackDate, nil
 }
 
 func fetchNasdaq100PEPercentile(client *http.Client) (float64, string, error) {
 	percentile, date, err := fetchHistoryOfMarketNasdaq100ForwardPEPercentile(client)
-	if err == nil {
+	if err == nil && !valuationDateStale(date, time.Now(), primaryValuationMaxLagDays) {
 		return percentile, date, nil
 	}
 	historyErr := err
+	if historyErr == nil {
+		historyErr = fmt.Errorf("historyofmarket Nasdaq 100 forward PE stale as of %s", date)
+	}
 	snapshot, err := fetchWorldPERatioNasdaq100(client, worldPERatioNasdaq100URL)
 	if err != nil {
+		if date != "" {
+			return percentile, date, nil
+		}
 		return 0, "", fmt.Errorf("historyofmarket: %v; worldperatio: %v", historyErr, err)
 	}
 	return snapshot.Percentile, snapshot.Date, nil
@@ -755,6 +778,10 @@ func fetchNasdaq100PEPercentile(client *http.Client) (float64, string, error) {
 type historyOfMarketPoint struct {
 	Date  string  `json:"date"`
 	Value float64 `json:"value"`
+}
+
+type historyOfMarketCurrentValuation struct {
+	Forward float64 `json:"forward"`
 }
 
 func fetchHistoryOfMarketSP500CAPEPercentile(client *http.Client) (float64, string, error) {
@@ -769,12 +796,26 @@ func fetchHistoryOfMarketSP500CAPEPercentile(client *http.Client) (float64, stri
 
 func fetchHistoryOfMarketNasdaq100ForwardPEPercentile(client *http.Client) (float64, string, error) {
 	var payload struct {
-		Forward []historyOfMarketPoint `json:"forward"`
+		Updated string                          `json:"updated"`
+		Current historyOfMarketCurrentValuation `json:"current"`
+		Forward []historyOfMarketPoint          `json:"forward"`
 	}
 	if err := fetchHistoryOfMarketJSON(client, historyOfMarketNDXForwardPEURL, &payload); err != nil {
 		return 0, "", err
 	}
-	return percentileFromHistoryOfMarketPoints(payload.Forward, 10, "Nasdaq 100 forward PE")
+	points := historyOfMarketPointsWithCurrentForward(payload.Forward, payload.Updated, payload.Current)
+	return percentileFromHistoryOfMarketPoints(points, 10, "Nasdaq 100 forward PE")
+}
+
+func historyOfMarketPointsWithCurrentForward(points []historyOfMarketPoint, updated string, current historyOfMarketCurrentValuation) []historyOfMarketPoint {
+	combined := append([]historyOfMarketPoint(nil), points...)
+	if current.Forward > 0 && strings.TrimSpace(updated) != "" {
+		combined = append(combined, historyOfMarketPoint{
+			Date:  strings.TrimSpace(updated),
+			Value: current.Forward,
+		})
+	}
+	return combined
 }
 
 func fetchHistoryOfMarketJSON(client *http.Client, endpoint string, target any) error {
@@ -816,6 +857,18 @@ func percentileFromHistoryOfMarketPoints(points []historyOfMarketPoint, years in
 
 func capePercentileFromMonthlyValues(observations []dailyClose, years int) (float64, string, error) {
 	return percentileFromDatedValues(observations, years, "CAPE")
+}
+
+func valuationDateStale(date string, now time.Time, maxLagDays int) bool {
+	parsed, err := time.Parse(etfRuleRuntimeTimestampDateLayout, strings.TrimSpace(date))
+	if err != nil {
+		return true
+	}
+	reference := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, parsed.Location())
+	if reference.Before(parsed) {
+		return false
+	}
+	return reference.Sub(parsed) > time.Duration(maxLagDays)*24*time.Hour
 }
 
 func percentileFromDatedValues(observations []dailyClose, years int, label string) (float64, string, error) {
