@@ -1,6 +1,6 @@
 {
   "totalCapital": 1150000,
-  "cash": 197284.16701442332,
+  "cash": 196784.16701442332,
   "fx": {
     "CNY": 1,
     "HKD": 0.8716,
@@ -162,6 +162,19 @@
       "currency": "CNY",
       "currentPrice": 1.0091,
       "reason": "ETF追踪买入：南方标普红利低波50ETF联接A"
+    },
+    {
+      "id": 1783458639600,
+      "date": "2026-07-08",
+      "assetType": "fund",
+      "symbol": "018738",
+      "name": "博时标普500ETF联接E(人民币)",
+      "side": "buy",
+      "shares": 90.70294784580499,
+      "price": 5.5125,
+      "currency": "CNY",
+      "currentPrice": 5.5125,
+      "reason": "ETF追踪买入：博时标普500ETF联接E(人民币)"
     }
   ],
   "decisionLogs": [
@@ -429,16 +442,36 @@
       "decision": "买入 南方标普红利低波50ETF联接A",
       "discipline": "",
       "detail": "买入 2972.95 fund shares; price CNY 1.0091; latest CNY 1.0091; reason: ETF追踪买入：南方标普红利低波50ETF联接A"
+    },
+    {
+      "id": 1783458639604700823,
+      "date": "2026-07-08 05:10:39",
+      "type": "trade",
+      "symbol": "018738",
+      "name": "博时标普500ETF联接E(人民币)",
+      "price": 5.5125,
+      "currency": "CNY",
+      "decision": "买入 博时标普500ETF联接E(人民币)",
+      "discipline": "",
+      "detail": "买入 90.70 fund shares; price CNY 5.5125; latest CNY 5.5125; reason: ETF追踪买入：博时标普500ETF联接E(人民币)"
     }
   ],
   "pnlHistory": [
     {
       "date": "2026-07-07",
-      "pnlCny": -3783.7,
+      "pnlCny": -3748.28,
       "stockPnlCny": -3531.28,
-      "fundPnlCny": -252.42,
-      "totalValueCny": 516251.06,
-      "updatedAt": "2026-07-07 22:58:14"
+      "fundPnlCny": -217,
+      "totalValueCny": 486725.22,
+      "updatedAt": "2026-07-08 08:56:52"
+    },
+    {
+      "date": "2026-07-08",
+      "pnlCny": -992.79,
+      "stockPnlCny": -992.79,
+      "stockValueCny": 476943.69,
+      "totalValueCny": 476943.69,
+      "updatedAt": "2026-07-08 09:38:19"
     }
   ],
   "stocks": [
@@ -447,7 +480,7 @@
       "name": "美的集团",
       "status": "持仓达标但新增买入安全边际不足",
       "action": "继续持有；当前不追买；等待75元附近复核，70.5元以下才更符合新增买入纪律",
-      "marginOfSafety": 0.15829787234042547,
+      "marginOfSafety": 0.15968085106382984,
       "qualityScore": 89,
       "risk": "2026Q1扣非利润下滑、家电补贴退坡、白电价格战、原材料和汇率波动、海外关税、H股可转债潜在摊薄、ToB业务利润率验证不足",
       "industry": "家电/智能制造/楼宇科技/机器人与自动化",
@@ -1008,7 +1041,7 @@
       "name": "招商银行",
       "status": "持仓；核心替补/等待",
       "action": "已有持仓继续持有；新资金暂不追买，等待¥34-36再复核分批，接近或低于¥33.75才进入正式买入区",
-      "marginOfSafety": 0.16555555555555562,
+      "marginOfSafety": 0.16400000000000006,
       "qualityScore": 88,
       "risk": "净息差下行、信用卡与消费贷资产质量、房地产与地方债链条、低利率环境、政策性让利和银行估值中枢下移需折价",
       "industry": "银行/零售银行/财富管理",
@@ -1905,7 +1938,7 @@
       "name": "中国民航信息网络",
       "status": "核心替补/中等优先级（长期股东达标，安全边际未达买入纪律）",
       "action": "继续持有；暂不追买；等待≤HK$9.4再考虑分批，≤HK$8.8安全边际更充分",
-      "marginOfSafety": 0.3408,
+      "marginOfSafety": 0.35120000000000007,
       "qualityScore": 82,
       "risk": "增长弹性不足、机场数字化项目波动、政策定价、税收优惠续期、网络安全、国企资本配置折价需持续跟踪",
       "industry": "民航IT/航空信息网络/交易清算/机场数字化",
@@ -2402,7 +2435,7 @@
       "name": "保利物业",
       "status": "持仓观察（安全边际约9.5%，未达新增买入门槛）",
       "action": "继续持有；当前不主动加仓；等待HK$28-30再严肃复核，HK$27以下才适合分批",
-      "marginOfSafety": 0.2717808219178083,
+      "marginOfSafety": 0.2723287671232877,
       "qualityScore": 82,
       "risk": "地产链下行、基础物管毛利率下降、社区增值服务收缩、应收账款和收缴率压力、物业服务提质政策可能增加成本但未必同步带来提价权",
       "industry": "物业管理/央企物管/社区服务",
@@ -3311,6 +3344,14 @@
       "fundType": "otc",
       "shares": 2972.9461896739667,
       "cost": 1.0091,
+      "currency": "CNY"
+    },
+    {
+      "symbol": "018738",
+      "name": "博时标普500ETF联接E(人民币)",
+      "fundType": "otc",
+      "shares": 90.70294784580499,
+      "cost": 5.5125,
       "currency": "CNY"
     }
   ],

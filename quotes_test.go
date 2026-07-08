@@ -132,44 +132,138 @@ func TestPersistentStateDoesNotMutateRuntimeQuotes(t *testing.T) {
 	}
 }
 
-func TestRecordDailyPnlSnapshotUpsertsOneEntryPerDay(t *testing.T) {
+func TestRecordDailyPnlSnapshotUsesQuoteDates(t *testing.T) {
 	state := AppState{
 		FX: map[string]float64{"HKD": 0.9, "CNY": 1},
 		Holdings: []Holding{{
-			Symbol:        "0700.HK",
-			Shares:        100,
-			CurrentPrice:  11,
-			PreviousClose: 10,
-			Currency:      "HKD",
+			Symbol:           "0700.HK",
+			Shares:           100,
+			CurrentPrice:     11,
+			PreviousClose:    10,
+			CurrentPriceDate: "2026-07-08",
+			Currency:         "HKD",
 		}},
 		Funds: []Fund{{
-			Symbol:        "563020",
-			Shares:        1000,
-			CurrentPrice:  1.2,
-			PreviousClose: 1.1,
-			Currency:      "CNY",
+			Symbol:           "563020",
+			Shares:           1000,
+			CurrentPrice:     1.2,
+			PreviousClose:    1.1,
+			CurrentPriceDate: "2026-07-07",
+			Currency:         "CNY",
 		}},
 	}
-	now := time.Date(2026, 7, 7, 9, 30, 0, 0, time.Local)
+	now := time.Date(2026, 7, 8, 9, 30, 0, 0, time.Local)
 
 	recordDailyPnlSnapshot(&state, now)
 
-	if len(state.PnlHistory) != 1 {
-		t.Fatalf("pnl history len = %d, want 1", len(state.PnlHistory))
+	if len(state.PnlHistory) != 2 {
+		t.Fatalf("pnl history len = %d, want 2: %+v", len(state.PnlHistory), state.PnlHistory)
 	}
-	entry := state.PnlHistory[0]
-	if entry.Date != "2026-07-07" || entry.PnlCny != 190 || entry.StockPnlCny != 90 || entry.FundPnlCny != 100 || entry.TotalValueCny != 2190 {
-		t.Fatalf("unexpected pnl entry: %+v", entry)
+	fundEntry := state.PnlHistory[0]
+	if fundEntry.Date != "2026-07-07" || fundEntry.PnlCny != 100 || fundEntry.StockPnlCny != 0 || fundEntry.FundPnlCny != 100 || fundEntry.TotalValueCny != 1200 {
+		t.Fatalf("unexpected fund pnl entry: %+v", fundEntry)
+	}
+	stockEntry := state.PnlHistory[1]
+	if stockEntry.Date != "2026-07-08" || stockEntry.PnlCny != 90 || stockEntry.StockPnlCny != 90 || stockEntry.FundPnlCny != 0 || stockEntry.TotalValueCny != 990 {
+		t.Fatalf("unexpected stock pnl entry: %+v", stockEntry)
 	}
 
 	state.Holdings[0].CurrentPrice = 12
 	recordDailyPnlSnapshot(&state, now.Add(2*time.Hour))
 
-	if len(state.PnlHistory) != 1 {
-		t.Fatalf("pnl history should upsert same day, got %+v", state.PnlHistory)
+	if len(state.PnlHistory) != 2 {
+		t.Fatalf("pnl history should keep quote-date rows, got %+v", state.PnlHistory)
 	}
-	if state.PnlHistory[0].PnlCny != 280 {
-		t.Fatalf("updated pnl = %.2f, want 280", state.PnlHistory[0].PnlCny)
+	if state.PnlHistory[0].FundPnlCny != 100 {
+		t.Fatalf("stale fund date should keep fund pnl, got %+v", state.PnlHistory[0])
+	}
+	if state.PnlHistory[1].PnlCny != 180 || state.PnlHistory[1].FundPnlCny != 0 {
+		t.Fatalf("updated stock pnl should not include fund pnl: %+v", state.PnlHistory[1])
+	}
+}
+
+func TestRecordDailyStockPnlSnapshotClearsLegacyFundPnlWithoutFundValue(t *testing.T) {
+	state := AppState{
+		FX: map[string]float64{"CNY": 1},
+		PnlHistory: []PnlHistoryEntry{{
+			Date:       "2026-07-08",
+			PnlCny:     -50,
+			FundPnlCny: -50,
+		}},
+		Holdings: []Holding{{
+			Symbol:           "000333.SZ",
+			Shares:           100,
+			CurrentPrice:     12,
+			PreviousClose:    10,
+			CurrentPriceDate: "2026-07-08",
+			Currency:         "CNY",
+		}},
+	}
+
+	recordDailyStockPnlSnapshot(&state, time.Date(2026, 7, 8, 10, 0, 0, 0, time.Local))
+
+	if len(state.PnlHistory) != 1 {
+		t.Fatalf("pnl history len = %d, want 1", len(state.PnlHistory))
+	}
+	entry := state.PnlHistory[0]
+	if entry.StockPnlCny != 200 || entry.FundPnlCny != 0 || entry.PnlCny != 200 {
+		t.Fatalf("legacy fund pnl should be cleared on stock-only update: %+v", entry)
+	}
+}
+
+func TestNextMarketUpdateTimeUsesSameDayBeforeEightPM(t *testing.T) {
+	now := time.Date(2026, 7, 8, 8, 30, 0, 0, time.Local)
+	next := nextMarketUpdateTime(now)
+	want := time.Date(2026, 7, 8, 20, 0, 0, 0, time.Local)
+
+	if !next.Equal(want) {
+		t.Fatalf("next update = %s, want %s", next, want)
+	}
+}
+
+func TestNextMarketUpdateTimeRollsAfterEightPM(t *testing.T) {
+	now := time.Date(2026, 7, 8, 20, 0, 0, 0, time.Local)
+	next := nextMarketUpdateTime(now)
+	want := time.Date(2026, 7, 9, 20, 0, 0, 0, time.Local)
+
+	if !next.Equal(want) {
+		t.Fatalf("next update = %s, want %s", next, want)
+	}
+}
+
+func TestHasPnlHistoryEntry(t *testing.T) {
+	state := AppState{PnlHistory: []PnlHistoryEntry{{Date: "2026-07-07"}}}
+
+	if !hasPnlHistoryEntry(state, "2026-07-07") {
+		t.Fatalf("expected existing pnl history entry")
+	}
+	if hasPnlHistoryEntry(state, "2026-07-08") {
+		t.Fatalf("did not expect missing pnl history entry")
+	}
+}
+
+func TestStockQuoteSymbolsExcludeFunds(t *testing.T) {
+	state := AppState{
+		Holdings: []Holding{{Symbol: "0700.HK"}, {Symbol: "000333.SZ"}},
+		Candidates: []Candidate{
+			{Symbol: "0700.HK"},
+			{Symbol: "600036.SH"},
+		},
+		Funds: []Fund{
+			{Symbol: "563020", FundType: fundTypeETF},
+			{Symbol: "022434", FundType: fundTypeOTC},
+		},
+	}
+
+	symbols := stockQuoteSymbols(&state)
+	want := []string{"0700.HK", "000333.SZ", "600036.SH"}
+	if len(symbols) != len(want) {
+		t.Fatalf("stock symbols = %+v, want %+v", symbols, want)
+	}
+	for i := range want {
+		if symbols[i] != want[i] {
+			t.Fatalf("stock symbols = %+v, want %+v", symbols, want)
+		}
 	}
 }
 

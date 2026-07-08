@@ -172,20 +172,55 @@ func TestTopbarDoesNotRenderRedundantDecisionShortcut(t *testing.T) {
 	requireNotContains(t, html, `记录决策`)
 }
 
-func TestQuotesUpdateIsServerScheduledNotAutomaticOnOverview(t *testing.T) {
+func TestOverviewAutoRefreshesStockQuotesOnly(t *testing.T) {
 	html := readTextFile(t, "index.html")
 	js := readTextFile(t, "app.js")
+	goMain := readTextFile(t, "main.go")
 
 	requireNotContains(t, html, `id="updateQuotesButton"`)
 	requireNotContains(t, html, `更新行情/净值`)
 	requireNotContains(t, js, `updateQuotesButton`)
 	requireContains(t, js, `async function updateQuotes()`)
 	requireContains(t, js, `requestJSON("/api/quotes/update", { method: "POST" })`)
-	requireNotContains(t, js, `async function autoUpdateQuotesOnOverview()`)
-	requireNotContains(t, js, `autoUpdateQuotesOnOverview();`)
-	requireNotContains(t, js, `autoQuoteUpdateInFlight`)
+	requireContains(t, js, `async function autoRefreshOverviewStockQuotes()`)
+	requireContains(t, js, `requestJSON("/api/quotes/stocks/update", { method: "POST", timeoutMs: 60000 })`)
+	requireContains(t, js, `const STOCK_QUOTE_AUTO_REFRESH_MINUTES = 15`)
+	requireContains(t, js, `if (route.page === "overview")`)
+	requireContains(t, js, `void autoRefreshOverviewStockQuotes();`)
+	requireContains(t, goMain, `mux.HandleFunc("POST /api/quotes/stocks/update", server.handleUpdateStockQuotes)`)
 	requireContains(t, js, `if (window.location.hash.slice(1) === view)`)
 	requireContains(t, js, `handleRoute(view);`)
+}
+
+func TestCloudSyncButtonAndEndpointAreWired(t *testing.T) {
+	html := readTextFile(t, "index.html")
+	js := readTextFile(t, "app.js")
+	goMain := readTextFile(t, "main.go")
+	css := readTextFile(t, "styles.css")
+	topbarActions := extractBetween(t, html, `<div class="topbar-actions">`, `<section class="page active"`)
+
+	requireContains(t, html, `styles.css?v=stock-auto-refresh-v1`)
+	requireContains(t, html, `app.js?v=stock-auto-refresh-v1`)
+	requireContains(t, html, `id="cloudSyncButton"`)
+	requireContains(t, topbarActions, `id="cloudSyncButton"`)
+	requireContains(t, topbarActions, `id="privacyToggle"`)
+	requireContains(t, topbarActions, `overview-only-action`)
+	requireContains(t, topbarActions, `portfolio.json" hidden>`)
+	requireContains(t, topbarActions, `title="隐藏持仓数据" hidden>`)
+	requireContains(t, css, `body:not([data-active-page="overview"]) .overview-only-action`)
+	requireContains(t, css, `display: none !important;`)
+	requireContains(t, js, `cloudSyncButton: document.querySelector("#cloudSyncButton")`)
+	requireContains(t, js, `function setTopbarActionsVisibility(page)`)
+	requireContains(t, js, `const showOnOverview = page === "overview"`)
+	requireContains(t, js, `button.hidden = !showOnOverview`)
+	requireContains(t, js, `setTopbarActionsVisibility(nextView)`)
+	requireContains(t, js, `async function syncCloudPortfolio()`)
+	requireContains(t, js, `requestJSON("/api/cloud/sync", { method: "POST", timeoutMs: 90000 })`)
+	requireContains(t, js, `setLoadedState(result.state)`)
+	requireContains(t, goMain, `mux.HandleFunc("POST /api/cloud/sync", server.handleSyncCloudPortfolio)`)
+	requireContains(t, goMain, `func (s *Server) handleSyncCloudPortfolio`)
+	requireContains(t, goMain, `backupPortfolioFile()`)
+	requireContains(t, goMain, `saveState(remoteState)`)
 }
 
 func TestOverviewDailyPnlStartsFromRecordedHistory(t *testing.T) {

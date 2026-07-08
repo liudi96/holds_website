@@ -315,6 +315,19 @@ h2 {
   padding: 0 14px;
 }
 
+.cloud-sync-button {
+  white-space: nowrap;
+  font-weight: 760;
+}
+
+.cloud-sync-button.is-loading {
+  color: var(--green);
+}
+
+body:not([data-active-page="overview"]) .overview-only-action {
+  display: none !important;
+}
+
 .icon-button {
   width: 40px;
   display: grid;
@@ -7401,6 +7414,10 @@ h1 {
   .topbar-actions .ghost-button,
   .topbar-decision-link {
     display: none;
+  }
+
+  body[data-active-page="overview"] .topbar-actions .cloud-sync-button:not([hidden]) {
+    display: inline-flex;
   }
 
   .overview-dashboard {

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -8,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -20,6 +23,14 @@ const (
 	portfolioDataFileName = "portfolio.json"
 	runtimeQuotesFileName = "quotes.json"
 	decisionLogLimit      = 500
+
+	cloudSyncKeyPathEnv     = "HOLDS_CLOUD_SSH_KEY"
+	cloudSyncTargetEnv      = "HOLDS_CLOUD_SSH_TARGET"
+	cloudSyncRemotePathEnv  = "HOLDS_CLOUD_SITE_PATH"
+	defaultCloudSyncKeyPath = `D:\codex2cloud\windospc.pem`
+	defaultCloudSyncTarget  = "ubuntu@43.134.71.222"
+	defaultCloudSyncSiteDir = "/root/oneshot/holds_website"
+	cloudSyncTimeout        = 60 * time.Second
 )
 
 var (
@@ -105,6 +116,8 @@ type PnlHistoryEntry struct {
 	PnlCny        float64 `json:"pnlCny"`
 	StockPnlCny   float64 `json:"stockPnlCny,omitempty"`
 	FundPnlCny    float64 `json:"fundPnlCny,omitempty"`
+	StockValueCny float64 `json:"stockValueCny,omitempty"`
+	FundValueCny  float64 `json:"fundValueCny,omitempty"`
 	TotalValueCny float64 `json:"totalValueCny,omitempty"`
 	UpdatedAt     string  `json:"updatedAt,omitempty"`
 }
@@ -314,6 +327,18 @@ type Server struct {
 	state AppState
 }
 
+type cloudSyncConfig struct {
+	KeyPath   string
+	Target    string
+	RemoteDir string
+}
+
+type cloudSyncResponse struct {
+	BackupPath string   `json:"backupPath"`
+	RemotePath string   `json:"remotePath"`
+	State      AppState `json:"state"`
+}
+
 func resolveDataDir() string {
 	dir := strings.TrimSpace(os.Getenv(portfolioDataDirEnv))
 	if dir == "" {
@@ -329,6 +354,7 @@ func main() {
 	}
 
 	server := &Server{state: state}
+	server.startMarketUpdateScheduler()
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/state", server.handleGetState)
 	mux.HandleFunc("POST /api/reset", server.handleReset)
@@ -350,6 +376,8 @@ func main() {
 	mux.HandleFunc("POST /api/research/import", server.handleImportResearch)
 	mux.HandleFunc("GET /api/chatgpt/export", server.handleExportChatGPTContext)
 	mux.HandleFunc("POST /api/quotes/update", server.handleUpdateQuotes)
+	mux.HandleFunc("POST /api/quotes/stocks/update", server.handleUpdateStockQuotes)
+	mux.HandleFunc("POST /api/cloud/sync", server.handleSyncCloudPortfolio)
 	mux.HandleFunc("POST /api/valuation-history/update", server.handleUpdateValuationHistory)
 	mux.HandleFunc("POST /api/financials/update/", server.handleUpdateFinancials)
 	mux.HandleFunc("GET /api/health", server.handleHealth)
@@ -392,6 +420,121 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleDataStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, buildDataStatus())
+}
+
+func (s *Server) handleSyncCloudPortfolio(w http.ResponseWriter, r *http.Request) {
+	body, remotePath, err := fetchCloudPortfolioJSON(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+
+	var remoteState AppState
+	if err := json.Unmarshal(body, &remoteState); err != nil {
+		writeError(w, http.StatusBadGateway, "cloud portfolio.json is not valid JSON")
+		return
+	}
+	normalizePortfolioState(&remoteState)
+	if isEmptyPortfolioState(remoteState) {
+		writeError(w, http.StatusBadGateway, "cloud portfolio.json is empty")
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	backupPath, err := backupPortfolioFile()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to backup local portfolio: %v", err))
+		return
+	}
+	if err := saveState(remoteState); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to save cloud portfolio: %v", err))
+		return
+	}
+	state, err := loadState()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to reload synced portfolio: %v", err))
+		return
+	}
+	s.state = state
+	writeJSON(w, http.StatusOK, cloudSyncResponse{
+		BackupPath: backupPath,
+		RemotePath: remotePath,
+		State:      s.state,
+	})
+}
+
+func cloudSyncConfigFromEnv() cloudSyncConfig {
+	config := cloudSyncConfig{
+		KeyPath:   defaultCloudSyncKeyPath,
+		Target:    defaultCloudSyncTarget,
+		RemoteDir: defaultCloudSyncSiteDir,
+	}
+	if value := strings.TrimSpace(os.Getenv(cloudSyncKeyPathEnv)); value != "" {
+		config.KeyPath = value
+	}
+	if value := strings.TrimSpace(os.Getenv(cloudSyncTargetEnv)); value != "" {
+		config.Target = value
+	}
+	if value := strings.TrimSpace(os.Getenv(cloudSyncRemotePathEnv)); value != "" {
+		config.RemoteDir = value
+	}
+	return config
+}
+
+func fetchCloudPortfolioJSON(ctx context.Context) ([]byte, string, error) {
+	sshPath, err := exec.LookPath("ssh")
+	if err != nil {
+		return nil, "", errors.New("ssh command was not found on this machine")
+	}
+
+	config := cloudSyncConfigFromEnv()
+	if config.KeyPath == "" || config.Target == "" || config.RemoteDir == "" {
+		return nil, "", errors.New("cloud sync ssh config is incomplete")
+	}
+	if _, err := os.Stat(config.KeyPath); err != nil {
+		return nil, "", fmt.Errorf("ssh private key is not available: %w", err)
+	}
+
+	remoteFile := strings.TrimRight(config.RemoteDir, "/") + "/data/portfolio.json"
+	timeoutCtx, cancel := context.WithTimeout(ctx, cloudSyncTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(
+		timeoutCtx,
+		sshPath,
+		"-i", config.KeyPath,
+		"-o", "BatchMode=yes",
+		"-o", "ConnectTimeout=10",
+		"-o", "StrictHostKeyChecking=no",
+		config.Target,
+		"sudo -n cat "+shellQuote(remoteFile),
+	)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
+			return nil, "", errors.New("cloud sync ssh request timed out")
+		}
+		detail := strings.TrimSpace(stderr.String())
+		if detail == "" {
+			detail = err.Error()
+		}
+		return nil, "", fmt.Errorf("cloud sync ssh request failed: %s", detail)
+	}
+	body := bytes.TrimSpace(stdout.Bytes())
+	if len(body) == 0 {
+		return nil, "", errors.New("cloud portfolio.json is empty")
+	}
+	return append([]byte(nil), body...), fmt.Sprintf("%s:%s", config.Target, remoteFile), nil
+}
+
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
 }
 
 func (s *Server) handleGetState(w http.ResponseWriter, r *http.Request) {

@@ -18,6 +18,10 @@ const (
 	pnlHistoryStartDate  = "2026-07-07"
 	pnlHistoryKlineLimit = 520
 	pnlHistoryMaxEntries = 1400
+
+	marketUpdateHour   = 20
+	marketUpdateMinute = 0
+	marketUpdateSecond = 0
 )
 
 type QuoteUpdateResponse struct {
@@ -31,6 +35,11 @@ type QuoteSkip struct {
 	Symbol string `json:"symbol"`
 	Name   string `json:"name"`
 	Error  string `json:"error"`
+}
+
+type marketUpdateResult struct {
+	Response QuoteUpdateResponse
+	Err      error
 }
 
 type yahooChartResponse struct {
@@ -101,40 +110,153 @@ type dailyClose struct {
 }
 
 func (s *Server) handleUpdateQuotes(w http.ResponseWriter, r *http.Request) {
+	result := s.runMarketUpdate(time.Now())
+	if result.Err != nil {
+		writeError(w, http.StatusInternalServerError, result.Err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, result.Response)
+}
+
+func (s *Server) handleUpdateStockQuotes(w http.ResponseWriter, r *http.Request) {
+	result := s.runStockQuoteUpdate(time.Now())
+	if result.Err != nil {
+		writeError(w, http.StatusInternalServerError, result.Err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, result.Response)
+}
+
+func (s *Server) runMarketUpdate(now time.Time) marketUpdateResult {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	state, err := loadState()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load state")
-		return
+		return marketUpdateResult{Err: fmt.Errorf("failed to load state: %w", err)}
 	}
 
-	now := time.Now()
 	client := &http.Client{Timeout: 12 * time.Second}
 	updated, skipped, quoteRecords, etfRuleStatuses := updateQuotes(&state, client, now)
 	if len(quoteRecords) > 0 || len(etfRuleStatuses) > 0 {
 		if err := saveRuntimeMarketData(quoteRecords, etfRuleStatuses, now.Format("2006-01-02 15:04:05")); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to save runtime quotes")
-			return
+			return marketUpdateResult{Err: fmt.Errorf("failed to save runtime quotes: %w", err)}
 		}
 	}
 	if err := hydrateState(&state); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load state")
-		return
+		return marketUpdateResult{Err: fmt.Errorf("failed to hydrate state: %w", err)}
 	}
 	recordDailyPnlHistory(&state, client, now)
 	if err := saveState(state); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save pnl history")
-		return
+		return marketUpdateResult{Err: fmt.Errorf("failed to save pnl history: %w", err)}
 	}
 
 	s.state = state
-	writeJSON(w, http.StatusOK, QuoteUpdateResponse{
+	return marketUpdateResult{Response: QuoteUpdateResponse{
 		Updated: updated,
 		Skipped: skipped,
 		State:   state,
-	})
+	}}
+}
+
+func (s *Server) runStockQuoteUpdate(now time.Time) marketUpdateResult {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state, err := loadState()
+	if err != nil {
+		return marketUpdateResult{Err: fmt.Errorf("failed to load state: %w", err)}
+	}
+
+	client := &http.Client{Timeout: 12 * time.Second}
+	updated, skipped, quoteRecords := updateStockQuotes(&state, client, now)
+	if len(quoteRecords) > 0 {
+		if err := saveRuntimeQuoteRecords(quoteRecords, now.Format("2006-01-02 15:04:05")); err != nil {
+			return marketUpdateResult{Err: fmt.Errorf("failed to save stock runtime quotes: %w", err)}
+		}
+	}
+	if err := hydrateState(&state); err != nil {
+		return marketUpdateResult{Err: fmt.Errorf("failed to hydrate state: %w", err)}
+	}
+	recordDailyStockPnlSnapshot(&state, now)
+	if err := saveState(state); err != nil {
+		return marketUpdateResult{Err: fmt.Errorf("failed to save stock pnl history: %w", err)}
+	}
+
+	s.state = state
+	return marketUpdateResult{Response: QuoteUpdateResponse{
+		Updated: updated,
+		Skipped: skipped,
+		State:   state,
+	}}
+}
+
+func (s *Server) startMarketUpdateScheduler() {
+	go s.runMarketUpdateScheduler()
+}
+
+func (s *Server) runMarketUpdateScheduler() {
+	time.Sleep(3 * time.Second)
+	now := time.Now()
+	if s.needsPnlHistoryEntry(now.Format("2006-01-02")) {
+		s.logMarketUpdate("startup", now)
+	}
+
+	for {
+		next := nextMarketUpdateTime(time.Now())
+		timer := time.NewTimer(time.Until(next))
+		<-timer.C
+		s.logMarketUpdate("scheduled", time.Now())
+	}
+}
+
+func (s *Server) logMarketUpdate(reason string, now time.Time) {
+	logLabel := strings.TrimSpace(reason)
+	if logLabel == "" {
+		logLabel = "manual"
+	}
+	result := s.runMarketUpdate(now)
+	if result.Err != nil {
+		fmt.Printf("market update %s failed: %v\n", logLabel, result.Err)
+		return
+	}
+	fmt.Printf("market update %s finished: updated=%d skipped=%d date=%s\n", logLabel, result.Response.Updated, len(result.Response.Skipped), now.Format("2006-01-02"))
+}
+
+func (s *Server) needsPnlHistoryEntry(date string) bool {
+	date = strings.TrimSpace(date)
+	if date == "" || date < pnlHistoryStartDate {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state, err := loadState()
+	if err != nil {
+		return false
+	}
+	return !hasPnlHistoryEntry(state, date)
+}
+
+func hasPnlHistoryEntry(state AppState, date string) bool {
+	date = strings.TrimSpace(date)
+	if date == "" {
+		return false
+	}
+	for _, entry := range state.PnlHistory {
+		if strings.TrimSpace(entry.Date) == date {
+			return true
+		}
+	}
+	return false
+}
+
+func nextMarketUpdateTime(now time.Time) time.Time {
+	next := time.Date(now.Year(), now.Month(), now.Day(), marketUpdateHour, marketUpdateMinute, marketUpdateSecond, 0, now.Location())
+	if !now.Before(next) {
+		next = next.AddDate(0, 0, 1)
+	}
+	return next
 }
 
 func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []QuoteSkip, []RuntimeQuote, []ETFRuleStatus) {
@@ -202,10 +324,61 @@ func updateQuotes(state *AppState, client *http.Client, now time.Time) (int, []Q
 	return updated, skipped, runtimeQuoteList(quoteRecords), etfRuleStatuses
 }
 
+func updateStockQuotes(state *AppState, client *http.Client, now time.Time) (int, []QuoteSkip, []RuntimeQuote) {
+	updated := 0
+	skipped := []QuoteSkip{}
+	quoteRecords := map[string]RuntimeQuote{}
+	cache := make(map[string]quote)
+	fallbackCache, fallbackErr := fetchFallbackQuotes(client, stockQuoteSymbols(state))
+	updateLabel := now.Format("2006-01-02 15:04:05")
+
+	for i := range state.Holdings {
+		holding := &state.Holdings[i]
+		if strings.TrimSpace(holding.Symbol) == "" {
+			continue
+		}
+
+		quote, err := fetchQuoteCached(client, cache, fallbackCache, fallbackErr, holding.Symbol)
+		if err != nil {
+			skipped = append(skipped, QuoteSkip{Type: "holding", Symbol: holding.Symbol, Name: holding.Name, Error: err.Error()})
+			continue
+		}
+
+		applyHoldingQuote(holding, quote, updateLabel)
+		quoteRecords[normalizeSymbol(holding.Symbol)] = runtimeQuoteFromQuote(holding.Symbol, quote, updateLabel)
+		updated++
+	}
+
+	for i := range state.Candidates {
+		candidate := &state.Candidates[i]
+		if strings.TrimSpace(candidate.Symbol) == "" {
+			continue
+		}
+
+		quote, err := fetchQuoteCached(client, cache, fallbackCache, fallbackErr, candidate.Symbol)
+		if err != nil {
+			skipped = append(skipped, QuoteSkip{Type: "candidate", Symbol: candidate.Symbol, Name: candidate.Name, Error: err.Error()})
+			continue
+		}
+
+		applyCandidateQuote(candidate, quote, updateLabel)
+		quoteRecords[normalizeSymbol(candidate.Symbol)] = runtimeQuoteFromQuote(candidate.Symbol, quote, updateLabel)
+		updated++
+	}
+
+	return updated, skipped, runtimeQuoteList(quoteRecords)
+}
+
 type pnlHistoryAccumulator struct {
 	StockPnlCny   float64
 	FundPnlCny    float64
-	TotalValueCny float64
+	StockValueCny float64
+	FundValueCny  float64
+}
+
+type pnlComponentAccumulator struct {
+	PnlCny   float64
+	ValueCny float64
 }
 
 func recordDailyPnlHistory(state *AppState, client *http.Client, now time.Time) {
@@ -254,7 +427,9 @@ func recordDailyPnlHistory(state *AppState, client *http.Client, now time.Time) 
 			PnlCny:        roundMoney(point.StockPnlCny + point.FundPnlCny),
 			StockPnlCny:   roundMoney(point.StockPnlCny),
 			FundPnlCny:    roundMoney(point.FundPnlCny),
-			TotalValueCny: roundMoney(point.TotalValueCny),
+			StockValueCny: roundMoney(point.StockValueCny),
+			FundValueCny:  roundMoney(point.FundValueCny),
+			TotalValueCny: roundMoney(point.StockValueCny + point.FundValueCny),
 			UpdatedAt:     updatedAt,
 		})
 	}
@@ -306,10 +481,11 @@ func addDailyClosePnl(points map[string]*pnlHistoryAccumulator, closes []dailyCl
 		value := shares * current.Price * rate
 		if isFund {
 			point.FundPnlCny += pnl
+			point.FundValueCny += value
 		} else {
 			point.StockPnlCny += pnl
+			point.StockValueCny += value
 		}
-		point.TotalValueCny += value
 	}
 }
 
@@ -371,63 +547,85 @@ func tradeDateOnly(value string) string {
 }
 
 func recordDailyPnlSnapshot(state *AppState, now time.Time) {
+	recordDailyStockPnlSnapshot(state, now)
+	recordDailyFundPnlSnapshot(state, now)
+}
+
+func recordDailyStockPnlSnapshot(state *AppState, now time.Time) {
 	if state == nil {
 		return
 	}
-	date := now.Format("2006-01-02")
-	if date < pnlHistoryStartDate {
-		return
-	}
+	maxDate := now.Format("2006-01-02")
 	updatedAt := now.Format("2006-01-02 15:04:05")
-	stockPnl, stockValue := dailyHoldingPnl(state)
-	fundPnl, fundValue := dailyFundPnl(state)
-	entry := PnlHistoryEntry{
-		Date:          date,
-		PnlCny:        roundMoney(stockPnl + fundPnl),
-		StockPnlCny:   roundMoney(stockPnl),
-		FundPnlCny:    roundMoney(fundPnl),
-		TotalValueCny: roundMoney(stockValue + fundValue),
-		UpdatedAt:     updatedAt,
-	}
-	upsertPnlHistoryEntry(state, entry)
-}
-
-func dailyHoldingPnl(state *AppState) (float64, float64) {
-	totalPnl := 0.0
-	totalValue := 0.0
+	points := map[string]*pnlComponentAccumulator{}
 	for _, holding := range state.Holdings {
-		shares := holding.Shares
-		currentPrice := holding.CurrentPrice
-		previousClose := holding.PreviousClose
-		if shares <= 0 || currentPrice <= 0 {
+		date := pnlDataDate(holding.CurrentPriceDate, maxDate)
+		if date == "" {
+			continue
+		}
+		shares := sharesOnDate(state, "stock", holding.Symbol, date, holding.Shares)
+		if shares <= 0 || holding.CurrentPrice <= 0 {
 			continue
 		}
 		rate := fxRate(state, holding.Currency)
-		totalValue += shares * currentPrice * rate
-		if previousClose > 0 {
-			totalPnl += shares * (currentPrice - previousClose) * rate
+		point := points[date]
+		if point == nil {
+			point = &pnlComponentAccumulator{}
+			points[date] = point
+		}
+		point.ValueCny += shares * holding.CurrentPrice * rate
+		if holding.PreviousClose > 0 {
+			point.PnlCny += shares * (holding.CurrentPrice - holding.PreviousClose) * rate
 		}
 	}
-	return totalPnl, totalValue
+	for date, point := range points {
+		upsertPnlHistoryComponents(state, date, point, nil, updatedAt)
+	}
+	prunePnlHistory(state)
 }
 
-func dailyFundPnl(state *AppState) (float64, float64) {
-	totalPnl := 0.0
-	totalValue := 0.0
+func recordDailyFundPnlSnapshot(state *AppState, now time.Time) {
+	if state == nil {
+		return
+	}
+	maxDate := now.Format("2006-01-02")
+	updatedAt := now.Format("2006-01-02 15:04:05")
+	points := map[string]*pnlComponentAccumulator{}
 	for _, fund := range state.Funds {
-		shares := fund.Shares
-		currentPrice := fund.CurrentPrice
-		previousClose := fund.PreviousClose
-		if shares <= 0 || currentPrice <= 0 {
+		date := pnlDataDate(fund.CurrentPriceDate, maxDate)
+		if date == "" {
+			continue
+		}
+		shares := sharesOnDate(state, assetTypeFund, fund.Symbol, date, fund.Shares)
+		if shares <= 0 || fund.CurrentPrice <= 0 {
 			continue
 		}
 		rate := fxRate(state, fund.Currency)
-		totalValue += shares * currentPrice * rate
-		if previousClose > 0 {
-			totalPnl += shares * (currentPrice - previousClose) * rate
+		point := points[date]
+		if point == nil {
+			point = &pnlComponentAccumulator{}
+			points[date] = point
+		}
+		point.ValueCny += shares * fund.CurrentPrice * rate
+		if fund.PreviousClose > 0 {
+			point.PnlCny += shares * (fund.CurrentPrice - fund.PreviousClose) * rate
 		}
 	}
-	return totalPnl, totalValue
+	for date, point := range points {
+		upsertPnlHistoryComponents(state, date, nil, point, updatedAt)
+	}
+	prunePnlHistory(state)
+}
+
+func pnlDataDate(value string, maxDate string) string {
+	date := tradeDateOnly(value)
+	if date == "" || date < pnlHistoryStartDate {
+		return ""
+	}
+	if strings.TrimSpace(maxDate) != "" && date > strings.TrimSpace(maxDate) {
+		return ""
+	}
+	return date
 }
 
 func fxRate(state *AppState, currency string) float64 {
@@ -448,6 +646,12 @@ func upsertPnlHistoryEntry(state *AppState, entry PnlHistoryEntry) {
 	if entry.Date < pnlHistoryStartDate {
 		return
 	}
+	entry.StockPnlCny = roundMoney(entry.StockPnlCny)
+	entry.FundPnlCny = roundMoney(entry.FundPnlCny)
+	entry.PnlCny = roundMoney(entry.StockPnlCny + entry.FundPnlCny)
+	entry.StockValueCny = roundMoney(entry.StockValueCny)
+	entry.FundValueCny = roundMoney(entry.FundValueCny)
+	entry.TotalValueCny = roundMoney(entry.StockValueCny + entry.FundValueCny)
 	for i := range state.PnlHistory {
 		if strings.TrimSpace(state.PnlHistory[i].Date) == entry.Date {
 			state.PnlHistory[i] = entry
@@ -455,6 +659,54 @@ func upsertPnlHistoryEntry(state *AppState, entry PnlHistoryEntry) {
 			return
 		}
 	}
+	state.PnlHistory = append(state.PnlHistory, entry)
+	prunePnlHistory(state)
+}
+
+func upsertPnlHistoryComponents(state *AppState, date string, stock *pnlComponentAccumulator, fund *pnlComponentAccumulator, updatedAt string) {
+	if state == nil {
+		return
+	}
+	date = strings.TrimSpace(date)
+	if date == "" || date < pnlHistoryStartDate {
+		return
+	}
+	for i := range state.PnlHistory {
+		if strings.TrimSpace(state.PnlHistory[i].Date) == date {
+			entry := state.PnlHistory[i]
+			if stock != nil {
+				entry.StockPnlCny = roundMoney(stock.PnlCny)
+				entry.StockValueCny = roundMoney(stock.ValueCny)
+			}
+			if fund != nil {
+				entry.FundPnlCny = roundMoney(fund.PnlCny)
+				entry.FundValueCny = roundMoney(fund.ValueCny)
+			}
+			if stock != nil && fund == nil && entry.FundValueCny <= 0 {
+				entry.FundPnlCny = 0
+			}
+			if fund != nil && stock == nil && entry.StockValueCny <= 0 {
+				entry.StockPnlCny = 0
+			}
+			entry.PnlCny = roundMoney(entry.StockPnlCny + entry.FundPnlCny)
+			entry.TotalValueCny = roundMoney(entry.StockValueCny + entry.FundValueCny)
+			entry.UpdatedAt = strings.TrimSpace(updatedAt)
+			state.PnlHistory[i] = entry
+			prunePnlHistory(state)
+			return
+		}
+	}
+	entry := PnlHistoryEntry{Date: date, UpdatedAt: strings.TrimSpace(updatedAt)}
+	if stock != nil {
+		entry.StockPnlCny = roundMoney(stock.PnlCny)
+		entry.StockValueCny = roundMoney(stock.ValueCny)
+	}
+	if fund != nil {
+		entry.FundPnlCny = roundMoney(fund.PnlCny)
+		entry.FundValueCny = roundMoney(fund.ValueCny)
+	}
+	entry.PnlCny = roundMoney(entry.StockPnlCny + entry.FundPnlCny)
+	entry.TotalValueCny = roundMoney(entry.StockValueCny + entry.FundValueCny)
 	state.PnlHistory = append(state.PnlHistory, entry)
 	prunePnlHistory(state)
 }
@@ -509,6 +761,26 @@ func quoteSymbols(state *AppState) []string {
 		normalized := normalizeSymbol(quoteSymbol)
 		if normalized != "" && !seen[normalized] {
 			symbols = append(symbols, quoteSymbol)
+			seen[normalized] = true
+		}
+	}
+	return symbols
+}
+
+func stockQuoteSymbols(state *AppState) []string {
+	symbols := []string{}
+	seen := map[string]bool{}
+	for _, holding := range state.Holdings {
+		normalized := normalizeSymbol(holding.Symbol)
+		if normalized != "" && !seen[normalized] {
+			symbols = append(symbols, holding.Symbol)
+			seen[normalized] = true
+		}
+	}
+	for _, candidate := range state.Candidates {
+		normalized := normalizeSymbol(candidate.Symbol)
+		if normalized != "" && !seen[normalized] {
+			symbols = append(symbols, candidate.Symbol)
 			seen[normalized] = true
 		}
 	}

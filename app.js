@@ -356,6 +356,10 @@ let backendStateError = "";
 let backendAvailable = false;
 let tradeAssetType = "stock";
 let overviewPnlRange = "day";
+const STOCK_QUOTE_AUTO_REFRESH_MINUTES = 15;
+const STOCK_QUOTE_AUTO_REFRESH_COOLDOWN_MS = 60 * 1000;
+let stockQuoteAutoRefreshPromise = null;
+let lastStockQuoteAutoRefreshAttempt = 0;
 const pageTitles = {
   overview: "晴仓记",
   holdings: "股票",
@@ -426,6 +430,7 @@ const elements = {
   positionCount: document.querySelector("#positionCount"),
   recordCount: document.querySelector("#recordCount"),
   privacyToggle: document.querySelector("#privacyToggle"),
+  cloudSyncButton: document.querySelector("#cloudSyncButton"),
   quoteUpdateStatus: document.querySelector("#quoteUpdateStatus"),
   etfBuyDialog: document.querySelector("#etfBuyDialog"),
   etfBuyForm: document.querySelector("#etfBuyForm"),
@@ -476,6 +481,13 @@ function setPrivacyToggleState() {
   elements.privacyToggle.setAttribute("aria-label", label);
   elements.privacyToggle.setAttribute("title", label);
   document.body.classList.toggle("holdings-masked", holdingsMasked);
+}
+
+function setTopbarActionsVisibility(page) {
+  const showOnOverview = page === "overview";
+  [elements.cloudSyncButton, elements.privacyToggle].filter(Boolean).forEach((button) => {
+    button.hidden = !showOnOverview;
+  });
 }
 
 if (!USE_BACKEND) {
@@ -5321,6 +5333,80 @@ function buildDataQualityIssues(positions) {
   });
 }
 
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function stockQuoteUpdatedAtDate(value) {
+  const text = String(value ?? "").trim();
+  const match = text.match(/(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}:\d{2}))?/);
+  if (!match) return null;
+  const date = new Date(`${match[1]}T${match[2] || "00:00:00"}`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function latestStockQuoteUpdatedAt(stocks) {
+  return stocks
+    .map((stock) => stockQuoteUpdatedAtDate(stock.updatedAt))
+    .filter(Boolean)
+    .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+}
+
+function shouldAutoRefreshStockQuotes() {
+  if (!USE_BACKEND || !backendAvailable) return false;
+  const stocks = auditUniverse(computePositions());
+  if (!stocks.length) return false;
+
+  const today = localDateKey();
+  const hasMissingQuote = stocks.some((stock) => {
+    const currentPrice = finiteNumber(stock.currentPrice);
+    const previousClose = finiteNumber(stock.previousClose);
+    return !stock.currentPriceDate || !Number.isFinite(currentPrice) || currentPrice <= 0 || !Number.isFinite(previousClose) || previousClose <= 0;
+  });
+  if (hasMissingQuote) return true;
+
+  const latestPriceDate = quoteReferenceDate(stocks);
+  const latestUpdatedAt = latestStockQuoteUpdatedAt(stocks);
+  const refreshWindowExpired = !latestUpdatedAt || Date.now() - latestUpdatedAt.getTime() > STOCK_QUOTE_AUTO_REFRESH_MINUTES * 60 * 1000;
+
+  if (!latestPriceDate || latestPriceDate < today) return refreshWindowExpired;
+  return refreshWindowExpired;
+}
+
+async function autoRefreshOverviewStockQuotes() {
+  if (stockQuoteAutoRefreshPromise) return stockQuoteAutoRefreshPromise;
+  if (Date.now() - lastStockQuoteAutoRefreshAttempt < STOCK_QUOTE_AUTO_REFRESH_COOLDOWN_MS) return null;
+  if (!shouldAutoRefreshStockQuotes()) return null;
+
+  lastStockQuoteAutoRefreshAttempt = Date.now();
+  setQuoteUpdateStatus("正在后台更新股票行情...");
+  stockQuoteAutoRefreshPromise = requestJSON("/api/quotes/stocks/update", { method: "POST", timeoutMs: 60000 })
+    .then((result) => {
+      setLoadedState(result.state);
+      localStorage.removeItem(STORAGE_KEY);
+      syncCash();
+      render("overview");
+      const skipped = result.skipped ?? [];
+      if (skipped.length) {
+        setQuoteUpdateStatus(`股票行情已更新 ${result.updated} 项，${skipped.length} 项失败`, "error");
+      } else {
+        setQuoteUpdateStatus(`股票行情已更新 ${result.updated} 项`, "success");
+      }
+      return result;
+    })
+    .catch((error) => {
+      setQuoteUpdateStatus(`股票行情后台更新失败：${error.message || error}`, "error");
+      return null;
+    })
+    .finally(() => {
+      stockQuoteAutoRefreshPromise = null;
+    });
+  return stockQuoteAutoRefreshPromise;
+}
+
 function renderDataQuality(positions) {
   const issues = buildDataQualityIssues(positions);
   const warningCount = issues.filter((issue) => issue.tone === "warn" || issue.tone === "error").length;
@@ -7398,6 +7484,34 @@ async function updateQuotes() {
   }
 }
 
+async function syncCloudPortfolio() {
+  if (!USE_BACKEND) throw new Error("需要通过 go run . 启动本地后端后才能同步云端数据");
+
+  const button = elements.cloudSyncButton;
+  const originalText = button?.textContent;
+  if (button) {
+    button.disabled = true;
+    button.classList.add("is-loading");
+    button.textContent = "同步中";
+  }
+
+  try {
+    setQuoteUpdateStatus("正在从云服务器同步 portfolio.json...");
+    const result = await requestJSON("/api/cloud/sync", { method: "POST", timeoutMs: 90000 });
+    setLoadedState(result.state);
+    localStorage.removeItem(STORAGE_KEY);
+    syncCash();
+    render();
+    setQuoteUpdateStatus(`已同步云端数据，本地备份：${result.backupPath || "已创建"}`, "success");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.classList.remove("is-loading");
+      button.textContent = originalText;
+    }
+  }
+}
+
 async function updateFinancials(symbol, button) {
   if (!USE_BACKEND) throw new Error("需要通过 go run . 启动后端后才能更新财务数据");
 
@@ -7646,6 +7760,7 @@ function showPage(view) {
   document.querySelector(".page.active")?.classList.remove("active");
   document.querySelector(`[data-page="${nextView}"]`)?.classList.add("active");
   document.body.dataset.activePage = nextView;
+  setTopbarActionsVisibility(nextView);
   elements.pageTitle.textContent = pageTitles[route.view] || pageTitles[nextView];
   requestBackToTopUpdate();
 }
@@ -7681,6 +7796,9 @@ function handleRoute(rawHash) {
   const previousRoute = activeRoute;
   showPage(view);
   render(view);
+  if (route.page === "overview") {
+    void autoRefreshOverviewStockQuotes();
+  }
   if (route.page === "stock-detail") {
     resetStockDetailRouteScroll();
   } else if (route.page === "holdings" && previousRoute?.page === "stock-detail") {
@@ -7698,6 +7816,17 @@ elements.privacyToggle?.addEventListener("click", () => {
   localStorage.setItem(HOLDINGS_PRIVACY_KEY, holdingsMasked ? "1" : "0");
   setPrivacyToggleState();
   render();
+});
+
+elements.cloudSyncButton?.addEventListener("click", async () => {
+  if (!window.confirm("从云服务器同步 portfolio.json？本地当前数据会先备份再覆盖。")) return;
+  try {
+    await syncCloudPortfolio();
+  } catch (error) {
+    const message = error?.message || "同步云端数据失败";
+    setQuoteUpdateStatus(message, "error");
+    window.alert(message);
+  }
 });
 
 elements.candidateSort?.addEventListener("change", (event) => {
