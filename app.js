@@ -4066,6 +4066,15 @@ function etfRuleMoney(value, suffix = "") {
   return privateText(`¥${number.toLocaleString("zh-CN", { maximumFractionDigits: 0 })}${suffix}`);
 }
 
+function tradeQuantityText(value, isFundTrade = false) {
+  const number = finiteNumber(value);
+  if (!Number.isFinite(number)) return "-";
+  if (isFundTrade) {
+    return number.toLocaleString("zh-CN", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+  }
+  return number.toLocaleString("zh-CN", { maximumFractionDigits: 4 });
+}
+
 function etfRuleTrackerTotals() {
   return ETF_RULE_TRACKER_RULES.reduce((totals, rule) => {
     const entry = etfRuleEntry(rule.symbol);
@@ -4135,6 +4144,28 @@ function renderEtfRuleCard(rule, allocationSnapshot) {
   `;
 }
 
+function renderEtfRuleActionItem(rule, allocationSnapshot) {
+  const entry = etfRuleEntry(rule.symbol);
+  const meta = etfRuleLevelMeta(entry.level);
+  const status = etfRuleStatus(rule.symbol);
+  const daily = etfRuleDailyAmount(rule, entry.level);
+  const allocation = etfAllocationEntry(allocationSnapshot, rule.symbol);
+  const statusDate = status?.asOf || status?.updatedAt || "-";
+  return `
+    <article class="etf-rule-action-item">
+      <div>
+        <strong>${escapeHTML(rule.name)}</strong>
+        <span>${escapeHTML(rule.symbol)} · ${escapeHTML(statusDate)}</span>
+      </div>
+      <div class="etf-rule-action-state">
+        <em class="${meta.tone}">${escapeHTML(meta.label)}</em>
+        <strong>${escapeHTML(etfRuleMoney(daily, "/日"))}</strong>
+        <small>${escapeHTML(percent(allocation.progressPercent, false))}</small>
+      </div>
+    </article>
+  `;
+}
+
 function renderEtfRuleTracker() {
   if (!elements.etfRuleTracker) return;
   const totals = etfRuleTrackerTotals();
@@ -4153,9 +4184,18 @@ function renderEtfRuleTracker() {
         <div><span>月计划</span><strong>${escapeHTML(etfRuleMoney(totals.monthly, "/月"))}</strong></div>
         <div><span>自动触发</span><strong>${escapeHTML(`${totals.active}/4`)}</strong></div>
       </div>
-      <div class="etf-rule-grid">
-        ${ETF_RULE_TRACKER_RULES.map((rule) => renderEtfRuleCard(rule, allocationSnapshot)).join("")}
+      <div class="etf-rule-action-list">
+        ${ETF_RULE_TRACKER_RULES.map((rule) => renderEtfRuleActionItem(rule, allocationSnapshot)).join("")}
       </div>
+      <details class="etf-rule-detail-layer">
+        <summary>
+          <span>规则明细</span>
+          <strong>自动水位指标和五档规则</strong>
+        </summary>
+        <div class="etf-rule-grid">
+          ${ETF_RULE_TRACKER_RULES.map((rule) => renderEtfRuleCard(rule, allocationSnapshot)).join("")}
+        </div>
+      </details>
     </div>
   `;
 }
@@ -4170,7 +4210,7 @@ function renderFunds(fundPositions = computeFundPositions()) {
   }
 
   if (!funds.length) {
-    elements.fundsBody.innerHTML = `<tr><td colspan="9" class="empty-state">暂无基金</td></tr>`;
+    elements.fundsBody.innerHTML = `<tr><td colspan="8" class="empty-state">暂无基金</td></tr>`;
     if (elements.fundMobileCards) {
       elements.fundMobileCards.innerHTML = `<div class="empty-state compact-empty">暂无基金</div>`;
     }
@@ -4187,11 +4227,10 @@ function renderFunds(fundPositions = computeFundPositions()) {
             <span class="ticker fund-ticker">${escapeHTML(fund.symbol.slice(0, 6))}</span>
             <span class="stock-name">
               <strong>${escapeHTML(fund.name || fund.symbol)}</strong>
-              <span>${escapeHTML(fund.symbol)}</span>
+              <span>${escapeHTML(fund.symbol)} · ${escapeHTML(fundTypeLabel(fund))}</span>
             </span>
           </div>
         </td>
-        <td data-label="类型">${escapeHTML(fundTypeLabel(fund))}</td>
         <td data-label="份额">${escapeHTML(privateText(fund.shares.toLocaleString("zh-CN", { maximumFractionDigits: 2 })))}</td>
         <td data-label="成本净值">${escapeHTML(privateText(fundNav(fund.cost, fund.currency)))}</td>
         <td data-label="最新净值">${escapeHTML(privateText(fundNav(fund.currentPrice, fund.currency)))}</td>
@@ -4276,7 +4315,7 @@ function renderTrades() {
           <strong>${escapeHTML(trade.symbol)} · ${sideText}</strong>
           <span class="${privateClass(sideClass)}">${escapeHTML(privateText(tradePriceText))}</span>
           <small>${trade.date} · ${escapeHTML(trade.name)}</small>
-          <small>${escapeHTML(privateText(`${trade.shares} ${unit}`))} · ${currentLabel} ${escapeHTML(privateText(currentPriceText))}</small>
+          <small>${escapeHTML(privateText(`${tradeQuantityText(trade.shares, isFundTrade)} ${unit}`))} · ${currentLabel} ${escapeHTML(privateText(currentPriceText))}</small>
           <button class="trade-delete-button" type="button" data-delete-trade="${escapeHTML(trade.id)}" aria-label="删除交易记录 ${escapeHTML(trade.symbol)} ${escapeHTML(trade.date)}">
             <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
               <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 7v8h2v-8h-2Zm4 0v8h2v-8h-2ZM7 8h10l-.7 12H7.7L7 8Z" />

@@ -32,7 +32,7 @@ PORTFOLIO_DATA_DIR=/data/holds go run .
 
 ## 更新行情
 
-进入总览页时，网站会自动触发一次行情和基金净值更新。网站会优先拉取 Yahoo Finance 日线收盘价；如果云服务器 IP 被 Yahoo 限流，会自动切换到腾讯实时行情，必要时再尝试东方财富。基金里，场内 ETF 复用证券行情路径，场外公募基金拉取天天基金净值。
+进入总览页时，网站会按冷却窗口在后台自动刷新股票行情；完整的股票行情、基金净值、股息数据和 ETF 追踪状态刷新由本地或云服务器定时任务调用 `/api/quotes/update` 完成。网站会优先拉取 Yahoo Finance 日线收盘价；如果云服务器 IP 被 Yahoo 限流，会自动切换到腾讯实时行情，必要时再尝试东方财富。基金里，场内 ETF 复用证券行情路径，场外公募基金拉取天天基金净值。
 
 行情和基金净值优先写入运行时文件 `runtime/quotes.json`，不会污染 `portfolio.json` 里的静态研究档案。页面读取状态时会自动把 `portfolio.json` 和 runtime 行情合并，安全边际按 `(内在价值 - 最新价) / 内在价值` 实时重算。
 
@@ -95,7 +95,7 @@ kill $(lsof -tiTCP:8080 -sTCP:LISTEN)
 
 ## Server scheduled updates
 
-Use a systemd timer on the cloud server to call the backend update endpoint. See [docs/server-scheduled-update.md](docs/server-scheduled-update.md). The overview page only reads saved data and does not trigger market-data updates when opened.
+Use a systemd timer on the cloud server to call the backend update endpoint. See [docs/server-scheduled-update.md](docs/server-scheduled-update.md). The overview page may refresh stock quotes opportunistically, while scheduled tasks remain responsible for the full market-data, fund NAV, dividend, and ETF update flow.
 
 ## Local scheduled updates
 

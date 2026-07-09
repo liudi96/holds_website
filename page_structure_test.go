@@ -118,6 +118,9 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 	requireContains(t, js, `function etfAllocationSnapshot`)
 	requireContains(t, js, `renderEtfAllocationBar`)
 	requireContains(t, js, `renderEtfPoolProgress`)
+	requireContains(t, js, `renderEtfRuleActionItem`)
+	requireContains(t, js, `etf-rule-action-list`)
+	requireContains(t, js, `etf-rule-detail-layer`)
 	requireContains(t, js, `日计划`)
 	requireContains(t, js, `今日计划`)
 	requireContains(t, js, `data-etf-rule-buy`)
@@ -166,6 +169,9 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 	requireContains(t, css, `.etf-pool-progress`)
 	requireContains(t, css, `.etf-allocation-progress`)
 	requireContains(t, css, `.etf-allocation-bar`)
+	requireContains(t, css, `.etf-rule-action-list`)
+	requireContains(t, css, `.etf-rule-action-item`)
+	requireContains(t, css, `.etf-rule-detail-layer`)
 	requireContains(t, css, `.etf-rule-live`)
 	requireContains(t, css, `.etf-rule-metric`)
 	requireContains(t, css, `.etf-rule-rulebook`)
@@ -177,6 +183,22 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 	requireNotContains(t, css, `.etf-rule-active-condition`)
 	requireNotContains(t, css, `.etf-rule-source`)
 	requireNotContains(t, css, `etf-rule-confidence`)
+}
+
+func TestTradeAndFundTablesUseReadableNumbers(t *testing.T) {
+	html := readTextFile(t, "index.html")
+	js := readTextFile(t, "app.js")
+	css := readTextFile(t, "styles.css")
+	fundPageSection := extractBetween(t, html, `data-page="funds"`, `data-page="trades"`)
+
+	requireNotContains(t, fundPageSection, `<th>类型</th>`)
+	requireContains(t, fundPageSection, `<th>份额</th>`)
+	requireContains(t, js, `function tradeQuantityText`)
+	requireContains(t, js, `minimumFractionDigits: 4`)
+	requireContains(t, js, `tradeQuantityText(trade.shares, isFundTrade)`)
+	requireContains(t, js, `${escapeHTML(fund.symbol)} · ${escapeHTML(fundTypeLabel(fund))}`)
+	requireContains(t, css, `.fund-table`)
+	requireContains(t, css, `min-width: 880px`)
 }
 
 func TestTopbarDoesNotRenderRedundantDecisionShortcut(t *testing.T) {
@@ -213,8 +235,8 @@ func TestCloudSyncButtonAndEndpointAreWired(t *testing.T) {
 	css := readTextFile(t, "styles.css")
 	topbarActions := extractBetween(t, html, `<div class="topbar-actions">`, `<section class="page active"`)
 
-	requireContains(t, html, `styles.css?v=stock-auto-refresh-v2`)
-	requireContains(t, html, `app.js?v=stock-auto-refresh-v2`)
+	requireContains(t, html, `styles.css?v=overview-layer-v1`)
+	requireContains(t, html, `app.js?v=overview-layer-v1`)
 	requireContains(t, html, `id="cloudSyncButton"`)
 	requireContains(t, topbarActions, `id="cloudSyncButton"`)
 	requireContains(t, topbarActions, `id="privacyToggle"`)
