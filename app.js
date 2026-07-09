@@ -293,8 +293,8 @@ const ETF_RULE_TRACKER_RULES = [
       oneHalf: "PE分位20%—40%；回撤<12%则降为1倍",
       two: "PE分位<20%；回撤<18%则降为1.5倍"
     },
-    monthly: { quarter: 5000, half: 10000, one: 20000, oneHalf: 30000, two: 40000 },
-    weekly: { quarter: 1250, half: 2500, one: 5000, oneHalf: 7500, two: 10000 }
+    monthly: { quarter: 2800, half: 5600, one: 11200, oneHalf: 16800, two: 22400 },
+    weekly: { quarter: 700, half: 1400, one: 2800, oneHalf: 4200, two: 5600 }
   },
   {
     symbol: "018738",
@@ -306,8 +306,8 @@ const ETF_RULE_TRACKER_RULES = [
       oneHalf: "PE分位20%—40%；回撤<15%则降为1倍",
       two: "PE分位<20%；回撤<20%则降为1.5倍"
     },
-    monthly: { quarter: 4000, half: 8000, one: 16000, oneHalf: 24000, two: 32000 },
-    weekly: { quarter: 1000, half: 2000, one: 4000, oneHalf: 6000, two: 8000 }
+    monthly: { quarter: 4200, half: 8400, one: 16800, oneHalf: 25200, two: 33600 },
+    weekly: { quarter: 1050, half: 2100, one: 4200, oneHalf: 6300, two: 8400 }
   },
   {
     symbol: "008163",
@@ -319,8 +319,8 @@ const ETF_RULE_TRACKER_RULES = [
       oneHalf: "股息率5.8%—6.2%；回撤<8%则降为1倍",
       two: "股息率>6.2%；回撤<12%则降为1.5倍"
     },
-    monthly: { quarter: 3000, half: 6000, one: 12000, oneHalf: 18000, two: 24000 },
-    weekly: { quarter: 750, half: 1500, one: 3000, oneHalf: 4500, two: 6000 }
+    monthly: { quarter: 4200, half: 8400, one: 16800, oneHalf: 25200, two: 33600 },
+    weekly: { quarter: 1050, half: 2100, one: 4200, oneHalf: 6300, two: 8400 }
   },
   {
     symbol: "021000",
@@ -332,10 +332,15 @@ const ETF_RULE_TRACKER_RULES = [
       oneHalf: "PE分位20%—40%；或<20%且回撤<30%后限速",
       two: "PE分位<20%；且回撤≥30%"
     },
-    monthly: { quarter: 2000, half: 4000, one: 8000, oneHalf: 12000, two: 16000 },
-    weekly: { quarter: 500, half: 1000, one: 2000, oneHalf: 3000, two: 4000 }
+    monthly: { quarter: 2800, half: 5600, one: 11200, oneHalf: 16800, two: 22400 },
+    weekly: { quarter: 700, half: 1400, one: 2800, oneHalf: 4200, two: 5600 }
   }
 ];
+
+const ETF_ALLOCATION_POOL_BASE = 1000000;
+const ETF_ALLOCATION_POOL_BASE_DATE = "2026-07-09";
+const ETF_ALLOCATION_MONTHLY_INFLOW = 15000;
+const ETF_RULE_TRADING_DAYS_PER_WEEK = 5;
 
 let state = loadState();
 let activeFilter = "all";
@@ -3884,6 +3889,121 @@ function etfRuleMetricText(metric) {
   return `${formatted}${unit}`;
 }
 
+function etfAllocationMoney(value) {
+  return privateText(wholeCurrency(value, "CNY"));
+}
+
+function etfRuleBaseMonthlyTotal() {
+  return ETF_RULE_TRACKER_RULES.reduce((sum, rule) => sum + (finiteNumber(rule.monthly?.one) ?? 0), 0);
+}
+
+function etfAllocationReferenceDate(referenceDate = new Date()) {
+  return new Date(Date.UTC(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate()));
+}
+
+function etfAllocationMonthlyInflowCount(referenceDate = new Date()) {
+  const baseDate = dateFromKey(ETF_ALLOCATION_POOL_BASE_DATE);
+  const today = etfAllocationReferenceDate(referenceDate);
+  if (!baseDate || today <= baseDate) return 0;
+  let cursor = new Date(Date.UTC(baseDate.getUTCFullYear(), baseDate.getUTCMonth() + 1, 1));
+  let count = 0;
+  while (cursor <= today) {
+    count += 1;
+    cursor = addUtcMonths(cursor, 1);
+  }
+  return count;
+}
+
+function etfAllocationProgressTone(progress) {
+  const value = finiteNumber(progress);
+  if (!Number.isFinite(value)) return "under";
+  if (value >= 1.1) return "over";
+  if (value >= 0.9) return "near";
+  return "under";
+}
+
+function etfAllocationSnapshot(referenceDate = new Date()) {
+  const baseMonthly = etfRuleBaseMonthlyTotal();
+  const poolTotal = ETF_ALLOCATION_POOL_BASE + ETF_ALLOCATION_MONTHLY_INFLOW * etfAllocationMonthlyInflowCount(referenceDate);
+  const fundPositions = computeFundPositions();
+  const fundsBySymbol = new Map(fundPositions.map((fund) => [normalizeFundSymbol(fund.symbol), fund]));
+  const entries = ETF_RULE_TRACKER_RULES.map((rule) => {
+    const marketValue = finiteNumber(fundsBySymbol.get(normalizeFundSymbol(rule.symbol))?.marketValueCny) ?? 0;
+    const targetWeight = baseMonthly > 0 ? (finiteNumber(rule.monthly?.one) ?? 0) / baseMonthly : 0;
+    const targetAmount = poolTotal * targetWeight;
+    const progress = targetAmount > 0 ? marketValue / targetAmount : 0;
+    return {
+      symbol: rule.symbol,
+      marketValue,
+      targetWeight,
+      targetAmount,
+      progress,
+      progressPercent: progress * 100,
+      widthPercent: clamp(progress * 100, 0, 100),
+      tone: etfAllocationProgressTone(progress)
+    };
+  });
+  const invested = entries.reduce((sum, item) => sum + item.marketValue, 0);
+  const progress = poolTotal > 0 ? invested / poolTotal : 0;
+  return {
+    poolTotal,
+    invested,
+    progress,
+    progressPercent: progress * 100,
+    widthPercent: clamp(progress * 100, 0, 100),
+    entries
+  };
+}
+
+function etfAllocationEntry(snapshot, symbol) {
+  const normalized = normalizeFundSymbol(symbol);
+  return snapshot.entries.find((item) => normalizeFundSymbol(item.symbol) === normalized) ?? {
+    marketValue: 0,
+    targetWeight: 0,
+    targetAmount: 0,
+    progress: 0,
+    progressPercent: 0,
+    widthPercent: 0,
+    tone: "under"
+  };
+}
+
+function renderEtfAllocationBar(entry) {
+  return `
+    <div class="etf-allocation-progress ${escapeHTML(entry.tone)}">
+      <div class="etf-allocation-progress-head">
+        <span>配置进度</span>
+        <strong>${escapeHTML(percent(entry.progressPercent, false))}</strong>
+      </div>
+      <div class="etf-allocation-bar" style="--progress: ${escapeHTML(String(entry.widthPercent))}%">
+        <i></i>
+      </div>
+      <small>${escapeHTML(etfAllocationMoney(entry.marketValue))} / 目标 ${escapeHTML(etfAllocationMoney(entry.targetAmount))}</small>
+    </div>
+  `;
+}
+
+function renderEtfPoolProgress(snapshot) {
+  return `
+    <div class="etf-pool-progress">
+      <div class="etf-pool-progress-top">
+        <div>
+          <span>总资金池</span>
+          <strong>${escapeHTML(etfAllocationMoney(snapshot.poolTotal))}</strong>
+        </div>
+        <div>
+          <span>当前配置</span>
+          <strong>${escapeHTML(percent(snapshot.progressPercent, false))}</strong>
+        </div>
+      </div>
+      <div class="etf-allocation-bar" style="--progress: ${escapeHTML(String(snapshot.widthPercent))}%">
+        <i></i>
+      </div>
+      <small>已配置 ${escapeHTML(etfAllocationMoney(snapshot.invested))}</small>
+    </div>
+  `;
+}
+
 function renderEtfRuleLiveStatus(rule, entry) {
   const status = etfRuleStatus(rule.symbol);
   if (!status) {
@@ -3898,11 +4018,12 @@ function renderEtfRuleLiveStatus(rule, entry) {
   const statusMeta = etfRuleLevelMeta(status.level);
   const statusLabel = status.complete ? (status.levelLabel || statusMeta.label || "待数据") : "待确认";
   const metrics = (status.metrics ?? []).map(renderEtfRuleMetric).join("");
+  const dailyAmount = etfRuleStatusDailyAmount(status);
   return `
     <div class="etf-rule-live ${status.complete ? "complete" : "pending"}">
       <div>
         <span>自动水位</span>
-        <strong>${escapeHTML(statusLabel)}${status.complete && status.weeklyAmount ? ` · ${escapeHTML(etfRuleMoney(status.weeklyAmount, "/周"))}` : ""}</strong>
+        <strong>${escapeHTML(statusLabel)}${status.complete && dailyAmount ? ` · ${escapeHTML(etfRuleMoney(dailyAmount, "/日"))}` : ""}</strong>
         <small>${escapeHTML(status.reason || "等待更多指标确认")} · ${escapeHTML(status.asOf || status.updatedAt || "-")}</small>
       </div>
       <div class="etf-rule-live-metrics">${metrics}</div>
@@ -3925,6 +4046,20 @@ function etfRuleAmount(rule, level, period) {
   return finiteNumber(rule?.[period]?.[level]) ?? 0;
 }
 
+function etfRuleDailyAmountFromWeekly(value) {
+  const weekly = finiteNumber(value) ?? 0;
+  if (weekly <= 0) return 0;
+  return weekly / ETF_RULE_TRADING_DAYS_PER_WEEK;
+}
+
+function etfRuleDailyAmount(rule, level) {
+  return etfRuleDailyAmountFromWeekly(etfRuleAmount(rule, level, "weekly"));
+}
+
+function etfRuleStatusDailyAmount(status) {
+  return etfRuleDailyAmountFromWeekly(status?.weeklyAmount);
+}
+
 function etfRuleMoney(value, suffix = "") {
   const number = finiteNumber(value) ?? 0;
   if (number <= 0) return "-";
@@ -3934,11 +4069,11 @@ function etfRuleMoney(value, suffix = "") {
 function etfRuleTrackerTotals() {
   return ETF_RULE_TRACKER_RULES.reduce((totals, rule) => {
     const entry = etfRuleEntry(rule.symbol);
-    totals.weekly += etfRuleAmount(rule, entry.level, "weekly");
+    totals.daily += etfRuleDailyAmount(rule, entry.level);
     totals.monthly += etfRuleAmount(rule, entry.level, "monthly");
     if (entry.level !== "none") totals.active += 1;
     return totals;
-  }, { weekly: 0, monthly: 0, active: 0 });
+  }, { daily: 0, monthly: 0, active: 0 });
 }
 
 function renderEtfRuleConditionItem(rule, level) {
@@ -3949,7 +4084,7 @@ function renderEtfRuleConditionItem(rule, level) {
     <div class="etf-rule-condition ${meta.tone} ${active ? "active" : ""}">
       <span>${escapeHTML(meta.label)}条件</span>
       <strong>${escapeHTML(rule.conditions[level])}</strong>
-      <small>${escapeHTML(etfRuleMoney(rule.weekly[level], "/周"))} · ${escapeHTML(etfRuleMoney(rule.monthly[level], "/月"))}</small>
+      <small>${escapeHTML(etfRuleMoney(etfRuleDailyAmount(rule, level), "/日"))} · ${escapeHTML(etfRuleMoney(rule.monthly[level], "/月"))}</small>
     </div>
   `;
 }
@@ -3965,11 +4100,12 @@ function renderEtfRuleRulebook(rule) {
   `;
 }
 
-function renderEtfRuleCard(rule) {
+function renderEtfRuleCard(rule, allocationSnapshot) {
   const entry = etfRuleEntry(rule.symbol);
   const meta = etfRuleLevelMeta(entry.level);
-  const weekly = etfRuleAmount(rule, entry.level, "weekly");
+  const daily = etfRuleDailyAmount(rule, entry.level);
   const monthly = etfRuleAmount(rule, entry.level, "monthly");
+  const allocation = etfAllocationEntry(allocationSnapshot, rule.symbol);
   return `
     <article class="etf-rule-card">
       <div class="etf-rule-card-head">
@@ -3982,10 +4118,11 @@ function renderEtfRuleCard(rule) {
           <em class="${meta.tone}">${escapeHTML(meta.label)}</em>
         </div>
       </div>
+      ${renderEtfAllocationBar(allocation)}
       <div class="etf-rule-selected">
         <div>
-          <span>本周计划</span>
-          <strong>${escapeHTML(etfRuleMoney(weekly, "/周"))}</strong>
+          <span>今日计划</span>
+          <strong>${escapeHTML(etfRuleMoney(daily, "/日"))}</strong>
         </div>
         <div>
           <span>月度节奏</span>
@@ -4001,6 +4138,7 @@ function renderEtfRuleCard(rule) {
 function renderEtfRuleTracker() {
   if (!elements.etfRuleTracker) return;
   const totals = etfRuleTrackerTotals();
+  const allocationSnapshot = etfAllocationSnapshot();
   elements.etfRuleTracker.innerHTML = `
     <div class="etf-rule-tracker">
       <div class="panel-head compact etf-rule-head">
@@ -4008,14 +4146,15 @@ function renderEtfRuleTracker() {
           <p class="eyebrow">ETF Rules</p>
           <h2>ETF追踪</h2>
         </div>
+        ${renderEtfPoolProgress(allocationSnapshot)}
       </div>
       <div class="etf-rule-summary">
-        <div><span>周计划</span><strong>${escapeHTML(etfRuleMoney(totals.weekly, "/周"))}</strong></div>
+        <div><span>日计划</span><strong>${escapeHTML(etfRuleMoney(totals.daily, "/日"))}</strong></div>
         <div><span>月计划</span><strong>${escapeHTML(etfRuleMoney(totals.monthly, "/月"))}</strong></div>
         <div><span>自动触发</span><strong>${escapeHTML(`${totals.active}/4`)}</strong></div>
       </div>
       <div class="etf-rule-grid">
-        ${ETF_RULE_TRACKER_RULES.map(renderEtfRuleCard).join("")}
+        ${ETF_RULE_TRACKER_RULES.map((rule) => renderEtfRuleCard(rule, allocationSnapshot)).join("")}
       </div>
     </div>
   `;
@@ -7239,14 +7378,14 @@ function openEtfBuyDialog(symbol) {
   if (!rule || !elements.etfBuyDialog || !elements.etfBuyForm) return;
   const fund = findTradeFund(rule.symbol);
   const entry = etfRuleEntry(rule.symbol);
-  const weekly = etfRuleAmount(rule, entry.level, "weekly");
+  const daily = etfRuleDailyAmount(rule, entry.level);
   const currentPrice = finiteNumber(fund?.currentPrice);
 
   elements.etfBuyForm.reset();
   setEtfBuyField("symbol", rule.symbol);
   setEtfBuyField("name", rule.name);
   setEtfBuyField("price", Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice.toFixed(4) : "");
-  setEtfBuyField("amount", weekly > 0 ? String(weekly) : "");
+  setEtfBuyField("amount", daily > 0 ? String(daily) : "");
   setEtfBuyField("reason", "ETF\u8ffd\u8e2a\u4e70\u5165\uff1a" + rule.name);
   if (elements.etfBuyFundLabel) {
     elements.etfBuyFundLabel.textContent = `${rule.name} ${rule.symbol}`;

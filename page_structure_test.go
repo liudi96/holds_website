@@ -111,6 +111,15 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 	requireContains(t, js, `status?.complete`)
 	requireContains(t, js, `renderEtfRuleMetric`)
 	requireContains(t, js, `renderEtfRuleRulebook`)
+	requireContains(t, js, `ETF_ALLOCATION_POOL_BASE`)
+	requireContains(t, js, `ETF_ALLOCATION_MONTHLY_INFLOW`)
+	requireContains(t, js, `ETF_RULE_TRADING_DAYS_PER_WEEK`)
+	requireContains(t, js, `function etfRuleDailyAmount`)
+	requireContains(t, js, `function etfAllocationSnapshot`)
+	requireContains(t, js, `renderEtfAllocationBar`)
+	requireContains(t, js, `renderEtfPoolProgress`)
+	requireContains(t, js, `日计划`)
+	requireContains(t, js, `今日计划`)
 	requireContains(t, js, `data-etf-rule-buy`)
 	requireContains(t, js, `function openEtfBuyDialog`)
 	requireContains(t, js, `function tradeFromEtfRuleBuyForm`)
@@ -136,8 +145,8 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 		"PE分位20%—40%；回撤<15%则降为1倍",
 		"PE分位>85%；或70%—85%且回撤<5%后限速",
 		"PE分位20%—40%；或<20%且回撤<30%后限速",
-		`quarter: 4000, half: 8000, one: 16000, oneHalf: 24000, two: 32000`,
-		`quarter: 500, half: 1000, one: 2000, oneHalf: 3000, two: 4000`,
+		`quarter: 4200, half: 8400, one: 16800, oneHalf: 25200, two: 33600`,
+		`quarter: 700, half: 1400, one: 2800, oneHalf: 4200, two: 5600`,
 	} {
 		requireContains(t, js, condition)
 	}
@@ -146,12 +155,17 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 	requireNotContains(t, js, `data-etf-rule-done`)
 	requireNotContains(t, js, `updateEtfRuleTrackerEntry`)
 	requireNotContains(t, js, `已手动覆盖`)
+	requireNotContains(t, js, `周计划`)
+	requireNotContains(t, js, `本周计划`)
 	requireContains(t, js, `renderEtfRuleLiveStatus`)
 	requireContains(t, css, `.etf-rule-panel`)
 	requireContains(t, css, `.etf-rule-card`)
 	requireContains(t, css, `.etf-rule-card-actions`)
 	requireContains(t, css, `.etf-rule-buy-button`)
 	requireContains(t, css, `.etf-buy-target`)
+	requireContains(t, css, `.etf-pool-progress`)
+	requireContains(t, css, `.etf-allocation-progress`)
+	requireContains(t, css, `.etf-allocation-bar`)
 	requireContains(t, css, `.etf-rule-live`)
 	requireContains(t, css, `.etf-rule-metric`)
 	requireContains(t, css, `.etf-rule-rulebook`)

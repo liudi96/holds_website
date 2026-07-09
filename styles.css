@@ -2093,6 +2093,84 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
+.etf-pool-progress {
+  min-width: 320px;
+  width: min(420px, 44vw);
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgba(15, 139, 121, 0.14);
+  border-radius: 8px;
+  background: #f8faf9;
+}
+
+.etf-pool-progress-top {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.etf-pool-progress-top div,
+.etf-allocation-progress-head {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.etf-pool-progress span,
+.etf-pool-progress small,
+.etf-allocation-progress span,
+.etf-allocation-progress small {
+  display: inline;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.etf-pool-progress strong,
+.etf-allocation-progress strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.etf-allocation-progress {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.etf-allocation-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9eef0;
+}
+
+.etf-allocation-bar i {
+  display: block;
+  width: var(--progress);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+}
+
+.etf-allocation-progress.near .etf-allocation-bar i {
+  background: var(--green);
+}
+
+.etf-allocation-progress.over .etf-allocation-bar i {
+  background: var(--red);
+}
+
 .etf-rule-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2364,6 +2442,16 @@ tbody tr:hover {
 }
 
 @media (max-width: 720px) {
+  .etf-rule-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .etf-pool-progress {
+    width: 100%;
+    min-width: 0;
+  }
+
   .etf-rule-summary,
   .etf-rule-grid,
   .etf-rule-selected {

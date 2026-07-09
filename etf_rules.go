@@ -117,8 +117,8 @@ var etfRuleConfigs = []etfRuleConfig{
 		ValuationSourceName: "韭圈儿中证A500 PE分位（优先；乐咕乐股备援）",
 		ValuationSourceURL:  fundDBIndexPageURL,
 		Levels:              etfRuleLevels,
-		Monthly:             map[string]float64{"quarter": 5000, "half": 10000, "one": 20000, "oneHalf": 30000, "two": 40000},
-		Weekly:              map[string]float64{"quarter": 1250, "half": 2500, "one": 5000, "oneHalf": 7500, "two": 10000},
+		Monthly:             map[string]float64{"quarter": 2800, "half": 5600, "one": 11200, "oneHalf": 16800, "two": 22400},
+		Weekly:              map[string]float64{"quarter": 700, "half": 1400, "one": 2800, "oneHalf": 4200, "two": 5600},
 		Evaluate:            evaluateA500Rule,
 	},
 	{
@@ -132,8 +132,8 @@ var etfRuleConfigs = []etfRuleConfig{
 		ValuationSourceName: "韭圈儿标普500 PE分位（优先；History of Market CAPE备援）",
 		ValuationSourceURL:  fundDBIndexPageURL,
 		Levels:              etfRuleLevels,
-		Monthly:             map[string]float64{"quarter": 4000, "half": 8000, "one": 16000, "oneHalf": 24000, "two": 32000},
-		Weekly:              map[string]float64{"quarter": 1000, "half": 2000, "one": 4000, "oneHalf": 6000, "two": 8000},
+		Monthly:             map[string]float64{"quarter": 4200, "half": 8400, "one": 16800, "oneHalf": 25200, "two": 33600},
+		Weekly:              map[string]float64{"quarter": 1050, "half": 2100, "one": 4200, "oneHalf": 6300, "two": 8400},
 		Evaluate:            evaluateSP500Rule,
 	},
 	{
@@ -147,8 +147,8 @@ var etfRuleConfigs = []etfRuleConfig{
 		ValuationSourceName: "天天基金/东方财富515450分红TTM备援口径",
 		ValuationSourceURL:  "https://fundf10.eastmoney.com/fhsp_515450.html",
 		Levels:              etfRuleLevels,
-		Monthly:             map[string]float64{"quarter": 3000, "half": 6000, "one": 12000, "oneHalf": 18000, "two": 24000},
-		Weekly:              map[string]float64{"quarter": 750, "half": 1500, "one": 3000, "oneHalf": 4500, "two": 6000},
+		Monthly:             map[string]float64{"quarter": 4200, "half": 8400, "one": 16800, "oneHalf": 25200, "two": 33600},
+		Weekly:              map[string]float64{"quarter": 1050, "half": 2100, "one": 4200, "oneHalf": 6300, "two": 8400},
 		Evaluate:            evaluateDividendLowVolRule,
 	},
 	{
@@ -162,8 +162,8 @@ var etfRuleConfigs = []etfRuleConfig{
 		ValuationSourceName: "韭圈儿纳斯达克100 PE分位（优先；History of Market Forward PE备援）",
 		ValuationSourceURL:  fundDBIndexPageURL,
 		Levels:              etfRuleLevels,
-		Monthly:             map[string]float64{"quarter": 2000, "half": 4000, "one": 8000, "oneHalf": 12000, "two": 16000},
-		Weekly:              map[string]float64{"quarter": 500, "half": 1000, "one": 2000, "oneHalf": 3000, "two": 4000},
+		Monthly:             map[string]float64{"quarter": 2800, "half": 5600, "one": 11200, "oneHalf": 16800, "two": 22400},
+		Weekly:              map[string]float64{"quarter": 700, "half": 1400, "one": 2800, "oneHalf": 4200, "two": 5600},
 		Evaluate:            evaluateNasdaq100Rule,
 	},
 }

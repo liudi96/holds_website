@@ -102,6 +102,32 @@ func TestNormalizeNasdaqQuoteDate(t *testing.T) {
 	}
 }
 
+func TestETFRuleBaseAmountsKeepThreeThreeTwoTwoRatio(t *testing.T) {
+	wantMonthly := map[string]float64{
+		"008163": 16800,
+		"018738": 16800,
+		"022434": 11200,
+		"021000": 11200,
+	}
+	totalMonthly := 0.0
+	totalWeekly := 0.0
+	for _, config := range etfRuleConfigs {
+		monthly := config.Monthly["one"]
+		weekly := config.Weekly["one"]
+		if monthly != wantMonthly[config.Symbol] {
+			t.Fatalf("%s monthly one = %.0f, want %.0f", config.Symbol, monthly, wantMonthly[config.Symbol])
+		}
+		if weekly*4 != monthly {
+			t.Fatalf("%s weekly one %.0f does not reconcile with monthly %.0f", config.Symbol, weekly, monthly)
+		}
+		totalMonthly += monthly
+		totalWeekly += weekly
+	}
+	if totalMonthly != 56000 || totalWeekly != 14000 {
+		t.Fatalf("totals monthly=%.0f weekly=%.0f, want 56000/14000", totalMonthly, totalWeekly)
+	}
+}
+
 func TestParseMultplTable(t *testing.T) {
 	rows, err := parseMultplTable([]byte(`
 		<table>
@@ -475,7 +501,7 @@ func TestMergeETFRuleStatusUsesFreshPreviousMetric(t *testing.T) {
 	if strings.Contains(merged.Reason, "沿用上次成功值") {
 		t.Fatalf("reason should not expose fallback state, got %q", merged.Reason)
 	}
-	if !merged.Complete || merged.WeeklyAmount != 2500 || merged.MonthlyAmount != 10000 {
+	if !merged.Complete || merged.WeeklyAmount != 1400 || merged.MonthlyAmount != 5600 {
 		t.Fatalf("fresh fallback metrics should remain executable, got %+v", merged)
 	}
 }
@@ -517,8 +543,8 @@ func TestETFRuleStatusConfidenceAcceptsFreshCompleteMetrics(t *testing.T) {
 		Symbol:        "022434",
 		Level:         "half",
 		LevelLabel:    "0.5倍",
-		WeeklyAmount:  2500,
-		MonthlyAmount: 10000,
+		WeeklyAmount:  1400,
+		MonthlyAmount: 5600,
 		Complete:      true,
 		Metrics: []ETFRuleMetric{
 			{Key: "drawdown252", Label: "近252交易日回撤", Value: &drawdown, Unit: "%", AsOf: "2026-07-03", Available: true},
@@ -534,7 +560,7 @@ func TestETFRuleStatusConfidenceAcceptsFreshCompleteMetrics(t *testing.T) {
 		t.Fatalf("fresh complete metrics should have no issues, got %+v", issues)
 	}
 	checked := enforceETFRuleStatusConfidence(status, config, mustParseDate(t, "2026-07-06"))
-	if !checked.Complete || checked.WeeklyAmount != 2500 {
+	if !checked.Complete || checked.WeeklyAmount != 1400 {
 		t.Fatalf("fresh complete metrics should remain executable, got %+v", checked)
 	}
 }
@@ -550,8 +576,8 @@ func TestETFRuleStatusConfidenceRejectsStaleMetrics(t *testing.T) {
 		Symbol:        "022434",
 		Level:         "half",
 		LevelLabel:    "0.5倍",
-		WeeklyAmount:  2500,
-		MonthlyAmount: 10000,
+		WeeklyAmount:  1400,
+		MonthlyAmount: 5600,
 		Complete:      true,
 		Metrics: []ETFRuleMetric{
 			{Key: "drawdown252", Label: "近252交易日回撤", Value: &drawdown, Unit: "%", AsOf: "2026-06-20", Available: true},
