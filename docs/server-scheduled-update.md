@@ -16,10 +16,10 @@ sudo systemctl enable --now holds-market-update.timer
 
 默认每天执行两次：
 
-- 20:00：覆盖股票和 ETF 收盘数据。
-- 22:30：补一次较晚更新的基金净值。
+- 08:30：早盘前刷新一次行情、基金净值和 ETF 追踪状态。
+- 20:30：晚间补一次收盘后行情、基金净值和 ETF 追踪状态。
 
-如果只想每天 20:00 执行一次，删除 `deploy/holds-market-update.timer` 里的 `OnCalendar=*-*-* 22:30:00` 后重新复制并 `daemon-reload`。
+如果只想每天 20:30 执行一次，删除 `deploy/holds-market-update.timer` 里的 `OnCalendar=*-*-* 08:30:00` 后重新复制并 `daemon-reload`。
 
 ## 手动验证
 

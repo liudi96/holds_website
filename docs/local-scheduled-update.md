@@ -23,16 +23,16 @@ The script:
 Use two Windows Task Scheduler jobs, matching the cloud schedule:
 
 ```powershell
-schtasks /Create /TN "HoldsWebsiteMarketUpdate-2000" /SC DAILY /ST 20:00 /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"D:\program\oneshot\holds_website\scripts\update-market-data.ps1\"" /F
+schtasks /Create /TN "HoldsWebsiteMarketUpdate-0830" /SC DAILY /ST 08:30 /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"D:\program\oneshot\holds_website\scripts\update-market-data.ps1\"" /F
 
-schtasks /Create /TN "HoldsWebsiteMarketUpdate-2230" /SC DAILY /ST 22:30 /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"D:\program\oneshot\holds_website\scripts\update-market-data.ps1\"" /F
+schtasks /Create /TN "HoldsWebsiteMarketUpdate-2030" /SC DAILY /ST 20:30 /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"D:\program\oneshot\holds_website\scripts\update-market-data.ps1\"" /F
 ```
 
 ## Verify
 
 ```powershell
-schtasks /Query /TN "HoldsWebsiteMarketUpdate-2000"
-schtasks /Query /TN "HoldsWebsiteMarketUpdate-2230"
+schtasks /Query /TN "HoldsWebsiteMarketUpdate-0830"
+schtasks /Query /TN "HoldsWebsiteMarketUpdate-2030"
 PowerShell -NoProfile -ExecutionPolicy Bypass -File D:\program\oneshot\holds_website\scripts\update-market-data.ps1
 ```
 
