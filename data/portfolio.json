@@ -1,6 +1,6 @@
 {
   "totalCapital": 1150000,
-  "cash": 195784.16701442332,
+  "cash": 195284.16701442332,
   "fx": {
     "CNY": 1,
     "HKD": 0.8716,
@@ -188,6 +188,19 @@
       "currency": "CNY",
       "currentPrice": 2.313,
       "reason": "ETF追踪买入：南方纳斯达克100指数发起(QDII)I"
+    },
+    {
+      "id": 1783578303511,
+      "date": "2026-07-09",
+      "assetType": "fund",
+      "symbol": "018738",
+      "name": "博时标普500ETF联接E(人民币)",
+      "side": "buy",
+      "shares": 91.1095318792252,
+      "price": 5.4879,
+      "currency": "CNY",
+      "currentPrice": 5.4879,
+      "reason": "ETF追踪买入：博时标普500ETF联接E(人民币)"
     }
   ],
   "decisionLogs": [
@@ -479,6 +492,304 @@
       "decision": "买入 南方纳斯达克100指数发起(QDII)I",
       "discipline": "",
       "detail": "买入 432.34 fund shares; price CNY 2.3130; latest CNY 2.3130; reason: ETF追踪买入：南方纳斯达克100指数发起(QDII)I"
+    },
+    {
+      "id": 1783563706214257800,
+      "date": "2026-07-09 10:21:46",
+      "type": "financials",
+      "symbol": "000333.SZ",
+      "name": "美的集团",
+      "currency": "CNY",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富财务分析；年度 10 年；最新期 2025；收入 458502407000；利润 43945411000；ROE 19.70%；ROIC 12.36%；FCF 42204041000"
+    },
+    {
+      "id": 1783563709724398100,
+      "date": "2026-07-09 10:21:49",
+      "type": "financials",
+      "symbol": "600036.SH",
+      "name": "招商银行",
+      "currency": "CNY",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富财务分析；年度 10 年；最新期 2025；收入 337532000000；利润 150181000000；ROE 13.44%"
+    },
+    {
+      "id": 1783563713794842200,
+      "date": "2026-07-09 10:21:53",
+      "type": "financials",
+      "symbol": "0700.HK",
+      "name": "腾讯控股",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 751766000000；利润 224842000000；ROE 21.13%；ROIC 15.25%；FCF 215570000000"
+    },
+    {
+      "id": 1783563717852746300,
+      "date": "2026-07-09 10:21:57",
+      "type": "financials",
+      "symbol": "0696.HK",
+      "name": "中国民航信息网络",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 8765840085；利润 2341561691；ROE 10.12%；ROIC 11.41%；FCF 2080744520"
+    },
+    {
+      "id": 1783563721189267700,
+      "date": "2026-07-09 10:22:01",
+      "type": "financials",
+      "symbol": "0696.HK",
+      "name": "中国民航信息网络",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 8765840085；利润 2341561691；ROE 10.12%；ROIC 11.41%；FCF 2080744520"
+    },
+    {
+      "id": 1783563740944978400,
+      "date": "2026-07-09 10:22:20",
+      "type": "financials",
+      "symbol": "6049.HK",
+      "name": "保利物业",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 17126068000；利润 1549450000；ROE 15.30%；ROIC 22.17%；FCF 1782175000"
+    },
+    {
+      "id": 1783563746529773000,
+      "date": "2026-07-09 10:22:26",
+      "type": "financials",
+      "symbol": "9992.HK",
+      "name": "泡泡玛特",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 9 年；最新期 2025；收入 37120052000；利润 12775689000；ROE 77.52%；ROIC 130.69%；FCF 9879902000"
+    },
+    {
+      "id": 1783563750153613000,
+      "date": "2026-07-09 10:22:30",
+      "type": "financials",
+      "symbol": "1448.HK",
+      "name": "福寿园",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2024；收入 2077484000；利润 373134000；ROE 6.50%；ROIC 6.85%；FCF 630595000"
+    },
+    {
+      "id": 1783563754366814600,
+      "date": "2026-07-09 10:22:34",
+      "type": "financials",
+      "symbol": "7489.HK",
+      "name": "岚图汽车",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 4 年；最新期 2025；收入 34864815000；利润 1017378000；ROE 14.70%；ROIC 4.23%；FCF 1872302000"
+    },
+    {
+      "id": 1783564037561952200,
+      "date": "2026-07-09 10:27:17",
+      "type": "financials",
+      "symbol": "7489.HK",
+      "name": "岚图汽车",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 4 年；最新期 2025；收入 34864815000；利润 1017378000；ROE 14.70%；ROIC 4.23%；FCF 1872302000"
+    },
+    {
+      "id": 1783564062445339600,
+      "date": "2026-07-09 10:27:42",
+      "type": "financials",
+      "symbol": "7489.HK",
+      "name": "岚图汽车",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 4 年；最新期 2025；收入 34864815000；利润 1017378000；ROE 14.70%；ROIC 4.23%；FCF 1872302000"
+    },
+    {
+      "id": 1783564125023196600,
+      "date": "2026-07-09 10:28:45",
+      "type": "financials",
+      "symbol": "7489.HK",
+      "name": "岚图汽车",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 4 年；最新期 2025；收入 34864815000；利润 1017378000；ROE 14.70%；ROIC 4.23%；FCF 1872302000"
+    },
+    {
+      "id": 1783564205023319400,
+      "date": "2026-07-09 10:30:05",
+      "type": "financials",
+      "symbol": "7489.HK",
+      "name": "岚图汽车",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 4 年；最新期 2025；收入 34864815000；利润 1017378000；ROE 14.70%；ROIC 4.23%；FCF 1872302000"
+    },
+    {
+      "id": 1783564327927148500,
+      "date": "2026-07-09 10:32:07",
+      "type": "financials",
+      "symbol": "7489.HK",
+      "name": "岚图汽车",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 4 年；最新期 2025；收入 34864815000；利润 1017378000；ROE 14.70%；ROIC 4.23%；FCF 1872302000"
+    },
+    {
+      "id": 1783564939339690300,
+      "date": "2026-07-09 10:42:19",
+      "type": "financials",
+      "symbol": "7489.HK",
+      "name": "岚图汽车",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 4 年；最新期 2025；收入 34864815000；利润 1017378000；ROE 14.70%；ROIC 4.23%；FCF 1872302000"
+    },
+    {
+      "id": 1783565143054336800,
+      "date": "2026-07-09 10:45:43",
+      "type": "financials",
+      "symbol": "7489.HK",
+      "name": "岚图汽车",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 4 年；最新期 2025；收入 34864815000；利润 1017378000；ROE 14.70%；ROIC 4.23%；FCF 1872302000"
+    },
+    {
+      "id": 1783565266041436900,
+      "date": "2026-07-09 10:47:46",
+      "type": "financials",
+      "symbol": "000333.SZ",
+      "name": "美的集团",
+      "currency": "CNY",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富财务分析；年度 10 年；最新期 2025；收入 458502407000；利润 43945411000；ROE 19.70%；ROIC 12.36%；FCF 42204041000"
+    },
+    {
+      "id": 1783565269815116600,
+      "date": "2026-07-09 10:47:49",
+      "type": "financials",
+      "symbol": "600036.SH",
+      "name": "招商银行",
+      "currency": "CNY",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富财务分析；年度 10 年；最新期 2025；收入 337532000000；利润 150181000000；ROE 13.44%"
+    },
+    {
+      "id": 1783565272505305300,
+      "date": "2026-07-09 10:47:52",
+      "type": "financials",
+      "symbol": "0700.HK",
+      "name": "腾讯控股",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 751766000000；利润 224842000000；ROE 21.13%；ROIC 15.25%；FCF 215570000000"
+    },
+    {
+      "id": 1783565273752960200,
+      "date": "2026-07-09 10:47:53",
+      "type": "financials",
+      "symbol": "0700.HK",
+      "name": "腾讯控股",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 751766000000；利润 224842000000；ROE 21.13%；ROIC 15.25%；FCF 215570000000"
+    },
+    {
+      "id": 1783565276172567400,
+      "date": "2026-07-09 10:47:56",
+      "type": "financials",
+      "symbol": "0696.HK",
+      "name": "中国民航信息网络",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 8765840085；利润 2341561691；ROE 10.12%；ROIC 11.41%；FCF 2080744520"
+    },
+    {
+      "id": 1783565278970915800,
+      "date": "2026-07-09 10:47:58",
+      "type": "financials",
+      "symbol": "6049.HK",
+      "name": "保利物业",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2025；收入 17126068000；利润 1549450000；ROE 15.30%；ROIC 22.17%；FCF 1782175000"
+    },
+    {
+      "id": 1783565291121690600,
+      "date": "2026-07-09 10:48:11",
+      "type": "financials",
+      "symbol": "9992.HK",
+      "name": "泡泡玛特",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 9 年；最新期 2025；收入 37120052000；利润 12775689000；ROE 77.52%；ROIC 130.69%；FCF 9879902000"
+    },
+    {
+      "id": 1783565294647173000,
+      "date": "2026-07-09 10:48:14",
+      "type": "financials",
+      "symbol": "9926.HK",
+      "name": "康方生物",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 9 年；最新期 2025；收入 3056275000；利润 -1113025000；ROE -14.03%；ROIC -16.89%；FCF -1724533000"
+    },
+    {
+      "id": 1783565299381207800,
+      "date": "2026-07-09 10:48:19",
+      "type": "financials",
+      "symbol": "1448.HK",
+      "name": "福寿园",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 10 年；最新期 2024；收入 2077484000；利润 373134000；ROE 6.50%；ROIC 6.85%；FCF 630595000"
+    },
+    {
+      "id": 1783565303187239200,
+      "date": "2026-07-09 10:48:23",
+      "type": "financials",
+      "symbol": "7489.HK",
+      "name": "岚图汽车",
+      "currency": "HKD",
+      "decision": "更新多年财务数据",
+      "discipline": "三大师视角使用结构化财务数据复核质量、成长、杠杆和估值",
+      "detail": "来源 东方财富港股财务分析；年度 4 年；最新期 2025；收入 34864815000；利润 1017378000；ROE 14.70%；ROIC 4.23%；FCF 1872302000"
+    },
+    {
+      "id": 1783578303515904500,
+      "date": "2026-07-09 14:25:03",
+      "type": "trade",
+      "symbol": "018738",
+      "name": "博时标普500ETF联接E(人民币)",
+      "price": 5.4879,
+      "currency": "CNY",
+      "decision": "买入 博时标普500ETF联接E(人民币)",
+      "discipline": "",
+      "detail": "买入 91.11 fund shares; price CNY 5.4879; latest CNY 5.4879; reason: ETF追踪买入：博时标普500ETF联接E(人民币)"
     }
   ],
   "pnlHistory": [
@@ -490,17 +801,27 @@
       "stockValueCny": 452625.22,
       "fundValueCny": 34100,
       "totalValueCny": 486725.22,
-      "updatedAt": "2026-07-08 23:18:58"
+      "updatedAt": "2026-07-09 15:22:53"
     },
     {
       "date": "2026-07-08",
-      "pnlCny": 7796.94,
+      "pnlCny": 7300.94,
       "stockPnlCny": 7285.43,
-      "fundPnlCny": 511.51,
-      "stockValueCny": 485221.91,
-      "fundValueCny": 38826.09,
-      "totalValueCny": 524048,
-      "updatedAt": "2026-07-08 23:20:15"
+      "fundPnlCny": 15.51,
+      "stockValueCny": 459910.65,
+      "fundValueCny": 4230.09,
+      "totalValueCny": 464140.74,
+      "updatedAt": "2026-07-09 15:22:53"
+    },
+    {
+      "date": "2026-07-09",
+      "pnlCny": -7060.28,
+      "stockPnlCny": -6564.28,
+      "fundPnlCny": -496,
+      "stockValueCny": 478657.63,
+      "fundValueCny": 34100,
+      "totalValueCny": 512757.63,
+      "updatedAt": "2026-07-09 15:22:53"
     }
   ],
   "stocks": [
@@ -509,7 +830,7 @@
       "name": "美的集团",
       "status": "持仓达标但新增买入安全边际不足",
       "action": "继续持有；当前不追买；等待75元附近复核，70.5元以下才更符合新增买入纪律",
-      "marginOfSafety": 0.15521276595744685,
+      "marginOfSafety": 0.15606382978723407,
       "qualityScore": 89,
       "risk": "2026Q1扣非利润下滑、家电补贴退坡、白电价格战、原材料和汇率波动、海外关税、H股可转债潜在摊薄、ToB业务利润率验证不足",
       "industry": "家电/智能制造/楼宇科技/机器人与自动化",
@@ -593,7 +914,7 @@
         "fiscalYear": "FY2025",
         "dividendPerShare": 4.3,
         "dividendCurrency": "CNY",
-        "cashDividendTotal": 32737781250,
+        "cashDividendTotal": 32737800075.72889,
         "cashDividendCurrency": "CNY",
         "buybackAmount": 12999947297,
         "buybackCurrency": "CNY",
@@ -647,7 +968,7 @@
         }
       },
       "financials": {
-        "updatedAt": "2026-05-14 19:43:51",
+        "updatedAt": "2026-07-09 10:47:44",
         "source": "东方财富财务分析",
         "sourceSymbol": "000333.SZ",
         "currency": "CNY",
@@ -688,8 +1009,8 @@
             "inventoryTurnoverDays": 72.718022985523,
             "receivableTurnoverDays": 30.068530466367,
             "dividendPaid": 33080135000,
-            "peAtCurrentPrice": 14.105171992860992,
-            "pbAtCurrentPrice": 2.7843328570374335
+            "peAtCurrentPrice": 13.660344827586208,
+            "pbAtCurrentPrice": 2.6965248606085868
           },
           {
             "fiscalYear": "2024",
@@ -726,8 +1047,8 @@
             "inventoryTurnoverDays": 71.03263159744,
             "receivableTurnoverDays": 30.364928124698,
             "dividendPaid": 22821861000,
-            "peAtCurrentPrice": 15.038602492388556,
-            "pbAtCurrentPrice": 2.8896589479037593
+            "peAtCurrentPrice": 14.564338235294118,
+            "pbAtCurrentPrice": 2.7985293396254964
           },
           {
             "fiscalYear": "2023",
@@ -765,8 +1086,8 @@
             "inventoryTurnoverDays": 66.376996131439,
             "receivableTurnoverDays": 29.572542192547,
             "dividendPaid": 19643828000,
-            "peAtCurrentPrice": 16.594319991601168,
-            "pbAtCurrentPrice": 3.5288696657607326
+            "peAtCurrentPrice": 16.070993914807303,
+            "pbAtCurrentPrice": 3.4175816154740004
           },
           {
             "fiscalYear": "2022",
@@ -804,8 +1125,8 @@
             "inventoryTurnoverDays": 69.28920030195,
             "receivableTurnoverDays": 27.673478325826,
             "dividendPaid": 13740037000,
-            "peAtCurrentPrice": 18.850229852210543,
-            "pbAtCurrentPrice": 4.004938901467286
+            "peAtCurrentPrice": 18.255760368663594,
+            "pbAtCurrentPrice": 3.8786373136851537
           },
           {
             "fiscalYear": "2021",
@@ -842,8 +1163,8 @@
             "inventoryTurnoverDays": 57.200549727437,
             "receivableTurnoverDays": 25.116736410954,
             "dividendPaid": 12894125000,
-            "peAtCurrentPrice": 19.618704450502097,
-            "pbAtCurrentPrice": 4.5773954590921
+            "peAtCurrentPrice": 19,
+            "pbAtCurrentPrice": 4.433040619077377
           },
           {
             "fiscalYear": "2020",
@@ -881,8 +1202,8 @@
             "inventoryTurnoverDays": 55.425773250471,
             "receivableTurnoverDays": 26.372386956896,
             "dividendPaid": 12822636000,
-            "peAtCurrentPrice": 20.816793271906807,
-            "pbAtCurrentPrice": 4.89398079378094
+            "peAtCurrentPrice": 20.16030534351145,
+            "pbAtCurrentPrice": 4.739641973629817
           },
           {
             "fiscalYear": "2019",
@@ -919,8 +1240,8 @@
             "inventoryTurnoverDays": 56.468562738039,
             "receivableTurnoverDays": 24.620145216155,
             "dividendPaid": 11055769000,
-            "peAtCurrentPrice": 22.724999321831596,
-            "pbAtCurrentPrice": 5.610070006957327
+            "peAtCurrentPrice": 22.008333333333333,
+            "pbAtCurrentPrice": 5.433148269352783
           },
           {
             "fiscalYear": "2018",
@@ -958,8 +1279,8 @@
             "inventoryTurnoverDays": 56.525273885665,
             "receivableTurnoverDays": 25.592224545473,
             "dividendPaid": 9303222000,
-            "peAtCurrentPrice": 26.561687519023945,
-            "pbAtCurrentPrice": 6.561799266589373
+            "peAtCurrentPrice": 25.724025974025974,
+            "pbAtCurrentPrice": 6.354863359084209
           },
           {
             "fiscalYear": "2017",
@@ -996,8 +1317,8 @@
             "inventoryTurnoverDays": 44.956037483471,
             "receivableTurnoverDays": 23.16865825648,
             "dividendPaid": 7908056000,
-            "peAtCurrentPrice": 30.75563817992246,
-            "pbAtCurrentPrice": 7.279338037092304
+            "peAtCurrentPrice": 29.785714285714285,
+            "pbAtCurrentPrice": 7.049773498229855
           },
           {
             "fiscalYear": "2016",
@@ -1035,27 +1356,27 @@
             "inventoryTurnoverDays": 40.597088432058,
             "receivableTurnoverDays": 26.96562029633,
             "dividendPaid": 6046355000,
-            "peAtCurrentPrice": 35.724889763578055,
-            "pbAtCurrentPrice": 8.64417324754761
+            "peAtCurrentPrice": 34.59825327510917,
+            "pbAtCurrentPrice": 8.37156664028349
           }
         ],
         "valuation": {
           "date": "2025-12-31",
-          "price": 81.80999755859375,
+          "price": 79.23,
           "currency": "CNY",
-          "pe": 14.105171992860992,
-          "pb": 2.7843328570374335,
-          "peg": 1.0050977576066185,
-          "dividendYield": 0.052560813205259724,
+          "pe": 13.660344827586208,
+          "pb": 2.6965248606085868,
+          "peg": 0.9734005343067904,
+          "dividendYield": 0.05427237157642307,
           "peRange": {
-            "min": 14.105171992860992,
-            "median": 20.217748861204452,
-            "max": 35.724889763578055
+            "min": 13.660344827586208,
+            "median": 19.580152671755727,
+            "max": 34.59825327510917
           },
           "pbRange": {
-            "min": 2.7843328570374335,
-            "median": 4.73568812643652,
-            "max": 8.64417324754761
+            "min": 2.6965248606085868,
+            "median": 4.586341296353597,
+            "max": 8.37156664028349
           },
           "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
         }
@@ -1070,7 +1391,7 @@
       "name": "招商银行",
       "status": "持仓；核心替补/等待",
       "action": "已有持仓继续持有；新资金暂不追买，等待¥34-36再复核分批，接近或低于¥33.75才进入正式买入区",
-      "marginOfSafety": 0.15688888888888894,
+      "marginOfSafety": 0.16555555555555562,
       "qualityScore": 88,
       "risk": "净息差下行、信用卡与消费贷资产质量、房地产与地方债链条、低利率环境、政策性让利和银行估值中枢下移需折价",
       "industry": "银行/零售银行/财富管理",
@@ -1154,7 +1475,7 @@
         "fiscalYear": "FY2025",
         "dividendPerShare": 2.016,
         "dividendCurrency": "CNY",
-        "cashDividendTotal": 50843220779.22079,
+        "cashDividendTotal": 50843208938.54748,
         "cashDividendCurrency": "CNY",
         "buybackCurrency": "CNY",
         "payoutRatio": 0.35,
@@ -1192,7 +1513,7 @@
         }
       },
       "financials": {
-        "updatedAt": "2026-05-11 21:34:42",
+        "updatedAt": "2026-07-09 10:47:49",
         "source": "东方财富财务分析",
         "sourceSymbol": "600036.SH",
         "currency": "CNY",
@@ -1211,12 +1532,13 @@
             "bookValuePerShare": 43.43,
             "dividendPerShare": 2.016,
             "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "totalLiabilities": 11789624000000,
             "debtRatio": 0.902000937529,
             "roe": 0.1344,
             "netMargin": 0.44773828851799996,
-            "peAtCurrentPrice": 6.661403722930372,
-            "pbAtCurrentPrice": 0.8742804794083151
+            "peAtCurrentPrice": 6.594736842105264,
+            "pbAtCurrentPrice": 0.8655307391204238
           },
           {
             "fiscalYear": "2024",
@@ -1232,12 +1554,13 @@
             "bookValuePerShare": 41.46,
             "dividendPerShare": 2,
             "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "totalLiabilities": 10918561000000,
             "debtRatio": 0.898496433026,
             "roe": 0.1449,
             "netMargin": 0.44315353434800003,
-            "peAtCurrentPrice": 6.7084807810429545,
-            "pbAtCurrentPrice": 0.9158225089412234
+            "peAtCurrentPrice": 6.641342756183746,
+            "pbAtCurrentPrice": 0.9066570188133141
           },
           {
             "fiscalYear": "2023",
@@ -1253,12 +1576,13 @@
             "bookValuePerShare": 36.71,
             "dividendPerShare": 1.972,
             "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "totalLiabilities": 9942754000000,
             "debtRatio": 0.9015522805809999,
             "roe": 0.16219999999999998,
             "netMargin": 0.436437516771,
-            "peAtCurrentPrice": 6.744227570284747,
-            "pbAtCurrentPrice": 1.0343231059848303
+            "peAtCurrentPrice": 6.676731793960925,
+            "pbAtCurrentPrice": 1.023971669844729
           },
           {
             "fiscalYear": "2022",
@@ -1274,12 +1598,13 @@
             "bookValuePerShare": 32.71,
             "dividendPerShare": 1.738,
             "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "totalLiabilities": 9184674000000,
             "debtRatio": 0.905883589876,
             "roe": 0.17059999999999997,
             "netMargin": 0.404004837826,
-            "peAtCurrentPrice": 7.218631410780062,
-            "pbAtCurrentPrice": 1.1608071299511808
+            "peAtCurrentPrice": 7.146387832699621,
+            "pbAtCurrentPrice": 1.1491898501987161
           },
           {
             "fiscalYear": "2021",
@@ -1295,12 +1620,13 @@
             "bookValuePerShare": 29.01,
             "dividendPerShare": 1.522,
             "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "totalLiabilities": 8383340000000,
             "debtRatio": 0.9064029587560001,
             "roe": 0.1696,
             "netMargin": 0.36477858313699996,
-            "peAtCurrentPrice": 8.236442781063584,
-            "pbAtCurrentPrice": 1.3088590562117588
+            "peAtCurrentPrice": 8.154013015184383,
+            "pbAtCurrentPrice": 1.295760082730093
           },
           {
             "fiscalYear": "2020",
@@ -1316,12 +1642,13 @@
             "bookValuePerShare": 25.36,
             "dividendPerShare": 1.253,
             "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "totalLiabilities": 7631094000000,
             "debtRatio": 0.9126522104779999,
             "roe": 0.1573,
             "netMargin": 0.33722915705600004,
-            "peAtCurrentPrice": 10.018469979077341,
-            "pbAtCurrentPrice": 1.4972397957690506
+            "peAtCurrentPrice": 9.918205804749341,
+            "pbAtCurrentPrice": 1.482255520504732
           },
           {
             "fiscalYear": "2019",
@@ -1337,12 +1664,13 @@
             "bookValuePerShare": 22.89,
             "dividendPerShare": 1.2,
             "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "totalLiabilities": 6799533000000,
             "debtRatio": 0.9167201007379999,
             "roe": 0.1684,
             "netMargin": 0.34639214246800004,
-            "peAtCurrentPrice": 10.488950613453902,
-            "pbAtCurrentPrice": 1.6588030240586773
+            "peAtCurrentPrice": 10.383977900552487,
+            "pbAtCurrentPrice": 1.6422018348623855
           },
           {
             "fiscalYear": "2018",
@@ -1358,12 +1686,13 @@
             "bookValuePerShare": 20.07,
             "dividendPerShare": 0.9400000000000001,
             "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "totalLiabilities": 6202124000000,
             "debtRatio": 0.9194149364730001,
             "roe": 0.16570000000000001,
             "netMargin": 0.32515539820199996,
-            "peAtCurrentPrice": 12.130990805336461,
-            "pbAtCurrentPrice": 1.8918784863329907
+            "peAtCurrentPrice": 12.009584664536742,
+            "pbAtCurrentPrice": 1.8729446935724965
           },
           {
             "fiscalYear": "2017",
@@ -1379,12 +1708,13 @@
             "bookValuePerShare": 17.69,
             "dividendPerShare": 0.8400000000000001,
             "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "totalLiabilities": 5814246000000,
             "debtRatio": 0.923242333078,
             "roe": 0.1654,
             "netMargin": 0.31977799608,
-            "peAtCurrentPrice": 13.658273820396808,
-            "pbAtCurrentPrice": 2.1464104703619626
+            "peAtCurrentPrice": 13.521582733812952,
+            "pbAtCurrentPrice": 2.124929338609384
           },
           {
             "fiscalYear": "2016",
@@ -1400,31 +1730,32 @@
             "bookValuePerShare": 15.95,
             "dividendPerShare": 0.74,
             "dividendCurrency": "CNY",
+            "buybackCurrency": "CNY",
             "totalLiabilities": 5538949000000,
             "debtRatio": 0.932120348464,
             "roe": 0.16269999999999998,
             "netMargin": 0.297444211329,
-            "peAtCurrentPrice": 15.434959845814278,
-            "pbAtCurrentPrice": 2.3805643398559955
+            "peAtCurrentPrice": 15.280487804878051,
+            "pbAtCurrentPrice": 2.356739811912226
           }
         ],
         "valuation": {
           "date": "2025-12-31",
-          "price": 37.970001220703125,
+          "price": 37.59,
           "currency": "CNY",
-          "pe": 6.661403722930372,
-          "pb": 0.8742804794083151,
-          "peg": 5.522303686307357,
-          "dividendYield": 0.05309454662068267,
+          "pe": 6.594736842105264,
+          "pb": 0.8655307391204238,
+          "peg": 5.4670368421033615,
+          "dividendYield": 0.05363128491620111,
           "peRange": {
-            "min": 6.661403722930372,
-            "median": 9.127456380070463,
-            "max": 15.434959845814278
+            "min": 6.594736842105264,
+            "median": 9.036109409966862,
+            "max": 15.280487804878051
           },
           "pbRange": {
-            "min": 0.8742804794083151,
-            "median": 1.4030494259904047,
-            "max": 2.3805643398559955
+            "min": 0.8655307391204238,
+            "median": 1.3890078016174126,
+            "max": 2.356739811912226
           },
           "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
         }
@@ -1439,7 +1770,7 @@
       "name": "腾讯控股",
       "status": "持仓观察（安全边际约13%，未达新增买入门槛）",
       "action": "继续持有；新资金暂不追买；等待2026Q1财报后复核，HK$400-430再考虑分批加仓",
-      "marginOfSafety": 0.1050467289719626,
+      "marginOfSafety": 0.12261682242990658,
       "qualityScore": 89,
       "risk": "AI资本开支和研发投入上升、2026年回购可能低于2025年、平台监管、地缘风险、广告和游戏周期波动需折价",
       "industry": "互联网平台/游戏/广告/金融科技",
@@ -1515,7 +1846,7 @@
         "fiscalYear": "FY2025",
         "dividendPerShare": 5.3,
         "dividendCurrency": "HKD",
-        "cashDividendTotal": 48189564752.21239,
+        "cashDividendTotal": 48190336284.17564,
         "cashDividendCurrency": "HKD",
         "buybackAmount": 78181000000,
         "buybackCurrency": "HKD",
@@ -1569,7 +1900,7 @@
         }
       },
       "financials": {
-        "updatedAt": "2026-05-14 19:43:32",
+        "updatedAt": "2026-07-09 10:47:53",
         "source": "东方财富港股财务分析",
         "sourceSymbol": "00700.HK",
         "currency": "HKD",
@@ -1589,7 +1920,7 @@
             "capitalExpenditure": 87482000000,
             "freeCashFlow": 215570000000,
             "eps": 24.749,
-            "bookValuePerShare": 126.579629163415,
+            "bookValuePerShare": 126.934279061592,
             "dividendPerShare": 5.3,
             "dividendCurrency": "HKD",
             "buybackAmount": 78181000000,
@@ -1609,8 +1940,8 @@
             "operatingMargin": 0.32132605092542094,
             "netMargin": 0.305681555165,
             "dividendPaid": 39907000000,
-            "peAtCurrentPrice": 18.59469118780683,
-            "pbAtCurrentPrice": 3.635656189298125
+            "peAtCurrentPrice": 19.507858903390037,
+            "pbAtCurrentPrice": 3.8035430899302796
           },
           {
             "fiscalYear": "2024",
@@ -1627,7 +1958,7 @@
             "capitalExpenditure": 62927000000,
             "freeCashFlow": 195594000000,
             "eps": 20.938,
-            "bookValuePerShare": 106.772197087372,
+            "bookValuePerShare": 107.071350664258,
             "dividendPerShare": 4.5,
             "dividendCurrency": "HKD",
             "buybackAmount": 105751000000,
@@ -1647,8 +1978,8 @@
             "operatingMargin": 0.315178786442249,
             "netMargin": 0.29756140412,
             "dividendPaid": 31244000000,
-            "peAtCurrentPrice": 21.979177199686276,
-            "pbAtCurrentPrice": 4.3101109161446605
+            "peAtCurrentPrice": 23.058553825580287,
+            "pbAtCurrentPrice": 4.509142707220613
           },
           {
             "fiscalYear": "2023",
@@ -1665,7 +1996,7 @@
             "capitalExpenditure": 21008000000,
             "freeCashFlow": 200954000000,
             "eps": 12.186,
-            "bookValuePerShare": 88.680822738145,
+            "bookValuePerShare": 88.929288031985,
             "dividendPerShare": 3.4,
             "dividendCurrency": "HKD",
             "buybackAmount": 48145000000,
@@ -1685,8 +2016,8 @@
             "operatingMargin": 0.262840816728652,
             "netMargin": 0.19383430621599998,
             "dividendPaid": 21788000000,
-            "peAtCurrentPrice": 37.764648958397444,
-            "pbAtCurrentPrice": 5.189397188678559
+            "peAtCurrentPrice": 39.619235187920566,
+            "pbAtCurrentPrice": 5.429032557039616
           },
           {
             "fiscalYear": "2022",
@@ -1703,7 +2034,7 @@
             "capitalExpenditure": 22679000000,
             "freeCashFlow": 123412000000,
             "eps": 19.757,
-            "bookValuePerShare": 79.117313197764,
+            "bookValuePerShare": 79.338983519087,
             "dividendPerShare": 20.529999999999998,
             "dividendCurrency": "HKD",
             "buybackAmount": 32189000000,
@@ -1723,8 +2054,8 @@
             "operatingMargin": 0.19984960833249182,
             "netMargin": 0.34029090148400004,
             "dividendPaid": 15117000000,
-            "peAtCurrentPrice": 23.293010690237953,
-            "pbAtCurrentPrice": 5.816678974634812
+            "peAtCurrentPrice": 24.436908437515815,
+            "pbAtCurrentPrice": 6.085280886965867
           },
           {
             "fiscalYear": "2021",
@@ -1741,7 +2072,7 @@
             "capitalExpenditure": 29302000000,
             "freeCashFlow": 145884000000,
             "eps": 23.597,
-            "bookValuePerShare": 88.429451592886,
+            "bookValuePerShare": 88.677212596853,
             "dividendPerShare": 1.6,
             "dividendCurrency": "HKD",
             "buybackAmount": 4997000000,
@@ -1761,8 +2092,8 @@
             "operatingMargin": 0.4730610335679268,
             "netMargin": 0.40671787016300004,
             "dividendPaid": 13906000000,
-            "peAtCurrentPrice": 19.502479646015647,
-            "pbAtCurrentPrice": 5.20414866220943
+            "peAtCurrentPrice": 20.46022799508412,
+            "pbAtCurrentPrice": 5.444465222366876
           },
           {
             "fiscalYear": "2020",
@@ -1779,7 +2110,7 @@
             "capitalExpenditure": 34070000000,
             "freeCashFlow": 160049000000,
             "eps": 16.844,
-            "bookValuePerShare": 77.208230507747,
+            "bookValuePerShare": 77.424551974866,
             "dividendPerShare": 1.6,
             "dividendCurrency": "HKD",
             "buybackAmount": 1865000000,
@@ -1799,8 +2130,8 @@
             "operatingMargin": 0.3677519997344751,
             "netMargin": 0.332165438614,
             "dividendPaid": 11418000000,
-            "peAtCurrentPrice": 27.32130207830867,
-            "pbAtCurrentPrice": 5.9605045884435235
+            "peAtCurrentPrice": 28.663025409641413,
+            "pbAtCurrentPrice": 6.235748062923622
           },
           {
             "fiscalYear": "2019",
@@ -1816,7 +2147,7 @@
             "operatingCashFlowToRevenue": 0.39383602490398606,
             "freeCashFlow": 148590000000,
             "eps": 9.856,
-            "bookValuePerShare": 47.456283935552,
+            "bookValuePerShare": 47.589246611907,
             "dividendPerShare": 1.2,
             "dividendCurrency": "HKD",
             "buybackCurrency": "HKD",
@@ -1834,8 +2165,8 @@
             "grossMargin": 0.44404422074325,
             "operatingMargin": 0.2978618512599095,
             "netMargin": 0.254150001723,
-            "peAtCurrentPrice": 46.6923713684082,
-            "pbAtCurrentPrice": 9.697346147709455
+            "peAtCurrentPrice": 48.98538961038961,
+            "pbAtCurrentPrice": 10.145149048844193
           },
           {
             "fiscalYear": "2018",
@@ -1851,7 +2182,7 @@
             "operatingCashFlowToRevenue": 0.3547749557074968,
             "freeCashFlow": 110936000000,
             "eps": 8.336,
-            "bookValuePerShare": 35.480401048264,
+            "bookValuePerShare": 35.579809781741,
             "dividendPerShare": 1,
             "dividendCurrency": "HKD",
             "buybackCurrency": "HKD",
@@ -1869,8 +2200,8 @@
             "grossMargin": 0.45450184525447,
             "operatingMargin": 0.2976680077008193,
             "netMargin": 0.255790005565,
-            "peAtCurrentPrice": 55.206335437503746,
-            "pbAtCurrentPrice": 12.970541442894657
+            "peAtCurrentPrice": 57.91746641074856,
+            "pbAtCurrentPrice": 13.56949356844975
           },
           {
             "fiscalYear": "2017",
@@ -1886,7 +2217,7 @@
             "operatingCashFlowToRevenue": 0.44641655450874834,
             "freeCashFlow": 106140000000,
             "eps": 7.598,
-            "bookValuePerShare": 28.084474106004,
+            "bookValuePerShare": 28.163160984358,
             "dividendPerShare": 0.88,
             "dividendCurrency": "HKD",
             "buybackCurrency": "HKD",
@@ -1904,8 +2235,8 @@
             "grossMargin": 0.49177742261104,
             "operatingMargin": 0.36323183041722745,
             "netMargin": 0.304807368775,
-            "peAtCurrentPrice": 60.56857228310493,
-            "pbAtCurrentPrice": 16.386278428074537
+            "peAtCurrentPrice": 63.5430376414846,
+            "pbAtCurrentPrice": 17.142962051317685
           },
           {
             "fiscalYear": "2016",
@@ -1920,7 +2251,7 @@
             "operatingCashFlowToRevenue": 0.43121536416169753,
             "freeCashFlow": 65518000000,
             "eps": 4.383,
-            "bookValuePerShare": 19.15158589426,
+            "bookValuePerShare": 19.205244670417,
             "dividendPerShare": 0.61,
             "dividendCurrency": "HKD",
             "buybackCurrency": "HKD",
@@ -1932,27 +2263,27 @@
             "roic": 0.16910200437002998,
             "grossMargin": 0.55614132080191,
             "netMargin": 0.272788900736,
-            "peAtCurrentPrice": 104.99658047160193,
-            "pbAtCurrentPrice": 24.029342256453013
+            "peAtCurrentPrice": 110.15286333561488,
+            "pbAtCurrentPrice": 25.1389663753509
           }
         ],
         "valuation": {
           "date": "2025-12-31",
-          "price": 460.20001220703125,
+          "price": 482.8,
           "currency": "HKD",
-          "pe": 18.59469118780683,
-          "pb": 3.635656189298125,
-          "peg": 1.1728452347785252,
-          "dividendYield": 0.01151673155022794,
+          "pe": 19.507858903390037,
+          "pb": 3.8035430899302796,
+          "peg": 1.2304425561299899,
+          "dividendYield": 0.010977630488815244,
           "peRange": {
-            "min": 18.59469118780683,
-            "median": 32.54297551835306,
-            "max": 104.99658047160193
+            "min": 19.507858903390037,
+            "median": 34.14113029878099,
+            "max": 110.15286333561488
           },
           "pbRange": {
-            "min": 3.635656189298125,
-            "median": 5.8885917815391675,
-            "max": 24.029342256453013
+            "min": 3.8035430899302796,
+            "median": 6.160514474944744,
+            "max": 25.1389663753509
           },
           "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
         }
@@ -1967,7 +2298,7 @@
       "name": "中国民航信息网络",
       "status": "核心替补/中等优先级（长期股东达标，安全边际未达买入纪律）",
       "action": "继续持有；暂不追买；等待≤HK$9.4再考虑分批，≤HK$8.8安全边际更充分",
-      "marginOfSafety": 0.3264,
+      "marginOfSafety": 0.34,
       "qualityScore": 82,
       "risk": "增长弹性不足、机场数字化项目波动、政策定价、税收优惠续期、网络安全、国企资本配置折价需持续跟踪",
       "industry": "民航IT/航空信息网络/交易清算/机场数字化",
@@ -2020,7 +2351,7 @@
         "fiscalYear": "FY2025",
         "dividendPerShare": 0.276,
         "dividendCurrency": "CNY",
-        "cashDividendTotal": 807633876.3636365,
+        "cashDividendTotal": 807633897.4970204,
         "cashDividendCurrency": "CNY",
         "buybackCurrency": "CNY",
         "payoutRatio": 0.345,
@@ -2072,7 +2403,7 @@
         }
       },
       "financials": {
-        "updatedAt": "2026-05-11 21:54:07",
+        "updatedAt": "2026-07-09 10:47:55",
         "source": "东方财富港股财务分析",
         "sourceSymbol": "00696.HK",
         "currency": "HKD",
@@ -2111,8 +2442,8 @@
             "operatingMargin": 0.29429635428906253,
             "netMargin": 0.27446356212,
             "dividendPaid": 744218133.73,
-            "peAtCurrentPrice": 12.437499761581421,
-            "pbAtCurrentPrice": 1.2139789533825747
+            "peAtCurrentPrice": 10.4875,
+            "pbAtCurrentPrice": 1.0236465943844115
           },
           {
             "fiscalYear": "2024",
@@ -2148,8 +2479,8 @@
             "operatingMargin": 0.24766259781000857,
             "netMargin": 0.241251040701,
             "dividendPaid": 517761079.9,
-            "peAtCurrentPrice": 14.014084238401601,
-            "pbAtCurrentPrice": 1.3053578918889193
+            "peAtCurrentPrice": 11.816901408450706,
+            "pbAtCurrentPrice": 1.100698786220067
           },
           {
             "fiscalYear": "2023",
@@ -2185,8 +2516,8 @@
             "operatingMargin": 0.20911138695687037,
             "netMargin": 0.207317829299,
             "dividendPaid": 183564374.2,
-            "peAtCurrentPrice": 20.729166269302368,
-            "pbAtCurrentPrice": 1.422285014253242
+            "peAtCurrentPrice": 17.479166666666668,
+            "pbAtCurrentPrice": 1.1992936179227944
           },
           {
             "fiscalYear": "2022",
@@ -2222,8 +2553,8 @@
             "operatingMargin": 0.10981426003570413,
             "netMargin": 0.13037689330399999,
             "dividendPaid": 196290701.67,
-            "peAtCurrentPrice": 47.38095147269113,
-            "pbAtCurrentPrice": 1.5141996139151317
+            "peAtCurrentPrice": 39.952380952380956,
+            "pbAtCurrentPrice": 1.2767974878671104
           },
           {
             "fiscalYear": "2021",
@@ -2259,8 +2590,8 @@
             "operatingMargin": 0.10341260345175318,
             "netMargin": 0.111593293346,
             "dividendPaid": 73525697.6,
-            "peAtCurrentPrice": 52.36842004876387,
-            "pbAtCurrentPrice": 1.5519929218210178
+            "peAtCurrentPrice": 44.15789473684211,
+            "pbAtCurrentPrice": 1.3086654134358249
           },
           {
             "fiscalYear": "2020",
@@ -2296,8 +2627,8 @@
             "operatingMargin": 0.040790786292666255,
             "netMargin": 0.075094516135,
             "dividendPaid": 841148818.86,
-            "peAtCurrentPrice": 82.91666507720947,
-            "pbAtCurrentPrice": 1.5913916259442682
+            "peAtCurrentPrice": 69.91666666666667,
+            "pbAtCurrentPrice": 1.3418870349363872
           },
           {
             "fiscalYear": "2019",
@@ -2333,8 +2664,8 @@
             "operatingMargin": 0.33151111758997087,
             "netMargin": 0.320422528708,
             "dividendPaid": 866110319.11,
-            "peAtCurrentPrice": 11.436781389959927,
-            "pbAtCurrentPrice": 1.5505920530994466
+            "peAtCurrentPrice": 9.64367816091954,
+            "pbAtCurrentPrice": 1.3074841783806206
           },
           {
             "fiscalYear": "2018",
@@ -2368,8 +2699,8 @@
             "operatingMargin": 0.31040653287677356,
             "netMargin": 0.31875356826699996,
             "dividendPaid": 763795000,
-            "peAtCurrentPrice": 12.594936467424223,
-            "pbAtCurrentPrice": 1.7116275874137772
+            "peAtCurrentPrice": 10.620253164556962,
+            "pbAtCurrentPrice": 1.4432719330335544
           },
           {
             "fiscalYear": "2017",
@@ -2393,14 +2724,15 @@
             "totalAssets": 20593195000,
             "totalLiabilities": 4732757000,
             "parentEquity": 15425647000,
+            "minorityEquity": 434791000,
             "debtRatio": 0.22982140459506162,
             "roe": 0.15396065859046001,
             "roic": 0.15620668312103,
             "grossMargin": 0.9525127167188,
             "netMargin": 0.34429828436599996,
             "dividendPaid": 664573000,
-            "peAtCurrentPrice": 12.922077674370307,
-            "pbAtCurrentPrice": 1.8874919705098105
+            "peAtCurrentPrice": 10.896103896103897,
+            "pbAtCurrentPrice": 1.5915636116727618
           },
           {
             "fiscalYear": "2016",
@@ -2429,27 +2761,27 @@
             "grossMargin": 0.91624865203437,
             "netMargin": 0.39940452498699996,
             "dividendPaid": 501182000,
-            "peAtCurrentPrice": 11.987951577427877,
-            "pbAtCurrentPrice": 2.112119806189487
+            "peAtCurrentPrice": 10.10843373493976,
+            "pbAtCurrentPrice": 1.780973418454625
           }
         ],
         "valuation": {
           "date": "2025-12-31",
-          "price": 9.949999809265137,
+          "price": 8.39,
           "currency": "HKD",
-          "pe": 12.437499761581421,
-          "pb": 1.2139789533825747,
-          "peg": 0.9652007980147013,
-          "dividendYield": 0.027738693999068947,
+          "pe": 10.4875,
+          "pb": 1.0236465943844115,
+          "peg": 0.8138728493042483,
+          "dividendYield": 0.03289630512514899,
           "peRange": {
-            "min": 11.436781389959927,
-            "median": 13.468080956385954,
-            "max": 82.91666507720947
+            "min": 9.64367816091954,
+            "median": 11.356502652277301,
+            "max": 69.91666666666667
           },
           "pbRange": {
-            "min": 1.2139789533825747,
-            "median": 1.5512924874602323,
-            "max": 2.112119806189487
+            "min": 1.0236465943844115,
+            "median": 1.3080747959082228,
+            "max": 1.780973418454625
           },
           "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
         }
@@ -2464,7 +2796,7 @@
       "name": "保利物业",
       "status": "持仓观察（安全边际约9.5%，未达新增买入门槛）",
       "action": "继续持有；当前不主动加仓；等待HK$28-30再严肃复核，HK$27以下才适合分批",
-      "marginOfSafety": 0.2608219178082192,
+      "marginOfSafety": 0.2657534246575342,
       "qualityScore": 82,
       "risk": "地产链下行、基础物管毛利率下降、社区增值服务收缩、应收账款和收缴率压力、物业服务提质政策可能增加成本但未必同步带来提价权",
       "industry": "物业管理/央企物管/社区服务",
@@ -2516,7 +2848,7 @@
         "fiscalYear": "FY2025",
         "dividendPerShare": 1.401,
         "dividendCurrency": "CNY",
-        "cashDividendTotal": 775220346.1823573,
+        "cashDividendTotal": 775219999.9999999,
         "cashDividendCurrency": "CNY",
         "buybackCurrency": "CNY",
         "payoutRatio": 0.5,
@@ -2568,7 +2900,7 @@
         }
       },
       "financials": {
-        "updatedAt": "2026-05-11 21:04:55",
+        "updatedAt": "2026-07-09 10:47:58",
         "source": "东方财富港股财务分析",
         "sourceSymbol": "06049.HK",
         "currency": "HKD",
@@ -2589,6 +2921,9 @@
             "freeCashFlow": 1782175000,
             "eps": 2.81,
             "bookValuePerShare": 19.072362159956,
+            "dividendPerShare": 1.401,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "HKD",
             "cashAndShortInvestments": 10709927000,
             "interestBearingDebt": 101649000,
             "netCash": 10608278000,
@@ -2604,8 +2939,8 @@
             "operatingMargin": 0.12059901899256735,
             "netMargin": 0.091547984044,
             "dividendPaid": 737427000,
-            "peAtCurrentPrice": 11.758007443248164,
-            "pbAtCurrentPrice": 1.7323497025920342
+            "peAtCurrentPrice": 9.565836298932384,
+            "pbAtCurrentPrice": 1.4093692105132514
           },
           {
             "fiscalYear": "2024",
@@ -2623,6 +2958,9 @@
             "freeCashFlow": 2236241000,
             "eps": 2.68,
             "bookValuePerShare": 17.531950899765,
+            "dividendPerShare": 1.332,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "HKD",
             "cashAndShortInvestments": 9890671000,
             "interestBearingDebt": 105646000,
             "netCash": 9785025000,
@@ -2638,8 +2976,8 @@
             "operatingMargin": 0.12020202527035342,
             "netMargin": 0.09113985830200001,
             "dividendPaid": 555087000,
-            "peAtCurrentPrice": 12.328358550569904,
-            "pbAtCurrentPrice": 1.8845592886054805
+            "peAtCurrentPrice": 10.029850746268655,
+            "pbAtCurrentPrice": 1.533200734686081
           },
           {
             "fiscalYear": "2023",
@@ -2657,6 +2995,10 @@
             "freeCashFlow": 2339351000,
             "eps": 2.51,
             "bookValuePerShare": 15.758862559173,
+            "dividendPerShare": 0.998,
+            "dividendCurrency": "CNY",
+            "buybackAmount": 120097000,
+            "buybackCurrency": "HKD",
             "cashAndShortInvestments": 11011462000,
             "interestBearingDebt": 111703000,
             "netCash": 10899759000,
@@ -2672,8 +3014,8 @@
             "operatingMargin": 0.12236451837482468,
             "netMargin": 0.09276319030499999,
             "dividendPaid": 296430000,
-            "peAtCurrentPrice": 13.163346978297747,
-            "pbAtCurrentPrice": 2.0965980756203275
+            "peAtCurrentPrice": 10.709163346613547,
+            "pbAtCurrentPrice": 1.705706861714683
           },
           {
             "fiscalYear": "2022",
@@ -2691,6 +3033,10 @@
             "freeCashFlow": 1400176000,
             "eps": 2.01,
             "bookValuePerShare": 13.898716397745,
+            "dividendPerShare": 0.503,
+            "dividendCurrency": "CNY",
+            "buybackAmount": 45912000,
+            "buybackCurrency": "HKD",
             "cashAndShortInvestments": 8956316000,
             "interestBearingDebt": 107215000,
             "netCash": 8849101000,
@@ -2706,8 +3052,8 @@
             "operatingMargin": 0.11126087573434633,
             "netMargin": 0.082806823168,
             "dividendPaid": 172097000,
-            "peAtCurrentPrice": 16.437811400759873,
-            "pbAtCurrentPrice": 2.3771980066366365
+            "peAtCurrentPrice": 13.37313432835821,
+            "pbAtCurrentPrice": 1.9339915450293776
           },
           {
             "fiscalYear": "2021",
@@ -2725,6 +3071,9 @@
             "freeCashFlow": 1370959000,
             "eps": 1.53,
             "bookValuePerShare": 12.263250329729,
+            "dividendPerShare": 0.305,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "HKD",
             "cashAndShortInvestments": 7690572000,
             "interestBearingDebt": 114592000,
             "netCash": 7575980000,
@@ -2740,8 +3089,8 @@
             "operatingMargin": 0.10675444183003481,
             "netMargin": 0.080767914897,
             "dividendPaid": 240311000,
-            "peAtCurrentPrice": 21.59477184021395,
-            "pbAtCurrentPrice": 2.694228693630319
+            "peAtCurrentPrice": 17.56862745098039,
+            "pbAtCurrentPrice": 2.191914808656932
           },
           {
             "fiscalYear": "2020",
@@ -2759,6 +3108,9 @@
             "freeCashFlow": 494434000,
             "eps": 1.22,
             "bookValuePerShare": 11.152238415393,
+            "dividendPerShare": 0.43,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "HKD",
             "cashAndShortInvestments": 7448102000,
             "interestBearingDebt": 238121000,
             "netCash": 7209981000,
@@ -2774,8 +3126,8 @@
             "operatingMargin": 0.11474855035786291,
             "netMargin": 0.086612105078,
             "dividendPaid": 202478000,
-            "peAtCurrentPrice": 27.081967963547005,
-            "pbAtCurrentPrice": 2.9626340188283202
+            "peAtCurrentPrice": 22.0327868852459,
+            "pbAtCurrentPrice": 2.410278457004522
           },
           {
             "fiscalYear": "2019",
@@ -2793,6 +3145,9 @@
             "freeCashFlow": 659273000,
             "eps": 1.21,
             "bookValuePerShare": 9.136421188383,
+            "dividendPerShare": 0.3,
+            "dividendCurrency": "CNY",
+            "buybackCurrency": "HKD",
             "cashAndShortInvestments": 6508618000,
             "interestBearingDebt": 14895000,
             "netCash": 6493723000,
@@ -2808,8 +3163,8 @@
             "operatingMargin": 0.11229569574226608,
             "netMargin": 0.084329785501,
             "dividendPaid": 160000000,
-            "peAtCurrentPrice": 27.30578588060111,
-            "pbAtCurrentPrice": 3.6162957283030965
+            "peAtCurrentPrice": 22.214876033057852,
+            "pbAtCurrentPrice": 2.942071019468546
           },
           {
             "fiscalYear": "2018",
@@ -2827,6 +3182,7 @@
             "freeCashFlow": 402458000,
             "eps": 0.82,
             "bookValuePerShare": 1.174442027176,
+            "buybackCurrency": "HKD",
             "cashAndShortInvestments": 1811570000,
             "interestBearingDebt": 17729000,
             "netCash": 1793841000,
@@ -2842,8 +3198,8 @@
             "operatingMargin": 0.10938960764443377,
             "netMargin": 0.079460147568,
             "dividendPaid": 210000000,
-            "peAtCurrentPrice": 40.292684043326034,
-            "pbAtCurrentPrice": 28.132509013640757
+            "peAtCurrentPrice": 32.78048780487805,
+            "pbAtCurrentPrice": 22.88746432604613
           },
           {
             "fiscalYear": "2017",
@@ -2858,6 +3214,7 @@
             "operatingCashFlowToRevenue": 0.11157831260604617,
             "freeCashFlow": 361551000,
             "bookValuePerShare": 0.697420397901,
+            "buybackCurrency": "HKD",
             "cashAndShortInvestments": 1649053000,
             "interestBearingDebt": 10154000,
             "netCash": 1638899000,
@@ -2871,7 +3228,7 @@
             "roic": 0.59595033724557,
             "grossMargin": 0.17923769586715,
             "netMargin": 0.069339148372,
-            "pbAtCurrentPrice": 47.37458355816176
+            "pbAtCurrentPrice": 38.542033013229506
           },
           {
             "fiscalYear": "2016",
@@ -2884,6 +3241,7 @@
             "operatingCashFlowToRevenue": 0.3007304069476992,
             "freeCashFlow": 771129000,
             "bookValuePerShare": 0.547093307579,
+            "buybackCurrency": "HKD",
             "cashAndShortInvestments": 1279517000,
             "interestBearingDebt": 5604000,
             "netCash": 1273913000,
@@ -2897,26 +3255,26 @@
             "roic": 0.50570207442927,
             "grossMargin": 0.16709506755943,
             "netMargin": 0.058176334253000006,
-            "pbAtCurrentPrice": 60.39189377354316
+            "pbAtCurrentPrice": 49.13238679330498
           }
         ],
         "valuation": {
           "date": "2025-12-31",
-          "price": 33.040000915527344,
+          "price": 26.88,
           "currency": "HKD",
-          "pe": 11.758007443248164,
-          "pb": 1.7323497025920342,
-          "peg": 2.2922670992455516,
-          "dividendYield": 0.04398668158986048,
+          "pe": 9.565836298932384,
+          "pb": 1.4093692105132514,
+          "peg": 1.8648952155071994,
+          "dividendYield": 0.05212053571428571,
           "peRange": {
-            "min": 11.758007443248164,
-            "median": 19.01629162048691,
-            "max": 40.292684043326034
+            "min": 9.565836298932384,
+            "median": 15.4708808896693,
+            "max": 32.78048780487805
           },
           "pbRange": {
-            "min": 1.7323497025920342,
-            "median": 2.8284313562293195,
-            "max": 60.39189377354316
+            "min": 1.4093692105132514,
+            "median": 2.3010966328307267,
+            "max": 49.13238679330498
           },
           "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
         }
@@ -2931,7 +3289,7 @@
       "name": "泡泡玛特",
       "status": "接近达标但仅限成长仓观察（估值已大幅回落且DCF安全边际约18%，但H股综合回报盾不足，核心IP持续性、海外增长放缓和利润率压力仍需验证）",
       "action": "加入成长/消费IP候选池；HK$150附近只适合小仓观察，不适合重仓；HK$130-140进入正式复核区，HK$120以下且基本面未恶化时提高优先级",
-      "marginOfSafety": 0.16270270270270268,
+      "marginOfSafety": 0.1891891891891892,
       "qualityScore": 84,
       "risk": "THE MONSTERS/Labubu等核心IP集中度高，潮流玩具存在爆款周期和二级市场热度退潮风险；2026年海外增长较2025年明显降速，原材料、物流和燃油成本可能压制利润率；库存周转拉长、全球门店扩张、主题乐园/电影/授权等新业务执行风险、仿冒品和消费者偏好变化均需折价",
       "industry": "潮流玩具/IP运营/文化消费/全球零售",
@@ -2950,7 +3308,7 @@
         "fiscalYear": "FY2025",
         "dividendPerShare": 2.3817,
         "dividendCurrency": "CNY",
-        "cashDividendTotal": 3171765104.2632613,
+        "cashDividendTotal": 3171765066.3075924,
         "cashDividendCurrency": "CNY",
         "buybackCurrency": "HKD",
         "reliability": "limited",
@@ -3004,7 +3362,7 @@
         }
       },
       "financials": {
-        "updatedAt": "2026-05-17 14:58:21",
+        "updatedAt": "2026-07-09 10:48:10",
         "source": "东方财富港股财务分析",
         "sourceSymbol": "09992.HK",
         "currency": "HKD",
@@ -3024,7 +3382,7 @@
             "capitalExpenditure": 985250000,
             "freeCashFlow": 9879902000,
             "eps": 9.61,
-            "bookValuePerShare": 16.612243237662,
+            "bookValuePerShare": 16.728503217805,
             "dividendPerShare": 2.3817,
             "dividendCurrency": "CNY",
             "buybackCurrency": "HKD",
@@ -3042,7 +3400,9 @@
             "grossMargin": 0.7210365976858,
             "operatingMargin": 0.4550229078342886,
             "netMargin": 0.35053943351199995,
-            "dividendPaid": 1128262000
+            "dividendPaid": 1128262000,
+            "peAtCurrentPrice": 16.03537981269511,
+            "pbAtCurrentPrice": 9.211822360531546
           },
           {
             "fiscalYear": "2024",
@@ -3059,7 +3419,7 @@
             "capitalExpenditure": 372668000,
             "freeCashFlow": 4581552000,
             "eps": 2.36,
-            "bookValuePerShare": 7.966563193735,
+            "bookValuePerShare": 8.022316800605,
             "dividendPerShare": 0.8146,
             "dividendCurrency": "CNY",
             "buybackAmount": 78031000,
@@ -3078,7 +3438,9 @@
             "grossMargin": 0.66788868231778,
             "operatingMargin": 0.3186341445904504,
             "netMargin": 0.253751241875,
-            "dividendPaid": 378015000
+            "dividendPaid": 378015000,
+            "peAtCurrentPrice": 65.29661016949153,
+            "pbAtCurrentPrice": 19.208914809793924
           },
           {
             "fiscalYear": "2023",
@@ -3095,7 +3457,7 @@
             "capitalExpenditure": 324179000,
             "freeCashFlow": 1666417000,
             "eps": 0.81,
-            "bookValuePerShare": 5.793942573734,
+            "bookValuePerShare": 5.834491200367,
             "dividendPerShare": 0.2821,
             "dividendCurrency": "CNY",
             "buybackAmount": 333709000,
@@ -3114,7 +3476,9 @@
             "grossMargin": 0.6132470676885999,
             "operatingMargin": 0.1953095713983268,
             "netMargin": 0.17279331128599998,
-            "dividendPaid": 121609000
+            "dividendPaid": 121609000,
+            "peAtCurrentPrice": 190.24691358024688,
+            "pbAtCurrentPrice": 26.411900319655434
           },
           {
             "fiscalYear": "2022",
@@ -3131,7 +3495,7 @@
             "capitalExpenditure": 266132000,
             "freeCashFlow": 624890000,
             "eps": 0.35,
-            "bookValuePerShare": 5.192441421441,
+            "bookValuePerShare": 5.228780471377,
             "dividendPerShare": 0.087,
             "dividendCurrency": "CNY",
             "buybackAmount": 634310000,
@@ -3150,7 +3514,9 @@
             "grossMargin": 0.5749094064007599,
             "operatingMargin": 0.1263459094488496,
             "netMargin": 0.10304691635199999,
-            "dividendPaid": 220086000
+            "dividendPaid": 220086000,
+            "peAtCurrentPrice": 440.2857142857143,
+            "pbAtCurrentPrice": 29.471499299609672
           },
           {
             "fiscalYear": "2021",
@@ -3167,7 +3533,7 @@
             "capitalExpenditure": 287502000,
             "freeCashFlow": 491595000,
             "eps": 0.62,
-            "bookValuePerShare": 5.084237595188,
+            "bookValuePerShare": 5.119819385884,
             "dividendPerShare": 0.1524,
             "dividendCurrency": "CNY",
             "buybackCurrency": "HKD",
@@ -3185,7 +3551,9 @@
             "grossMargin": 0.6143038058401801,
             "operatingMargin": 0.2560457270003837,
             "netMargin": 0.19029913480299998,
-            "dividendPaid": 208834000
+            "dividendPaid": 208834000,
+            "peAtCurrentPrice": 248.54838709677418,
+            "pbAtCurrentPrice": 30.098718018231953
           },
           {
             "fiscalYear": "2020",
@@ -3202,7 +3570,7 @@
             "capitalExpenditure": 175984000,
             "freeCashFlow": 527374000,
             "eps": 0.44,
-            "bookValuePerShare": 4.570601624564,
+            "bookValuePerShare": 4.602588758782,
             "dividendPerShare": 0.1494,
             "dividendCurrency": "CNY",
             "buybackCurrency": "HKD",
@@ -3220,7 +3588,9 @@
             "grossMargin": 0.63422573803318,
             "operatingMargin": 0.2859722670363016,
             "netMargin": 0.20820291938899999,
-            "dividendPaid": 377580000
+            "dividendPaid": 377580000,
+            "peAtCurrentPrice": 350.2272727272727,
+            "pbAtCurrentPrice": 33.48115768674064
           },
           {
             "fiscalYear": "2019",
@@ -3237,7 +3607,7 @@
             "capitalExpenditure": 104951000,
             "freeCashFlow": 397938000,
             "eps": 0.39,
-            "bookValuePerShare": 0.442029773613,
+            "bookValuePerShare": 0.445123297586,
             "buybackCurrency": "HKD",
             "cashAndShortInvestments": 324614000,
             "interestBearingDebt": 183398000,
@@ -3252,7 +3622,9 @@
             "grossMargin": 0.64768443550505,
             "operatingMargin": 0.3556979364798382,
             "netMargin": 0.26797486566100004,
-            "dividendPaid": 80000000
+            "dividendPaid": 80000000,
+            "peAtCurrentPrice": 395.1282051282051,
+            "pbAtCurrentPrice": 346.19621312952535
           },
           {
             "fiscalYear": "2018",
@@ -3268,7 +3640,7 @@
             "capitalExpenditure": 35470000,
             "freeCashFlow": 139530000,
             "eps": 0.86,
-            "bookValuePerShare": 0.163178940215,
+            "bookValuePerShare": 0.164320940129,
             "buybackCurrency": "HKD",
             "cashAndShortInvestments": 96802000,
             "interestBearingDebt": 75298000,
@@ -3281,7 +3653,9 @@
             "roe": 0.6687025875681201,
             "roic": 0.45790466550105996,
             "grossMargin": 0.57923931655494,
-            "netMargin": 0.193428323204
+            "netMargin": 0.193428323204,
+            "peAtCurrentPrice": 179.1860465116279,
+            "pbAtCurrentPrice": 937.7989188658727
           },
           {
             "fiscalYear": "2017",
@@ -3295,7 +3669,7 @@
             "capitalExpenditure": 11555000,
             "freeCashFlow": 3952000,
             "eps": 0.01,
-            "bookValuePerShare": 0.058778123582,
+            "bookValuePerShare": 0.059189479435,
             "buybackCurrency": "HKD",
             "cashAndShortInvestments": 13592000,
             "interestBearingDebt": 38732000,
@@ -3308,12 +3682,29 @@
             "roe": 0.01990510504415,
             "roic": 0.01219237374405,
             "grossMargin": 0.47606817060364004,
-            "netMargin": 0.009925730987
+            "netMargin": 0.009925730987,
+            "peAtCurrentPrice": 15410,
+            "pbAtCurrentPrice": 2603.5032149459553
           }
         ],
         "valuation": {
           "date": "2025-12-31",
+          "price": 154.1,
           "currency": "HKD",
+          "pe": 16.03537981269511,
+          "pb": 9.211822360531546,
+          "peg": 0.05193474078645655,
+          "dividendYield": 0.015455548345230372,
+          "peRange": {
+            "min": 16.03537981269511,
+            "median": 248.54838709677418,
+            "max": 15410
+          },
+          "pbRange": {
+            "min": 9.211822360531546,
+            "median": 30.098718018231953,
+            "max": 2603.5032149459553
+          },
           "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
         }
       },
@@ -3326,6 +3717,328 @@
       "symbol": "9926.HK",
       "name": "康方生物",
       "currency": "HKD",
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendCurrency": "HKD",
+        "cashDividendCurrency": "HKD",
+        "buybackCurrency": "HKD"
+      },
+      "netCash": {
+        "cashAndShortInvestments": 8822414000,
+        "interestBearingDebt": 4556025000,
+        "netCash": 4266389000,
+        "currency": "HKD",
+        "shareholderFcf": -1724533000,
+        "shareholderFcfCurrency": "HKD",
+        "shareholderFcfBasis": "普通股东 FCF：未发现重大少数股东权益分流，使用合并 FCF",
+        "consolidatedFcf": -1724533000,
+        "fcfPositiveYears": 2,
+        "note": "由更新财务根据最新年度资产负债表、现金流量表和少数股东权益自动刷新。"
+      },
+      "financials": {
+        "updatedAt": "2026-07-09 10:48:14",
+        "source": "东方财富港股财务分析",
+        "sourceSymbol": "09926.HK",
+        "currency": "HKD",
+        "annual": [
+          {
+            "fiscalYear": "2025",
+            "reportDate": "2025-12-31",
+            "reportType": "2025年年报",
+            "currency": "HKD",
+            "revenue": 3056275000,
+            "revenueYoY": 0.438962138361,
+            "netProfit": -1113025000,
+            "netProfitYoY": -1.16325082845,
+            "operatingProfit": -1009816000,
+            "operatingCashFlow": -947628000,
+            "operatingCashFlowToRevenue": -0.31005979501190173,
+            "capitalExpenditure": 776905000,
+            "freeCashFlow": -1724533000,
+            "eps": -1.23,
+            "bookValuePerShare": 9.822462170637,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 8822414000,
+            "interestBearingDebt": 4556025000,
+            "netCash": 4266389000,
+            "totalAssets": 16000440000,
+            "totalLiabilities": 7054483000,
+            "totalEquity": 8945957000,
+            "parentEquity": 9047894000,
+            "minorityEquity": -101937000,
+            "debtRatio": 0.44089306294076913,
+            "roe": -0.14033989862593,
+            "roic": -0.16893012263019,
+            "grossMargin": 0.786569271417,
+            "operatingMargin": -0.33040744042993514,
+            "netMargin": -0.37326255,
+            "pbAtCurrentPrice": 10.043306686881587
+          },
+          {
+            "fiscalYear": "2024",
+            "reportDate": "2024-12-31",
+            "reportType": "2024年年报",
+            "currency": "HKD",
+            "revenue": 2123944000,
+            "revenueYoY": -0.5307500486610001,
+            "netProfit": -514515000,
+            "netProfitYoY": -1.253668096435,
+            "operatingProfit": -432833000,
+            "operatingCashFlow": -527615000,
+            "operatingCashFlowToRevenue": -0.24841285834278118,
+            "capitalExpenditure": 585771000,
+            "freeCashFlow": -1113386000,
+            "eps": -0.6,
+            "bookValuePerShare": 7.397278922034,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 6918065000,
+            "interestBearingDebt": 3951927000,
+            "netCash": 2966138000,
+            "totalAssets": 12754965000,
+            "totalLiabilities": 6001491000,
+            "totalEquity": 6753474000,
+            "parentEquity": 6813953000,
+            "minorityEquity": -60479000,
+            "debtRatio": 0.47052194968782746,
+            "roe": -0.08943193862975,
+            "roic": -0.09179534961724001,
+            "grossMargin": 0.86391260786537,
+            "operatingMargin": -0.20378738799139715,
+            "netMargin": -0.235925711789,
+            "pbAtCurrentPrice": 13.335984899278964
+          },
+          {
+            "fiscalYear": "2023",
+            "reportDate": "2023-12-31",
+            "reportType": "2023年年报",
+            "currency": "HKD",
+            "revenue": 4526253000,
+            "revenueYoY": 4.403474696057,
+            "netProfit": 2028300000,
+            "netProfitYoY": 2.735974111451,
+            "operatingProfit": 2029512000,
+            "operatingCashFlow": 2467773000,
+            "operatingCashFlowToRevenue": 0.5452132260392868,
+            "capitalExpenditure": 719382000,
+            "freeCashFlow": 1748391000,
+            "eps": 2.42,
+            "bookValuePerShare": 5.094038714346,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 4041986000,
+            "interestBearingDebt": 2990902000,
+            "netCash": 1051084000,
+            "totalAssets": 9181090000,
+            "totalLiabilities": 4662313000,
+            "totalEquity": 4518777000,
+            "parentEquity": 4692339000,
+            "minorityEquity": -173562000,
+            "debtRatio": 0.5078169367689457,
+            "roe": 0.55357789596731,
+            "roic": 0.46077625908424996,
+            "grossMargin": 0.9705610799926601,
+            "operatingMargin": 0.4483867782026325,
+            "netMargin": 0.429130011071,
+            "peAtCurrentPrice": 40.76446280991736,
+            "pbAtCurrentPrice": 19.365773511335636
+          },
+          {
+            "fiscalYear": "2022",
+            "reportDate": "2022-12-31",
+            "reportType": "2022年年报",
+            "currency": "HKD",
+            "revenue": 837656000,
+            "revenueYoY": 2.712586315407,
+            "netProfit": -1168393000,
+            "netProfitYoY": -0.086944953779,
+            "operatingProfit": -1378926000,
+            "operatingCashFlow": -1240413000,
+            "operatingCashFlowToRevenue": -1.480814319959506,
+            "capitalExpenditure": 775642000,
+            "freeCashFlow": -2016055000,
+            "eps": -1.42,
+            "bookValuePerShare": 2.861256608821,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 2092388000,
+            "interestBearingDebt": 1879109000,
+            "netCash": 213279000,
+            "totalAssets": 5495948000,
+            "totalLiabilities": 2947934000,
+            "totalEquity": 2548014000,
+            "parentEquity": 2635627000,
+            "minorityEquity": -87613000,
+            "debtRatio": 0.5363831681085774,
+            "roe": -0.40291615938319,
+            "roic": -0.42186900571155,
+            "grossMargin": 0.88764242123258,
+            "operatingMargin": -1.6461721756902594,
+            "netMargin": -1.697852101579,
+            "pbAtCurrentPrice": 34.47785832835504
+          },
+          {
+            "fiscalYear": "2021",
+            "reportDate": "2021-12-31",
+            "reportType": "2021年年报",
+            "currency": "HKD",
+            "revenue": 225626000,
+            "netProfit": -1074933000,
+            "netProfitYoY": 0.08675749818799999,
+            "operatingProfit": -1247774000,
+            "operatingCashFlow": -1001238000,
+            "operatingCashFlowToRevenue": -4.437600276563871,
+            "capitalExpenditure": 712126000,
+            "freeCashFlow": -1713364000,
+            "eps": -1.32,
+            "bookValuePerShare": 3.434923128606,
+            "buybackAmount": 51718000,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 2641717000,
+            "interestBearingDebt": 859422000,
+            "netCash": 1782295000,
+            "totalAssets": 4805789000,
+            "totalLiabilities": 1525523000,
+            "totalEquity": 3280266000,
+            "parentEquity": 3164056000,
+            "minorityEquity": 116210000,
+            "debtRatio": 0.3174344524905276,
+            "roe": -0.33858279621305004,
+            "roic": -0.727601260487,
+            "grossMargin": 0.8614565697215799,
+            "operatingMargin": -5.530275766090788,
+            "netMargin": -5.576157003182,
+            "pbAtCurrentPrice": 28.7197111278689
+          },
+          {
+            "fiscalYear": "2020",
+            "reportDate": "2020-12-31",
+            "reportType": "2020年年报",
+            "currency": "HKD",
+            "netProfit": -1177051000,
+            "netProfitYoY": -2.5095412450129997,
+            "operatingProfit": -1312592000,
+            "operatingCashFlow": -617775000,
+            "capitalExpenditure": 444262000,
+            "freeCashFlow": -1062037000,
+            "eps": -1.65,
+            "bookValuePerShare": 3.458252835171,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 2686452000,
+            "interestBearingDebt": 198991000,
+            "netCash": 2487461000,
+            "totalAssets": 3856169000,
+            "totalLiabilities": 405730000,
+            "totalEquity": 3450439000,
+            "parentEquity": 3185546000,
+            "minorityEquity": 264893000,
+            "debtRatio": 0.10521582430645544,
+            "roe": -0.7404715599210201,
+            "roic": -2.0092812137786003,
+            "pbAtCurrentPrice": 28.525965191646282
+          },
+          {
+            "fiscalYear": "2019",
+            "reportDate": "2019-12-31",
+            "reportType": "2019年年报",
+            "currency": "HKD",
+            "revenue": 70879000,
+            "revenueYoY": 24.081033262562002,
+            "netProfit": -335386000,
+            "netProfitYoY": -1.356777951893,
+            "operatingProfit": -340718000,
+            "operatingCashFlow": -219595000,
+            "operatingCashFlowToRevenue": -3.0981672992000453,
+            "capitalExpenditure": 136273000,
+            "freeCashFlow": -355868000,
+            "eps": -2.74,
+            "bookValuePerShare": -0.006896864858,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 1188307000,
+            "interestBearingDebt": 218715000,
+            "netCash": 969592000,
+            "totalAssets": 1672939000,
+            "totalLiabilities": 1457234000,
+            "totalEquity": 215705000,
+            "parentEquity": -6353000,
+            "minorityEquity": 222058000,
+            "debtRatio": 0.8710622443496147,
+            "roe": -1.5424903935262402,
+            "roic": -1.20651125980286,
+            "operatingMargin": -4.807037345335008,
+            "netMargin": -4.887963994977
+          },
+          {
+            "fiscalYear": "2018",
+            "reportDate": "2018-12-31",
+            "reportType": "2018年年报",
+            "currency": "HKD",
+            "revenue": 2826000,
+            "revenueYoY": -0.9295648272770001,
+            "netProfit": -142307000,
+            "netProfitYoY": -36.498550724638,
+            "operatingCashFlow": -123417000,
+            "operatingCashFlowToRevenue": -43.67197452229299,
+            "freeCashFlow": -123417000,
+            "bookValuePerShare": 0.478987427249,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 313813000,
+            "interestBearingDebt": 65047000,
+            "netCash": 248766000,
+            "totalAssets": 651718000,
+            "totalLiabilities": 163623000,
+            "totalEquity": 488095000,
+            "parentEquity": 441216000,
+            "minorityEquity": 46879000,
+            "debtRatio": 0.25106411055088246,
+            "roe": -0.34821088845688003,
+            "roic": -0.49851556164316,
+            "netMargin": -54.619249823071,
+            "pbAtCurrentPrice": 205.95530151299178
+          },
+          {
+            "fiscalYear": "2017",
+            "reportDate": "2017-12-31",
+            "reportType": "2017年年报",
+            "currency": "HKD",
+            "revenue": 40122000,
+            "netProfit": -3795000,
+            "operatingCashFlow": 16331000,
+            "operatingCashFlowToRevenue": 0.4070335476795773,
+            "freeCashFlow": 16331000,
+            "bookValuePerShare": 0.408345857409,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 214464000,
+            "interestBearingDebt": 55830000,
+            "netCash": 158634000,
+            "totalAssets": 538355000,
+            "totalLiabilities": 118017000,
+            "totalEquity": 420338000,
+            "parentEquity": 376145000,
+            "minorityEquity": 44193000,
+            "debtRatio": 0.2192178023794708,
+            "roe": -0.01008919432666,
+            "roic": -0.01356325947105,
+            "grossMargin": 0.98262798464683,
+            "netMargin": -0.24754498778700001,
+            "pbAtCurrentPrice": 241.5844270490345
+          }
+        ],
+        "valuation": {
+          "date": "2025-12-31",
+          "price": 98.65,
+          "currency": "HKD",
+          "pb": 10.043306686881587,
+          "peRange": {
+            "min": 40.76446280991736,
+            "median": 40.76446280991736,
+            "max": 40.76446280991736
+          },
+          "pbRange": {
+            "min": 10.043306686881587,
+            "median": 28.622838159757592,
+            "max": 241.5844270490345
+          },
+          "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
+        }
+      },
       "position": {
         "shares": 1000,
         "cost": 120
@@ -3335,6 +4048,411 @@
       "symbol": "1448.HK",
       "name": "福寿园",
       "currency": "HKD",
+      "dividend": {
+        "fiscalYear": "FY2024",
+        "dividendPerShare": 0.5474,
+        "dividendCurrency": "HKD",
+        "cashDividendTotal": 1269893354.5454545,
+        "cashDividendCurrency": "HKD",
+        "buybackCurrency": "HKD"
+      },
+      "netCash": {
+        "cashAndShortInvestments": 96395000,
+        "interestBearingDebt": 161762000,
+        "netCash": -65367000,
+        "currency": "HKD",
+        "shareholderFcf": 569677370.2302923,
+        "shareholderFcfCurrency": "HKD",
+        "shareholderFcfBasis": "普通股东 FCF：合并 FCF 按归属普通股东权益比例扣除少数股东分流",
+        "consolidatedFcf": 630595000,
+        "minorityFcfAdjustment": 60917629.76970768,
+        "fcfPositiveYears": 10,
+        "note": "由更新财务根据最新年度资产负债表、现金流量表和少数股东权益自动刷新。"
+      },
+      "financials": {
+        "updatedAt": "2026-07-09 10:48:19",
+        "source": "东方财富港股财务分析",
+        "sourceSymbol": "01448.HK",
+        "currency": "HKD",
+        "annual": [
+          {
+            "fiscalYear": "2024",
+            "reportDate": "2024-12-31",
+            "reportType": "2024年年报",
+            "currency": "HKD",
+            "revenue": 2077484000,
+            "revenueYoY": -0.209489697412,
+            "netProfit": 373134000,
+            "netProfitYoY": -0.528418684596,
+            "operatingProfit": 709887000,
+            "operatingCashFlow": 708532000,
+            "operatingCashFlowToRevenue": 0.3410529274834367,
+            "capitalExpenditure": 77937000,
+            "freeCashFlow": 630595000,
+            "eps": 0.164,
+            "bookValuePerShare": 2.397190260108,
+            "dividendPerShare": 0.5474,
+            "dividendCurrency": "HKD",
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 96395000,
+            "interestBearingDebt": 161762000,
+            "netCash": -65367000,
+            "totalAssets": 8181197000,
+            "totalLiabilities": 2025369000,
+            "totalEquity": 6155828000,
+            "parentEquity": 5561154000,
+            "minorityEquity": 594674000,
+            "debtRatio": 0.247563895601096,
+            "roe": 0.06499907805877,
+            "roic": 0.06851343524092,
+            "grossMargin": 0.85850817623626,
+            "operatingMargin": 0.3417051587400914,
+            "netMargin": 0.239389569306,
+            "dividendPaid": 852552000,
+            "peAtCurrentPrice": 16.097560975609756,
+            "pbAtCurrentPrice": 1.1012893068742322
+          },
+          {
+            "fiscalYear": "2023",
+            "reportDate": "2023-12-31",
+            "reportType": "2023年年报",
+            "currency": "HKD",
+            "revenue": 2628029000,
+            "revenueYoY": 0.210166483547,
+            "netProfit": 791240000,
+            "netProfitYoY": 0.201404199236,
+            "operatingProfit": 1372199000,
+            "operatingCashFlow": 1102878000,
+            "operatingCashFlowToRevenue": 0.41965975261308,
+            "capitalExpenditure": 30952000,
+            "freeCashFlow": 1071926000,
+            "eps": 0.348,
+            "bookValuePerShare": 2.551898074627,
+            "dividendPerShare": 0.3731,
+            "dividendCurrency": "HKD",
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 89424000,
+            "interestBearingDebt": 281809000,
+            "netCash": -192385000,
+            "totalAssets": 8667787000,
+            "totalLiabilities": 2093923000,
+            "totalEquity": 6573864000,
+            "parentEquity": 5920055000,
+            "minorityEquity": 653809000,
+            "debtRatio": 0.24157527175044796,
+            "roe": 0.13886503753616,
+            "roic": 0.14717034124421,
+            "grossMargin": 0.86207420085547,
+            "operatingMargin": 0.5221399763853443,
+            "netMargin": 0.37134902240400003,
+            "dividendPaid": 480508000,
+            "peAtCurrentPrice": 7.586206896551725,
+            "pbAtCurrentPrice": 1.0345240769014168
+          },
+          {
+            "fiscalYear": "2022",
+            "reportDate": "2022-12-31",
+            "reportType": "2022年年报",
+            "currency": "HKD",
+            "revenue": 2171626000,
+            "revenueYoY": -0.066307858467,
+            "netProfit": 658596000,
+            "netProfitYoY": -0.085325255926,
+            "operatingProfit": 1030327000,
+            "operatingCashFlow": 852933000,
+            "operatingCashFlowToRevenue": 0.39276238173608163,
+            "capitalExpenditure": 69532000,
+            "freeCashFlow": 783401000,
+            "eps": 0.29,
+            "bookValuePerShare": 2.360379472374,
+            "dividendPerShare": 0.1322,
+            "dividendCurrency": "HKD",
+            "buybackAmount": 1919000,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 81394000,
+            "interestBearingDebt": 97661000,
+            "netCash": -16267000,
+            "totalAssets": 7815891000,
+            "totalLiabilities": 1701887000,
+            "totalEquity": 6114004000,
+            "parentEquity": 5475758000,
+            "minorityEquity": 638246000,
+            "debtRatio": 0.2177470233400133,
+            "roe": 0.12521791109931,
+            "roic": 0.1240617140136,
+            "grossMargin": 0.85093519786556,
+            "operatingMargin": 0.474449559915013,
+            "netMargin": 0.37332809609,
+            "dividendPaid": 325906000,
+            "peAtCurrentPrice": 9.10344827586207,
+            "pbAtCurrentPrice": 1.1184642261546047
+          },
+          {
+            "fiscalYear": "2021",
+            "reportDate": "2021-12-31",
+            "reportType": "2021年年报",
+            "currency": "HKD",
+            "revenue": 2325848000,
+            "revenueYoY": 0.228957742966,
+            "netProfit": 720033000,
+            "netProfitYoY": 0.161223680136,
+            "operatingProfit": 1094478000,
+            "operatingCashFlow": 992369000,
+            "operatingCashFlowToRevenue": 0.4266697565791058,
+            "capitalExpenditure": 123181000,
+            "freeCashFlow": 869188000,
+            "eps": 0.316,
+            "bookValuePerShare": 2.174024536174,
+            "dividendPerShare": 0.1128,
+            "dividendCurrency": "HKD",
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 69379000,
+            "interestBearingDebt": 88600000,
+            "netCash": -19221000,
+            "totalAssets": 7405450000,
+            "totalLiabilities": 1733130000,
+            "totalEquity": 5672320000,
+            "parentEquity": 5043440000,
+            "minorityEquity": 628880000,
+            "debtRatio": 0.23403439358850575,
+            "roe": 0.14983018463331,
+            "roic": 0.14001294088079,
+            "grossMargin": 0.8411031159387901,
+            "operatingMargin": 0.4705715936725014,
+            "netMargin": 0.382503069848,
+            "dividendPaid": 342783000,
+            "peAtCurrentPrice": 8.354430379746836,
+            "pbAtCurrentPrice": 1.2143377206984316
+          },
+          {
+            "fiscalYear": "2020",
+            "reportDate": "2020-12-31",
+            "reportType": "2020年年报",
+            "currency": "HKD",
+            "revenue": 1892537000,
+            "revenueYoY": 0.022675667116999997,
+            "netProfit": 620064000,
+            "netProfitYoY": 0.07170153081899999,
+            "operatingProfit": 927903000,
+            "operatingCashFlow": 822349000,
+            "operatingCashFlowToRevenue": 0.4345220199129528,
+            "capitalExpenditure": 100209000,
+            "freeCashFlow": 722140000,
+            "eps": 0.274,
+            "bookValuePerShare": 1.969030140603,
+            "dividendPerShare": 0.08810000000000001,
+            "dividendCurrency": "HKD",
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 61403000,
+            "interestBearingDebt": 122752000,
+            "netCash": -61349000,
+            "totalAssets": 6678175000,
+            "totalLiabilities": 1536089000,
+            "totalEquity": 5142086000,
+            "parentEquity": 4567881000,
+            "minorityEquity": 574205000,
+            "debtRatio": 0.23001628438907337,
+            "roe": 0.14401754231327002,
+            "roic": 0.14945219373175,
+            "grossMargin": 0.85594046510055,
+            "operatingMargin": 0.49029583041177,
+            "netMargin": 0.400153339142,
+            "dividendPaid": 294890000,
+            "peAtCurrentPrice": 9.635036496350365,
+            "pbAtCurrentPrice": 1.340761599104583
+          },
+          {
+            "fiscalYear": "2019",
+            "reportDate": "2019-12-31",
+            "reportType": "2019年年报",
+            "currency": "HKD",
+            "revenue": 1850574000,
+            "revenueYoY": 0.12067772099400001,
+            "netProfit": 578579000,
+            "netProfitYoY": 0.184729013605,
+            "operatingProfit": 869341000,
+            "operatingCashFlow": 707084000,
+            "operatingCashFlowToRevenue": 0.38208901670508716,
+            "capitalExpenditure": 184246000,
+            "freeCashFlow": 522838000,
+            "eps": 0.259,
+            "bookValuePerShare": 1.742805184848,
+            "dividendPerShare": 0.0842,
+            "dividendCurrency": "HKD",
+            "buybackAmount": 234000,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 56268000,
+            "interestBearingDebt": 169038000,
+            "netCash": -112770000,
+            "totalAssets": 5985620000,
+            "totalLiabilities": 1400407000,
+            "totalEquity": 4585213000,
+            "parentEquity": 4043070000,
+            "minorityEquity": 542143000,
+            "debtRatio": 0.2339618953425042,
+            "roe": 0.15315437057053,
+            "roic": 0.17572157112206,
+            "grossMargin": 0.85721835495365,
+            "operatingMargin": 0.4697682989169847,
+            "netMargin": 0.397346444941,
+            "dividendPaid": 274016000,
+            "peAtCurrentPrice": 10.193050193050194,
+            "pbAtCurrentPrice": 1.5147992575144018
+          },
+          {
+            "fiscalYear": "2018",
+            "reportDate": "2018-12-31",
+            "reportType": "2018年年报",
+            "currency": "HKD",
+            "revenue": 1651299000,
+            "revenueYoY": 0.11785137908799999,
+            "netProfit": 488364000,
+            "netProfitYoY": 0.170154546544,
+            "operatingProfit": 722894000,
+            "operatingCashFlow": 670523000,
+            "operatingCashFlowToRevenue": 0.4060578974492203,
+            "capitalExpenditure": 105010000,
+            "freeCashFlow": 565513000,
+            "eps": 0.222,
+            "bookValuePerShare": 1.514068012233,
+            "dividendPerShare": 0.0744,
+            "dividendCurrency": "HKD",
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 46852000,
+            "interestBearingDebt": 162779000,
+            "netCash": -115927000,
+            "totalAssets": 5237704000,
+            "totalLiabilities": 1186821000,
+            "totalEquity": 4050883000,
+            "parentEquity": 3512431000,
+            "minorityEquity": 538452000,
+            "debtRatio": 0.2265918425325295,
+            "roe": 0.14956189283854,
+            "roic": 0.18477621568652,
+            "grossMargin": 0.61034070752783,
+            "operatingMargin": 0.4377729290697808,
+            "netMargin": 0.37281740012,
+            "dividendPaid": 244145000,
+            "peAtCurrentPrice": 11.891891891891893,
+            "pbAtCurrentPrice": 1.7436469026952341
+          },
+          {
+            "fiscalYear": "2017",
+            "reportDate": "2017-12-31",
+            "reportType": "2017年年报",
+            "currency": "HKD",
+            "revenue": 1477208000,
+            "revenueYoY": 0.16530759552100002,
+            "netProfit": 417350000,
+            "netProfitYoY": 0.23121537345,
+            "operatingCashFlow": 648172000,
+            "operatingCashFlowToRevenue": 0.4387818100091524,
+            "capitalExpenditure": 111834000,
+            "freeCashFlow": 536338000,
+            "eps": 0.196,
+            "bookValuePerShare": 1.301008917757,
+            "dividendPerShare": 0.0648,
+            "dividendCurrency": "HKD",
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 38750000,
+            "interestBearingDebt": 164584000,
+            "netCash": -125834000,
+            "totalAssets": 4662035000,
+            "totalLiabilities": 1057531000,
+            "totalEquity": 3604504000,
+            "parentEquity": 3018163000,
+            "minorityEquity": 586341000,
+            "debtRatio": 0.22683892334570632,
+            "roe": 0.15027879985086,
+            "roic": 0.20664451103457002,
+            "grossMargin": 0.8021158834774801,
+            "netMargin": 0.37244111865100005,
+            "peAtCurrentPrice": 13.46938775510204,
+            "pbAtCurrentPrice": 2.0291943921118416
+          },
+          {
+            "fiscalYear": "2016",
+            "reportDate": "2016-12-31",
+            "reportType": "2016年年报",
+            "currency": "HKD",
+            "revenue": 1267655000,
+            "revenueYoY": 0.144134264775,
+            "netProfit": 338974000,
+            "netProfitYoY": 0.191707330793,
+            "operatingCashFlow": 455423000,
+            "operatingCashFlowToRevenue": 0.3592641531015931,
+            "freeCashFlow": 455423000,
+            "eps": 0.162,
+            "bookValuePerShare": 1.093245393651,
+            "dividendPerShare": 0.051699999999999996,
+            "dividendCurrency": "HKD",
+            "buybackCurrency": "HKD",
+            "interestBearingDebt": 168330000,
+            "totalAssets": 3936218000,
+            "totalLiabilities": 907178000,
+            "totalEquity": 3029040000,
+            "parentEquity": 2536180000,
+            "minorityEquity": 492860000,
+            "debtRatio": 0.23046945062493998,
+            "roe": 0.14206465107985,
+            "roic": 0.17918228464893002,
+            "grossMargin": 0.7907135616551799,
+            "netMargin": 0.35380683230099996,
+            "peAtCurrentPrice": 16.296296296296298,
+            "pbAtCurrentPrice": 2.414828377354019
+          },
+          {
+            "fiscalYear": "2015",
+            "reportDate": "2015-12-31",
+            "reportType": "2015年年报",
+            "currency": "HKD",
+            "revenue": 1107960000,
+            "revenueYoY": 0.393499117083,
+            "netProfit": 284444000,
+            "netProfitYoY": 0.23471602451700002,
+            "operatingCashFlow": 366578000,
+            "operatingCashFlowToRevenue": 0.33085851474782485,
+            "freeCashFlow": 366578000,
+            "eps": 0.137,
+            "bookValuePerShare": 0.963819239872,
+            "dividendPerShare": 0.0478,
+            "dividendCurrency": "HKD",
+            "buybackCurrency": "HKD",
+            "interestBearingDebt": 205643000,
+            "totalAssets": 3563565000,
+            "totalLiabilities": 913796000,
+            "totalEquity": 2649769000,
+            "parentEquity": 2235929000,
+            "minorityEquity": 413840000,
+            "debtRatio": 0.2564274820299335,
+            "roe": 0.13483307980988,
+            "roic": 0.17332056175448,
+            "grossMargin": 0.7760198924148899,
+            "netMargin": 0.32958680818799996,
+            "peAtCurrentPrice": 19.27007299270073,
+            "pbAtCurrentPrice": 2.739102822175043
+          }
+        ],
+        "valuation": {
+          "date": "2024-12-31",
+          "price": 2.64,
+          "currency": "HKD",
+          "pe": 16.097560975609756,
+          "pb": 1.1012893068742322,
+          "dividendYield": 0.20734848484848484,
+          "peRange": {
+            "min": 7.586206896551725,
+            "median": 11.042471042471043,
+            "max": 19.27007299270073
+          },
+          "pbRange": {
+            "min": 1.0345240769014168,
+            "median": 1.4277804283094924,
+            "max": 2.739102822175043
+          },
+          "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
+        }
+      },
       "position": {
         "shares": 11000,
         "cost": 2.53
@@ -3344,6 +4462,178 @@
       "symbol": "7489.HK",
       "name": "岚图汽车",
       "currency": "HKD",
+      "dividend": {
+        "fiscalYear": "FY2025",
+        "dividendCurrency": "HKD",
+        "cashDividendCurrency": "HKD",
+        "buybackCurrency": "HKD"
+      },
+      "netCash": {
+        "cashAndShortInvestments": 7975751000,
+        "interestBearingDebt": 4570596000,
+        "netCash": 3405155000,
+        "currency": "HKD",
+        "shareholderFcf": 1872302000,
+        "shareholderFcfCurrency": "HKD",
+        "shareholderFcfBasis": "普通股东 FCF：未发现重大少数股东权益分流，使用合并 FCF",
+        "consolidatedFcf": 1872302000,
+        "fcfPositiveYears": 3,
+        "note": "由更新财务根据最新年度资产负债表、现金流量表和少数股东权益自动刷新。"
+      },
+      "financials": {
+        "updatedAt": "2026-07-09 10:48:22",
+        "source": "东方财富港股财务分析",
+        "sourceSymbol": "07489.HK",
+        "currency": "HKD",
+        "annual": [
+          {
+            "fiscalYear": "2025",
+            "reportDate": "2025-12-31",
+            "reportType": "2025年年报",
+            "currency": "HKD",
+            "revenue": 34864815000,
+            "revenueYoY": 0.8008088264840001,
+            "netProfit": 1017378000,
+            "netProfitYoY": 12.246841110337,
+            "operatingProfit": 1155517000,
+            "operatingCashFlow": 4720453000,
+            "operatingCashFlowToRevenue": 0.1353930316280181,
+            "capitalExpenditure": 2848151000,
+            "freeCashFlow": 1872302000,
+            "eps": 0.3,
+            "bookValuePerShare": 2.869739402174,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 7975751000,
+            "interestBearingDebt": 4570596000,
+            "netCash": 3405155000,
+            "totalAssets": 39880853000,
+            "totalLiabilities": 29320212000,
+            "totalEquity": 10560641000,
+            "parentEquity": 10560641000,
+            "debtRatio": 0.7351952075849532,
+            "roe": 0.14698593576833,
+            "roic": 0.0423367547614,
+            "grossMargin": 0.20926567371718,
+            "operatingMargin": 0.03314278306080213,
+            "netMargin": 0.029180651037000002,
+            "peAtCurrentPrice": 10.666666666666668,
+            "pbAtCurrentPrice": 1.1150838287183178
+          },
+          {
+            "fiscalYear": "2024",
+            "reportDate": "2024-12-31",
+            "reportType": "2024年年报",
+            "currency": "HKD",
+            "revenue": 19360642000,
+            "revenueYoY": 0.518555568977,
+            "netProfit": -90459000,
+            "netProfitYoY": 0.939513791423,
+            "operatingProfit": -137312000,
+            "operatingCashFlow": 3303731000,
+            "operatingCashFlowToRevenue": 0.17064160372367818,
+            "capitalExpenditure": 1642551000,
+            "freeCashFlow": 1661180000,
+            "eps": -0.03,
+            "bookValuePerShare": 0.892000271739,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 5861314000,
+            "interestBearingDebt": 3279921000,
+            "netCash": 2581393000,
+            "totalAssets": 21949366000,
+            "totalLiabilities": 18666805000,
+            "totalEquity": 3282561000,
+            "parentEquity": 3282561000,
+            "debtRatio": 0.8504484822021738,
+            "roe": -0.02745448078104,
+            "roic": -0.00621065432157,
+            "grossMargin": 0.20998761301407,
+            "operatingMargin": -0.0070923267937085975,
+            "netMargin": -0.004672314069,
+            "pbAtCurrentPrice": 3.5874428533092675
+          },
+          {
+            "fiscalYear": "2023",
+            "reportDate": "2023-12-31",
+            "reportType": "2023年年报",
+            "currency": "HKD",
+            "revenue": 12749380000,
+            "revenueYoY": 1.1067247611189999,
+            "netProfit": -1495531000,
+            "netProfitYoY": 0.027685836235,
+            "operatingProfit": -1908045000,
+            "operatingCashFlow": 3632233000,
+            "operatingCashFlowToRevenue": 0.28489487331933006,
+            "capitalExpenditure": 2217060000,
+            "freeCashFlow": 1415173000,
+            "eps": -0.48,
+            "bookValuePerShare": 0.898691032609,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 5682457000,
+            "interestBearingDebt": 3247488000,
+            "netCash": 2434969000,
+            "totalAssets": 18581637000,
+            "totalLiabilities": 15274454000,
+            "totalEquity": 3307183000,
+            "parentEquity": 3307183000,
+            "debtRatio": 0.8220187489401499,
+            "roe": -0.37059056241496996,
+            "roic": -0.13423001251755,
+            "grossMargin": 0.14222926918799,
+            "operatingMargin": -0.14965786571582304,
+            "netMargin": -0.117302253129,
+            "pbAtCurrentPrice": 3.5607343167874332
+          },
+          {
+            "fiscalYear": "2022",
+            "reportDate": "2022-12-31",
+            "reportType": "2022年年报",
+            "currency": "HKD",
+            "revenue": 6051754000,
+            "netProfit": -1538115000,
+            "operatingProfit": -1843186000,
+            "operatingCashFlow": 152692000,
+            "operatingCashFlowToRevenue": 0.02523103219331123,
+            "capitalExpenditure": 741506000,
+            "freeCashFlow": -588814000,
+            "eps": -0.6,
+            "bookValuePerShare": 1.29453423913,
+            "buybackCurrency": "HKD",
+            "cashAndShortInvestments": 3529123000,
+            "interestBearingDebt": 267291000,
+            "netCash": 3261832000,
+            "totalAssets": 12831962000,
+            "totalLiabilities": 8068076000,
+            "totalEquity": 4763886000,
+            "parentEquity": 4763886000,
+            "debtRatio": 0.6287484330143746,
+            "roe": -0.32286981678403004,
+            "roic": -0.16529738731441002,
+            "grossMargin": 0.08305492919903999,
+            "operatingMargin": -0.30457054268894607,
+            "netMargin": -0.25416019884499996,
+            "pbAtCurrentPrice": 2.4719315281692205
+          }
+        ],
+        "valuation": {
+          "date": "2025-12-31",
+          "price": 3.2,
+          "currency": "HKD",
+          "pe": 10.666666666666668,
+          "pb": 1.1150838287183178,
+          "peg": 0.008709728958321686,
+          "peRange": {
+            "min": 10.666666666666668,
+            "median": 10.666666666666668,
+            "max": 10.666666666666668
+          },
+          "pbRange": {
+            "min": 1.1150838287183178,
+            "median": 3.016332922478327,
+            "max": 3.5874428533092675
+          },
+          "sourceNote": "PE/PB 区间为按当前价格除以历史 EPS/BPS 的回看口径，不等同历史市场估值分位"
+        }
+      },
       "position": {
         "shares": 2132,
         "cost": 0.01
@@ -3379,8 +4669,8 @@
       "symbol": "018738",
       "name": "博时标普500ETF联接E(人民币)",
       "fundType": "otc",
-      "shares": 90.70294784580499,
-      "cost": 5.5125,
+      "shares": 181.8124797250302,
+      "cost": 5.500172493727501,
       "currency": "CNY"
     },
     {
