@@ -155,7 +155,7 @@ var etfRuleConfigs = []etfRuleConfig{
 		Symbol:              "021000",
 		Name:                "南方纳斯达克100指数发起(QDII)I",
 		PriceSymbol:         "^NDX",
-		PriceSourceName:     "Nasdaq/Yahoo/东方财富/Stooq纳指100日线（自动选最新）",
+		PriceSourceName:     "Nasdaq官方NDX历史/报价、Yahoo、东方财富、Stooq纳指100日线（自动选最新）",
 		PriceSourceURL:      "https://finance.yahoo.com/quote/%5ENDX/history/",
 		ValuationMetricKey:  "pePercentile",
 		ValuationMetricName: "纳指100 PE分位",
@@ -312,6 +312,11 @@ func fetchGlobalIndexDailyCloses(client *http.Client, symbol string, eastmoneySe
 
 	if strings.EqualFold(symbol, "^NDX") || strings.EqualFold(symbol, "NDX") {
 		closes, err := fetchNasdaqHistoricalCloses(client, "NDX", "index", limit)
+		if err == nil && len(closes) > 0 {
+			if latest, latestErr := fetchNasdaqLatestQuoteClose(client, "NDX", "index"); latestErr == nil {
+				closes = appendOrReplaceLatestDailyClose(closes, latest)
+			}
+		}
 		addCandidate("nasdaq", closes, err)
 	}
 	if strings.TrimSpace(eastmoneySecID) != "" {
@@ -361,6 +366,26 @@ func latestDailyCloseDate(closes []dailyClose) string {
 		return ""
 	}
 	return strings.TrimSpace(closes[len(closes)-1].Date)
+}
+
+func appendOrReplaceLatestDailyClose(closes []dailyClose, latest dailyClose) []dailyClose {
+	if latest.Date == "" || latest.Price <= 0 {
+		return closes
+	}
+	if len(closes) == 0 {
+		return []dailyClose{latest}
+	}
+	result := append([]dailyClose(nil), closes...)
+	last := result[len(result)-1]
+	if latest.Date < last.Date {
+		return result
+	}
+	if latest.Date == last.Date {
+		result[len(result)-1] = latest
+		return result
+	}
+	result = append(result, latest)
+	return result
 }
 
 func eastmoneyGlobalIndexSecID(symbol string) string {
@@ -468,6 +493,53 @@ func fetchNasdaqHistoricalCloses(client *http.Client, symbol string, assetClass 
 	return closes, nil
 }
 
+func fetchNasdaqLatestQuoteClose(client *http.Client, symbol string, assetClass string) (dailyClose, error) {
+	values := url.Values{}
+	values.Set("assetclass", assetClass)
+	endpoint := "https://api.nasdaq.com/api/quote/" + url.PathEscape(strings.ToUpper(strings.TrimSpace(symbol))) + "/info?" + values.Encode()
+
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return dailyClose{}, err
+	}
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Origin", "https://www.nasdaq.com")
+	req.Header.Set("Referer", "https://www.nasdaq.com/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return dailyClose{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return dailyClose{}, fmt.Errorf("nasdaq quote request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	var payload struct {
+		Data struct {
+			PrimaryData struct {
+				LastSalePrice      string `json:"lastSalePrice"`
+				LastTradeTimestamp string `json:"lastTradeTimestamp"`
+			} `json:"primaryData"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&payload); err != nil {
+		return dailyClose{}, err
+	}
+	price, err := parseMarketNumber(payload.Data.PrimaryData.LastSalePrice)
+	if err != nil || price <= 0 {
+		return dailyClose{}, errors.New("missing nasdaq quote close price")
+	}
+	date := normalizeNasdaqQuoteDate(payload.Data.PrimaryData.LastTradeTimestamp)
+	if date == "" {
+		return dailyClose{}, errors.New("missing nasdaq quote close date")
+	}
+	return dailyClose{Date: date, Price: price}, nil
+}
+
 func parseNasdaqHistoricalCloses(body []byte) ([]dailyClose, error) {
 	var payload struct {
 		Data struct {
@@ -507,6 +579,16 @@ func parseNasdaqHistoricalCloses(body []byte) ([]dailyClose, error) {
 func normalizeNasdaqHistoricalDate(value string) string {
 	value = strings.TrimSpace(value)
 	for _, layout := range []string{"01/02/2006", "1/2/2006", "2006-01-02"} {
+		if date, err := time.Parse(layout, value); err == nil {
+			return date.Format("2006-01-02")
+		}
+	}
+	return ""
+}
+
+func normalizeNasdaqQuoteDate(value string) string {
+	value = strings.TrimSpace(value)
+	for _, layout := range []string{"Jan 2, 2006", "Jan 02, 2006", "2006-01-02"} {
 		if date, err := time.Parse(layout, value); err == nil {
 			return date.Format("2006-01-02")
 		}

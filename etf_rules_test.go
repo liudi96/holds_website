@@ -70,6 +70,38 @@ func TestSelectLatestDailyCloseCandidateKeepsFirstSourceOnTie(t *testing.T) {
 	}
 }
 
+func TestAppendOrReplaceLatestDailyCloseAppendsNewerQuote(t *testing.T) {
+	closes := appendOrReplaceLatestDailyClose([]dailyClose{
+		{Date: "2026-07-06", Price: 100},
+		{Date: "2026-07-07", Price: 101},
+	}, dailyClose{Date: "2026-07-08", Price: 102})
+	if len(closes) != 3 {
+		t.Fatalf("len = %d, want 3", len(closes))
+	}
+	if latest := closes[len(closes)-1]; latest.Date != "2026-07-08" || latest.Price != 102 {
+		t.Fatalf("latest = %+v", latest)
+	}
+}
+
+func TestAppendOrReplaceLatestDailyCloseReplacesSameDateQuote(t *testing.T) {
+	closes := appendOrReplaceLatestDailyClose([]dailyClose{
+		{Date: "2026-07-06", Price: 100},
+		{Date: "2026-07-07", Price: 101},
+	}, dailyClose{Date: "2026-07-07", Price: 102})
+	if len(closes) != 2 {
+		t.Fatalf("len = %d, want 2", len(closes))
+	}
+	if latest := closes[len(closes)-1]; latest.Date != "2026-07-07" || latest.Price != 102 {
+		t.Fatalf("latest = %+v", latest)
+	}
+}
+
+func TestNormalizeNasdaqQuoteDate(t *testing.T) {
+	if got := normalizeNasdaqQuoteDate("Jul 8, 2026"); got != "2026-07-08" {
+		t.Fatalf("date = %q, want 2026-07-08", got)
+	}
+}
+
 func TestParseMultplTable(t *testing.T) {
 	rows, err := parseMultplTable([]byte(`
 		<table>
