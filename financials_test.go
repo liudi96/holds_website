@@ -20,6 +20,47 @@ func TestEastmoneyFinancialSecucode(t *testing.T) {
 	}
 }
 
+func TestFindFinancialTargetUpdatesUnifiedStockBeforeLegacyBuckets(t *testing.T) {
+	state := AppState{
+		FX: map[string]float64{"HKD": 0.9},
+		Stocks: []Stock{{
+			Symbol:       "7489.HK",
+			Name:         "岚图汽车",
+			Currency:     "HKD",
+			CurrentPrice: 3.19,
+			Position:     &StockPosition{Shares: 2132, Cost: 0.01},
+		}},
+	}
+	normalizePortfolioState(&state)
+
+	target, targetType, apply := findFinancialTarget(&state, "7489.HK")
+	if apply == nil {
+		t.Fatal("expected financial target")
+	}
+	if target.Symbol != "7489.HK" || targetType != "holding" {
+		t.Fatalf("target = %+v type=%s", target, targetType)
+	}
+	apply(&Financials{
+		UpdatedAt: "2026-07-09 10:32:07",
+		Source:    "东方财富港股财务分析",
+		Currency:  "HKD",
+		Annual: []FinancialAnnual{{
+			FiscalYear: "2025",
+			Currency:   "HKD",
+			Revenue:    ptrFloat(100),
+		}},
+	})
+
+	persisted := persistentState(state)
+	stock := findStock(persisted.Stocks, "7489.HK")
+	if stock == nil || stock.Financials == nil || stock.Financials.UpdatedAt != "2026-07-09 10:32:07" {
+		t.Fatalf("stock financials not persisted: %+v", stock)
+	}
+	if len(persisted.Holdings) != 1 || persisted.Holdings[0].Financials == nil {
+		t.Fatalf("legacy holding financials not rebuilt: %+v", persisted.Holdings)
+	}
+}
+
 func TestFillDerivedGrowth(t *testing.T) {
 	annual := []FinancialAnnual{
 		{FiscalYear: "2025", Revenue: ptr(120), NetProfit: ptr(24), OperatingCashFlow: ptr(30)},

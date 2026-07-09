@@ -29,6 +29,47 @@ func TestDrawdownFromRecentHigh(t *testing.T) {
 	}
 }
 
+func TestSelectLatestDailyCloseCandidatePrefersNewestDate(t *testing.T) {
+	closes, source, ok := selectLatestDailyCloseCandidate([]dailyCloseCandidate{
+		{
+			Source: "nasdaq",
+			Closes: []dailyClose{
+				{Date: "2026-07-06", Price: 100},
+				{Date: "2026-07-07", Price: 101},
+			},
+		},
+		{
+			Source: "yahoo",
+			Closes: []dailyClose{
+				{Date: "2026-07-07", Price: 101},
+				{Date: "2026-07-08", Price: 102},
+			},
+		},
+	}, 10)
+	if !ok {
+		t.Fatal("selectLatestDailyCloseCandidate returned no candidate")
+	}
+	if source != "yahoo" {
+		t.Fatalf("source = %q, want yahoo", source)
+	}
+	if got := latestDailyCloseDate(closes); got != "2026-07-08" {
+		t.Fatalf("latest date = %q, want 2026-07-08", got)
+	}
+}
+
+func TestSelectLatestDailyCloseCandidateKeepsFirstSourceOnTie(t *testing.T) {
+	_, source, ok := selectLatestDailyCloseCandidate([]dailyCloseCandidate{
+		{Source: "nasdaq", Closes: []dailyClose{{Date: "2026-07-08", Price: 100}}},
+		{Source: "yahoo", Closes: []dailyClose{{Date: "2026-07-08", Price: 101}}},
+	}, 10)
+	if !ok {
+		t.Fatal("selectLatestDailyCloseCandidate returned no candidate")
+	}
+	if source != "nasdaq" {
+		t.Fatalf("source = %q, want nasdaq", source)
+	}
+}
+
 func TestParseMultplTable(t *testing.T) {
 	rows, err := parseMultplTable([]byte(`
 		<table>

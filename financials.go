@@ -168,6 +168,29 @@ func (s *Server) handleUpdateFinancials(w http.ResponseWriter, r *http.Request) 
 
 func findFinancialTarget(state *AppState, symbol string) (financialTarget, string, func(*Financials)) {
 	normalized := normalizeSymbol(symbol)
+	for i := range state.Stocks {
+		if normalizeSymbol(state.Stocks[i].Symbol) != normalized {
+			continue
+		}
+		target := financialTarget{
+			Symbol:       state.Stocks[i].Symbol,
+			Name:         state.Stocks[i].Name,
+			Industry:     state.Stocks[i].Industry,
+			Currency:     state.Stocks[i].Currency,
+			CurrentPrice: state.Stocks[i].CurrentPrice,
+			MarketCap:    state.Stocks[i].MarketCap,
+			Dividend:     state.Stocks[i].Dividend,
+		}
+		targetType := "candidate"
+		if state.Stocks[i].Position != nil {
+			targetType = "holding"
+		}
+		return target, targetType, func(financials *Financials) {
+			applyFinancialFactsToStock(&state.Stocks[i], financials)
+			state.Stocks[i].Financials = financials
+		}
+	}
+
 	for i := range state.Holdings {
 		if normalizeSymbol(state.Holdings[i].Symbol) != normalized {
 			continue
@@ -207,6 +230,23 @@ func findFinancialTarget(state *AppState, symbol string) (financialTarget, strin
 	}
 
 	return financialTarget{}, "", nil
+}
+
+func applyFinancialFactsToStock(stock *Stock, financials *Financials) {
+	if stock == nil || financials == nil || len(financials.Annual) == 0 {
+		return
+	}
+	applyFinancialDividend(&stock.Dividend, financials, stock.Currency, stock.CurrentPrice, stock.MarketCap)
+	applyFinancialNetCash(&stock.NetCash, financials, stock.Currency, stock.Industry)
+	if financials.Valuation != nil {
+		financials.Valuation.DividendYield = financialDividendYield(financialTarget{
+			Symbol:       stock.Symbol,
+			Currency:     stock.Currency,
+			CurrentPrice: stock.CurrentPrice,
+			MarketCap:    stock.MarketCap,
+			Dividend:     stock.Dividend,
+		})
+	}
 }
 
 func applyFinancialFactsToHolding(holding *Holding, financials *Financials) {

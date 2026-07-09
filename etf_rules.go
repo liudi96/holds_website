@@ -125,7 +125,7 @@ var etfRuleConfigs = []etfRuleConfig{
 		Symbol:              "018738",
 		Name:                "博时标普500ETF联接E(人民币)",
 		PriceSymbol:         "^GSPC",
-		PriceSourceName:     "Yahoo Finance标普500日线；Nasdaq官方SPY日线备援",
+		PriceSourceName:     "东方财富/Yahoo/Nasdaq/Stooq标普500日线（自动选最新）",
 		PriceSourceURL:      "https://finance.yahoo.com/quote/%5EGSPC/history/",
 		ValuationMetricKey:  "pePercentile",
 		ValuationMetricName: "标普500 PE分位",
@@ -155,8 +155,8 @@ var etfRuleConfigs = []etfRuleConfig{
 		Symbol:              "021000",
 		Name:                "南方纳斯达克100指数发起(QDII)I",
 		PriceSymbol:         "^NDX",
-		PriceSourceName:     "Nasdaq官方纳指100日线",
-		PriceSourceURL:      "https://api.nasdaq.com/api/quote/NDX/historical?assetclass=index",
+		PriceSourceName:     "Nasdaq/Yahoo/东方财富/Stooq纳指100日线（自动选最新）",
+		PriceSourceURL:      "https://finance.yahoo.com/quote/%5ENDX/history/",
 		ValuationMetricKey:  "pePercentile",
 		ValuationMetricName: "纳指100 PE分位",
 		ValuationSourceName: "韭圈儿纳斯达克100 PE分位（优先；History of Market Forward PE备援）",
@@ -266,17 +266,8 @@ func fetchRuleDailyCloses(client *http.Client, symbol string, limit int) ([]dail
 		}
 		return fetchEastmoneyDailyCloses(client, normalized, limit)
 	}
-	if strings.EqualFold(normalized, "^NDX") || strings.EqualFold(normalized, "NDX") {
-		closes, err := fetchNasdaqHistoricalCloses(client, "NDX", "index", limit)
-		if err == nil && len(closes) > 0 {
-			return closes, nil
-		}
-	}
 	if secID := eastmoneyGlobalIndexSecID(normalized); secID != "" {
-		closes, err := fetchEastmoneyDailyClosesBySecID(client, secID, limit)
-		if err == nil && len(closes) > 0 {
-			return closes, nil
-		}
+		return fetchGlobalIndexDailyCloses(client, normalized, secID, limit)
 	}
 	closes, err := fetchYahooDailyCloses(client, normalized, "1y")
 	if err == nil && len(closes) > 0 {
@@ -296,6 +287,80 @@ func fetchRuleDailyCloses(client *http.Client, symbol string, limit int) ([]dail
 		return stooqCloses, nil
 	}
 	return nil, fmt.Errorf("yahoo: %v; stooq: %v", err, stooqErr)
+}
+
+type dailyCloseCandidate struct {
+	Source string
+	Closes []dailyClose
+}
+
+func fetchGlobalIndexDailyCloses(client *http.Client, symbol string, eastmoneySecID string, limit int) ([]dailyClose, error) {
+	candidates := []dailyCloseCandidate{}
+	errs := []string{}
+
+	addCandidate := func(source string, closes []dailyClose, err error) {
+		if err != nil {
+			errs = append(errs, source+": "+err.Error())
+			return
+		}
+		if len(closes) == 0 {
+			errs = append(errs, source+": empty daily closes")
+			return
+		}
+		candidates = append(candidates, dailyCloseCandidate{Source: source, Closes: closes})
+	}
+
+	if strings.EqualFold(symbol, "^NDX") || strings.EqualFold(symbol, "NDX") {
+		closes, err := fetchNasdaqHistoricalCloses(client, "NDX", "index", limit)
+		addCandidate("nasdaq", closes, err)
+	}
+	if strings.TrimSpace(eastmoneySecID) != "" {
+		closes, err := fetchEastmoneyDailyClosesBySecID(client, eastmoneySecID, limit)
+		addCandidate("eastmoney", closes, err)
+	}
+	closes, err := fetchYahooDailyCloses(client, symbol, "2y")
+	addCandidate("yahoo", closes, err)
+	if strings.EqualFold(symbol, "^GSPC") || strings.EqualFold(symbol, "SPX") {
+		closes, err := fetchNasdaqHistoricalCloses(client, "SPY", "etf", limit)
+		addCandidate("nasdaq-spy", closes, err)
+	}
+	closes, err = fetchStooqDailyCloses(client, symbol)
+	addCandidate("stooq", closes, err)
+
+	if closes, _, ok := selectLatestDailyCloseCandidate(candidates, limit); ok {
+		return closes, nil
+	}
+	return nil, errors.New(strings.Join(errs, "; "))
+}
+
+func selectLatestDailyCloseCandidate(candidates []dailyCloseCandidate, limit int) ([]dailyClose, string, bool) {
+	var best dailyCloseCandidate
+	bestDate := ""
+	for _, candidate := range candidates {
+		date := latestDailyCloseDate(candidate.Closes)
+		if date == "" {
+			continue
+		}
+		if bestDate == "" || date > bestDate {
+			best = candidate
+			bestDate = date
+		}
+	}
+	if bestDate == "" {
+		return nil, "", false
+	}
+	closes := best.Closes
+	if limit > 0 && len(closes) > limit {
+		closes = closes[len(closes)-limit:]
+	}
+	return closes, best.Source, true
+}
+
+func latestDailyCloseDate(closes []dailyClose) string {
+	if len(closes) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(closes[len(closes)-1].Date)
 }
 
 func eastmoneyGlobalIndexSecID(symbol string) string {
