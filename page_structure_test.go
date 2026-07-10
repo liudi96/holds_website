@@ -113,9 +113,11 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 	requireContains(t, js, `renderEtfRuleRulebook`)
 	requireContains(t, js, `ETF_ALLOCATION_POOL_BASE`)
 	requireContains(t, js, `ETF_ALLOCATION_MONTHLY_INFLOW`)
+	requireContains(t, js, `ETF_ALLOCATION_CORRECTION_THRESHOLD`)
 	requireContains(t, js, `ETF_RULE_TRADING_DAYS_PER_WEEK`)
 	requireContains(t, js, `function etfRuleDailyAmount`)
 	requireContains(t, js, `function etfAllocationSnapshot`)
+	requireContains(t, js, `function etfRuleExecution`)
 	requireContains(t, js, `renderEtfAllocationBar`)
 	requireContains(t, js, `renderEtfPoolProgress`)
 	requireContains(t, js, `renderEtfRuleActionItem`)
@@ -128,7 +130,7 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 	requireContains(t, js, `function tradeFromEtfRuleBuyForm`)
 	requireContains(t, js, `async function saveEtfRuleBuy`)
 	requireContains(t, js, `async function saveTradeRecord`)
-	for _, symbol := range []string{"022434", "018738", "008163", "021000"} {
+	for _, symbol := range []string{"022434", "018738", "008163", "021000", "563020"} {
 		requireContains(t, js, symbol)
 	}
 	for _, fundName := range []string{
@@ -143,13 +145,17 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 		requireContains(t, js, level)
 	}
 	for _, condition := range []string{
-		"PE分位>80%；若回撤<5%且高估则保持限速",
-		"PE分位>95%；最低档不再下调",
+		"PE分位>80%",
+		"PE分位60%—80%",
 		"PE分位20%—40%；回撤<15%则降为1倍",
-		"PE分位>85%；或70%—85%且回撤<5%后限速",
-		"PE分位20%—40%；或<20%且回撤<30%后限速",
-		`quarter: 4200, half: 8400, one: 16800, oneHalf: 25200, two: 33600`,
-		`quarter: 700, half: 1400, one: 2800, oneHalf: 4200, two: 5600`,
+		"回退口径取绝对股息率与历史分位较低档",
+		"PE分位<20%；回撤<30%则降为1.5倍",
+		`targetWeight: 0.35`,
+		`targetWeight: 0.25`,
+		`targetWeight: 0.30`,
+		`targetWeight: 0.10`,
+		`quarter: 4900, half: 9800, one: 19600, oneHalf: 29400, two: 39200`,
+		`quarter: 1400, half: 2800, one: 5600, oneHalf: 8400, two: 11200`,
 	} {
 		requireContains(t, js, condition)
 	}
@@ -235,8 +241,8 @@ func TestCloudSyncButtonAndEndpointAreWired(t *testing.T) {
 	css := readTextFile(t, "styles.css")
 	topbarActions := extractBetween(t, html, `<div class="topbar-actions">`, `<section class="page active"`)
 
-	requireContains(t, html, `styles.css?v=overview-layer-v1`)
-	requireContains(t, html, `app.js?v=overview-layer-v1`)
+	requireContains(t, html, `styles.css?v=etf-policy-v1`)
+	requireContains(t, html, `app.js?v=etf-policy-v1`)
 	requireContains(t, html, `id="cloudSyncButton"`)
 	requireContains(t, topbarActions, `id="cloudSyncButton"`)
 	requireContains(t, topbarActions, `id="privacyToggle"`)

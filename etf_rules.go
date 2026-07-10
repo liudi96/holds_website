@@ -19,18 +19,24 @@ import (
 )
 
 type ETFRuleStatus struct {
-	Symbol        string          `json:"symbol"`
-	Name          string          `json:"name"`
-	Level         string          `json:"level,omitempty"`
-	LevelLabel    string          `json:"levelLabel,omitempty"`
-	MonthlyAmount float64         `json:"monthlyAmount,omitempty"`
-	WeeklyAmount  float64         `json:"weeklyAmount,omitempty"`
-	Complete      bool            `json:"complete"`
-	Reason        string          `json:"reason,omitempty"`
-	AsOf          string          `json:"asOf,omitempty"`
-	UpdatedAt     string          `json:"updatedAt,omitempty"`
-	Metrics       []ETFRuleMetric `json:"metrics,omitempty"`
-	Sources       []ETFRuleSource `json:"sources,omitempty"`
+	Symbol            string          `json:"symbol"`
+	Name              string          `json:"name"`
+	Level             string          `json:"level,omitempty"`
+	LevelLabel        string          `json:"levelLabel,omitempty"`
+	MonthlyAmount     float64         `json:"monthlyAmount,omitempty"`
+	WeeklyAmount      float64         `json:"weeklyAmount,omitempty"`
+	Complete          bool            `json:"complete"`
+	Reason            string          `json:"reason,omitempty"`
+	AsOf              string          `json:"asOf,omitempty"`
+	UpdatedAt         string          `json:"updatedAt,omitempty"`
+	LevelUpdatedAt    string          `json:"levelUpdatedAt,omitempty"`
+	PendingLevel      string          `json:"pendingLevel,omitempty"`
+	PendingLevelLabel string          `json:"pendingLevelLabel,omitempty"`
+	PendingSince      string          `json:"pendingSince,omitempty"`
+	PendingAsOf       string          `json:"pendingAsOf,omitempty"`
+	PendingDays       int             `json:"pendingDays,omitempty"`
+	Metrics           []ETFRuleMetric `json:"metrics,omitempty"`
+	Sources           []ETFRuleSource `json:"sources,omitempty"`
 }
 
 type ETFRuleMetric struct {
@@ -60,6 +66,8 @@ const (
 	fundDBAPIVersion                  = "2.2.7"
 	fundDBAPIReqKey                   = "EWf45rlv#kfsr@k#gfksgkr"
 	primaryValuationMaxLagDays        = 3
+	chinaBondHistoryURL               = "https://yield.chinabond.com.cn/cbweb-pbc-web/pbc/historyQuery"
+	eastmoneyTreasuryYieldURL         = "https://datacenter-web.eastmoney.com/api/data/get"
 )
 
 type etfRuleLevel struct {
@@ -84,11 +92,14 @@ type etfRuleConfig struct {
 }
 
 type etfRuleInputs struct {
-	Drawdown            *float64
-	DrawdownAsOf        string
-	ValuationPercentile *float64
-	ValuationZScore     *float64
-	ValuationAsOf       string
+	Drawdown                 *float64
+	DrawdownAsOf             string
+	ValuationPercentile      *float64
+	ValuationZScore          *float64
+	DividendYield            *float64
+	DividendYieldPercentile  *float64
+	DividendSpreadPercentile *float64
+	ValuationAsOf            string
 }
 
 type etfRuleEvaluation struct {
@@ -109,24 +120,24 @@ var etfRuleConfigs = []etfRuleConfig{
 	{
 		Symbol:              "022434",
 		Name:                "南方中证A500ETF联接A",
-		PriceSymbol:         "000510.SH",
-		PriceSourceName:     "东方财富沪深行情K线",
-		PriceSourceURL:      "https://quote.eastmoney.com/",
+		PriceSymbol:         "000510CNY010",
+		PriceSourceName:     "中证指数中证A500全收益指数日线",
+		PriceSourceURL:      "https://www.csindex.com.cn/",
 		ValuationMetricKey:  "pePercentile",
 		ValuationMetricName: "中证A500 PE分位",
 		ValuationSourceName: "韭圈儿中证A500 PE分位（优先；乐咕乐股备援）",
 		ValuationSourceURL:  fundDBIndexPageURL,
 		Levels:              etfRuleLevels,
-		Monthly:             map[string]float64{"quarter": 2800, "half": 5600, "one": 11200, "oneHalf": 16800, "two": 22400},
-		Weekly:              map[string]float64{"quarter": 700, "half": 1400, "one": 2800, "oneHalf": 4200, "two": 5600},
+		Monthly:             map[string]float64{"quarter": 4900, "half": 9800, "one": 19600, "oneHalf": 29400, "two": 39200},
+		Weekly:              map[string]float64{"quarter": 1225, "half": 2450, "one": 4900, "oneHalf": 7350, "two": 9800},
 		Evaluate:            evaluateA500Rule,
 	},
 	{
 		Symbol:              "018738",
 		Name:                "博时标普500ETF联接E(人民币)",
-		PriceSymbol:         "^GSPC",
-		PriceSourceName:     "东方财富/Yahoo/Nasdaq/Stooq标普500日线（自动选最新）",
-		PriceSourceURL:      "https://finance.yahoo.com/quote/%5EGSPC/history/",
+		PriceSymbol:         "SPY",
+		PriceSourceName:     "Nasdaq SPY日线 + StockAnalysis分红（标普500总收益代理）",
+		PriceSourceURL:      "https://stockanalysis.com/etf/spy/dividend/",
 		ValuationMetricKey:  "pePercentile",
 		ValuationMetricName: "标普500 PE分位",
 		ValuationSourceName: "韭圈儿标普500 PE分位（优先；History of Market CAPE备援）",
@@ -140,30 +151,30 @@ var etfRuleConfigs = []etfRuleConfig{
 		Symbol:              "008163",
 		Name:                "南方标普红利低波50ETF联接A",
 		PriceSymbol:         "515450.SH",
-		PriceSourceName:     "东方财富沪深行情K线",
+		PriceSourceName:     "腾讯515450未复权日线 + 东方财富分红（红利指数全收益代理）",
 		PriceSourceURL:      "https://quote.eastmoney.com/sh515450.html",
-		ValuationMetricKey:  "dividendYield",
-		ValuationMetricName: "515450股息率",
-		ValuationSourceName: "天天基金/东方财富515450分红TTM备援口径",
+		ValuationMetricKey:  "dividendYieldPercentile",
+		ValuationMetricName: "红利低波股息率历史分位",
+		ValuationSourceName: "515450股息率历史（利差主口径；绝对值回退）",
 		ValuationSourceURL:  "https://fundf10.eastmoney.com/fhsp_515450.html",
 		Levels:              etfRuleLevels,
-		Monthly:             map[string]float64{"quarter": 4200, "half": 8400, "one": 16800, "oneHalf": 25200, "two": 33600},
-		Weekly:              map[string]float64{"quarter": 1050, "half": 2100, "one": 4200, "oneHalf": 6300, "two": 8400},
+		Monthly:             map[string]float64{"quarter": 3500, "half": 7000, "one": 14000, "oneHalf": 21000, "two": 28000},
+		Weekly:              map[string]float64{"quarter": 875, "half": 1750, "one": 3500, "oneHalf": 5250, "two": 7000},
 		Evaluate:            evaluateDividendLowVolRule,
 	},
 	{
 		Symbol:              "021000",
 		Name:                "南方纳斯达克100指数发起(QDII)I",
-		PriceSymbol:         "^NDX",
-		PriceSourceName:     "Nasdaq官方NDX历史/报价、Yahoo、东方财富、Stooq纳指100日线（自动选最新）",
-		PriceSourceURL:      "https://finance.yahoo.com/quote/%5ENDX/history/",
+		PriceSymbol:         "XNDX",
+		PriceSourceName:     "Nasdaq官方纳斯达克100总收益指数日线",
+		PriceSourceURL:      "https://indexes.nasdaq.com/Index/Overview/XNDX",
 		ValuationMetricKey:  "pePercentile",
 		ValuationMetricName: "纳指100 PE分位",
 		ValuationSourceName: "韭圈儿纳斯达克100 PE分位（优先；History of Market Forward PE备援）",
 		ValuationSourceURL:  fundDBIndexPageURL,
 		Levels:              etfRuleLevels,
-		Monthly:             map[string]float64{"quarter": 2800, "half": 5600, "one": 11200, "oneHalf": 16800, "two": 22400},
-		Weekly:              map[string]float64{"quarter": 700, "half": 1400, "one": 2800, "oneHalf": 4200, "two": 5600},
+		Monthly:             map[string]float64{"quarter": 1400, "half": 2800, "one": 5600, "oneHalf": 8400, "two": 11200},
+		Weekly:              map[string]float64{"quarter": 350, "half": 700, "one": 1400, "oneHalf": 2100, "two": 2800},
 		Evaluate:            evaluateNasdaq100Rule,
 	},
 }
@@ -190,30 +201,73 @@ func fetchETFRuleStatus(client *http.Client, config etfRuleConfig, now time.Time
 	drawdown, drawdownDate, err := fetchETFRuleDrawdown(client, config)
 	if err != nil {
 		statusErrs = append(statusErrs, "回撤："+err.Error())
-		metrics = append(metrics, ETFRuleMetric{Key: "drawdown252", Label: "近252交易日回撤", Unit: "%", Available: false, Error: err.Error()})
+		metrics = append(metrics, ETFRuleMetric{Key: "drawdown3y", Label: "近3年总收益回撤", Unit: "%", Available: false, Error: err.Error()})
 	} else {
 		inputs.Drawdown = &drawdown
 		inputs.DrawdownAsOf = drawdownDate
-		metrics = append(metrics, ETFRuleMetric{Key: "drawdown252", Label: "近252交易日回撤", Value: percentMetric(drawdown), Unit: "%", AsOf: drawdownDate, Available: true})
+		metrics = append(metrics, ETFRuleMetric{Key: "drawdown3y", Label: "近3年总收益回撤", Value: percentMetric(drawdown), Unit: "%", AsOf: drawdownDate, Available: true})
 	}
 
-	valuation, valuationErr := fetchETFRuleValuation(client, config)
-	if valuationErr != nil {
-		statusErrs = append(statusErrs, config.ValuationMetricName+"："+valuationErr.Error())
-		metrics = append(metrics, ETFRuleMetric{Key: config.ValuationMetricKey, Label: config.ValuationMetricName, Unit: configValuationMetricUnit(config), Available: false, Error: valuationErr.Error()})
-	} else {
-		inputs.ValuationAsOf = valuation.Date
-		metricValue := valuation.Value
-		if valuation.Kind == "zScore" {
-			inputs.ValuationZScore = &valuation.Value
+	if config.Symbol == "008163" {
+		valuation, valuationErr := fetchDividendLowVolValuationSnapshot(client)
+		if valuationErr != nil {
+			statusErrs = append(statusErrs, "红利低波估值："+valuationErr.Error())
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "dividendYield", Label: "515450绝对股息率", Unit: "%", Available: false, Error: valuationErr.Error()},
+				ETFRuleMetric{Key: "dividendYieldPercentile", Label: "股息率历史分位", Unit: "%", Available: false, Error: valuationErr.Error()},
+				ETFRuleMetric{Key: "china10YBondYield", Label: "中债10年国债收益率", Unit: "%", Available: false, Error: valuationErr.Error()},
+				ETFRuleMetric{Key: "dividendSpread", Label: "股息率利差", Unit: "%", Available: false, Error: valuationErr.Error()},
+				ETFRuleMetric{Key: "dividendSpreadPercentile", Label: "股息率利差历史分位", Unit: "%", Available: false, Error: valuationErr.Error()},
+			)
 		} else {
-			inputs.ValuationPercentile = &valuation.Value
-			metricValue = valuation.Value * 100
+			inputs.DividendYield = &valuation.Yield
+			inputs.DividendYieldPercentile = &valuation.Percentile
+			inputs.ValuationAsOf = valuation.Date
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "dividendYield", Label: "515450绝对股息率", Value: percentMetric(valuation.Yield), Unit: "%", AsOf: valuation.Date, Available: true},
+				ETFRuleMetric{Key: "dividendYieldPercentile", Label: "股息率历史分位", Value: percentMetric(valuation.Percentile), Unit: "%", AsOf: valuation.Date, Available: true},
+			)
+			if valuation.SpreadAvailable {
+				inputs.DividendSpreadPercentile = &valuation.SpreadPercentile
+				inputs.ValuationAsOf = valuation.SpreadDate
+				metrics = append(metrics,
+					ETFRuleMetric{Key: "china10YBondYield", Label: "中债10年国债收益率", Value: percentMetric(valuation.BondYield), Unit: "%", AsOf: valuation.BondDate, Available: true},
+					ETFRuleMetric{Key: "dividendSpread", Label: "股息率利差", Value: percentMetric(valuation.Spread), Unit: "%", AsOf: valuation.SpreadDate, Available: true},
+					ETFRuleMetric{Key: "dividendSpreadPercentile", Label: fmt.Sprintf("股息率利差历史分位（%d个月）", valuation.SpreadObservations), Value: percentMetric(valuation.SpreadPercentile), Unit: "%", AsOf: valuation.SpreadDate, Available: true},
+				)
+			} else {
+				metrics = append(metrics,
+					ETFRuleMetric{Key: "china10YBondYield", Label: "中债10年国债收益率", Unit: "%", Available: false, Error: valuation.SpreadError},
+					ETFRuleMetric{Key: "dividendSpread", Label: "股息率利差", Unit: "%", Available: false, Error: valuation.SpreadError},
+					ETFRuleMetric{Key: "dividendSpreadPercentile", Label: "股息率利差历史分位", Unit: "%", Available: false, Error: valuation.SpreadError},
+				)
+			}
 		}
-		metrics = append(metrics, ETFRuleMetric{Key: config.ValuationMetricKey, Label: config.ValuationMetricName, Value: floatMetric(metricValue), Unit: valuation.Unit, AsOf: valuation.Date, Available: true})
+	} else {
+		valuation, valuationErr := fetchETFRuleValuation(client, config)
+		if valuationErr != nil {
+			statusErrs = append(statusErrs, config.ValuationMetricName+"："+valuationErr.Error())
+			metrics = append(metrics, ETFRuleMetric{Key: config.ValuationMetricKey, Label: config.ValuationMetricName, Unit: configValuationMetricUnit(config), Available: false, Error: valuationErr.Error()})
+		} else {
+			inputs.ValuationAsOf = valuation.Date
+			metricValue := valuation.Value
+			if valuation.Kind == "zScore" {
+				inputs.ValuationZScore = &valuation.Value
+			} else {
+				inputs.ValuationPercentile = &valuation.Value
+				metricValue = valuation.Value * 100
+			}
+			metrics = append(metrics, ETFRuleMetric{Key: config.ValuationMetricKey, Label: config.ValuationMetricName, Value: floatMetric(metricValue), Unit: valuation.Unit, AsOf: valuation.Date, Available: true})
+		}
 	}
 	if strings.TrimSpace(config.ValuationSourceName) != "" {
 		sources = append(sources, ETFRuleSource{Name: config.ValuationSourceName, URL: config.ValuationSourceURL})
+	}
+	if config.Symbol == "008163" {
+		sources = append(sources,
+			ETFRuleSource{Name: "中债10年期国债收益率（官网校验）", URL: chinaBondHistoryURL},
+			ETFRuleSource{Name: "东方财富中债收益率历史序列", URL: "https://data.eastmoney.com/cjsj/zmgzsyl.html"},
+		)
 	}
 
 	evaluation := config.Evaluate(inputs)
@@ -250,11 +304,256 @@ func fetchETFRuleStatus(client *http.Client, config etfRuleConfig, now time.Time
 }
 
 func fetchETFRuleDrawdown(client *http.Client, config etfRuleConfig) (float64, string, error) {
-	closes, err := fetchRuleDailyCloses(client, config.PriceSymbol, 280)
+	const tradingDays = 3 * 252
+	var (
+		closes []dailyClose
+		err    error
+	)
+	switch config.Symbol {
+	case "022434":
+		closes, err = fetchCSIIndexPerformance(client, "000510CNY010", time.Now().AddDate(-3, 0, 0), time.Now())
+	case "018738":
+		closes, err = fetchSPYTotalReturnCloses(client, tradingDays+40)
+	case "008163":
+		closes, err = fetchDividendLowVolTotalReturnCloses(client, tradingDays+40)
+	case "021000":
+		closes, err = fetchNasdaqIndexHistoryChart(client, "XNDX", time.Now().AddDate(-3, 0, 0), time.Now())
+	default:
+		closes, err = fetchRuleDailyCloses(client, config.PriceSymbol, tradingDays+40)
+	}
 	if err != nil {
 		return 0, "", err
 	}
-	return drawdownFromRecentHigh(closes, 252)
+	return drawdownFromRecentHigh(closes, tradingDays)
+}
+
+func fetchCSIIndexPerformance(client *http.Client, indexCode string, start time.Time, end time.Time) ([]dailyClose, error) {
+	values := url.Values{}
+	values.Set("indexCode", strings.TrimSpace(indexCode))
+	values.Set("startDate", start.Format("20060102"))
+	values.Set("endDate", end.Format("20060102"))
+	endpoint := "https://www.csindex.com.cn/csindex-home/perf/index-perf?" + values.Encode()
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Referer", "https://www.csindex.com.cn/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website etf rule updater)")
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("CSI index request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	var payload struct {
+		Code string `json:"code"`
+		Data []struct {
+			TradeDate string  `json:"tradeDate"`
+			Close     float64 `json:"close"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	if payload.Code != "200" {
+		return nil, fmt.Errorf("CSI index response code %s", payload.Code)
+	}
+	closes := make([]dailyClose, 0, len(payload.Data))
+	for _, item := range payload.Data {
+		date, err := time.Parse("20060102", strings.TrimSpace(item.TradeDate))
+		if err == nil && item.Close > 0 {
+			closes = append(closes, dailyClose{Date: date.Format(etfRuleRuntimeTimestampDateLayout), Price: item.Close})
+		}
+	}
+	if len(closes) == 0 {
+		return nil, errors.New("CSI index performance is empty")
+	}
+	sort.Slice(closes, func(i, j int) bool { return closes[i].Date < closes[j].Date })
+	return closes, nil
+}
+
+func fetchNasdaqIndexHistoryChart(client *http.Client, symbol string, start time.Time, end time.Time) ([]dailyClose, error) {
+	values := url.Values{}
+	values.Set("id", strings.ToUpper(strings.TrimSpace(symbol)))
+	values.Set("startDate", start.Format("2006-01-02"))
+	values.Set("endDate", end.Format("2006-01-02"))
+	req, err := http.NewRequest(http.MethodPost, "https://indexes.nasdaq.com/Index/HistoryChartData", strings.NewReader(values.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Referer", "https://indexes.nasdaq.com/Index/Overview/"+strings.ToUpper(strings.TrimSpace(symbol)))
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website etf rule updater)")
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("Nasdaq index history request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	var points []struct {
+		Timestamp int64   `json:"x"`
+		Close     float64 `json:"y"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&points); err != nil {
+		return nil, err
+	}
+	closes := make([]dailyClose, 0, len(points))
+	for _, point := range points {
+		if point.Timestamp > 0 && point.Close > 0 {
+			closes = append(closes, dailyClose{Date: time.UnixMilli(point.Timestamp).UTC().Format(etfRuleRuntimeTimestampDateLayout), Price: point.Close})
+		}
+	}
+	if len(closes) == 0 {
+		return nil, errors.New("Nasdaq index history is empty")
+	}
+	sort.Slice(closes, func(i, j int) bool { return closes[i].Date < closes[j].Date })
+	return closes, nil
+}
+
+func fetchSPYTotalReturnCloses(client *http.Client, limit int) ([]dailyClose, error) {
+	closes, err := fetchNasdaqHistoricalCloses(client, "SPY", "etf", limit)
+	if err != nil {
+		return nil, err
+	}
+	events, err := fetchStockAnalysisDividends(client, "SPY")
+	if err != nil {
+		return nil, err
+	}
+	return totalReturnCloses(closes, events)
+}
+
+func fetchDividendLowVolTotalReturnCloses(client *http.Client, limit int) ([]dailyClose, error) {
+	closes, err := fetchTencentRawDailyCloses(client, "515450.SH", limit)
+	if err != nil {
+		return nil, err
+	}
+	events, err := fetchEastmoneyFundDividends(client, "515450")
+	if err != nil {
+		return nil, err
+	}
+	return totalReturnCloses(closes, events)
+}
+
+func totalReturnCloses(closes []dailyClose, events []cashDividendEvent) ([]dailyClose, error) {
+	if len(closes) == 0 {
+		return nil, errors.New("missing close prices")
+	}
+	ordered := append([]dailyClose(nil), closes...)
+	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Date < ordered[j].Date })
+	dividends := map[string]float64{}
+	for _, event := range events {
+		if event.Date != "" && event.Amount > 0 {
+			dividends[event.Date] += event.Amount
+		}
+	}
+	if ordered[0].Price <= 0 {
+		return nil, errors.New("invalid initial close price")
+	}
+	result := make([]dailyClose, 0, len(ordered))
+	value := ordered[0].Price
+	result = append(result, dailyClose{Date: ordered[0].Date, Price: value})
+	for i := 1; i < len(ordered); i++ {
+		previous := ordered[i-1].Price
+		current := ordered[i].Price
+		if previous <= 0 || current <= 0 {
+			continue
+		}
+		value *= (current + dividends[ordered[i].Date]) / previous
+		result = append(result, dailyClose{Date: ordered[i].Date, Price: value})
+	}
+	if len(result) < 2 {
+		return nil, errors.New("insufficient total-return closes")
+	}
+	return result, nil
+}
+
+func fetchTencentRawDailyCloses(client *http.Client, symbol string, limit int) ([]dailyClose, error) {
+	sourceSymbol, _, err := tencentSymbol(symbol)
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 {
+		limit = 30
+	}
+	const batchSize = 640
+	closes := make([]dailyClose, 0, limit)
+	endDate := ""
+	for len(closes) < limit {
+		batchLimit := min(batchSize, limit-len(closes))
+		batch, err := fetchTencentRawDailyCloseBatch(client, sourceSymbol, endDate, batchLimit)
+		if err != nil {
+			return nil, err
+		}
+		if len(batch) == 0 {
+			break
+		}
+		closes = append(batch, closes...)
+		if len(batch) < batchLimit {
+			break
+		}
+		oldest, err := time.Parse(etfRuleRuntimeTimestampDateLayout, batch[0].Date)
+		if err != nil {
+			return nil, err
+		}
+		endDate = oldest.AddDate(0, 0, -1).Format(etfRuleRuntimeTimestampDateLayout)
+	}
+	if len(closes) == 0 {
+		return nil, errors.New("missing tencent raw close prices")
+	}
+	if len(closes) > limit {
+		closes = closes[len(closes)-limit:]
+	}
+	return closes, nil
+}
+
+func fetchTencentRawDailyCloseBatch(client *http.Client, sourceSymbol string, endDate string, limit int) ([]dailyClose, error) {
+	param := fmt.Sprintf("%s,day,,%s,%d", sourceSymbol, strings.TrimSpace(endDate), limit)
+	endpoint := "https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param=" + url.QueryEscape(param)
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json,text/plain,*/*")
+	req.Header.Set("Referer", "https://gu.qq.com/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website etf rule updater)")
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("tencent raw kline request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	var payload struct {
+		Code int                        `json:"code"`
+		Data map[string]json.RawMessage `json:"data"`
+		Msg  string                     `json:"msg"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	if payload.Code != 0 {
+		return nil, fmt.Errorf("tencent raw kline response: %s", payload.Msg)
+	}
+	raw, ok := payload.Data[sourceSymbol]
+	if !ok {
+		return nil, fmt.Errorf("missing tencent raw kline symbol: %s", sourceSymbol)
+	}
+	var symbolPayload map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &symbolPayload); err != nil {
+		return nil, err
+	}
+	return parseTencentKlineRows(symbolPayload["day"])
 }
 
 func fetchRuleDailyCloses(client *http.Client, symbol string, limit int) ([]dailyClose, error) {
@@ -404,12 +703,15 @@ func fetchYahooDailyCloses(client *http.Client, symbol string, rangeParam string
 	if strings.TrimSpace(rangeParam) == "" {
 		rangeParam = "1y"
 	}
-	endpoint := "https://query1.finance.yahoo.com/v8/finance/chart/" + url.PathEscape(sourceSymbol) + "?range=" + url.QueryEscape(rangeParam) + "&interval=1d"
+	endpoint := "https://query2.finance.yahoo.com/v8/finance/chart/" + url.PathEscape(sourceSymbol) + "?range=" + url.QueryEscape(rangeParam) + "&interval=1d"
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "holds-website etf rule updater")
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+	req.Header.Set("Referer", "https://finance.yahoo.com/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -452,7 +754,8 @@ func fetchNasdaqHistoricalCloses(client *http.Client, symbol string, assetClass 
 		limit = 280
 	}
 	toDate := time.Now().Format("2006-01-02")
-	fromDate := time.Now().AddDate(-2, 0, 0).Format("2006-01-02")
+	calendarDays := int(math.Ceil(float64(limit)*365/252)) + 60
+	fromDate := time.Now().AddDate(0, 0, -calendarDays).Format("2006-01-02")
 	values := url.Values{}
 	values.Set("assetclass", assetClass)
 	values.Set("fromdate", fromDate)
@@ -703,9 +1006,6 @@ func fetchETFRuleValuation(client *http.Client, config etfRuleConfig) (etfRuleVa
 		return etfRuleValuation{Value: value, Date: date, Unit: "%", Kind: "percentile"}, err
 	case "018738":
 		value, date, err := fetchSP500PEPercentile(client)
-		return etfRuleValuation{Value: value, Date: date, Unit: "%", Kind: "percentile"}, err
-	case "008163":
-		value, date, err := fetchDividendLowVolYield(client)
 		return etfRuleValuation{Value: value, Date: date, Unit: "%", Kind: "percentile"}, err
 	case "021000":
 		value, date, err := fetchNasdaq100PEPercentile(client)
@@ -1412,23 +1712,413 @@ type cashDividendEvent struct {
 }
 
 func fetchDividendLowVolYield(client *http.Client) (float64, string, error) {
-	closes, err := fetchRuleDailyCloses(client, "515450.SH", 30)
+	snapshot, err := fetchDividendLowVolValuationSnapshot(client)
 	if err != nil {
 		return 0, "", err
+	}
+	return snapshot.Yield, snapshot.Date, nil
+}
+
+type dividendLowVolValuationSnapshot struct {
+	Yield              float64
+	Percentile         float64
+	Date               string
+	BondYield          float64
+	BondDate           string
+	Spread             float64
+	SpreadPercentile   float64
+	SpreadDate         string
+	SpreadAvailable    bool
+	SpreadError        string
+	SpreadObservations int
+}
+
+type datedRate struct {
+	Date  string
+	Value float64
+}
+
+func fetchDividendLowVolValuationSnapshot(client *http.Client) (dividendLowVolValuationSnapshot, error) {
+	closes, err := fetchTencentRawDailyCloses(client, "515450.SH", 10*252+80)
+	if err != nil {
+		return dividendLowVolValuationSnapshot{}, err
 	}
 	if len(closes) == 0 || closes[len(closes)-1].Price <= 0 {
-		return 0, "", errors.New("missing 515450 close price")
+		return dividendLowVolValuationSnapshot{}, errors.New("missing 515450 close price")
 	}
-	latest := closes[len(closes)-1]
 	events, err := fetchEastmoneyFundDividends(client, "515450")
 	if err != nil {
-		return 0, "", err
+		return dividendLowVolValuationSnapshot{}, err
 	}
+	latest := closes[len(closes)-1]
 	trailingAmount, err := trailingFundDividendAmount(events, latest.Date)
 	if err != nil {
-		return 0, "", err
+		return dividendLowVolValuationSnapshot{}, err
 	}
-	return trailingAmount / latest.Price, latest.Date, nil
+	currentYield := trailingAmount / latest.Price
+	monthly := monthEndCloses(closes)
+	yieldHistory := make([]datedRate, 0, len(monthly))
+	for _, close := range monthly {
+		amount, err := trailingFundDividendAmount(events, close.Date)
+		if err != nil || amount <= 0 || close.Price <= 0 {
+			continue
+		}
+		yieldHistory = append(yieldHistory, datedRate{Date: close.Date, Value: amount / close.Price})
+	}
+	if len(yieldHistory) < 12 {
+		return dividendLowVolValuationSnapshot{}, fmt.Errorf("insufficient dividend-yield history: %d monthly observations", len(yieldHistory))
+	}
+	historyValues := make([]float64, 0, len(yieldHistory))
+	for _, point := range yieldHistory {
+		historyValues = append(historyValues, point.Value)
+	}
+	snapshot := dividendLowVolValuationSnapshot{
+		Yield:      currentYield,
+		Percentile: percentileRank(currentYield, historyValues),
+		Date:       latest.Date,
+	}
+	oldestDate := yieldHistory[0].Date
+	bondHistory, bondErr := fetchEastmoneyChina10YBondYieldHistory(client, oldestDate)
+	if bondErr != nil {
+		snapshot.SpreadError = bondErr.Error()
+		return snapshot, nil
+	}
+	latestDate, err := time.Parse(etfRuleRuntimeTimestampDateLayout, latest.Date)
+	if err != nil {
+		snapshot.SpreadError = err.Error()
+		return snapshot, nil
+	}
+	officialBond, officialErr := fetchChinaBondOfficial10YYield(client, latestDate)
+	if officialErr != nil {
+		snapshot.SpreadError = officialErr.Error()
+		return snapshot, nil
+	}
+	spread, spreadPercentile, observationCount, spreadErr := calculateDividendSpread(
+		datedRate{Date: latest.Date, Value: currentYield},
+		yieldHistory,
+		bondHistory,
+		officialBond,
+	)
+	if spreadErr != nil {
+		snapshot.SpreadError = spreadErr.Error()
+		return snapshot, nil
+	}
+	snapshot.BondYield = officialBond.Value
+	snapshot.BondDate = officialBond.Date
+	snapshot.Spread = spread
+	snapshot.SpreadPercentile = spreadPercentile
+	snapshot.SpreadDate = latest.Date
+	snapshot.SpreadAvailable = true
+	snapshot.SpreadObservations = observationCount
+	return snapshot, nil
+}
+
+func monthEndCloses(closes []dailyClose) []dailyClose {
+	byMonth := map[string]dailyClose{}
+	months := []string{}
+	for _, close := range closes {
+		if len(close.Date) < 7 || close.Price <= 0 {
+			continue
+		}
+		month := close.Date[:7]
+		if _, ok := byMonth[month]; !ok {
+			months = append(months, month)
+		}
+		if previous, ok := byMonth[month]; !ok || close.Date > previous.Date {
+			byMonth[month] = close
+		}
+	}
+	sort.Strings(months)
+	result := make([]dailyClose, 0, len(months))
+	for _, month := range months {
+		result = append(result, byMonth[month])
+	}
+	return result
+}
+
+func fetchEastmoneyChina10YBondYieldHistory(client *http.Client, startDate string) ([]datedRate, error) {
+	if _, err := time.Parse(etfRuleRuntimeTimestampDateLayout, startDate); err != nil {
+		return nil, fmt.Errorf("invalid treasury-yield start date: %s", startDate)
+	}
+	const pageSize = 500
+	pointsByDate := map[string]datedRate{}
+	pageCount := 1
+	for page := 1; page <= pageCount && page <= 20; page++ {
+		values := url.Values{}
+		values.Set("type", "RPTA_WEB_TREASURYYIELD")
+		values.Set("sty", "ALL")
+		values.Set("st", "SOLAR_DATE")
+		values.Set("sr", "-1")
+		values.Set("p", strconv.Itoa(page))
+		values.Set("ps", strconv.Itoa(pageSize))
+		req, err := http.NewRequest(http.MethodGet, eastmoneyTreasuryYieldURL+"?"+values.Encode(), nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Accept", "application/json,text/plain,*/*")
+		req.Header.Set("Referer", "https://data.eastmoney.com/cjsj/zmgzsyl.html")
+		req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website etf rule updater)")
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+		resp.Body.Close()
+		if readErr != nil {
+			return nil, readErr
+		}
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("eastmoney treasury-yield request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+		}
+		pagePoints, pages, err := parseEastmoneyChina10YBondYields(body)
+		if err != nil {
+			return nil, err
+		}
+		if pages > 0 {
+			pageCount = pages
+		}
+		oldest := ""
+		for _, point := range pagePoints {
+			pointsByDate[point.Date] = point
+			if oldest == "" || point.Date < oldest {
+				oldest = point.Date
+			}
+		}
+		if oldest != "" && oldest <= startDate {
+			break
+		}
+	}
+	points := make([]datedRate, 0, len(pointsByDate))
+	for _, point := range pointsByDate {
+		if point.Date >= startDate {
+			points = append(points, point)
+		}
+	}
+	sort.Slice(points, func(i, j int) bool { return points[i].Date < points[j].Date })
+	if len(points) == 0 {
+		return nil, errors.New("missing eastmoney China 10Y bond-yield history")
+	}
+	return points, nil
+}
+
+func parseEastmoneyChina10YBondYields(body []byte) ([]datedRate, int, error) {
+	var payload struct {
+		Result struct {
+			Pages int `json:"pages"`
+			Data  []struct {
+				Date  string   `json:"SOLAR_DATE"`
+				Yield *float64 `json:"EMM00166466"`
+			} `json:"data"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, 0, err
+	}
+	points := make([]datedRate, 0, len(payload.Result.Data))
+	for _, row := range payload.Result.Data {
+		date := normalizeTreasuryYieldDate(row.Date)
+		if date == "" || row.Yield == nil || *row.Yield <= 0 {
+			continue
+		}
+		points = append(points, datedRate{Date: date, Value: *row.Yield / 100})
+	}
+	if len(points) == 0 {
+		return nil, payload.Result.Pages, errors.New("missing eastmoney China 10Y bond-yield rows")
+	}
+	return points, payload.Result.Pages, nil
+}
+
+func fetchChinaBondOfficial10YYield(client *http.Client, endDate time.Time) (datedRate, error) {
+	values := url.Values{}
+	values.Set("startDate", endDate.AddDate(0, 0, -14).Format(etfRuleRuntimeTimestampDateLayout))
+	values.Set("endDate", endDate.Format(etfRuleRuntimeTimestampDateLayout))
+	values.Set("gjqx", "10")
+	values.Set("qxId", "hzsylqx")
+	values.Set("locale", "en_US")
+	req, err := http.NewRequest(http.MethodGet, chinaBondHistoryURL+"?"+values.Encode(), nil)
+	if err != nil {
+		return datedRate{}, err
+	}
+	req.Header.Set("Accept", "text/html,*/*")
+	req.Header.Set("Referer", "https://yield.chinabond.com.cn/cbweb-pbc-web/pbc/more?locale=en_US")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website etf rule updater)")
+	resp, err := client.Do(req)
+	if err != nil {
+		return datedRate{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return datedRate{}, fmt.Errorf("ChinaBond history request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+	if err != nil {
+		return datedRate{}, err
+	}
+	return parseChinaBondOfficial10YYield(body)
+}
+
+func parseChinaBondOfficial10YYield(body []byte) (datedRate, error) {
+	rowPattern := regexp.MustCompile(`(?is)<tr[^>]*>.*?</tr>`)
+	cellPattern := regexp.MustCompile(`(?is)<td[^>]*>(.*?)</td>`)
+	latest := datedRate{}
+	for _, row := range rowPattern.FindAllString(string(body), -1) {
+		cells := cellPattern.FindAllStringSubmatch(row, -1)
+		if len(cells) < 9 {
+			continue
+		}
+		date := normalizeTreasuryYieldDate(htmlPlainText(cells[1][1]))
+		yield, err := firstTextNumber(htmlPlainText(cells[8][1]))
+		if date == "" || err != nil || yield <= 0 {
+			continue
+		}
+		if latest.Date == "" || date > latest.Date {
+			latest = datedRate{Date: date, Value: yield / 100}
+		}
+	}
+	if latest.Date == "" {
+		return datedRate{}, errors.New("missing ChinaBond official 10Y yield")
+	}
+	return latest, nil
+}
+
+func normalizeTreasuryYieldDate(value string) string {
+	value = strings.TrimSpace(value)
+	for _, layout := range []string{"2006-01-02 15:04:05", "2006-01-02"} {
+		if date, err := time.Parse(layout, value); err == nil {
+			return date.Format(etfRuleRuntimeTimestampDateLayout)
+		}
+	}
+	return ""
+}
+
+func calculateDividendSpread(currentYield datedRate, yieldHistory []datedRate, bondHistory []datedRate, officialBond datedRate) (float64, float64, int, error) {
+	if currentYield.Date == "" || currentYield.Value <= 0 || officialBond.Date == "" || officialBond.Value <= 0 {
+		return 0, 0, 0, errors.New("invalid current dividend or bond yield")
+	}
+	officialHistoryPoint, ok := datedRateOnOrBefore(bondHistory, officialBond.Date, 0)
+	if !ok {
+		return 0, 0, 0, fmt.Errorf("missing Eastmoney bond yield for ChinaBond date %s", officialBond.Date)
+	}
+	if math.Abs(officialHistoryPoint.Value-officialBond.Value)/officialBond.Value > 0.01 {
+		return 0, 0, 0, fmt.Errorf("China 10Y bond-yield sources differ: ChinaBond %.4f%%, Eastmoney %.4f%%", officialBond.Value*100, officialHistoryPoint.Value*100)
+	}
+	currentDate, err := time.Parse(etfRuleRuntimeTimestampDateLayout, currentYield.Date)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	officialDate, err := time.Parse(etfRuleRuntimeTimestampDateLayout, officialBond.Date)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	if currentDate.Sub(officialDate).Hours()/24 > 10 || officialDate.After(currentDate) {
+		return 0, 0, 0, fmt.Errorf("ChinaBond 10Y yield is not aligned with dividend yield: %s vs %s", officialBond.Date, currentYield.Date)
+	}
+	spreads := make([]float64, 0, len(yieldHistory))
+	for _, dividendYield := range yieldHistory {
+		bondYield, ok := datedRateOnOrBefore(bondHistory, dividendYield.Date, 10)
+		if !ok {
+			continue
+		}
+		spreads = append(spreads, dividendYield.Value-bondYield.Value)
+	}
+	if len(spreads) < 12 {
+		return 0, 0, len(spreads), fmt.Errorf("insufficient dividend-spread history: %d monthly observations", len(spreads))
+	}
+	currentSpread := currentYield.Value - officialBond.Value
+	return currentSpread, percentileRank(currentSpread, spreads), len(spreads), nil
+}
+
+func datedRateOnOrBefore(points []datedRate, targetDate string, maxLagDays int) (datedRate, bool) {
+	target, err := time.Parse(etfRuleRuntimeTimestampDateLayout, targetDate)
+	if err != nil {
+		return datedRate{}, false
+	}
+	for i := len(points) - 1; i >= 0; i-- {
+		point := points[i]
+		date, err := time.Parse(etfRuleRuntimeTimestampDateLayout, point.Date)
+		if err != nil || date.After(target) {
+			continue
+		}
+		lagDays := int(target.Sub(date).Hours() / 24)
+		if lagDays > maxLagDays {
+			return datedRate{}, false
+		}
+		return point, true
+	}
+	return datedRate{}, false
+}
+
+func fetchStockAnalysisDividends(client *http.Client, symbol string) ([]cashDividendEvent, error) {
+	endpoint := "https://stockanalysis.com/etf/" + strings.ToLower(strings.TrimSpace(symbol)) + "/dividend/"
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "text/html,*/*")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Referer", "https://stockanalysis.com/etf/"+strings.ToLower(strings.TrimSpace(symbol))+"/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36")
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("stockanalysis dividend request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+	if err != nil {
+		return nil, err
+	}
+	return parseStockAnalysisDividends(body)
+}
+
+func parseStockAnalysisDividends(body []byte) ([]cashDividendEvent, error) {
+	page := string(body)
+	historyIndex := strings.Index(page, "Dividend History")
+	if historyIndex < 0 {
+		return nil, errors.New("missing stockanalysis dividend history")
+	}
+	tableBodyStart := strings.Index(page[historyIndex:], "<tbody")
+	if tableBodyStart < 0 {
+		return nil, errors.New("missing stockanalysis dividend table")
+	}
+	tableBodyStart += historyIndex
+	tableBodyEnd := strings.Index(page[tableBodyStart:], "</tbody>")
+	if tableBodyEnd < 0 {
+		return nil, errors.New("incomplete stockanalysis dividend table")
+	}
+	tableBody := page[tableBodyStart : tableBodyStart+tableBodyEnd]
+	rowPattern := regexp.MustCompile(`(?is)<tr[^>]*>.*?</tr>`)
+	cellPattern := regexp.MustCompile(`(?is)<td[^>]*>(.*?)</td>`)
+	events := []cashDividendEvent{}
+	for _, row := range rowPattern.FindAllString(tableBody, -1) {
+		cells := cellPattern.FindAllStringSubmatch(row, -1)
+		if len(cells) < 2 {
+			continue
+		}
+		date := normalizeStockAnalysisDate(htmlPlainText(cells[0][1]))
+		amount, err := parseMarketNumber(htmlPlainText(cells[1][1]))
+		if date == "" || err != nil || amount <= 0 {
+			continue
+		}
+		events = append(events, cashDividendEvent{Date: date, Amount: amount})
+	}
+	if len(events) == 0 {
+		return nil, errors.New("missing stockanalysis dividend rows")
+	}
+	return events, nil
+}
+
+func normalizeStockAnalysisDate(value string) string {
+	for _, layout := range []string{"Jan 2, 2006", "Jan 02, 2006", "2006-01-02"} {
+		if date, err := time.Parse(layout, strings.TrimSpace(value)); err == nil {
+			return date.Format(etfRuleRuntimeTimestampDateLayout)
+		}
+	}
+	return ""
 }
 
 func fetchEastmoneyFundDividends(client *http.Client, code string) ([]cashDividendEvent, error) {
@@ -1699,95 +2389,60 @@ func normalPercentileFromZ(zScore float64) float64 {
 }
 
 func evaluateA500Rule(inputs etfRuleInputs) etfRuleEvaluation {
-	drawdown := valueOrNaN(inputs.Drawdown)
-	valuation := valueOrNaN(inputs.ValuationPercentile)
-	if !known(valuation) {
-		return pendingRule("需要中证A500 PE分位决定基础倍数")
-	}
-	base := percentileBaseLevel(valuation, 0.80, 0.60, 0.40, 0.20)
-	if !known(drawdown) {
-		return partialRule(base, "已按PE分位得到基础倍数；回撤数据缺失，暂未做限速调整")
-	}
-	switch {
-	case valuation > 0.80 && drawdown < 0.05:
-		return completeRule(downshiftLevel(base), "PE分位>80%且回撤<5%，高位限速")
-	case valuation >= 0.20 && valuation < 0.40 && drawdown < 0.12:
-		return completeRule("one", "PE分位20%—40%但回撤<12%，低估确认不足")
-	case valuation < 0.20 && drawdown < 0.18:
-		return completeRule("oneHalf", "PE分位<20%但回撤<18%，极低确认不足")
-	default:
-		return completeRule(base, "按PE分位基础倍数执行，回撤未触发限速")
-	}
+	return evaluatePEPercentileRule(inputs, "中证A500", 0.12, 0.18)
 }
 
 func evaluateSP500Rule(inputs etfRuleInputs) etfRuleEvaluation {
-	drawdown := valueOrNaN(inputs.Drawdown)
-	pePercentile := valueOrNaN(inputs.ValuationPercentile)
-	if !known(pePercentile) {
-		return pendingRule("需要标普500 PE分位决定基础倍数")
-	}
-	base := percentileBaseLevel(pePercentile, 0.95, 0.80, 0.40, 0.20)
-	if !known(drawdown) {
-		return partialRule(base, "已按PE分位得到基础倍数；回撤数据缺失，暂未做限速调整")
-	}
-	switch {
-	case pePercentile > 0.80 && drawdown < 0.05:
-		return completeRule(downshiftLevel(base), "PE分位>80%且回撤<5%，高估限速")
-	case pePercentile >= 0.40 && pePercentile <= 0.80 && drawdown < 0.05:
-		return completeRule("half", "PE分位40%—80%但回撤<5%，正常估值高位限速")
-	case pePercentile >= 0.20 && pePercentile < 0.40 && drawdown < 0.15:
-		return completeRule("one", "PE分位20%—40%但回撤<15%，低估确认不足")
-	case pePercentile < 0.20 && drawdown < 0.20:
-		return completeRule("oneHalf", "PE分位<20%但回撤<20%，极低确认不足")
-	default:
-		return completeRule(base, "按PE分位基础倍数执行，回撤未触发限速")
-	}
+	return evaluatePEPercentileRule(inputs, "标普500", 0.15, 0.20)
 }
 
 func evaluateDividendLowVolRule(inputs etfRuleInputs) etfRuleEvaluation {
 	drawdown := valueOrNaN(inputs.Drawdown)
-	yield := valueOrNaN(inputs.ValuationPercentile)
-	if !known(yield) {
-		return pendingRule("需要515450股息率决定基础倍数")
+	spreadPercentile := valueOrNaN(inputs.DividendSpreadPercentile)
+	base := ""
+	reason := ""
+	if known(spreadPercentile) {
+		base = dividendAttractivenessBaseLevel(spreadPercentile)
+		reason = "按股息率利差历史分位确定基础倍数"
+	} else {
+		yield := valueOrNaN(inputs.DividendYield)
+		yieldPercentile := valueOrNaN(inputs.DividendYieldPercentile)
+		if !known(yield) || !known(yieldPercentile) {
+			return pendingRule("利差暂不可得，需要绝对股息率和股息率历史分位共同确认")
+		}
+		yieldLevel := dividendYieldBaseLevel(yield)
+		percentileLevel := dividendAttractivenessBaseLevel(yieldPercentile)
+		base = lowerETFRuleLevel(yieldLevel, percentileLevel)
+		reason = fmt.Sprintf("利差暂不可得，绝对股息率%s、历史分位%s，取较低档%s", etfRuleLevels[yieldLevel].Label, etfRuleLevels[percentileLevel].Label, etfRuleLevels[base].Label)
 	}
-	base := dividendYieldBaseLevel(yield)
-	if !known(drawdown) {
-		return partialRule(base, "已按股息率得到基础倍数；回撤数据缺失，暂未做限速调整")
-	}
-	switch {
-	case yield < 0.050 && drawdown < 0.05:
-		return completeRule(downshiftLevel(base), "股息率<5.0%且回撤<5%，股息率偏低且价格高位")
-	case yield >= 0.058 && yield <= 0.062 && drawdown < 0.08:
-		return completeRule("one", "股息率5.8%—6.2%但回撤<8%，低位确认不足")
-	case yield > 0.062 && drawdown < 0.12:
-		return completeRule("oneHalf", "股息率>6.2%但回撤<12%，极低确认不足")
-	default:
-		return completeRule(base, "按股息率基础倍数执行，回撤未触发限速")
-	}
+	return confirmAccelerationByDrawdown(base, drawdown, 0.08, 0.12, reason)
 }
 
 func evaluateNasdaq100Rule(inputs etfRuleInputs) etfRuleEvaluation {
-	drawdown := valueOrNaN(inputs.Drawdown)
-	pePercentile := valueOrNaN(inputs.ValuationPercentile)
-	if !known(pePercentile) {
-		return pendingRule("需要纳指100 PE分位决定基础倍数")
+	return evaluatePEPercentileRule(inputs, "纳斯达克100", 0.20, 0.30)
+}
+
+func evaluatePEPercentileRule(inputs etfRuleInputs, name string, oneHalfDrawdown float64, twoDrawdown float64) etfRuleEvaluation {
+	valuation := valueOrNaN(inputs.ValuationPercentile)
+	if !known(valuation) {
+		return pendingRule("需要" + name + " PE分位决定基础倍数")
 	}
-	base := percentileBaseLevel(pePercentile, 0.85, 0.70, 0.40, 0.20)
-	if !known(drawdown) {
-		return partialRule(base, "已按PE分位得到基础倍数；回撤数据缺失，暂未做限速调整")
+	base := percentileBaseLevel(valuation, 0.80, 0.60, 0.40, 0.20)
+	return confirmAccelerationByDrawdown(base, valueOrNaN(inputs.Drawdown), oneHalfDrawdown, twoDrawdown, "按PE分位确定基础倍数")
+}
+
+func confirmAccelerationByDrawdown(base string, drawdown float64, oneHalfDrawdown float64, twoDrawdown float64, reason string) etfRuleEvaluation {
+	switch base {
+	case "oneHalf":
+		if !known(drawdown) || drawdown < oneHalfDrawdown {
+			return completeRule("one", fmt.Sprintf("%s；1.5倍候选回撤未达到%.0f%%，执行1倍", reason, oneHalfDrawdown*100))
+		}
+	case "two":
+		if !known(drawdown) || drawdown < twoDrawdown {
+			return completeRule("oneHalf", fmt.Sprintf("%s；2倍候选回撤未达到%.0f%%，执行1.5倍", reason, twoDrawdown*100))
+		}
 	}
-	switch {
-	case pePercentile > 0.70 && drawdown < 0.05:
-		return completeRule(downshiftLevel(base), "PE分位>70%且回撤<5%，高估限速")
-	case pePercentile >= 0.40 && pePercentile <= 0.70 && drawdown < 0.05:
-		return completeRule("half", "PE分位40%—70%但回撤<5%，正常估值高位限速")
-	case pePercentile >= 0.20 && pePercentile < 0.40 && drawdown < 0.20:
-		return completeRule("one", "PE分位20%—40%但回撤<20%，低估确认不足")
-	case pePercentile < 0.20 && drawdown < 0.30:
-		return completeRule("oneHalf", "PE分位<20%但回撤<30%，极低确认不足")
-	default:
-		return completeRule(base, "按PE分位基础倍数执行，回撤未触发限速")
-	}
+	return completeRule(base, reason+"；回撤只确认加速")
 }
 
 func percentileBaseLevel(value float64, quarterThreshold float64, halfThreshold float64, oneThreshold float64, oneHalfThreshold float64) string {
@@ -1818,6 +2473,29 @@ func dividendYieldBaseLevel(yield float64) string {
 	default:
 		return "two"
 	}
+}
+
+func dividendAttractivenessBaseLevel(percentile float64) string {
+	switch {
+	case percentile < 0.20:
+		return "quarter"
+	case percentile < 0.40:
+		return "half"
+	case percentile < 0.60:
+		return "one"
+	case percentile <= 0.80:
+		return "oneHalf"
+	default:
+		return "two"
+	}
+}
+
+func lowerETFRuleLevel(left string, right string) string {
+	order := map[string]int{"quarter": 0, "half": 1, "one": 2, "oneHalf": 3, "two": 4}
+	if order[left] <= order[right] {
+		return left
+	}
+	return right
 }
 
 func zScoreBaseLevel(zScore float64) string {
@@ -1905,7 +2583,8 @@ func runtimeETFRuleStatusList(records map[string]ETFRuleStatus) []ETFRuleStatus 
 func mergeETFRuleStatusWithExisting(next ETFRuleStatus, existing ETFRuleStatus, now time.Time) ETFRuleStatus {
 	if strings.TrimSpace(existing.Symbol) == "" {
 		if config, ok := etfRuleConfigBySymbol(next.Symbol); ok {
-			return enforceETFRuleStatusConfidence(next, config, now)
+			next = enforceETFRuleStatusConfidence(next, config, now)
+			return stabilizeETFRuleLevel(next, ETFRuleStatus{}, config)
 		}
 		return next
 	}
@@ -1933,8 +2612,73 @@ func mergeETFRuleStatusWithExisting(next ETFRuleStatus, existing ETFRuleStatus, 
 	}
 	if config, ok := etfRuleConfigBySymbol(next.Symbol); ok {
 		next = enforceETFRuleStatusConfidence(next, config, now)
+		next = stabilizeETFRuleLevel(next, existing, config)
 	}
 	return next
+}
+
+func stabilizeETFRuleLevel(next ETFRuleStatus, existing ETFRuleStatus, config etfRuleConfig) ETFRuleStatus {
+	if !next.Complete || strings.TrimSpace(next.Level) == "" {
+		return next
+	}
+	observationDate := etfRuleStatusObservationDate(next)
+	if strings.TrimSpace(existing.Level) == "" || !existing.Complete {
+		next.LevelUpdatedAt = firstNonEmpty(observationDate, next.AsOf)
+		return clearETFRulePendingLevel(next)
+	}
+	if next.Level == existing.Level {
+		next.LevelUpdatedAt = firstNonEmpty(existing.LevelUpdatedAt, existing.AsOf, observationDate)
+		return clearETFRulePendingLevel(next)
+	}
+	pendingDays := 1
+	pendingSince := observationDate
+	pendingAsOf := observationDate
+	if existing.PendingLevel == next.Level {
+		pendingDays = existing.PendingDays
+		pendingSince = firstNonEmpty(existing.PendingSince, observationDate)
+		pendingAsOf = firstNonEmpty(existing.PendingAsOf, observationDate)
+		if observationDate != "" && observationDate > pendingAsOf {
+			pendingDays++
+			pendingAsOf = observationDate
+		}
+	}
+	if pendingDays >= 5 {
+		next.LevelUpdatedAt = firstNonEmpty(observationDate, next.AsOf)
+		next.Reason = strings.TrimSpace(next.Reason + "；跨档边界已连续5个交易日确认")
+		return clearETFRulePendingLevel(next)
+	}
+	candidateLevel := next.Level
+	candidateLabel := config.Levels[candidateLevel].Label
+	next.PendingLevel = candidateLevel
+	next.PendingLevelLabel = candidateLabel
+	next.PendingSince = pendingSince
+	next.PendingAsOf = pendingAsOf
+	next.PendingDays = pendingDays
+	next.Level = existing.Level
+	next.LevelLabel = config.Levels[existing.Level].Label
+	next.MonthlyAmount = config.Monthly[existing.Level]
+	next.WeeklyAmount = config.Weekly[existing.Level]
+	next.LevelUpdatedAt = firstNonEmpty(existing.LevelUpdatedAt, existing.AsOf)
+	next.Reason = fmt.Sprintf("候选%s跨档确认中，继续执行%s", candidateLabel, next.LevelLabel)
+	return next
+}
+
+func clearETFRulePendingLevel(status ETFRuleStatus) ETFRuleStatus {
+	status.PendingLevel = ""
+	status.PendingLevelLabel = ""
+	status.PendingSince = ""
+	status.PendingAsOf = ""
+	status.PendingDays = 0
+	return status
+}
+
+func etfRuleStatusObservationDate(status ETFRuleStatus) string {
+	for _, metric := range status.Metrics {
+		if metric.Key == "drawdown3y" && metric.Available && strings.TrimSpace(metric.AsOf) != "" {
+			return strings.TrimSpace(metric.AsOf)
+		}
+	}
+	return strings.TrimSpace(status.AsOf)
 }
 
 func refreshETFRuleStatusFromMetrics(status ETFRuleStatus) ETFRuleStatus {
@@ -1948,10 +2692,22 @@ func refreshETFRuleStatusFromMetrics(status ETFRuleStatus) ETFRuleStatus {
 			continue
 		}
 		switch metric.Key {
-		case "drawdown252":
+		case "drawdown3y":
 			value := *metric.Value / 100
 			inputs.Drawdown = &value
 			inputs.DrawdownAsOf = metric.AsOf
+		case "dividendYield":
+			value := *metric.Value / 100
+			inputs.DividendYield = &value
+			inputs.ValuationAsOf = metric.AsOf
+		case "dividendYieldPercentile":
+			value := *metric.Value / 100
+			inputs.DividendYieldPercentile = &value
+			inputs.ValuationAsOf = metric.AsOf
+		case "dividendSpreadPercentile":
+			value := *metric.Value / 100
+			inputs.DividendSpreadPercentile = &value
+			inputs.ValuationAsOf = metric.AsOf
 		case config.ValuationMetricKey:
 			if metric.Key == "peZScore" || strings.TrimSpace(metric.Unit) == "σ" {
 				value := *metric.Value
@@ -2018,7 +2774,7 @@ func etfRuleStatusConfidenceIssues(status ETFRuleStatus, config etfRuleConfig, n
 		}
 		metricsByKey[metric.Key] = metric
 	}
-	for _, key := range []string{"drawdown252", config.ValuationMetricKey} {
+	for _, key := range etfRuleRequiredValuationMetricKeys(status, config) {
 		metric, ok := metricsByKey[key]
 		if !ok {
 			issues = append(issues, key+"缺失")
@@ -2030,6 +2786,18 @@ func etfRuleStatusConfidenceIssues(status ETFRuleStatus, config etfRuleConfig, n
 		issues = append(issues, "数据源不足")
 	}
 	return issues
+}
+
+func etfRuleRequiredValuationMetricKeys(status ETFRuleStatus, config etfRuleConfig) []string {
+	if config.Symbol != "008163" {
+		return []string{config.ValuationMetricKey}
+	}
+	for _, metric := range status.Metrics {
+		if metric.Key == "dividendSpreadPercentile" && metric.Available && metric.Value != nil {
+			return []string{"dividendSpreadPercentile"}
+		}
+	}
+	return []string{"dividendYield", "dividendYieldPercentile"}
 }
 
 func etfRuleMetricConfidenceIssues(metric ETFRuleMetric, config etfRuleConfig, now time.Time) []string {
@@ -2063,14 +2831,17 @@ func etfRuleMetricConfidenceIssues(metric ETFRuleMetric, config etfRuleConfig, n
 
 func etfRuleMetricValueInExpectedRange(metric ETFRuleMetric, config etfRuleConfig, value float64) bool {
 	switch metric.Key {
-	case "drawdown252":
+	case "drawdown3y":
+		return value >= 0 && value <= 100
+	case "dividendYield", "china10YBondYield":
+		return value > 0 && value <= 20
+	case "dividendSpread":
+		return value >= -20 && value <= 20
+	case "dividendYieldPercentile", "dividendSpreadPercentile":
 		return value >= 0 && value <= 100
 	case config.ValuationMetricKey:
 		if metric.Key == "peZScore" || strings.TrimSpace(metric.Unit) == "σ" {
 			return value >= -6 && value <= 6
-		}
-		if metric.Key == "dividendYield" {
-			return value > 0 && value <= 20
 		}
 		return value >= 0 && value <= 100
 	default:
@@ -2079,6 +2850,9 @@ func etfRuleMetricValueInExpectedRange(metric ETFRuleMetric, config etfRuleConfi
 }
 
 func etfRuleMetricMaxAgeDays(metric ETFRuleMetric, config etfRuleConfig) int {
+	if metric.Key == "dividendYieldPercentile" || metric.Key == "dividendSpreadPercentile" {
+		return etfRuleMonthlyMetricMaxAgeDays
+	}
 	if metric.Key == config.ValuationMetricKey && (config.Symbol == "018738" || config.Symbol == "021000") {
 		return etfRuleMonthlyMetricMaxAgeDays
 	}

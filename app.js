@@ -281,28 +281,33 @@ const ETF_RULE_LEVELS = [
 ];
 
 const ETF_RULE_NO_SELECTION = { key: "none", label: "未选择", tone: "neutral" };
+const ETF_RULE_PAUSED = { key: "paused", label: "暂停", tone: "risk" };
 
 const ETF_RULE_TRACKER_RULES = [
   {
     symbol: "022434",
     name: "南方中证A500ETF联接A",
+    targetWeight: 0.35,
+    holdingSymbols: ["022434"],
     conditions: {
-      quarter: "PE分位>80%；若回撤<5%且高估则保持限速",
+      quarter: "PE分位>80%",
       half: "PE分位60%—80%",
-      one: "PE分位40%—60%；低估确认不足时下调至此",
+      one: "PE分位40%—60%；或20%—40%但回撤<12%",
       oneHalf: "PE分位20%—40%；回撤<12%则降为1倍",
       two: "PE分位<20%；回撤<18%则降为1.5倍"
     },
-    monthly: { quarter: 2800, half: 5600, one: 11200, oneHalf: 16800, two: 22400 },
-    weekly: { quarter: 700, half: 1400, one: 2800, oneHalf: 4200, two: 5600 }
+    monthly: { quarter: 4900, half: 9800, one: 19600, oneHalf: 29400, two: 39200 },
+    weekly: { quarter: 1225, half: 2450, one: 4900, oneHalf: 7350, two: 9800 }
   },
   {
     symbol: "018738",
     name: "博时标普500ETF联接E(人民币)",
+    targetWeight: 0.30,
+    holdingSymbols: ["018738"],
     conditions: {
-      quarter: "PE分位>95%；最低档不再下调",
-      half: "PE分位80%—95%；或正常估值回撤<5%后限速",
-      one: "PE分位40%—80%；低估确认不足时下调至此",
+      quarter: "PE分位>80%",
+      half: "PE分位60%—80%",
+      one: "PE分位40%—60%；或20%—40%但回撤<15%",
       oneHalf: "PE分位20%—40%；回撤<15%则降为1倍",
       two: "PE分位<20%；回撤<20%则降为1.5倍"
     },
@@ -312,28 +317,32 @@ const ETF_RULE_TRACKER_RULES = [
   {
     symbol: "008163",
     name: "南方标普红利低波50ETF联接A",
+    targetWeight: 0.25,
+    holdingSymbols: ["008163", "563020"],
     conditions: {
-      quarter: "股息率<4.7%；或股息率分位<20%",
-      half: "股息率4.7%—5.0%；或股息率分位20%—40%",
-      one: "股息率5.0%—5.8%；低位确认不足时下调至此",
-      oneHalf: "股息率5.8%—6.2%；回撤<8%则降为1倍",
-      two: "股息率>6.2%；回撤<12%则降为1.5倍"
+      quarter: "利差分位<20%；回退口径取绝对股息率与历史分位较低档",
+      half: "利差分位20%—40%；回退口径取较低档",
+      one: "利差分位40%—60%；或60%—80%但回撤<8%",
+      oneHalf: "利差分位60%—80%；回撤<8%则降为1倍",
+      two: "利差分位>80%；回撤<12%则降为1.5倍"
     },
-    monthly: { quarter: 4200, half: 8400, one: 16800, oneHalf: 25200, two: 33600 },
-    weekly: { quarter: 1050, half: 2100, one: 4200, oneHalf: 6300, two: 8400 }
+    monthly: { quarter: 3500, half: 7000, one: 14000, oneHalf: 21000, two: 28000 },
+    weekly: { quarter: 875, half: 1750, one: 3500, oneHalf: 5250, two: 7000 }
   },
   {
     symbol: "021000",
     name: "南方纳斯达克100指数发起(QDII)I",
+    targetWeight: 0.10,
+    holdingSymbols: ["021000"],
     conditions: {
-      quarter: "PE分位>85%；或70%—85%且回撤<5%后限速",
-      half: "PE分位70%—85%；或40%—70%且回撤<5%后限速",
-      one: "PE分位40%—70%；或20%—40%且回撤<20%后限速",
-      oneHalf: "PE分位20%—40%；或<20%且回撤<30%后限速",
-      two: "PE分位<20%；且回撤≥30%"
+      quarter: "PE分位>80%",
+      half: "PE分位60%—80%",
+      one: "PE分位40%—60%；或20%—40%但回撤<20%",
+      oneHalf: "PE分位20%—40%；回撤<20%则降为1倍",
+      two: "PE分位<20%；回撤<30%则降为1.5倍"
     },
-    monthly: { quarter: 2800, half: 5600, one: 11200, oneHalf: 16800, two: 22400 },
-    weekly: { quarter: 700, half: 1400, one: 2800, oneHalf: 4200, two: 5600 }
+    monthly: { quarter: 1400, half: 2800, one: 5600, oneHalf: 8400, two: 11200 },
+    weekly: { quarter: 350, half: 700, one: 1400, oneHalf: 2100, two: 2800 }
   }
 ];
 
@@ -341,6 +350,9 @@ const ETF_ALLOCATION_POOL_BASE = 1000000;
 const ETF_ALLOCATION_POOL_BASE_DATE = "2026-07-09";
 const ETF_ALLOCATION_MONTHLY_INFLOW = 15000;
 const ETF_RULE_TRADING_DAYS_PER_WEEK = 5;
+const ETF_ALLOCATION_CORRECTION_THRESHOLD = 50000;
+const ETF_ALLOCATION_LEAD_DOWNSHIFT = 0.05;
+const ETF_ALLOCATION_LEAD_PAUSE = 0.10;
 
 let state = loadState();
 let activeFilter = "all";
@@ -3867,6 +3879,7 @@ function etfRuleEntry(symbol) {
 }
 
 function etfRuleLevelMeta(level) {
+  if (level === ETF_RULE_PAUSED.key) return ETF_RULE_PAUSED;
   return ETF_RULE_LEVELS.find((item) => item.key === level) ?? ETF_RULE_NO_SELECTION;
 }
 
@@ -3891,10 +3904,6 @@ function etfRuleMetricText(metric) {
 
 function etfAllocationMoney(value) {
   return privateText(wholeCurrency(value, "CNY"));
-}
-
-function etfRuleBaseMonthlyTotal() {
-  return ETF_RULE_TRACKER_RULES.reduce((sum, rule) => sum + (finiteNumber(rule.monthly?.one) ?? 0), 0);
 }
 
 function etfAllocationReferenceDate(referenceDate = new Date()) {
@@ -3923,13 +3932,14 @@ function etfAllocationProgressTone(progress) {
 }
 
 function etfAllocationSnapshot(referenceDate = new Date()) {
-  const baseMonthly = etfRuleBaseMonthlyTotal();
   const poolTotal = ETF_ALLOCATION_POOL_BASE + ETF_ALLOCATION_MONTHLY_INFLOW * etfAllocationMonthlyInflowCount(referenceDate);
   const fundPositions = computeFundPositions();
   const fundsBySymbol = new Map(fundPositions.map((fund) => [normalizeFundSymbol(fund.symbol), fund]));
-  const entries = ETF_RULE_TRACKER_RULES.map((rule) => {
-    const marketValue = finiteNumber(fundsBySymbol.get(normalizeFundSymbol(rule.symbol))?.marketValueCny) ?? 0;
-    const targetWeight = baseMonthly > 0 ? (finiteNumber(rule.monthly?.one) ?? 0) / baseMonthly : 0;
+  const rawEntries = ETF_RULE_TRACKER_RULES.map((rule) => {
+    const marketValue = (rule.holdingSymbols ?? [rule.symbol]).reduce((sum, symbol) => {
+      return sum + (finiteNumber(fundsBySymbol.get(normalizeFundSymbol(symbol))?.marketValueCny) ?? 0);
+    }, 0);
+    const targetWeight = finiteNumber(rule.targetWeight) ?? 0;
     const targetAmount = poolTotal * targetWeight;
     const progress = targetAmount > 0 ? marketValue / targetAmount : 0;
     return {
@@ -3943,8 +3953,13 @@ function etfAllocationSnapshot(referenceDate = new Date()) {
       tone: etfAllocationProgressTone(progress)
     };
   });
-  const invested = entries.reduce((sum, item) => sum + item.marketValue, 0);
+  const invested = rawEntries.reduce((sum, item) => sum + item.marketValue, 0);
   const progress = poolTotal > 0 ? invested / poolTotal : 0;
+  const entries = rawEntries.map((entry) => ({
+    ...entry,
+    lead: entry.progress - progress,
+    leadPercent: (entry.progress - progress) * 100
+  }));
   return {
     poolTotal,
     invested,
@@ -3968,11 +3983,57 @@ function etfAllocationEntry(snapshot, symbol) {
   };
 }
 
+function etfRuleDownshiftLevel(level) {
+  const order = ETF_RULE_LEVELS.map((item) => item.key);
+  const index = order.indexOf(level);
+  if (index <= 0) return index === 0 ? order[0] : ETF_RULE_NO_SELECTION.key;
+  return order[index - 1];
+}
+
+function etfRuleExecution(rule, snapshot) {
+  const base = etfRuleEntry(rule.symbol);
+  const allocation = etfAllocationEntry(snapshot, rule.symbol);
+  const correctionEnabled = snapshot.invested > ETF_ALLOCATION_CORRECTION_THRESHOLD;
+  if (base.level === ETF_RULE_NO_SELECTION.key || !correctionEnabled) {
+    return {
+      ...base,
+      baseLevel: base.level,
+      correction: correctionEnabled ? "normal" : "inactive",
+      correctionReason: correctionEnabled ? "仓位进度未触发纠偏" : "ETF持仓超过5万元后启用仓位纠偏"
+    };
+  }
+  if (allocation.lead > ETF_ALLOCATION_LEAD_PAUSE) {
+    return {
+      ...base,
+      baseLevel: base.level,
+      level: ETF_RULE_PAUSED.key,
+      correction: "pause",
+      correctionReason: `单项完成度领先整体 ${percent(allocation.leadPercent, false)}，暂停买入`
+    };
+  }
+  if (allocation.lead > ETF_ALLOCATION_LEAD_DOWNSHIFT) {
+    const level = etfRuleDownshiftLevel(base.level);
+    return {
+      ...base,
+      baseLevel: base.level,
+      level,
+      correction: "downshift",
+      correctionReason: `单项完成度领先整体 ${percent(allocation.leadPercent, false)}，降低一档`
+    };
+  }
+  return {
+    ...base,
+    baseLevel: base.level,
+    correction: "normal",
+    correctionReason: "仓位进度未触发纠偏"
+  };
+}
+
 function renderEtfAllocationBar(entry) {
   return `
     <div class="etf-allocation-progress ${escapeHTML(entry.tone)}">
       <div class="etf-allocation-progress-head">
-        <span>配置进度</span>
+        <span>配置进度 · 目标 ${escapeHTML(percent(entry.targetWeight * 100, false))}</span>
         <strong>${escapeHTML(percent(entry.progressPercent, false))}</strong>
       </div>
       <div class="etf-allocation-bar" style="--progress: ${escapeHTML(String(entry.widthPercent))}%">
@@ -4004,7 +4065,7 @@ function renderEtfPoolProgress(snapshot) {
   `;
 }
 
-function renderEtfRuleLiveStatus(rule, entry) {
+function renderEtfRuleLiveStatus(rule, execution) {
   const status = etfRuleStatus(rule.symbol);
   if (!status) {
     return `
@@ -4016,15 +4077,19 @@ function renderEtfRuleLiveStatus(rule, entry) {
     `;
   }
   const statusMeta = etfRuleLevelMeta(status.level);
+  const executionMeta = etfRuleLevelMeta(execution.level);
   const statusLabel = status.complete ? (status.levelLabel || statusMeta.label || "待数据") : "待确认";
   const metrics = (status.metrics ?? []).map(renderEtfRuleMetric).join("");
-  const dailyAmount = etfRuleStatusDailyAmount(status);
+  const dailyAmount = status.complete ? etfRuleDailyAmount(rule, execution.level) : 0;
+  const boundaryText = status.pendingLevel
+    ? `候选${status.pendingLevelLabel || etfRuleLevelMeta(status.pendingLevel).label}连续${status.pendingDays || 0}/5个交易日`
+    : "";
   return `
     <div class="etf-rule-live ${status.complete ? "complete" : "pending"}">
       <div>
         <span>自动水位</span>
-        <strong>${escapeHTML(statusLabel)}${status.complete && dailyAmount ? ` · ${escapeHTML(etfRuleMoney(dailyAmount, "/日"))}` : ""}</strong>
-        <small>${escapeHTML(status.reason || "等待更多指标确认")} · ${escapeHTML(status.asOf || status.updatedAt || "-")}</small>
+        <strong>${escapeHTML(`估值${statusLabel} · 执行${executionMeta.label}`)}${status.complete && dailyAmount ? ` · ${escapeHTML(etfRuleMoney(dailyAmount, "/日"))}` : ""}</strong>
+        <small>${escapeHTML([status.reason || "等待更多指标确认", execution.correctionReason, boundaryText, status.asOf || status.updatedAt || "-"].filter(Boolean).join(" · "))}</small>
       </div>
       <div class="etf-rule-live-metrics">${metrics}</div>
     </div>
@@ -4056,10 +4121,6 @@ function etfRuleDailyAmount(rule, level) {
   return etfRuleDailyAmountFromWeekly(etfRuleAmount(rule, level, "weekly"));
 }
 
-function etfRuleStatusDailyAmount(status) {
-  return etfRuleDailyAmountFromWeekly(status?.weeklyAmount);
-}
-
 function etfRuleMoney(value, suffix = "") {
   const number = finiteNumber(value) ?? 0;
   if (number <= 0) return "-";
@@ -4075,9 +4136,9 @@ function tradeQuantityText(value, isFundTrade = false) {
   return number.toLocaleString("zh-CN", { maximumFractionDigits: 4 });
 }
 
-function etfRuleTrackerTotals() {
+function etfRuleTrackerTotals(allocationSnapshot) {
   return ETF_RULE_TRACKER_RULES.reduce((totals, rule) => {
-    const entry = etfRuleEntry(rule.symbol);
+    const entry = etfRuleExecution(rule, allocationSnapshot);
     totals.daily += etfRuleDailyAmount(rule, entry.level);
     totals.monthly += etfRuleAmount(rule, entry.level, "monthly");
     if (entry.level !== "none") totals.active += 1;
@@ -4110,7 +4171,7 @@ function renderEtfRuleRulebook(rule) {
 }
 
 function renderEtfRuleCard(rule, allocationSnapshot) {
-  const entry = etfRuleEntry(rule.symbol);
+  const entry = etfRuleExecution(rule, allocationSnapshot);
   const meta = etfRuleLevelMeta(entry.level);
   const daily = etfRuleDailyAmount(rule, entry.level);
   const monthly = etfRuleAmount(rule, entry.level, "monthly");
@@ -4145,7 +4206,7 @@ function renderEtfRuleCard(rule, allocationSnapshot) {
 }
 
 function renderEtfRuleActionItem(rule, allocationSnapshot) {
-  const entry = etfRuleEntry(rule.symbol);
+  const entry = etfRuleExecution(rule, allocationSnapshot);
   const meta = etfRuleLevelMeta(entry.level);
   const status = etfRuleStatus(rule.symbol);
   const daily = etfRuleDailyAmount(rule, entry.level);
@@ -4168,8 +4229,8 @@ function renderEtfRuleActionItem(rule, allocationSnapshot) {
 
 function renderEtfRuleTracker() {
   if (!elements.etfRuleTracker) return;
-  const totals = etfRuleTrackerTotals();
   const allocationSnapshot = etfAllocationSnapshot();
+  const totals = etfRuleTrackerTotals(allocationSnapshot);
   elements.etfRuleTracker.innerHTML = `
     <div class="etf-rule-tracker">
       <div class="panel-head compact etf-rule-head">
