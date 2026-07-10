@@ -1,6 +1,8 @@
 package main
 
 import (
+	"archive/zip"
+	"bytes"
 	"math"
 	"path/filepath"
 	"strings"
@@ -63,6 +65,55 @@ func TestParseStockAnalysisDividends(t *testing.T) {
 	}
 	if events[0].Date != "2026-06-18" || !almostEqual(events[0].Amount, 1.90352, 0.000001) {
 		t.Fatalf("first event = %+v", events[0])
+	}
+}
+
+func TestParseStateStreetSPYDividends(t *testing.T) {
+	var workbook bytes.Buffer
+	archive := zip.NewWriter(&workbook)
+	sharedStrings, err := archive.Create("xl/sharedStrings.xml")
+	if err != nil {
+		t.Fatalf("create shared strings: %v", err)
+	}
+	_, err = sharedStrings.Write([]byte(`<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+		<si><t>SPY</t></si>
+		<si><r><t>06/18/</t></r><r><t>2026</t></r></si>
+		<si><t>1.903516</t></si>
+		<si><t>03/20/2026</t></si>
+		<si><t>1.796999</t></si>
+		<si><t>QQQ</t></si>
+	</sst>`))
+	if err != nil {
+		t.Fatalf("write shared strings: %v", err)
+	}
+	sheet, err := archive.Create("xl/worksheets/sheet1.xml")
+	if err != nil {
+		t.Fatalf("create dividend sheet: %v", err)
+	}
+	_, err = sheet.Write([]byte(`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
+		<row r="2"><c r="B2" t="s"><v>0</v></c><c r="D2" t="s"><v>1</v></c><c r="G2" t="s"><v>2</v></c></row>
+		<row r="3"><c r="B3" t="s"><v>0</v></c><c r="D3" t="s"><v>3</v></c><c r="G3" t="s"><v>4</v></c></row>
+		<row r="4"><c r="B4" t="s"><v>5</v></c><c r="D4" t="s"><v>3</v></c><c r="G4" t="s"><v>4</v></c></row>
+	</sheetData></worksheet>`))
+	if err != nil {
+		t.Fatalf("write dividend sheet: %v", err)
+	}
+	if err := archive.Close(); err != nil {
+		t.Fatalf("close workbook: %v", err)
+	}
+
+	events, err := parseStateStreetSPYDividends(workbook.Bytes())
+	if err != nil {
+		t.Fatalf("parseStateStreetSPYDividends returned error: %v", err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("len(events) = %d, want 2", len(events))
+	}
+	if events[0].Date != "2026-03-20" || !almostEqual(events[0].Amount, 1.796999, 0.000001) {
+		t.Fatalf("first event = %+v, want 2026-03-20 / 1.796999", events[0])
+	}
+	if events[1].Date != "2026-06-18" || !almostEqual(events[1].Amount, 1.903516, 0.000001) {
+		t.Fatalf("second event = %+v, want 2026-06-18 / 1.903516", events[1])
 	}
 }
 

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"crypto/md5"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"html"
@@ -136,8 +138,8 @@ var etfRuleConfigs = []etfRuleConfig{
 		Symbol:              "018738",
 		Name:                "博时标普500ETF联接E(人民币)",
 		PriceSymbol:         "SPY",
-		PriceSourceName:     "Nasdaq SPY日线 + StockAnalysis分红（标普500总收益代理）",
-		PriceSourceURL:      "https://stockanalysis.com/etf/spy/dividend/",
+		PriceSourceName:     "Nasdaq SPY日线 + State Street官方分红（标普500总收益代理）",
+		PriceSourceURL:      "https://www.ssga.com/library-content/products/fund-data/etfs/us/spdr-etf-historical-distributions.xlsx",
 		ValuationMetricKey:  "pePercentile",
 		ValuationMetricName: "标普500 PE分位",
 		ValuationSourceName: "韭圈儿标普500 PE分位（优先；History of Market CAPE备援）",
@@ -424,9 +426,12 @@ func fetchSPYTotalReturnCloses(client *http.Client, limit int) ([]dailyClose, er
 	if err != nil {
 		return nil, err
 	}
-	events, err := fetchStockAnalysisDividends(client, "SPY")
-	if err != nil {
-		return nil, err
+	events, stateStreetErr := fetchStateStreetSPYDividends(client)
+	if stateStreetErr != nil {
+		events, err = fetchStockAnalysisDividends(client, "SPY")
+		if err != nil {
+			return nil, fmt.Errorf("SPY dividend sources unavailable (State Street: %v; StockAnalysis: %v)", stateStreetErr, err)
+		}
 	}
 	return totalReturnCloses(closes, events)
 }
@@ -2065,14 +2070,223 @@ func fetchStockAnalysisDividends(client *http.Client, symbol string) ([]cashDivi
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
-		return nil, fmt.Errorf("stockanalysis dividend request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+		return nil, fmt.Errorf("stockanalysis dividend request failed: %s", resp.Status)
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	if err != nil {
 		return nil, err
 	}
 	return parseStockAnalysisDividends(body)
+}
+
+const stateStreetSPYDistributionsURL = "https://www.ssga.com/library-content/products/fund-data/etfs/us/spdr-etf-historical-distributions.xlsx"
+
+func fetchStateStreetSPYDividends(client *http.Client) ([]cashDividendEvent, error) {
+	req, err := http.NewRequest(http.MethodGet, stateStreetSPYDistributionsURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,*/*")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website etf rule updater)")
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("State Street dividend request failed: %s", resp.Status)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	if err != nil {
+		return nil, err
+	}
+	return parseStateStreetSPYDividends(body)
+}
+
+func parseStateStreetSPYDividends(workbook []byte) ([]cashDividendEvent, error) {
+	archive, err := zip.NewReader(bytes.NewReader(workbook), int64(len(workbook)))
+	if err != nil {
+		return nil, fmt.Errorf("open State Street dividend workbook: %w", err)
+	}
+	var sharedStringsFile *zip.File
+	var dividendSheetFile *zip.File
+	for _, file := range archive.File {
+		switch file.Name {
+		case "xl/sharedStrings.xml":
+			sharedStringsFile = file
+		case "xl/worksheets/sheet1.xml":
+			dividendSheetFile = file
+		}
+	}
+	if sharedStringsFile == nil || dividendSheetFile == nil {
+		return nil, errors.New("State Street dividend workbook is missing required worksheets")
+	}
+
+	sharedReader, err := sharedStringsFile.Open()
+	if err != nil {
+		return nil, err
+	}
+	sharedStrings, err := parseXLSXSharedStrings(sharedReader)
+	sharedReader.Close()
+	if err != nil {
+		return nil, fmt.Errorf("parse State Street shared strings: %w", err)
+	}
+
+	sheetReader, err := dividendSheetFile.Open()
+	if err != nil {
+		return nil, err
+	}
+	events, err := parseStateStreetDividendSheet(sheetReader, sharedStrings, "SPY")
+	sheetReader.Close()
+	if err != nil {
+		return nil, fmt.Errorf("parse State Street dividend sheet: %w", err)
+	}
+	if len(events) == 0 {
+		return nil, errors.New("State Street dividend workbook has no SPY rows")
+	}
+	sort.Slice(events, func(i, j int) bool { return events[i].Date < events[j].Date })
+	return events, nil
+}
+
+func parseXLSXSharedStrings(reader io.Reader) ([]string, error) {
+	decoder := xml.NewDecoder(reader)
+	values := []string{}
+	inSharedString := false
+	inText := false
+	var value strings.Builder
+	for {
+		token, err := decoder.Token()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		switch token := token.(type) {
+		case xml.StartElement:
+			switch token.Name.Local {
+			case "si":
+				inSharedString = true
+				value.Reset()
+			case "t":
+				inText = inSharedString
+			}
+		case xml.EndElement:
+			switch token.Name.Local {
+			case "t":
+				inText = false
+			case "si":
+				values = append(values, value.String())
+				inSharedString = false
+			}
+		case xml.CharData:
+			if inText {
+				value.Write([]byte(token))
+			}
+		}
+	}
+	return values, nil
+}
+
+func parseStateStreetDividendSheet(reader io.Reader, sharedStrings []string, ticker string) ([]cashDividendEvent, error) {
+	decoder := xml.NewDecoder(reader)
+	events := []cashDividendEvent{}
+	row := map[string]string{}
+	cellReference := ""
+	cellType := ""
+	cellValue := ""
+	inCellValue := false
+	for {
+		token, err := decoder.Token()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		switch token := token.(type) {
+		case xml.StartElement:
+			switch token.Name.Local {
+			case "row":
+				row = map[string]string{}
+			case "c":
+				cellReference = ""
+				cellType = ""
+				cellValue = ""
+				for _, attribute := range token.Attr {
+					switch attribute.Name.Local {
+					case "r":
+						cellReference = attribute.Value
+					case "t":
+						cellType = attribute.Value
+					}
+				}
+			case "v":
+				inCellValue = cellReference != ""
+			}
+		case xml.EndElement:
+			switch token.Name.Local {
+			case "v":
+				inCellValue = false
+			case "c":
+				column := xlsxColumn(cellReference)
+				if column == "" {
+					continue
+				}
+				resolved := strings.TrimSpace(cellValue)
+				if cellType == "s" {
+					index, err := strconv.Atoi(resolved)
+					if err != nil || index < 0 || index >= len(sharedStrings) {
+						continue
+					}
+					resolved = strings.TrimSpace(sharedStrings[index])
+				}
+				row[column] = resolved
+			case "row":
+				if !strings.EqualFold(strings.TrimSpace(row["B"]), ticker) {
+					continue
+				}
+				date := normalizeStateStreetDividendDate(row["D"])
+				amount, err := parseMarketNumber(row["G"])
+				if date == "" || err != nil || amount <= 0 {
+					continue
+				}
+				events = append(events, cashDividendEvent{Date: date, Amount: amount})
+			}
+		case xml.CharData:
+			if inCellValue {
+				cellValue += string(token)
+			}
+		}
+	}
+	return events, nil
+}
+
+func xlsxColumn(reference string) string {
+	end := 0
+	for end < len(reference) {
+		character := reference[end]
+		if character < 'A' || character > 'Z' {
+			break
+		}
+		end++
+	}
+	return reference[:end]
+}
+
+func normalizeStateStreetDividendDate(value string) string {
+	value = strings.TrimSpace(value)
+	for _, layout := range []string{"01/02/2006", "1/2/2006", "2006-01-02"} {
+		if date, err := time.Parse(layout, value); err == nil {
+			return date.Format(etfRuleRuntimeTimestampDateLayout)
+		}
+	}
+	serial, err := strconv.ParseFloat(value, 64)
+	if err != nil || serial <= 0 {
+		return ""
+	}
+	date := time.Date(1899, time.December, 30, 0, 0, 0, 0, time.UTC).Add(time.Duration(math.Round(serial*24)) * time.Hour)
+	return date.Format(etfRuleRuntimeTimestampDateLayout)
 }
 
 func parseStockAnalysisDividends(body []byte) ([]cashDividendEvent, error) {
