@@ -4079,7 +4079,13 @@ function renderEtfRuleLiveStatus(rule, execution) {
   const statusMeta = etfRuleLevelMeta(status.level);
   const executionMeta = etfRuleLevelMeta(execution.level);
   const statusLabel = status.complete ? (status.levelLabel || statusMeta.label || "待数据") : "待确认";
-  const metrics = (status.metrics ?? []).map(renderEtfRuleMetric).join("");
+  const hiddenMetricKeys = rule.symbol === "008163"
+    ? new Set(["dividendYieldPercentile", "china10YBondYield"])
+    : new Set();
+  const metrics = (status.metrics ?? [])
+    .filter((metric) => !hiddenMetricKeys.has(metric?.key))
+    .map(renderEtfRuleMetric)
+    .join("");
   const dailyAmount = status.complete ? etfRuleDailyAmount(rule, execution.level) : 0;
   const boundaryText = status.pendingLevel
     ? `候选${status.pendingLevelLabel || etfRuleLevelMeta(status.pendingLevel).label}连续${status.pendingDays || 0}/5个交易日`
@@ -4097,9 +4103,12 @@ function renderEtfRuleLiveStatus(rule, execution) {
 }
 
 function renderEtfRuleMetric(metric) {
+  const label = metric?.key === "dividendSpreadPercentile"
+    ? "股息率利差历史分位"
+    : (metric?.label || metric?.key || "指标");
   return `
-    <div class="etf-rule-metric ${metric?.available ? "" : "pending"}" title="${escapeHTML(metric?.label || metric?.key || "")}">
-      <span>${escapeHTML(metric?.label || metric?.key || "指标")}</span>
+    <div class="etf-rule-metric ${metric?.available ? "" : "pending"}" title="${escapeHTML(label)}">
+      <span>${escapeHTML(label)}</span>
       <strong>${escapeHTML(etfRuleMetricText(metric))}</strong>
       <small>${escapeHTML(metric?.asOf || "-")}</small>
     </div>

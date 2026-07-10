@@ -235,7 +235,7 @@ func fetchETFRuleStatus(client *http.Client, config etfRuleConfig, now time.Time
 				metrics = append(metrics,
 					ETFRuleMetric{Key: "china10YBondYield", Label: "中债10年国债收益率", Value: percentMetric(valuation.BondYield), Unit: "%", AsOf: valuation.BondDate, Available: true},
 					ETFRuleMetric{Key: "dividendSpread", Label: "股息率利差", Value: percentMetric(valuation.Spread), Unit: "%", AsOf: valuation.SpreadDate, Available: true},
-					ETFRuleMetric{Key: "dividendSpreadPercentile", Label: fmt.Sprintf("股息率利差历史分位（%d个月）", valuation.SpreadObservations), Value: percentMetric(valuation.SpreadPercentile), Unit: "%", AsOf: valuation.SpreadDate, Available: true},
+					ETFRuleMetric{Key: "dividendSpreadPercentile", Label: "股息率利差历史分位", Value: percentMetric(valuation.SpreadPercentile), Unit: "%", AsOf: valuation.SpreadDate, Available: true},
 				)
 			} else {
 				metrics = append(metrics,
