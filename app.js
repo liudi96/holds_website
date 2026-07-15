@@ -353,6 +353,9 @@ let activeFilter = "all";
 let activeEtfDetailSymbol = "";
 let etfExecutionQuoteTimer = null;
 let etfExecutionQuoteUpdating = false;
+let backendStateRefreshTimer = null;
+let backendStateRefreshPromise = null;
+let lastBackendStateRevision = "";
 let positionSort = { key: "", direction: "desc" };
 let sunny30Sort = { key: "quality", direction: "desc" };
 const expandedPositionCards = new Set();
@@ -587,6 +590,15 @@ function setLoadedState(rawState) {
   return state;
 }
 
+function backendStateRevision(rawState) {
+  const dataStatus = rawState?.dataStatus ?? {};
+  return [
+    dataStatus.portfolio?.modifiedAt,
+    dataStatus.runtimeQuotes?.updatedAt,
+    dataStatus.runtimeQuotes?.modifiedAt
+  ].map((value) => String(value ?? "").trim()).join("|");
+}
+
 function stocksToHoldings(stocks) {
   return stocks
     .filter((stock) => stock?.position)
@@ -711,7 +723,9 @@ async function loadBackendState() {
   if (!USE_BACKEND) return false;
 
   try {
-    setLoadedState(await requestJSON("/api/state", { timeoutMs: 3000 }));
+    const loadedState = await requestJSON("/api/state", { timeoutMs: 3000 });
+    setLoadedState(loadedState);
+    lastBackendStateRevision = backendStateRevision(loadedState);
     backendStateError = "";
     backendAvailable = true;
     localStorage.removeItem(STORAGE_KEY);
@@ -8798,6 +8812,40 @@ function scheduleETFExecutionQuoteRefresh() {
   }, 60000);
 }
 
+async function refreshBackendState() {
+  if (!USE_BACKEND || document.hidden || backendStateRefreshPromise || document.querySelector("dialog[open]")) {
+    return backendStateRefreshPromise;
+  }
+
+  backendStateRefreshPromise = requestJSON("/api/state", { timeoutMs: 10000 })
+    .then((loadedState) => {
+      const revision = backendStateRevision(loadedState);
+      if (revision && revision === lastBackendStateRevision) return false;
+      setLoadedState(loadedState);
+      lastBackendStateRevision = revision;
+      localStorage.removeItem(STORAGE_KEY);
+      syncCash();
+      render();
+      return true;
+    })
+    .catch((error) => {
+      console.warn("Backend state refresh failed", error);
+      return false;
+    })
+    .finally(() => {
+      backendStateRefreshPromise = null;
+    });
+
+  return backendStateRefreshPromise;
+}
+
+function scheduleBackendStateRefresh() {
+  if (backendStateRefreshTimer) window.clearInterval(backendStateRefreshTimer);
+  backendStateRefreshTimer = window.setInterval(() => {
+    void refreshBackendState();
+  }, 60000);
+}
+
 async function cancelETFExecutionStage(rule) {
   const decision = etfTacticalDecision(rule, etfAllocationSnapshot());
   const plan = etfExecutionPlan(rule);
@@ -9610,12 +9658,15 @@ async function init() {
   }
   syncCash();
   handleRoute(window.location.hash.slice(1));
+  scheduleBackendStateRefresh();
   scheduleETFExecutionQuoteRefresh();
   if (!document.hidden && chinaAshareMarketOpenClient()) updateETFExecutionQuotes({ silent: true });
 }
 
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && chinaAshareMarketOpenClient()) updateETFExecutionQuotes({ silent: true });
+  if (document.hidden) return;
+  void refreshBackendState();
+  if (chinaAshareMarketOpenClient()) updateETFExecutionQuotes({ silent: true });
 });
 
 init();

@@ -270,6 +270,23 @@ func TestOverviewAutoRefreshesStockQuotesOnly(t *testing.T) {
 	requireContains(t, js, `}, 60000)`)
 	requireContains(t, js, `if (window.location.hash.slice(1) === view)`)
 	requireContains(t, js, `handleRoute(view);`)
+	requireContains(t, js, `function backendStateRevision(rawState)`)
+	requireContains(t, js, `async function refreshBackendState()`)
+	requireContains(t, js, `requestJSON("/api/state", { timeoutMs: 10000 })`)
+	requireContains(t, js, `function scheduleBackendStateRefresh()`)
+	requireContains(t, js, `scheduleBackendStateRefresh();`)
+	requireContains(t, js, `void refreshBackendState();`)
+}
+
+func TestMarketUpdateScriptReportsPartialFailures(t *testing.T) {
+	script := readTextFile(t, "scripts/update-market-data.sh")
+
+	requireContains(t, script, `response_file="$(mktemp)"`)
+	requireContains(t, script, `response.get("updated")`)
+	requireContains(t, script, `response.get("skipped")`)
+	requireContains(t, script, `market data partial failure`)
+	requireContains(t, script, `if updated == 0 and skipped:`)
+	requireNotContains(t, script, `"${base_url%/}/api/quotes/update" >/dev/null`)
 }
 
 func TestCloudSyncButtonAndEndpointAreWired(t *testing.T) {
