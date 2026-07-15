@@ -1,21 +1,21 @@
 {
-  "updatedAt": "2026-07-11 02:04:24",
+  "updatedAt": "2026-07-15 11:18:15",
   "quotes": {
     "000333.SZ": {
       "symbol": "000333.SZ",
-      "currentPrice": 78.99,
-      "previousClose": 79.33,
-      "twentyDayClose": 81.628,
-      "twentyDayCloseDate": "2026-06-11",
-      "twentyDayChange": -0.03231734208849911,
-      "marketCap": 601386000000,
+      "currentPrice": 82.04,
+      "previousClose": 81.18,
+      "twentyDayClose": 75.238,
+      "twentyDayCloseDate": "2026-06-16",
+      "twentyDayChange": 0.09040644355246029,
+      "marketCap": 624607000000,
       "marketCapCurrency": "CNY",
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPriceDate": "2026-07-15",
+      "previousCloseDate": "2026-07-14",
       "currency": "CNY",
       "sourceSymbol": "sz000333",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-11 02:04:24；行情源 腾讯实时行情；代码 sz000333；币种 CNY；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 11:06:07；行情源 腾讯实时行情；代码 sz000333；币种 CNY；日期 2026-07-14/2026-07-15"
     },
     "002027.SZ": {
       "symbol": "002027.SZ",
@@ -51,47 +51,47 @@
     },
     "008163": {
       "symbol": "008163",
-      "currentPrice": 1.0065,
-      "previousClose": 1.0028,
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPrice": 1.0268,
+      "previousClose": 1.0169,
+      "currentPriceDate": "2026-07-14",
+      "previousCloseDate": "2026-07-13",
       "currency": "CNY",
       "sourceSymbol": "008163",
       "sourceName": "Eastmoney fund historical NAV",
-      "updatedAt": "2026-07-11 01:34:13；行情源 Eastmoney fund historical NAV；代码 008163；币种 CNY；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 08:30:29；行情源 Eastmoney fund historical NAV；代码 008163；币种 CNY；日期 2026-07-13/2026-07-14"
     },
     "018738": {
       "symbol": "018738",
-      "currentPrice": 5.5153,
-      "previousClose": 5.4755,
-      "currentPriceDate": "2026-07-09",
-      "previousCloseDate": "2026-07-08",
+      "currentPrice": 5.4904,
+      "previousClose": 5.534,
+      "currentPriceDate": "2026-07-13",
+      "previousCloseDate": "2026-07-10",
       "currency": "CNY",
       "sourceSymbol": "018738",
       "sourceName": "Eastmoney fund historical NAV",
-      "updatedAt": "2026-07-11 01:34:13；行情源 Eastmoney fund historical NAV；代码 018738；币种 CNY；日期 2026-07-08/2026-07-09"
+      "updatedAt": "2026-07-15 08:30:29；行情源 Eastmoney fund historical NAV；代码 018738；币种 CNY；日期 2026-07-10/2026-07-13"
     },
     "021000": {
       "symbol": "021000",
-      "currentPrice": 2.3143,
-      "previousClose": 2.2796,
-      "currentPriceDate": "2026-07-09",
-      "previousCloseDate": "2026-07-08",
+      "currentPrice": 2.2774,
+      "previousClose": 2.3202,
+      "currentPriceDate": "2026-07-13",
+      "previousCloseDate": "2026-07-10",
       "currency": "CNY",
       "sourceSymbol": "021000",
       "sourceName": "Eastmoney fund NAV",
-      "updatedAt": "2026-07-11 01:34:13；行情源 Eastmoney fund NAV；代码 021000；币种 CNY；日期 2026-07-08/2026-07-09"
+      "updatedAt": "2026-07-15 08:30:29；行情源 Eastmoney fund NAV；代码 021000；币种 CNY；日期 2026-07-10/2026-07-13"
     },
     "022434": {
       "symbol": "022434",
-      "currentPrice": 1.2865,
-      "previousClose": 1.3088,
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPrice": 1.2828,
+      "previousClose": 1.2558,
+      "currentPriceDate": "2026-07-14",
+      "previousCloseDate": "2026-07-13",
       "currency": "CNY",
       "sourceSymbol": "022434",
       "sourceName": "Eastmoney fund historical NAV",
-      "updatedAt": "2026-07-11 01:34:13；行情源 Eastmoney fund historical NAV；代码 022434；币种 CNY；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 08:30:29；行情源 Eastmoney fund historical NAV；代码 022434；币种 CNY；日期 2026-07-13/2026-07-14"
     },
     "0506.HK": {
       "symbol": "0506.HK",
@@ -111,35 +111,35 @@
     },
     "0696.HK": {
       "symbol": "0696.HK",
-      "currentPrice": 8.2,
-      "previousClose": 8.27,
-      "twentyDayClose": 8.97,
-      "twentyDayCloseDate": "2026-06-10",
-      "twentyDayChange": -0.08584169453734686,
-      "marketCap": 23994920000,
+      "currentPrice": 8.24,
+      "previousClose": 8.18,
+      "twentyDayClose": 9.1,
+      "twentyDayCloseDate": "2026-06-15",
+      "twentyDayChange": -0.09450549450549445,
+      "marketCap": 24111970000,
       "marketCapCurrency": "HKD",
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPriceDate": "2026-07-15",
+      "previousCloseDate": "2026-07-14",
       "currency": "HKD",
       "sourceSymbol": "hk00696",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-11 02:04:24；行情源 腾讯实时行情；代码 hk00696；币种 HKD；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 11:06:07；行情源 腾讯实时行情；代码 hk00696；币种 HKD；日期 2026-07-14/2026-07-15"
     },
     "0700.HK": {
       "symbol": "0700.HK",
-      "currentPrice": 460.2,
-      "previousClose": 469.6,
-      "twentyDayClose": 465.6,
-      "twentyDayCloseDate": "2026-06-10",
-      "twentyDayChange": -0.01159793814432997,
-      "marketCap": 4184376000000,
+      "currentPrice": 472.2,
+      "previousClose": 456.2,
+      "twentyDayClose": 459.6,
+      "twentyDayCloseDate": "2026-06-15",
+      "twentyDayChange": 0.027415143603133085,
+      "marketCap": 4293486190000.0005,
       "marketCapCurrency": "HKD",
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPriceDate": "2026-07-15",
+      "previousCloseDate": "2026-07-14",
       "currency": "HKD",
       "sourceSymbol": "hk00700",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-11 02:04:24；行情源 腾讯实时行情；代码 hk00700；币种 HKD；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 11:06:07；行情源 腾讯实时行情；代码 hk00700；币种 HKD；日期 2026-07-14/2026-07-15"
     },
     "0883.HK": {
       "symbol": "0883.HK",
@@ -198,12 +198,12 @@
       "twentyDayChange": -0.01492537313432837,
       "marketCap": 6124440000,
       "marketCapCurrency": "HKD",
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPriceDate": "2026-07-15",
+      "previousCloseDate": "2026-07-14",
       "currency": "HKD",
       "sourceSymbol": "hk01448",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-11 02:04:24；行情源 腾讯实时行情；代码 hk01448；币种 HKD；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 11:06:07；行情源 腾讯实时行情；代码 hk01448；币种 HKD；日期 2026-07-14/2026-07-15"
     },
     "2020.HK": {
       "symbol": "2020.HK",
@@ -287,35 +287,35 @@
     },
     "563020": {
       "symbol": "563020",
-      "currentPrice": 1.104,
-      "previousClose": 1.1,
-      "twentyDayClose": 1.155,
-      "twentyDayCloseDate": "2026-06-11",
-      "twentyDayChange": -0.0441558441558441,
-      "marketCap": 12508000000,
+      "currentPrice": 1.13,
+      "previousClose": 1.119,
+      "twentyDayClose": 1.156,
+      "twentyDayCloseDate": "2026-06-15",
+      "twentyDayChange": -0.02249134948096888,
+      "marketCap": 12767000000,
       "marketCapCurrency": "CNY",
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPriceDate": "2026-07-14",
+      "previousCloseDate": "2026-07-13",
       "currency": "CNY",
       "sourceSymbol": "sh563020",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-11 01:34:13；行情源 腾讯实时行情；代码 sh563020；币种 CNY；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 08:30:29；行情源 腾讯实时行情；代码 sh563020；币种 CNY；日期 2026-07-13/2026-07-14"
     },
     "600036.SH": {
       "symbol": "600036.SH",
-      "currentPrice": 36.88,
-      "previousClose": 36.55,
-      "twentyDayClose": 37.727,
-      "twentyDayCloseDate": "2026-06-11",
-      "twentyDayChange": -0.02245076470432301,
-      "marketCap": 930108000000,
+      "currentPrice": 37.55,
+      "previousClose": 37.18,
+      "twentyDayClose": 37.567,
+      "twentyDayCloseDate": "2026-06-16",
+      "twentyDayChange": -0.0004525248223175397,
+      "marketCap": 947004999999.9999,
       "marketCapCurrency": "CNY",
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPriceDate": "2026-07-15",
+      "previousCloseDate": "2026-07-14",
       "currency": "CNY",
       "sourceSymbol": "sh600036",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-11 02:04:24；行情源 腾讯实时行情；代码 sh600036；币种 CNY；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 11:06:07；行情源 腾讯实时行情；代码 sh600036；币种 CNY；日期 2026-07-14/2026-07-15"
     },
     "600309.SH": {
       "symbol": "600309.SH",
@@ -479,51 +479,51 @@
     },
     "6049.HK": {
       "symbol": "6049.HK",
-      "currentPrice": 27.02,
-      "previousClose": 26.74,
-      "twentyDayClose": 29.52,
-      "twentyDayCloseDate": "2026-06-10",
-      "twentyDayChange": -0.08468834688346884,
-      "marketCap": 14951070000.000002,
+      "currentPrice": 27.52,
+      "previousClose": 27.1,
+      "twentyDayClose": 30.26,
+      "twentyDayCloseDate": "2026-06-15",
+      "twentyDayChange": -0.09054857898215472,
+      "marketCap": 15227740000,
       "marketCapCurrency": "HKD",
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPriceDate": "2026-07-15",
+      "previousCloseDate": "2026-07-14",
       "currency": "HKD",
       "sourceSymbol": "hk06049",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-11 02:04:24；行情源 腾讯实时行情；代码 hk06049；币种 HKD；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 11:06:07；行情源 腾讯实时行情；代码 hk06049；币种 HKD；日期 2026-07-14/2026-07-15"
     },
     "7489.HK": {
       "symbol": "7489.HK",
-      "currentPrice": 3.17,
-      "previousClose": 3.13,
-      "twentyDayClose": 4.89,
-      "twentyDayCloseDate": "2026-06-10",
-      "twentyDayChange": -0.35173824130879344,
-      "marketCap": 11665600000,
+      "currentPrice": 3.01,
+      "previousClose": 2.96,
+      "twentyDayClose": 4.51,
+      "twentyDayCloseDate": "2026-06-15",
+      "twentyDayChange": -0.33259423503325947,
+      "marketCap": 11076800000,
       "marketCapCurrency": "HKD",
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPriceDate": "2026-07-15",
+      "previousCloseDate": "2026-07-14",
       "currency": "HKD",
       "sourceSymbol": "hk07489",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-11 02:04:24；行情源 腾讯实时行情；代码 hk07489；币种 HKD；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 11:06:07；行情源 腾讯实时行情；代码 hk07489；币种 HKD；日期 2026-07-14/2026-07-15"
     },
     "9926.HK": {
       "symbol": "9926.HK",
-      "currentPrice": 97.25,
-      "previousClose": 94.65,
-      "twentyDayClose": 87.95,
-      "twentyDayCloseDate": "2026-06-10",
-      "twentyDayChange": 0.10574189880613982,
-      "marketCap": 89581170000,
+      "currentPrice": 104.2,
+      "previousClose": 95.85,
+      "twentyDayClose": 89.35,
+      "twentyDayCloseDate": "2026-06-15",
+      "twentyDayChange": 0.16620033575825416,
+      "marketCap": 95983120000,
       "marketCapCurrency": "HKD",
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPriceDate": "2026-07-15",
+      "previousCloseDate": "2026-07-14",
       "currency": "HKD",
       "sourceSymbol": "hk09926",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-11 02:04:24；行情源 腾讯实时行情；代码 hk09926；币种 HKD；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 11:06:07；行情源 腾讯实时行情；代码 hk09926；币种 HKD；日期 2026-07-14/2026-07-15"
     },
     "9987.HK": {
       "symbol": "9987.HK",
@@ -543,182 +543,914 @@
     },
     "9992.HK": {
       "symbol": "9992.HK",
-      "currentPrice": 150.7,
-      "previousClose": 151,
-      "twentyDayClose": 173.1,
-      "twentyDayCloseDate": "2026-06-10",
-      "twentyDayChange": -0.12940496822645872,
-      "marketCap": 200690680000,
+      "currentPrice": 157.3,
+      "previousClose": 155,
+      "twentyDayClose": 177,
+      "twentyDayCloseDate": "2026-06-15",
+      "twentyDayChange": -0.11129943502824852,
+      "marketCap": 209480049999.99997,
       "marketCapCurrency": "HKD",
-      "currentPriceDate": "2026-07-10",
-      "previousCloseDate": "2026-07-09",
+      "currentPriceDate": "2026-07-15",
+      "previousCloseDate": "2026-07-14",
       "currency": "HKD",
       "sourceSymbol": "hk09992",
       "sourceName": "腾讯实时行情",
-      "updatedAt": "2026-07-11 02:04:24；行情源 腾讯实时行情；代码 hk09992；币种 HKD；日期 2026-07-09/2026-07-10"
+      "updatedAt": "2026-07-15 11:06:07；行情源 腾讯实时行情；代码 hk09992；币种 HKD；日期 2026-07-14/2026-07-15"
     }
   },
   "etfRuleStatuses": {
     "008163": {
       "symbol": "008163",
       "name": "南方标普红利低波50ETF联接A",
-      "level": "one",
-      "levelLabel": "1倍",
-      "monthlyAmount": 14000,
-      "weeklyAmount": 3500,
+      "level": "oneHalf",
+      "levelLabel": "偏低",
+      "monthlyAmount": 5000,
+      "weeklyAmount": 1250,
       "complete": true,
-      "reason": "按股息率利差历史分位确定基础倍数；回撤只确认加速",
-      "asOf": "2026-07-10",
-      "updatedAt": "2026-07-11 01:34:13",
-      "levelUpdatedAt": "2026-07-10",
+      "reason": "按75%股债利差分位+25%PB便宜度计算估值得分V；场外基础定投不择时",
+      "asOf": "2026-07-14",
+      "updatedAt": "2026-07-15 11:18:15",
+      "levelUpdatedAt": "2026-07-13",
+      "signalHealth": "healthy",
+      "executionHealth": "blocked",
+      "signalAsOf": "2026-07-14",
+      "executionAsOf": "2026-07-15 11:09:07",
+      "blockingReasons": [
+        "场内执行行情超过90秒"
+      ],
+      "qualityUpdatedAt": "2026-07-15 11:18:15",
       "metrics": [
         {
           "key": "drawdown3y",
-          "label": "近3年总收益回撤",
-          "value": 7.025920873124096,
+          "label": "515450成立以来总回报回撤",
+          "value": 4.774281805745572,
           "unit": "%",
-          "asOf": "2026-07-10",
-          "available": true
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 604800,
+          "sourceIds": [
+            "东方财富515450单位净值 + 每份分红（分红再投资总回报）",
+            "南方基金515450申购赎回篮子 + 东方财富成分股PB与分红（场内代理）"
+          ]
         },
         {
           "key": "dividendYield",
-          "label": "515450绝对股息率",
-          "value": 5.502567865003668,
+          "label": "515450篮子TTM股息率（代理）",
+          "value": 4.966927901162106,
           "unit": "%",
-          "asOf": "2026-07-10",
-          "available": true
-        },
-        {
-          "key": "dividendYieldPercentile",
-          "label": "股息率历史分位",
-          "value": 55.35714285714286,
-          "unit": "%",
-          "asOf": "2026-07-10",
-          "available": true
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "东方财富515450单位净值 + 每份分红（分红再投资总回报）",
+            "南方基金515450申购赎回篮子 + 东方财富成分股PB与分红（场内代理）"
+          ]
         },
         {
           "key": "china10YBondYield",
-          "label": "中债10年国债收益率",
-          "value": 1.7398,
+          "label": "中债10年期国债收益率",
+          "value": 1.7442,
           "unit": "%",
-          "asOf": "2026-07-10",
-          "available": true
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600
         },
         {
           "key": "dividendSpread",
-          "label": "股息率利差",
-          "value": 3.7627678650036676,
+          "label": "篮子股债利差（代理）",
+          "value": 3.2227279011621057,
           "unit": "%",
-          "asOf": "2026-07-10",
-          "available": true
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "东方财富515450单位净值 + 每份分红（分红再投资总回报）",
+            "南方基金515450申购赎回篮子 + 东方财富成分股PB与分红（场内代理）"
+          ]
         },
         {
           "key": "dividendSpreadPercentile",
-          "label": "股息率利差历史分位（56个月）",
-          "value": 55.35714285714286,
+          "label": "篮子股债利差5年分位（代理）",
+          "value": 67.08333333333333,
           "unit": "%",
-          "asOf": "2026-07-10",
-          "available": true
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "东方财富515450单位净值 + 每份分红（分红再投资总回报）",
+            "南方基金515450申购赎回篮子 + 东方财富成分股PB与分红（场内代理）"
+          ]
+        },
+        {
+          "key": "indexPB",
+          "label": "515450篮子PB（代理）",
+          "value": 0.8157922474180243,
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "东方财富515450单位净值 + 每份分红（分红再投资总回报）",
+            "南方基金515450申购赎回篮子 + 东方财富成分股PB与分红（场内代理）"
+          ]
+        },
+        {
+          "key": "pbPercentile",
+          "label": "篮子PB五年历史分位（代理）",
+          "value": 39.58333333333333,
+          "unit": "%",
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "东方财富515450单位净值 + 每份分红（分红再投资总回报）",
+            "南方基金515450申购赎回篮子 + 东方财富成分股PB与分红（场内代理）"
+          ]
+        },
+        {
+          "key": "valuationScore",
+          "label": "红利估值得分V",
+          "value": 65.41666666666666,
+          "unit": "%",
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "东方财富515450单位净值 + 每份分红（分红再投资总回报）",
+            "南方基金515450申购赎回篮子 + 东方财富成分股PB与分红（场内代理）"
+          ]
+        },
+        {
+          "key": "basketCoverage",
+          "label": "篮子有效覆盖（49/50）",
+          "value": 98,
+          "unit": "%",
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "东方财富515450单位净值 + 每份分红（分红再投资总回报）",
+            "南方基金515450申购赎回篮子 + 东方财富成分股PB与分红（场内代理）"
+          ]
+        },
+        {
+          "key": "tacticalMarketPrice",
+          "label": "515450场内价格",
+          "value": 13.86,
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "degraded",
+          "qualityMessage": "本次更新失败，沿用上次成功值",
+          "fetchedAt": "2026-07-15 11:09:07",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "东方财富515450单位净值 + 每份分红（分红再投资总回报）",
+            "南方基金515450申购赎回篮子 + 东方财富成分股PB与分红（场内代理）"
+          ]
         }
       ],
       "sources": [
         {
-          "name": "腾讯515450未复权日线 + 东方财富分红（红利指数全收益代理）",
-          "url": "https://quote.eastmoney.com/sh515450.html"
+          "name": "东方财富515450单位净值 + 每份分红（分红再投资总回报）",
+          "url": "https://fund.eastmoney.com/515450.html",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
         },
         {
-          "name": "515450股息率历史（利差主口径；绝对值回退）",
-          "url": "https://fundf10.eastmoney.com/fhsp_515450.html"
+          "name": "南方基金515450申购赎回篮子 + 东方财富成分股PB与分红（场内代理）",
+          "url": "https://www.southernfund.com/new/transaction-guide/detailed-list.html",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "东方财富A股历史PB与收盘价",
+          "url": "https://data.eastmoney.com/gzfx/",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "东方财富A股分红送配",
+          "url": "https://data.eastmoney.com/yjfp/",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "标普中国A股大盘红利低波50指数",
+          "url": "https://www.spglobal.com/spdji/en/indices/dividends-factors/sp-china-a-share-largecap-low-volatility-high-dividend-50-index/",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
         },
         {
           "name": "中债10年期国债收益率（官网校验）",
-          "url": "https://yield.chinabond.com.cn/cbweb-pbc-web/pbc/historyQuery"
+          "url": "https://yield.chinabond.com.cn/cbweb-pbc-web/pbc/historyQuery",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
         },
         {
           "name": "东方财富中债收益率历史序列",
-          "url": "https://data.eastmoney.com/cjsj/zmgzsyl.html"
+          "url": "https://data.eastmoney.com/cjsj/zmgzsyl.html",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "东方财富515450场内行情",
+          "url": "https://quote.eastmoney.com/sh515450.html",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
         }
       ]
     },
     "018738": {
       "symbol": "018738",
       "name": "博时标普500ETF联接E(人民币)",
-      "level": "quarter",
-      "levelLabel": "0.25倍",
-      "monthlyAmount": 4200,
-      "weeklyAmount": 1050,
+      "level": "one",
+      "levelLabel": "中性",
+      "monthlyAmount": 5000,
+      "weeklyAmount": 1250,
       "complete": true,
-      "reason": "按PE分位确定基础倍数；回撤只确认加速",
-      "asOf": "2026-07-09",
-      "updatedAt": "2026-07-11 01:34:13",
-      "levelUpdatedAt": "2026-07-09",
+      "reason": "估值中性：SPTR全收益回撤决定档位，估值只调整本档金额",
+      "asOf": "2026-07-13",
+      "updatedAt": "2026-07-15 11:18:15",
+      "levelUpdatedAt": "2026-07-13",
+      "signalHealth": "degraded",
+      "executionHealth": "ready",
+      "signalAsOf": "2026-07-13",
+      "executionAsOf": "2026-07-15 11:18:15",
+      "qualityUpdatedAt": "2026-07-15 11:18:15",
       "metrics": [
         {
           "key": "drawdown3y",
-          "label": "近3年总收益回撤",
-          "value": 0.7825231300976775,
+          "label": "标普500总回报回撤（SPY备援）",
+          "value": 1.1177758051965854,
           "unit": "%",
-          "asOf": "2026-07-09",
-          "available": true
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "fallback",
+          "qualityState": "degraded",
+          "qualityMessage": "当前使用经过校验的备用数据",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 604800,
+          "sourceIds": [
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）",
+            "新浪标普500期货行情（Yahoo Finance备援，估算净值辅助）"
+          ]
         },
         {
-          "key": "pePercentile",
-          "label": "标普500 PE分位",
-          "value": 81.83,
+          "key": "forwardPE",
+          "label": "标普500未来12个月PE",
+          "value": 20.92,
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "fallback",
+          "qualityState": "degraded",
+          "qualityMessage": "当前使用经过校验的备用数据",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 2678400,
+          "sourceIds": [
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）",
+            "新浪标普500期货行情（Yahoo Finance备援，估算净值辅助）"
+          ]
+        },
+        {
+          "key": "forwardPEPercentile",
+          "label": "未来PE十年周度分位",
+          "value": 67.68642447418738,
           "unit": "%",
-          "asOf": "2026-07-10",
-          "available": true
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "fallback",
+          "qualityState": "degraded",
+          "qualityMessage": "当前使用经过校验的备用数据",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 2678400,
+          "sourceIds": [
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）",
+            "新浪标普500期货行情（Yahoo Finance备援，估算净值辅助）"
+          ]
+        },
+        {
+          "key": "us10YBondYield",
+          "label": "美国10年期国债收益率",
+          "value": 4.58,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "S\u0026P Dow Jones Indices标普500官方说明",
+            "美国财政部10年期国债收益率"
+          ]
+        },
+        {
+          "key": "earningsYieldSpread",
+          "label": "盈利收益率利差",
+          "value": 0.2001147227533459,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "S\u0026P 500 Total Return（SPTR）公开日线",
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "earningsYieldSpreadPercentile",
+          "label": "盈利利差十年周度分位（523周）",
+          "value": 4.015296367112811,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "fallback",
+          "qualityState": "degraded",
+          "qualityMessage": "当前使用经过校验的备用数据",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 2678400,
+          "sourceIds": [
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）",
+            "新浪标普500期货行情（Yahoo Finance备援，估算净值辅助）"
+          ]
+        },
+        {
+          "key": "forwardEarningsRevision3m",
+          "label": "未来盈利预期三个月修正",
+          "unit": "%",
+          "available": false,
+          "error": "free point-in-time three-month forward earnings revision series is not available",
+          "sourceTier": "validated_proxy",
+          "qualityState": "unavailable",
+          "qualityMessage": "本次未取得可用数据",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "S\u0026P 500 Total Return（SPTR）公开日线",
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "vix",
+          "label": "Cboe标普500波动率VIX",
+          "value": 17.16,
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 604800,
+          "sourceIds": [
+            "S\u0026P Dow Jones Indices标普500官方说明",
+            "美国财政部10年期国债收益率"
+          ]
+        },
+        {
+          "key": "cnyTotalReturnDrawdown",
+          "label": "人民币口径全收益回撤",
+          "value": 0.898446943084079,
+          "unit": "%",
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 604800,
+          "sourceIds": [
+            "S\u0026P 500 Total Return（SPTR）公开日线",
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "usdCny",
+          "label": "USD/CNY执行参考汇率",
+          "value": 6.7801,
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "S\u0026P 500 Total Return（SPTR）公开日线",
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "sp500FuturesChange",
+          "label": "标普500期货当日变动",
+          "value": 0.1750963280092277,
+          "unit": "%",
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "S\u0026P 500 Total Return（SPTR）公开日线",
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "tacticalMarketPrice",
+          "label": "513650场内价格",
+          "value": 1.92,
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "S\u0026P 500 Total Return（SPTR）公开日线",
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "tacticalOfficialNAV",
+          "label": "513650最近公布净值",
+          "value": 1.8401,
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "S\u0026P 500 Total Return（SPTR）公开日线",
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "tacticalEstimatedNAV",
+          "label": "513650估算实时净值",
+          "value": 1.8505491848822595,
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "S\u0026P 500 Total Return（SPTR）公开日线",
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "qdiiPremium",
+          "label": "513650估算溢价",
+          "value": 3.7529840160481553,
+          "unit": "%",
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "S\u0026P 500 Total Return（SPTR）公开日线",
+            "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
         }
       ],
       "sources": [
         {
-          "name": "Nasdaq SPY日线 + StockAnalysis分红（标普500总收益代理）",
-          "url": "https://stockanalysis.com/etf/spy/dividend/"
+          "name": "S\u0026P 500 Total Return（SPTR）公开日线",
+          "url": "https://query2.finance.yahoo.com/v8/finance/chart/%5ESP500TR?range=max\u0026interval=1d",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-13"
         },
         {
-          "name": "韭圈儿标普500 PE分位（优先；History of Market CAPE备援）",
-          "url": "https://funddb.cn/site/index"
+          "name": "History of Market S\u0026P 500 Forward PE（同一序列计算PE与盈利利差分位）",
+          "url": "https://historyofmarket.com/api/sp500/forward-pe.json",
+          "tier": "fallback",
+          "qualityState": "degraded",
+          "asOf": "2026-07-13"
+        },
+        {
+          "name": "S\u0026P Dow Jones Indices标普500官方说明",
+          "url": "https://www.spglobal.com/spdji/en/indices/equity/sp-500/",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-13"
+        },
+        {
+          "name": "美国财政部10年期国债收益率",
+          "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-13"
+        },
+        {
+          "name": "Cboe VIX官方历史数据",
+          "url": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-13"
+        },
+        {
+          "name": "Frankfurter/欧洲央行USD-CNY参考汇率",
+          "url": "https://api.frankfurter.app",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-13"
+        },
+        {
+          "name": "东方财富513650场内行情",
+          "url": "https://quote.eastmoney.com/sh513650.html",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-13"
+        },
+        {
+          "name": "东方财富513650基金净值",
+          "url": "https://fund.eastmoney.com/513650.html",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-13"
+        },
+        {
+          "name": "新浪标普500期货行情（Yahoo Finance备援，估算净值辅助）",
+          "url": "https://hq.sinajs.cn/list=hf_ES",
+          "tier": "fallback",
+          "qualityState": "degraded",
+          "asOf": "2026-07-13"
+        },
+        {
+          "name": "State Street SPY分红再投资总回报（SPTR备援）",
+          "url": "https://www.ssga.com/library-content/products/fund-data/etfs/us/spdr-etf-historical-distributions.xlsx",
+          "tier": "fallback",
+          "qualityState": "degraded",
+          "asOf": "2026-07-13"
         }
       ]
     },
     "021000": {
       "symbol": "021000",
       "name": "南方纳斯达克100指数发起(QDII)I",
-      "level": "half",
-      "levelLabel": "0.5倍",
-      "monthlyAmount": 2800,
-      "weeklyAmount": 700,
+      "level": "one",
+      "levelLabel": "中性",
+      "monthlyAmount": 5000,
+      "weeklyAmount": 1250,
       "complete": true,
-      "reason": "按PE分位确定基础倍数；回撤只确认加速",
-      "asOf": "2026-07-09",
-      "updatedAt": "2026-07-11 01:34:13",
-      "levelUpdatedAt": "2026-07-09",
+      "reason": "估值中性：XNDX全收益回撤决定档位，估值只调整本档金额",
+      "asOf": "2026-07-14",
+      "updatedAt": "2026-07-15 11:18:15",
+      "levelUpdatedAt": "2026-07-14",
+      "signalHealth": "degraded",
+      "executionHealth": "ready",
+      "signalAsOf": "2026-07-14",
+      "executionAsOf": "2026-07-15 11:18:15",
+      "qualityUpdatedAt": "2026-07-15 11:18:15",
       "metrics": [
         {
           "key": "drawdown3y",
-          "label": "近3年总收益回撤",
-          "value": 2.9693506370153617,
+          "label": "XNDX十年全收益高点回撤",
+          "value": 3.428738920579863,
           "unit": "%",
-          "asOf": "2026-07-09",
-          "available": true
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 604800,
+          "sourceIds": [
+            "Nasdaq官方纳斯达克100总收益指数日线",
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
         },
         {
-          "key": "pePercentile",
-          "label": "纳指100 PE分位",
-          "value": 64.49,
+          "key": "forwardPE",
+          "label": "纳指100未来12个月PE",
+          "value": 24.29,
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "fallback",
+          "qualityState": "degraded",
+          "qualityMessage": "当前使用经过校验的备用数据",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 2678400,
+          "sourceIds": [
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）",
+            "新浪纳指期货行情（Yahoo Finance备援，估算净值辅助）"
+          ]
+        },
+        {
+          "key": "forwardPEPercentile",
+          "label": "未来PE十年周度分位",
+          "value": 58.31739961759082,
           "unit": "%",
-          "asOf": "2026-07-10",
-          "available": true
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "fallback",
+          "qualityState": "degraded",
+          "qualityMessage": "当前使用经过校验的备用数据",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 2678400,
+          "sourceIds": [
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）",
+            "新浪纳指期货行情（Yahoo Finance备援，估算净值辅助）"
+          ]
+        },
+        {
+          "key": "us10YBondYield",
+          "label": "美国10年期国债收益率",
+          "value": 4.58,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "Nasdaq官方纳斯达克100总收益指数日线",
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "earningsYieldSpread",
+          "label": "盈利收益率利差",
+          "value": -0.46307945656648836,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "Nasdaq官方纳斯达克100总收益指数日线",
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "earningsYieldSpreadPercentile",
+          "label": "盈利利差十年周度分位（523周）",
+          "value": 7.265774378585086,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "fallback",
+          "qualityState": "degraded",
+          "qualityMessage": "当前使用经过校验的备用数据",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 2678400,
+          "sourceIds": [
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）",
+            "新浪纳指期货行情（Yahoo Finance备援，估算净值辅助）"
+          ]
+        },
+        {
+          "key": "vxn",
+          "label": "Cboe纳指100波动率VXN",
+          "value": 26.28,
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 604800,
+          "sourceIds": [
+            "Nasdaq官方纳斯达克100总收益指数日线",
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "cnyTotalReturnDrawdown",
+          "label": "人民币口径全收益回撤",
+          "value": 3.178835470887452,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 604800,
+          "sourceIds": [
+            "Nasdaq官方纳斯达克100总收益指数日线",
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "usdCny",
+          "label": "USD/CNY执行参考汇率",
+          "value": 6.7801,
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "Nasdaq官方纳斯达克100总收益指数日线",
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "nasdaqFuturesChange",
+          "label": "纳指期货当日变动",
+          "value": 0.6311796644875356,
+          "unit": "%",
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "Nasdaq官方纳斯达克100总收益指数日线",
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "tacticalMarketPrice",
+          "label": "159659场内价格",
+          "value": 2.312,
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "Nasdaq官方纳斯达克100总收益指数日线",
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "tacticalOfficialNAV",
+          "label": "159659最近公布净值",
+          "value": 2.142,
+          "asOf": "2026-07-13",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "Nasdaq官方纳斯达克100总收益指数日线",
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "tacticalEstimatedNAV",
+          "label": "159659估算实时净值",
+          "value": 2.180055027912528,
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "Nasdaq官方纳斯达克100总收益指数日线",
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
+        },
+        {
+          "key": "qdiiPremium",
+          "label": "159659估算溢价",
+          "value": 6.052368880514591,
+          "unit": "%",
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "Nasdaq官方纳斯达克100总收益指数日线",
+            "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）"
+          ]
         }
       ],
       "sources": [
         {
           "name": "Nasdaq官方纳斯达克100总收益指数日线",
-          "url": "https://indexes.nasdaq.com/Index/Overview/XNDX"
+          "url": "https://indexes.nasdaq.com/Index/Overview/XNDX",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
         },
         {
-          "name": "韭圈儿纳斯达克100 PE分位（优先；History of Market Forward PE备援）",
-          "url": "https://funddb.cn/site/index"
+          "name": "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）",
+          "url": "https://historyofmarket.com/api/ndx/forward-pe.json",
+          "tier": "fallback",
+          "qualityState": "degraded",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "美国财政部10年期国债收益率",
+          "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "Cboe VXN官方历史数据",
+          "url": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VXN_History.csv",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "Frankfurter/欧洲央行USD-CNY参考汇率",
+          "url": "https://api.frankfurter.app",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "东方财富159659场内行情",
+          "url": "https://quote.eastmoney.com/sz159659.html",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "东方财富159659基金净值",
+          "url": "https://fund.eastmoney.com/159659.html",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "新浪纳指期货行情（Yahoo Finance备援，估算净值辅助）",
+          "url": "https://hq.sinajs.cn/list=hf_NQ",
+          "tier": "fallback",
+          "qualityState": "degraded",
+          "asOf": "2026-07-14"
         }
       ]
     },
@@ -726,40 +1458,393 @@
       "symbol": "022434",
       "name": "南方中证A500ETF联接A",
       "level": "quarter",
-      "levelLabel": "0.25倍",
-      "monthlyAmount": 4900,
-      "weeklyAmount": 1225,
+      "levelLabel": "高估",
+      "monthlyAmount": 5000,
+      "weeklyAmount": 1250,
       "complete": true,
-      "reason": "按PE分位确定基础倍数；回撤只确认加速",
-      "asOf": "2026-07-10",
-      "updatedAt": "2026-07-11 01:34:13",
-      "levelUpdatedAt": "2026-07-10",
+      "reason": "估值偏贵：PE不低于75%分位且股债利差不高于30%分位，机会仓金额系数V=0.5",
+      "asOf": "2026-07-14",
+      "updatedAt": "2026-07-15 11:18:15",
+      "levelUpdatedAt": "2026-07-13",
+      "signalHealth": "degraded",
+      "executionHealth": "ready",
+      "signalAsOf": "2026-07-14",
+      "executionAsOf": "2026-07-15 11:18:15",
+      "qualityUpdatedAt": "2026-07-15 11:18:15",
       "metrics": [
         {
           "key": "drawdown3y",
-          "label": "近3年总收益回撤",
-          "value": 5.443673052578445,
+          "label": "中证A500全收益高点回撤",
+          "value": 5.7628062059323915,
           "unit": "%",
-          "asOf": "2026-07-10",
-          "available": true
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 604800,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "totalReturnClose",
+          "label": "中证A500全收益指数",
+          "value": 8702.23,
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 604800,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "totalReturnPeak",
+          "label": "本轮全收益高点",
+          "value": 9234.39,
+          "asOf": "2026-06-22",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "stale",
+          "qualityMessage": "数据已超过允许时效",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 604800,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "indexPE",
+          "label": "中证A500滚动PE",
+          "value": 16.67,
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
         },
         {
           "key": "pePercentile",
-          "label": "中证A500 PE分位",
-          "value": 87.6,
+          "label": "滚动PE扩展窗口分位（485日）",
+          "value": 90.9278350515464,
           "unit": "%",
-          "asOf": "2026-07-10",
-          "available": true
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "china10YBondYield",
+          "label": "中债10年期国债收益率",
+          "value": 1.7402000000000002,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "earningsYieldSpread",
+          "label": "A500股债利差",
+          "value": 4.258600239952009,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "earningsYieldSpreadPercentile",
+          "label": "股债利差扩展窗口分位（485日）",
+          "value": 14.02061855670103,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "rv20",
+          "label": "20日实现波动率",
+          "value": 30.597988953869287,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "rv20Percentile",
+          "label": "RV20五年分位（1211日）",
+          "value": 93.39388934764658,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "fiveDayReturn",
+          "label": "近5个交易日全收益",
+          "value": -0.5290043676008938,
+          "unit": "%",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "official",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "volumeRatio",
+          "label": "成交额/20日均值",
+          "value": 0.9276447472326015,
+          "unit": "倍",
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "breadthBelowMA20",
+          "label": "成份股低于20日均线比例",
+          "unit": "%",
+          "available": false,
+          "error": "免费官方成份股广度序列未接入，恐慌系数不使用此条件",
+          "sourceTier": "validated_proxy",
+          "qualityState": "unavailable",
+          "qualityMessage": "本次未取得可用数据",
+          "fetchedAt": "2026-07-15 08:30:29",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "tacticalMarketPrice",
+          "label": "159352场内价格",
+          "value": 1.322,
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "tacticalOfficialNAV",
+          "label": "159352最近公布净值",
+          "value": 1.3272,
+          "asOf": "2026-07-14",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 1209600,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "tacticalEstimatedNAV",
+          "label": "159352估算净值",
+          "value": 1.3272,
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "etfPremium",
+          "label": "159352估算溢价",
+          "value": -0.3918022905364582,
+          "unit": "%",
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "bidAskSpread",
+          "label": "159352买卖价差",
+          "value": 0.07561436672967031,
+          "unit": "%",
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
+        },
+        {
+          "key": "openingGap",
+          "label": "159352开盘涨跌",
+          "value": 0.15082956259426794,
+          "unit": "%",
+          "asOf": "2026-07-15",
+          "available": true,
+          "sourceTier": "validated_proxy",
+          "qualityState": "fresh",
+          "qualityMessage": "数据可用",
+          "fetchedAt": "2026-07-15 11:18:15",
+          "maxAgeSeconds": 90,
+          "sourceIds": [
+            "中证指数中证A500全收益指数官方日线",
+            "中证指数中证A500滚动PE官方序列"
+          ]
         }
       ],
       "sources": [
         {
-          "name": "中证指数中证A500全收益指数日线",
-          "url": "https://www.csindex.com.cn/"
+          "name": "中证指数中证A500全收益指数官方日线",
+          "url": "https://www.csindex.com.cn/csindex-home/perf/index-perf?indexCode=000510CNY010",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
         },
         {
-          "name": "韭圈儿中证A500 PE分位（优先；乐咕乐股备援）",
-          "url": "https://funddb.cn/site/index"
+          "name": "中证指数中证A500滚动PE官方序列",
+          "url": "https://www.csindex.com.cn/csindex-home/perf/indexCsiDsPe?indexCode=000510",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "中证指数中证A500全收益指数",
+          "url": "https://www.csindex.com.cn/csindex-home/perf/index-perf?indexCode=000510CNY010",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "中证指数中证A500滚动PE",
+          "url": "https://www.csindex.com.cn/csindex-home/perf/indexCsiDsPe?indexCode=000510",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "中债10年期国债收益率（官网校验）",
+          "url": "https://yield.chinabond.com.cn/cbweb-pbc-web/pbc/historyQuery",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "东方财富中债收益率历史序列",
+          "url": "https://data.eastmoney.com/cjsj/zmgzsyl.html",
+          "tier": "official",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "腾讯159352五档盘口",
+          "url": "http://qt.gtimg.cn/q=sz159352",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
+        },
+        {
+          "name": "东方财富159352基金净值",
+          "url": "https://fund.eastmoney.com/159352.html",
+          "tier": "validated_proxy",
+          "qualityState": "fresh",
+          "asOf": "2026-07-14"
         }
       ]
     }

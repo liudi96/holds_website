@@ -51,6 +51,30 @@ func TestTotalReturnClosesReinvestsCashDividend(t *testing.T) {
 	}
 }
 
+func TestParseEastmoneyFundNAVTrendUsesUnitNAVAndCashDividend(t *testing.T) {
+	body := []byte(`var Data_netWorthTrend = [
+		{"x":1579190400000,"y":1.0,"equityReturn":0,"unitMoney":""},
+		{"x":1579708800000,"y":0.9,"equityReturn":-10,"unitMoney":"分红：每份派现金0.1元"}
+	]; var Data_ACWorthTrend = [];`)
+	closes, events, err := parseEastmoneyFundNAVTrend(body)
+	if err != nil {
+		t.Fatalf("parseEastmoneyFundNAVTrend returned error: %v", err)
+	}
+	if len(closes) != 2 || closes[0].Date != "2020-01-17" || closes[1].Date != "2020-01-23" {
+		t.Fatalf("closes = %+v", closes)
+	}
+	if len(events) != 1 || events[0].Date != "2020-01-23" || !almostEqual(events[0].Amount, 0.1, 0.000001) {
+		t.Fatalf("events = %+v", events)
+	}
+	totalReturns, err := totalReturnCloses(closes, events)
+	if err != nil {
+		t.Fatalf("totalReturnCloses returned error: %v", err)
+	}
+	if !almostEqual(totalReturns[1].Price, 1.0, 0.000001) {
+		t.Fatalf("ex-dividend total return = %.6f, want 1", totalReturns[1].Price)
+	}
+}
+
 func TestParseStockAnalysisDividends(t *testing.T) {
 	body := []byte(`<html><body><h2>Dividend History</h2><table><tbody>
 		<tr><td>Jun 18, 2026</td><td>$1.90352</td><td>Jun 18, 2026</td></tr>
@@ -244,10 +268,10 @@ func TestNormalizeNasdaqQuoteDate(t *testing.T) {
 
 func TestETFRuleBaseAmountsKeepTargetAllocation(t *testing.T) {
 	wantMonthly := map[string]float64{
-		"008163": 14000,
-		"018738": 16800,
-		"022434": 19600,
-		"021000": 5600,
+		"022434": 5000,
+		"008163": 5000,
+		"018738": 5000,
+		"021000": 5000,
 	}
 	totalMonthly := 0.0
 	totalWeekly := 0.0
@@ -260,11 +284,16 @@ func TestETFRuleBaseAmountsKeepTargetAllocation(t *testing.T) {
 		if weekly*4 != monthly {
 			t.Fatalf("%s weekly one %.0f does not reconcile with monthly %.0f", config.Symbol, weekly, monthly)
 		}
+		for level := range etfRuleLevels {
+			if config.Monthly[level] != monthly || config.Weekly[level] != weekly {
+				t.Fatalf("%s water level %s changed fixed plan", config.Symbol, level)
+			}
+		}
 		totalMonthly += monthly
 		totalWeekly += weekly
 	}
-	if totalMonthly != 56000 || totalWeekly != 14000 {
-		t.Fatalf("totals monthly=%.0f weekly=%.0f, want 56000/14000", totalMonthly, totalWeekly)
+	if totalMonthly != 20000 || totalWeekly != 5000 {
+		t.Fatalf("totals monthly=%.0f weekly=%.0f, want 20000/5000", totalMonthly, totalWeekly)
 	}
 }
 
@@ -470,7 +499,7 @@ func TestParseLeguleguIndexPERowsAndA500Percentile(t *testing.T) {
 }
 
 func TestParseFundDBIndexPEPercentile(t *testing.T) {
-	point, err := parseFundDBIndexPEPercentile([]byte(`{
+	body := []byte(`{
 		"code": 0,
 		"message": "",
 		"data": {
@@ -481,7 +510,8 @@ func TestParseFundDBIndexPEPercentile(t *testing.T) {
 				{"attribute":"pb","name":"市净率","new_percent_value":{"value":"59.21%"}}
 			]
 		}
-	}`))
+	}`)
+	point, err := parseFundDBIndexPEPercentile(body)
 	if err != nil {
 		t.Fatalf("parseFundDBIndexPEPercentile returned error: %v", err)
 	}
@@ -490,6 +520,13 @@ func TestParseFundDBIndexPEPercentile(t *testing.T) {
 	}
 	if !almostEqual(point.Percentile, 0.8669, 0.000001) {
 		t.Fatalf("percentile = %.6f, want 0.8669", point.Percentile)
+	}
+	pbPoint, err := parseFundDBIndexPBPercentile(body)
+	if err != nil {
+		t.Fatalf("parseFundDBIndexPBPercentile returned error: %v", err)
+	}
+	if pbPoint.Date != "2026-07-08" || !almostEqual(pbPoint.Percentile, 0.5921, 0.000001) {
+		t.Fatalf("PB point = %+v, want 59.21%% on 2026-07-08", pbPoint)
 	}
 }
 
@@ -525,72 +562,78 @@ func TestEastmoneyGlobalIndexSecID(t *testing.T) {
 	}
 }
 
-func TestEvaluateSP500RuleWithPEPercentileAndDrawdown(t *testing.T) {
+func TestEvaluateSP500RuleUsesForwardPEAndEarningsSpread(t *testing.T) {
 	pePercentile := 0.82
+	spreadPercentile := 0.19
 	drawdown := 0.12
-	got := evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
+	got := evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, EarningsYieldSpreadPercentile: &spreadPercentile, Drawdown: &drawdown})
 	if got.Level != "quarter" || !got.Complete {
-		t.Fatalf("PE percentile above 80%% should choose quarter, got %+v", got)
+		t.Fatalf("expensive PE and spread combination should choose quarter, got %+v", got)
 	}
 
-	pePercentile = 0.50
+	spreadPercentile = 0.50
 	drawdown = 0.03
-	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
+	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, EarningsYieldSpreadPercentile: &spreadPercentile, Drawdown: &drawdown})
 	if got.Level != "one" || !got.Complete {
-		t.Fatalf("normal PE percentile should not be slowed by shallow drawdown, got %+v", got)
+		t.Fatalf("high PE alone must not mark the combined valuation expensive, got %+v", got)
 	}
 
 	pePercentile = 0.30
+	spreadPercentile = 0.61
 	drawdown = 0.12
-	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
-	if got.Level != "one" || !got.Complete {
-		t.Fatalf("1.5x candidate without 15%% drawdown should execute one, got %+v", got)
-	}
-
-	drawdown = 0.16
-	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
+	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, EarningsYieldSpreadPercentile: &spreadPercentile, Drawdown: &drawdown})
 	if got.Level != "oneHalf" || !got.Complete {
-		t.Fatalf("1.5x candidate with confirmed drawdown should execute oneHalf, got %+v", got)
+		t.Fatalf("cheap PE and spread combination should choose oneHalf, got %+v", got)
 	}
 
-	pePercentile = 0.10
 	drawdown = 0.30
-	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
-	if got.Level != "two" || !got.Complete {
-		t.Fatalf("low PE percentile/deep drawdown should choose two, got %+v", got)
-	}
-}
-
-func TestEvaluateNasdaq100RuleUsesPEPercentileThenDrawdownLimit(t *testing.T) {
-	pePercentile := 0.81
-	drawdown := 0.046
-	got := evaluateNasdaq100Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
-	if got.Level != "quarter" || !got.Complete {
-		t.Fatalf("PE percentile above 80%% should choose quarter, got %+v", got)
-	}
-
-	pePercentile = 0.80
-	drawdown = 0.10
-	got = evaluateNasdaq100Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
-	if got.Level != "half" || !got.Complete {
-		t.Fatalf("PE percentile at 80%% should keep half, got %+v", got)
-	}
-
-	pePercentile = 0.10
-	drawdown = 0.10
-	got = evaluateNasdaq100Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
+	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile, EarningsYieldSpreadPercentile: &spreadPercentile, Drawdown: &drawdown})
 	if got.Level != "oneHalf" || !got.Complete {
-		t.Fatalf("very low PE percentile with insufficient drawdown should downshift to oneHalf, got %+v", got)
+		t.Fatalf("drawdown must not change the combined valuation water level, got %+v", got)
 	}
 
-	drawdown = 0.31
-	got = evaluateNasdaq100Rule(etfRuleInputs{ValuationPercentile: &pePercentile, Drawdown: &drawdown})
-	if got.Level != "two" || !got.Complete {
-		t.Fatalf("very low PE percentile with 30%% drawdown should execute two, got %+v", got)
+	got = evaluateSP500Rule(etfRuleInputs{ValuationPercentile: &pePercentile})
+	if got.Complete || got.Level != "" {
+		t.Fatalf("missing earnings spread percentile must fail closed, got %+v", got)
 	}
 }
 
-func TestEvaluateDividendLowVolFallbackUsesLowerLevel(t *testing.T) {
+func TestEvaluateNasdaq100RuleUsesForwardPEAndEarningsSpread(t *testing.T) {
+	pePercentile := 0.81
+	spreadPercentile := 0.19
+	got := evaluateNasdaq100Rule(etfRuleInputs{
+		ValuationPercentile:           &pePercentile,
+		EarningsYieldSpreadPercentile: &spreadPercentile,
+	})
+	if got.Level != "quarter" || !got.Complete {
+		t.Fatalf("expensive PE and spread combination should choose quarter, got %+v", got)
+	}
+
+	spreadPercentile = 0.50
+	got = evaluateNasdaq100Rule(etfRuleInputs{
+		ValuationPercentile:           &pePercentile,
+		EarningsYieldSpreadPercentile: &spreadPercentile,
+	})
+	if got.Level != "one" || !got.Complete {
+		t.Fatalf("high PE alone must not mark the combined valuation expensive, got %+v", got)
+	}
+
+	pePercentile = 0.29
+	got = evaluateNasdaq100Rule(etfRuleInputs{
+		ValuationPercentile:           &pePercentile,
+		EarningsYieldSpreadPercentile: &spreadPercentile,
+	})
+	if got.Level != "oneHalf" || !got.Complete {
+		t.Fatalf("low forward PE percentile should mark valuation cheap, got %+v", got)
+	}
+
+	got = evaluateNasdaq100Rule(etfRuleInputs{ValuationPercentile: &pePercentile})
+	if got.Complete || got.Level != "" {
+		t.Fatalf("missing earnings spread percentile must fail closed, got %+v", got)
+	}
+}
+
+func TestEvaluateDividendLowVolDoesNotUseAbsoluteYieldFallback(t *testing.T) {
 	yield := 0.059
 	percentile := 0.90
 	drawdown := 0.05
@@ -599,18 +642,8 @@ func TestEvaluateDividendLowVolFallbackUsesLowerLevel(t *testing.T) {
 		DividendYieldPercentile: &percentile,
 		Drawdown:                &drawdown,
 	})
-	if got.Level != "one" || !got.Complete {
-		t.Fatalf("fallback should take lower oneHalf base then require 8%% drawdown, got %+v", got)
-	}
-
-	drawdown = 0.10
-	got = evaluateDividendLowVolRule(etfRuleInputs{
-		DividendYield:           &yield,
-		DividendYieldPercentile: &percentile,
-		Drawdown:                &drawdown,
-	})
-	if got.Level != "oneHalf" || !got.Complete {
-		t.Fatalf("confirmed fallback oneHalf candidate should execute oneHalf, got %+v", got)
+	if got.Complete || got.Level != "" {
+		t.Fatalf("absolute yield must not produce an investable water level, got %+v", got)
 	}
 }
 
@@ -619,7 +652,24 @@ func TestEvaluateDividendLowVolPrefersSpreadPercentile(t *testing.T) {
 	drawdown := 0.13
 	got := evaluateDividendLowVolRule(etfRuleInputs{DividendSpreadPercentile: &spreadPercentile, Drawdown: &drawdown})
 	if got.Level != "two" || !got.Complete {
-		t.Fatalf("high spread percentile with confirmed drawdown should execute two, got %+v", got)
+		t.Fatalf("high spread percentile should display low water level, got %+v", got)
+	}
+}
+
+func TestEvaluateDividendLowVolUsesSpreadAndPBScore(t *testing.T) {
+	spreadPercentile := 0.80
+	pbPercentile := 0.60
+	score := dividendLowVolValuationScore(spreadPercentile, pbPercentile)
+	if !almostEqual(score, 0.70, 0.000001) {
+		t.Fatalf("valuation score = %.6f, want 0.70", score)
+	}
+	got := evaluateDividendLowVolRule(etfRuleInputs{
+		DividendSpreadPercentile: &spreadPercentile,
+		PBPercentile:             &pbPercentile,
+		ValuationScore:           &score,
+	})
+	if got.Level != "oneHalf" || !got.Complete {
+		t.Fatalf("70%% valuation score should display oneHalf water level, got %+v", got)
 	}
 }
 
@@ -629,6 +679,11 @@ func TestRuntimeMarketDataPersistsETFRuleStatuses(t *testing.T) {
 	t.Cleanup(func() {
 		runtimeQuotesFile = originalRuntimeQuotesFile
 	})
+	if err := saveRuntimeQuoteBook(RuntimeQuoteBook{ETFRuleStatuses: map[string]ETFRuleStatus{
+		"022434": {Symbol: "022434", Name: "南方中证A500ETF联接A", Complete: true},
+	}}); err != nil {
+		t.Fatalf("seed retired ETF status: %v", err)
+	}
 
 	drawdown := 4.0
 	pePercentile := 82.0
@@ -636,9 +691,9 @@ func TestRuntimeMarketDataPersistsETFRuleStatuses(t *testing.T) {
 		Symbol:        "018738",
 		Name:          "博时标普500ETF联接E(人民币)",
 		Level:         "half",
-		LevelLabel:    "0.5倍",
-		WeeklyAmount:  2000,
-		MonthlyAmount: 8000,
+		LevelLabel:    "偏高",
+		WeeklyAmount:  1250,
+		MonthlyAmount: 5000,
 		Complete:      true,
 		Metrics: []ETFRuleMetric{
 			{Key: "drawdown252", Label: "近252交易日回撤", Value: &drawdown, Unit: "%", AsOf: "2026-07-03", Available: true},
@@ -654,87 +709,112 @@ func TestRuntimeMarketDataPersistsETFRuleStatuses(t *testing.T) {
 		t.Fatalf("loadRuntimeQuoteBook returned error: %v", err)
 	}
 	status := book.ETFRuleStatuses["018738"]
-	if status.Level != "half" || status.WeeklyAmount != 2000 {
+	if status.Level != "half" || status.WeeklyAmount != 1250 {
 		t.Fatalf("persisted status = %+v", status)
+	}
+	if _, exists := book.ETFRuleStatuses["022434"]; !exists {
+		t.Fatal("active A500 status should be preserved")
 	}
 }
 
 func TestMergeETFRuleStatusUsesFreshPreviousMetric(t *testing.T) {
-	drawdown := 4.0
-	pePercentile := 70.0
 	now := mustParseDate(t, "2026-07-06")
 	existing := ETFRuleStatus{
-		Symbol: "022434",
-		Metrics: []ETFRuleMetric{
-			{Key: "drawdown3y", Label: "近3年总收益回撤", Value: &drawdown, Unit: "%", AsOf: "2026-07-03", Available: true},
-			{Key: "pePercentile", Label: "中证A500 PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-03", Available: true},
-		},
+		Symbol:  "018738",
+		Metrics: sp500TestMetrics("2026-07-03", true),
 	}
 	next := ETFRuleStatus{
-		Symbol:     "022434",
+		Symbol:     "018738",
 		LevelLabel: "待数据",
-		Metrics: []ETFRuleMetric{
-			{Key: "drawdown3y", Label: "近3年总收益回撤", Unit: "%", Available: false, Error: "temporary source error"},
-			{Key: "pePercentile", Label: "中证A500 PE分位", Unit: "%", Available: false, Error: "source not configured"},
-		},
-		Sources: []ETFRuleSource{{Name: "价格源"}, {Name: "估值源"}},
+		Metrics:    sp500TestMetrics("", false),
+		Sources:    []ETFRuleSource{{Name: "价格源"}, {Name: "估值源"}},
 	}
 	merged := mergeETFRuleStatusWithExisting(next, existing, now)
-	if merged.Level != "half" {
+	if merged.Level != "one" {
 		t.Fatalf("merged status = %+v", merged)
 	}
 	if strings.Contains(merged.Reason, "沿用上次成功值") {
 		t.Fatalf("reason should not expose fallback state, got %q", merged.Reason)
 	}
-	if !merged.Complete || merged.WeeklyAmount != 2450 || merged.MonthlyAmount != 9800 {
+	if !merged.Complete || merged.WeeklyAmount != 1250 || merged.MonthlyAmount != 5000 {
 		t.Fatalf("fresh fallback metrics should remain executable, got %+v", merged)
 	}
 }
 
-func TestMergeETFRuleStatusAllowsStaleDrawdownWhenValuationIsFresh(t *testing.T) {
-	drawdown := 4.0
-	pePercentile := 70.0
-	now := mustParseDate(t, "2026-07-06")
+func TestMergeETFRuleStatusDoesNotReuseRetiredDividendSpreadProxy(t *testing.T) {
+	oldSpreadPercentile := 55.36
+	drawdown := 6.14
+	now := mustParseDate(t, "2026-07-13")
 	existing := ETFRuleStatus{
-		Symbol: "022434",
+		Symbol:   "008163",
+		Complete: true,
+		Level:    "one",
 		Metrics: []ETFRuleMetric{
-			{Key: "drawdown3y", Label: "近3年总收益回撤", Value: &drawdown, Unit: "%", AsOf: "2026-06-20", Available: true},
-			{Key: "pePercentile", Label: "中证A500 PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-03", Available: true},
+			{Key: "dividendSpreadPercentile", Label: "股息率利差历史分位", Value: &oldSpreadPercentile, Unit: "%", AsOf: "2026-07-10", Available: true},
 		},
 	}
 	next := ETFRuleStatus{
-		Symbol:     "022434",
+		Symbol:     "008163",
 		LevelLabel: "待数据",
+		Complete:   false,
 		Metrics: []ETFRuleMetric{
-			{Key: "drawdown3y", Label: "近3年总收益回撤", Unit: "%", Available: false, Error: "temporary source error"},
-			{Key: "pePercentile", Label: "中证A500 PE分位", Unit: "%", Available: false, Error: "source not configured"},
+			{Key: "drawdown3y", Label: "成立以来总回报回撤", Value: &drawdown, Unit: "%", AsOf: "2026-07-13", Available: true},
+			{Key: "dividendSpreadPercentile", Label: "标的指数股债利差历史分位", Unit: "%", Available: false, Error: "标的指数TTM股息率历史数据源暂不可用；基金现金分红不代替指数股息率"},
+			{Key: "pbPercentile", Label: "标的指数PB历史分位", Unit: "%", Available: false, Error: "missing PB percentile"},
+			{Key: "valuationScore", Label: "红利估值得分V", Unit: "%", Available: false, Error: "需要股债利差分位和PB历史分位"},
 		},
-		Sources: []ETFRuleSource{{Name: "价格源"}, {Name: "估值源"}},
 	}
 	merged := mergeETFRuleStatusWithExisting(next, existing, now)
-	if !merged.Complete || merged.WeeklyAmount != 2450 || merged.MonthlyAmount != 9800 {
+	metric := ETFRuleMetric{}
+	found := false
+	for _, item := range merged.Metrics {
+		if item.Key == "dividendSpreadPercentile" {
+			metric = item
+			found = true
+			break
+		}
+	}
+	if !found || metric.Available || metric.Value != nil {
+		t.Fatalf("retired proxy metric must stay unavailable, got %+v", metric)
+	}
+	if merged.Complete || merged.Level != "" {
+		t.Fatalf("retired proxy metric must not produce an executable status, got %+v", merged)
+	}
+}
+
+func TestMergeETFRuleStatusAllowsStaleDrawdownWhenValuationIsFresh(t *testing.T) {
+	now := mustParseDate(t, "2026-07-06")
+	existingMetrics := sp500TestMetrics("2026-07-03", true)
+	existingMetrics[0].AsOf = "2026-06-20"
+	existing := ETFRuleStatus{
+		Symbol:  "018738",
+		Metrics: existingMetrics,
+	}
+	next := ETFRuleStatus{
+		Symbol:     "018738",
+		LevelLabel: "待数据",
+		Metrics:    sp500TestMetrics("", false),
+		Sources:    []ETFRuleSource{{Name: "价格源"}, {Name: "估值源"}},
+	}
+	merged := mergeETFRuleStatusWithExisting(next, existing, now)
+	if !merged.Complete || merged.WeeklyAmount != 1250 || merged.MonthlyAmount != 5000 {
 		t.Fatalf("stale drawdown should not block a non-accelerated valuation level, got %+v", merged)
 	}
 }
 
 func TestETFRuleStatusConfidenceAcceptsFreshCompleteMetrics(t *testing.T) {
-	drawdown := 4.0
-	pePercentile := 70.0
-	config, ok := etfRuleConfigBySymbol("022434")
+	config, ok := etfRuleConfigBySymbol("018738")
 	if !ok {
-		t.Fatal("missing A500 config")
+		t.Fatal("missing S&P 500 config")
 	}
 	status := ETFRuleStatus{
-		Symbol:        "022434",
+		Symbol:        "018738",
 		Level:         "half",
-		LevelLabel:    "0.5倍",
-		WeeklyAmount:  2450,
-		MonthlyAmount: 9800,
+		LevelLabel:    "偏高",
+		WeeklyAmount:  1250,
+		MonthlyAmount: 5000,
 		Complete:      true,
-		Metrics: []ETFRuleMetric{
-			{Key: "drawdown3y", Label: "近3年总收益回撤", Value: &drawdown, Unit: "%", AsOf: "2026-07-03", Available: true},
-			{Key: "pePercentile", Label: "中证A500 PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-07-03", Available: true},
-		},
+		Metrics:       sp500TestMetrics("2026-07-03", true),
 		Sources: []ETFRuleSource{
 			{Name: "价格源"},
 			{Name: "估值源"},
@@ -745,29 +825,30 @@ func TestETFRuleStatusConfidenceAcceptsFreshCompleteMetrics(t *testing.T) {
 		t.Fatalf("fresh complete metrics should have no issues, got %+v", issues)
 	}
 	checked := enforceETFRuleStatusConfidence(status, config, mustParseDate(t, "2026-07-06"))
-	if !checked.Complete || checked.WeeklyAmount != 2450 {
+	if !checked.Complete || checked.WeeklyAmount != 1250 {
 		t.Fatalf("fresh complete metrics should remain executable, got %+v", checked)
 	}
 }
 
 func TestETFRuleStatusConfidenceRejectsStaleValuation(t *testing.T) {
-	drawdown := 4.0
-	pePercentile := 70.0
-	config, ok := etfRuleConfigBySymbol("022434")
+	config, ok := etfRuleConfigBySymbol("018738")
 	if !ok {
-		t.Fatal("missing A500 config")
+		t.Fatal("missing S&P 500 config")
+	}
+	metrics := sp500TestMetrics("2026-07-03", true)
+	for index := range metrics {
+		if metrics[index].Key == "forwardPE" || metrics[index].Key == "forwardPEPercentile" || metrics[index].Key == "earningsYieldSpreadPercentile" {
+			metrics[index].AsOf = "2026-04-01"
+		}
 	}
 	status := ETFRuleStatus{
-		Symbol:        "022434",
+		Symbol:        "018738",
 		Level:         "half",
-		LevelLabel:    "0.5倍",
-		WeeklyAmount:  2450,
-		MonthlyAmount: 9800,
+		LevelLabel:    "偏高",
+		WeeklyAmount:  1250,
+		MonthlyAmount: 5000,
 		Complete:      true,
-		Metrics: []ETFRuleMetric{
-			{Key: "drawdown3y", Label: "近3年总收益回撤", Value: &drawdown, Unit: "%", AsOf: "2026-07-03", Available: true},
-			{Key: "pePercentile", Label: "中证A500 PE分位", Value: &pePercentile, Unit: "%", AsOf: "2026-06-20", Available: true},
-		},
+		Metrics:       metrics,
 		Sources: []ETFRuleSource{
 			{Name: "价格源"},
 			{Name: "估值源"},
@@ -778,33 +859,33 @@ func TestETFRuleStatusConfidenceRejectsStaleValuation(t *testing.T) {
 		t.Fatal("stale valuation should produce a confidence issue")
 	}
 	checked := enforceETFRuleStatusConfidence(status, config, mustParseDate(t, "2026-07-06"))
-	if checked.Complete || checked.WeeklyAmount != 0 || checked.MonthlyAmount != 0 {
-		t.Fatalf("stale metrics should not be executable, got %+v", checked)
+	if checked.Complete || checked.WeeklyAmount != 1250 || checked.MonthlyAmount != 5000 {
+		t.Fatalf("stale water metrics should not remove the fixed plan, got %+v", checked)
 	}
 }
 
 func TestStabilizeETFRuleLevelRequiresFiveDistinctTradingDates(t *testing.T) {
-	config, ok := etfRuleConfigBySymbol("022434")
+	config, ok := etfRuleConfigBySymbol("018738")
 	if !ok {
-		t.Fatal("missing A500 config")
+		t.Fatal("missing S&P 500 config")
 	}
 	drawdown := 13.0
 	existing := ETFRuleStatus{
-		Symbol:            "022434",
+		Symbol:            "018738",
 		Level:             "one",
-		LevelLabel:        "1倍",
+		LevelLabel:        "中性",
 		Complete:          true,
 		LevelUpdatedAt:    "2026-07-01",
 		PendingLevel:      "oneHalf",
-		PendingLevelLabel: "1.5倍",
+		PendingLevelLabel: "偏低",
 		PendingSince:      "2026-07-06",
 		PendingAsOf:       "2026-07-09",
 		PendingDays:       4,
 	}
 	next := ETFRuleStatus{
-		Symbol:        "022434",
+		Symbol:        "018738",
 		Level:         "oneHalf",
-		LevelLabel:    "1.5倍",
+		LevelLabel:    "偏低",
 		MonthlyAmount: config.Monthly["oneHalf"],
 		WeeklyAmount:  config.Weekly["oneHalf"],
 		Complete:      true,
@@ -820,13 +901,13 @@ func TestStabilizeETFRuleLevelRequiresFiveDistinctTradingDates(t *testing.T) {
 }
 
 func TestStabilizeETFRuleLevelDoesNotCountSameTradingDateTwice(t *testing.T) {
-	config, ok := etfRuleConfigBySymbol("022434")
+	config, ok := etfRuleConfigBySymbol("018738")
 	if !ok {
-		t.Fatal("missing A500 config")
+		t.Fatal("missing S&P 500 config")
 	}
 	drawdown := 13.0
 	existing := ETFRuleStatus{
-		Symbol:       "022434",
+		Symbol:       "018738",
 		Level:        "one",
 		Complete:     true,
 		PendingLevel: "oneHalf",
@@ -834,9 +915,9 @@ func TestStabilizeETFRuleLevelDoesNotCountSameTradingDateTwice(t *testing.T) {
 		PendingDays:  3,
 	}
 	next := ETFRuleStatus{
-		Symbol:        "022434",
+		Symbol:        "018738",
 		Level:         "oneHalf",
-		LevelLabel:    "1.5倍",
+		LevelLabel:    "偏低",
 		MonthlyAmount: config.Monthly["oneHalf"],
 		WeeklyAmount:  config.Weekly["oneHalf"],
 		Complete:      true,
@@ -848,6 +929,36 @@ func TestStabilizeETFRuleLevelDoesNotCountSameTradingDateTwice(t *testing.T) {
 	if got.Level != "one" || got.PendingDays != 3 {
 		t.Fatalf("same trading date must not advance confirmation, got %+v", got)
 	}
+}
+
+func sp500TestMetrics(date string, available bool) []ETFRuleMetric {
+	specs := []struct {
+		key   string
+		label string
+		value float64
+		unit  string
+	}{
+		{key: "drawdown3y", label: "SPTR全收益高点回撤", value: 4, unit: "%"},
+		{key: "forwardPE", label: "标普500未来12个月PE", value: 20.5},
+		{key: "forwardPEPercentile", label: "未来PE十年周度分位", value: 70, unit: "%"},
+		{key: "us10YBondYield", label: "美国10年期国债收益率", value: 4.5, unit: "%"},
+		{key: "earningsYieldSpreadPercentile", label: "盈利利差十年周度分位", value: 50, unit: "%"},
+		{key: "vix", label: "VIX", value: 18},
+		{key: "cnyTotalReturnDrawdown", label: "人民币口径全收益回撤", value: 3, unit: "%"},
+		{key: "qdiiPremium", label: "513650估算溢价", value: 0.3, unit: "%"},
+	}
+	metrics := make([]ETFRuleMetric, 0, len(specs))
+	for _, spec := range specs {
+		metric := ETFRuleMetric{Key: spec.key, Label: spec.label, Unit: spec.unit, AsOf: date, Available: available}
+		if available {
+			value := spec.value
+			metric.Value = &value
+		} else {
+			metric.Error = "temporary source error"
+		}
+		metrics = append(metrics, metric)
+	}
+	return metrics
 }
 
 func mustParseDate(t *testing.T, value string) time.Time {

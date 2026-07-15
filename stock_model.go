@@ -510,34 +510,36 @@ func candidateFromStock(stock Stock) Candidate {
 func (state AppState) MarshalJSON() ([]byte, error) {
 	normalizePortfolioState(&state)
 	type appStateJSON struct {
-		TotalCapital     float64            `json:"totalCapital"`
-		Cash             float64            `json:"cash"`
-		FX               map[string]float64 `json:"fx"`
-		Trades           []Trade            `json:"trades"`
-		DecisionLogs     []DecisionLog      `json:"decisionLogs"`
-		PnlHistory       []PnlHistoryEntry   `json:"pnlHistory,omitempty"`
-		Stocks           []Stock            `json:"stocks"`
-		Funds            []Fund             `json:"funds,omitempty"`
-		ETFRuleStatuses  []ETFRuleStatus    `json:"etfRuleStatuses,omitempty"`
-		ScreeningWeights ScreeningWeights   `json:"screeningWeights"`
-		Plan             []PlanItem         `json:"plan"`
-		Rules            []Rule             `json:"rules"`
-		DataStatus       *DataStatus        `json:"dataStatus,omitempty"`
+		TotalCapital      float64            `json:"totalCapital"`
+		Cash              float64            `json:"cash"`
+		FX                map[string]float64 `json:"fx"`
+		Trades            []Trade            `json:"trades"`
+		DecisionLogs      []DecisionLog      `json:"decisionLogs"`
+		PnlHistory        []PnlHistoryEntry  `json:"pnlHistory,omitempty"`
+		Stocks            []Stock            `json:"stocks"`
+		Funds             []Fund             `json:"funds,omitempty"`
+		ETFRuleStatuses   []ETFRuleStatus    `json:"etfRuleStatuses,omitempty"`
+		ETFExecutionPlans []ETFExecutionPlan `json:"etfExecutionPlans,omitempty"`
+		ScreeningWeights  ScreeningWeights   `json:"screeningWeights"`
+		Plan              []PlanItem         `json:"plan"`
+		Rules             []Rule             `json:"rules"`
+		DataStatus        *DataStatus        `json:"dataStatus,omitempty"`
 	}
 	return json.Marshal(appStateJSON{
-		TotalCapital:     state.TotalCapital,
-		Cash:             state.Cash,
-		FX:               state.FX,
-		Trades:           state.Trades,
-		DecisionLogs:     state.DecisionLogs,
-		PnlHistory:       state.PnlHistory,
-		Stocks:           state.Stocks,
-		Funds:            state.Funds,
-		ETFRuleStatuses:  state.ETFRuleStatuses,
-		ScreeningWeights: state.ScreeningWeights,
-		Plan:             state.Plan,
-		Rules:            state.Rules,
-		DataStatus:       state.DataStatus,
+		TotalCapital:      state.TotalCapital,
+		Cash:              state.Cash,
+		FX:                state.FX,
+		Trades:            state.Trades,
+		DecisionLogs:      state.DecisionLogs,
+		PnlHistory:        state.PnlHistory,
+		Stocks:            state.Stocks,
+		Funds:             state.Funds,
+		ETFRuleStatuses:   state.ETFRuleStatuses,
+		ETFExecutionPlans: state.ETFExecutionPlans,
+		ScreeningWeights:  state.ScreeningWeights,
+		Plan:              state.Plan,
+		Rules:             state.Rules,
+		DataStatus:        state.DataStatus,
 	})
 }
 

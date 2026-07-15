@@ -10,6 +10,7 @@ const seedState = {
   decisionLogs: [],
   funds: [],
   etfRuleStatuses: [],
+  etfExecutionPlans: [],
   holdings: [
     {
       symbol: "0700.HK",
@@ -273,89 +274,85 @@ const STOCK_DETAIL_VALUATION_SCENARIOS = [
 ];
 
 const ETF_RULE_LEVELS = [
-  { key: "quarter", label: "0.25倍", tone: "neutral" },
-  { key: "half", label: "0.5倍", tone: "watch" },
-  { key: "one", label: "1倍", tone: "core" },
-  { key: "oneHalf", label: "1.5倍", tone: "boost" },
-  { key: "two", label: "2倍", tone: "risk" }
+  { key: "quarter", label: "高估", tone: "risk" },
+  { key: "half", label: "偏高", tone: "watch" },
+  { key: "one", label: "中性", tone: "core" },
+  { key: "oneHalf", label: "偏低", tone: "boost" },
+  { key: "two", label: "低估", tone: "boost" }
 ];
 
-const ETF_RULE_NO_SELECTION = { key: "none", label: "未选择", tone: "neutral" };
+const ETF_RULE_NO_SELECTION = { key: "none", label: "待数据", tone: "neutral" };
+const ETF_PLAN_ACTIVE = { key: "active", label: "场外定投", tone: "core" };
 const ETF_RULE_PAUSED = { key: "paused", label: "暂停", tone: "risk" };
 
 const ETF_RULE_TRACKER_RULES = [
   {
     symbol: "022434",
     name: "南方中证A500ETF联接A",
-    targetWeight: 0.35,
-    holdingSymbols: ["022434"],
-    conditions: {
-      quarter: "PE分位>80%",
-      half: "PE分位60%—80%",
-      one: "PE分位40%—60%；或20%—40%但回撤<12%",
-      oneHalf: "PE分位20%—40%；回撤<12%则降为1倍",
-      two: "PE分位<20%；回撤<18%则降为1.5倍"
-    },
-    monthly: { quarter: 4900, half: 9800, one: 19600, oneHalf: 29400, two: 39200 },
-    weekly: { quarter: 1225, half: 2450, one: 4900, oneHalf: 7350, two: 9800 }
-  },
-  {
-    symbol: "018738",
-    name: "博时标普500ETF联接E(人民币)",
-    targetWeight: 0.30,
-    holdingSymbols: ["018738"],
-    conditions: {
-      quarter: "PE分位>80%",
-      half: "PE分位60%—80%",
-      one: "PE分位40%—60%；或20%—40%但回撤<15%",
-      oneHalf: "PE分位20%—40%；回撤<15%则降为1倍",
-      two: "PE分位<20%；回撤<20%则降为1.5倍"
-    },
-    monthly: { quarter: 4200, half: 8400, one: 16800, oneHalf: 25200, two: 33600 },
-    weekly: { quarter: 1050, half: 2100, one: 4200, oneHalf: 6300, two: 8400 }
+    targetWeight: 0.175,
+    otcSymbols: ["022434"],
+    exchangeSymbols: ["159352"],
+    tacticalSymbol: "159352",
+    tacticalName: "中证A500ETF南方",
+    tacticalPlanStartDate: "2026-07-14",
+    tacticalInitialTarget: 350000,
+    tacticalInitialOpportunityPool: 288795.36,
+    dailyBase: 250,
+    monthlyBase: 5000,
+    venueRule: "022434保持每日场外定投；159352只承担场内机会仓。全收益回撤定档，估值与恐慌只修正金额；溢价和买卖价差决定能否成交。"
   },
   {
     symbol: "008163",
     name: "南方标普红利低波50ETF联接A",
-    targetWeight: 0.25,
-    holdingSymbols: ["008163", "563020"],
-    conditions: {
-      quarter: "利差分位<20%；回退口径取绝对股息率与历史分位较低档",
-      half: "利差分位20%—40%；回退口径取较低档",
-      one: "利差分位40%—60%；或60%—80%但回撤<8%",
-      oneHalf: "利差分位60%—80%；回撤<8%则降为1倍",
-      two: "利差分位>80%；回撤<12%则降为1.5倍"
-    },
-    monthly: { quarter: 3500, half: 7000, one: 14000, oneHalf: 21000, two: 28000 },
-    weekly: { quarter: 875, half: 1750, one: 3500, oneHalf: 5250, two: 7000 }
+    targetWeight: 0.175,
+    otcSymbols: ["008163"],
+    exchangeSymbols: ["515450", "563020"],
+    tacticalSymbol: "515450",
+    tacticalName: "红利低波50ETF南方",
+    tacticalPlanStartDate: "2026-07-13",
+    dailyBase: 250,
+    monthlyBase: 5000,
+    venueRule: "008163保持场外基础定投；515450按总回报回撤人工分批买入。已有563020只计入红利低波持仓，不再作为新增场内标的。"
+  },
+  {
+    symbol: "018738",
+    name: "博时标普500ETF联接E(人民币)",
+    targetWeight: 0.175,
+    otcSymbols: ["018738"],
+    exchangeSymbols: ["513650"],
+    tacticalSymbol: "513650",
+    tacticalName: "南方标普500ETF",
+    tacticalPlanStartDate: "2026-07-14",
+    dailyBase: 250,
+    monthlyBase: 5000,
+    venueRule: "018738保持每日场外定投；513650只承担场内机会仓。估算溢价≤0.5%正常执行，0.5%—1%减半，>1%暂停。"
   },
   {
     symbol: "021000",
     name: "南方纳斯达克100指数发起(QDII)I",
-    targetWeight: 0.10,
-    holdingSymbols: ["021000"],
-    conditions: {
-      quarter: "PE分位>80%",
-      half: "PE分位60%—80%",
-      one: "PE分位40%—60%；或20%—40%但回撤<20%",
-      oneHalf: "PE分位20%—40%；回撤<20%则降为1倍",
-      two: "PE分位<20%；回撤<30%则降为1.5倍"
-    },
-    monthly: { quarter: 1400, half: 2800, one: 5600, oneHalf: 8400, two: 11200 },
-    weekly: { quarter: 350, half: 700, one: 1400, oneHalf: 2100, two: 2800 }
+    targetWeight: 0.175,
+    otcSymbols: ["021000"],
+    exchangeSymbols: ["159659"],
+    tacticalSymbol: "159659",
+    tacticalName: "招商纳斯达克100ETF",
+    tacticalPlanStartDate: "2026-07-14",
+    dailyBase: 250,
+    monthlyBase: 5000,
+    venueRule: "021000保持每日场外定投；159659只承担场内机会仓。估算溢价≤0.5%正常执行，0.5%—1%减半，>1%暂停。"
   }
 ];
 
-const ETF_ALLOCATION_POOL_BASE = 1000000;
+const ETF_ALLOCATION_POOL_BASE = 1400000;
 const ETF_ALLOCATION_POOL_BASE_DATE = "2026-07-09";
-const ETF_ALLOCATION_MONTHLY_INFLOW = 15000;
-const ETF_RULE_TRADING_DAYS_PER_WEEK = 5;
-const ETF_ALLOCATION_CORRECTION_THRESHOLD = 50000;
-const ETF_ALLOCATION_LEAD_DOWNSHIFT = 0.05;
-const ETF_ALLOCATION_LEAD_PAUSE = 0.10;
+const ETF_ALLOCATION_MONTHLY_INFLOW = 20000;
+const ETF_ALLOCATION_TOTAL_EQUITY_WEIGHT = 0.70;
+const ETF_RULE_TRADING_DAYS_PER_YEAR = 240;
 
 let state = loadState();
 let activeFilter = "all";
+let activeEtfDetailSymbol = "";
+let etfExecutionQuoteTimer = null;
+let etfExecutionQuoteUpdating = false;
 let positionSort = { key: "", direction: "desc" };
 let sunny30Sort = { key: "quality", direction: "desc" };
 const expandedPositionCards = new Set();
@@ -452,6 +449,10 @@ const elements = {
   etfBuyDialog: document.querySelector("#etfBuyDialog"),
   etfBuyForm: document.querySelector("#etfBuyForm"),
   etfBuyFundLabel: document.querySelector("#etfBuyFundLabel"),
+  etfBuyModeLabel: document.querySelector("#etfBuyModeLabel"),
+  etfBuyContext: document.querySelector("#etfBuyContext"),
+  etfBuyPriceLabel: document.querySelector("#etfBuyPriceLabel"),
+  etfBuyAmountLabel: document.querySelector("#etfBuyAmountLabel"),
   tradeDialog: document.querySelector("#tradeDialog"),
   tradeForm: document.querySelector("#tradeForm"),
   tradeStockNames: document.querySelector("#tradeStockNames"),
@@ -570,6 +571,7 @@ function normalizedLoadedState(rawState) {
     stocks,
     funds: Array.isArray(rawState?.funds) ? rawState.funds : [],
     etfRuleStatuses: Array.isArray(rawState?.etfRuleStatuses) ? rawState.etfRuleStatuses : [],
+    etfExecutionPlans: Array.isArray(rawState?.etfExecutionPlans) ? rawState.etfExecutionPlans : [],
     holdings,
     candidates,
     trades: Array.isArray(rawState?.trades) ? rawState.trades : [],
@@ -3868,19 +3870,12 @@ function fundTypeLabel(fund) {
   return normalizeFundType(fund?.fundType, fund?.symbol) === "etf" ? "ETF" : "场外基金";
 }
 
-function etfRuleEntry(symbol) {
-  const status = etfRuleStatus(symbol);
-  const statusLevel = status?.complete && ETF_RULE_LEVELS.some((item) => item.key === status?.level) ? status.level : "";
-  const level = statusLevel || ETF_RULE_NO_SELECTION.key;
-  return {
-    level,
-    source: statusLevel ? "auto" : "none"
-  };
+function etfRuleLevelMeta(level) {
+  return ETF_RULE_LEVELS.find((item) => item.key === level) ?? ETF_RULE_NO_SELECTION;
 }
 
-function etfRuleLevelMeta(level) {
-  if (level === ETF_RULE_PAUSED.key) return ETF_RULE_PAUSED;
-  return ETF_RULE_LEVELS.find((item) => item.key === level) ?? ETF_RULE_NO_SELECTION;
+function etfRulePlanMeta(planState) {
+  return planState === ETF_RULE_PAUSED.key ? ETF_RULE_PAUSED : ETF_PLAN_ACTIVE;
 }
 
 function etfRuleStatus(symbol) {
@@ -3894,7 +3889,7 @@ function etfRuleBySymbol(symbol) {
 }
 
 function etfRuleMetricText(metric) {
-  if (!metric?.available) return metric?.error ? `待数据：${metric.error}` : "待数据";
+  if (!metric?.available) return "待更新";
   const value = finiteNumber(metric.value);
   if (!Number.isFinite(value)) return "待数据";
   const unit = String(metric.unit ?? "").trim();
@@ -3936,16 +3931,25 @@ function etfAllocationSnapshot(referenceDate = new Date()) {
   const fundPositions = computeFundPositions();
   const fundsBySymbol = new Map(fundPositions.map((fund) => [normalizeFundSymbol(fund.symbol), fund]));
   const rawEntries = ETF_RULE_TRACKER_RULES.map((rule) => {
-    const marketValue = (rule.holdingSymbols ?? [rule.symbol]).reduce((sum, symbol) => {
+    const marketValueForSymbols = (symbols) => [...new Set(symbols ?? [])].reduce((sum, symbol) => {
       return sum + (finiteNumber(fundsBySymbol.get(normalizeFundSymbol(symbol))?.marketValueCny) ?? 0);
     }, 0);
+    const otcMarketValue = marketValueForSymbols(rule.otcSymbols ?? [rule.symbol]);
+    const exchangeMarketValue = marketValueForSymbols(rule.exchangeSymbols ?? []);
+    const marketValue = otcMarketValue + exchangeMarketValue;
     const targetWeight = finiteNumber(rule.targetWeight) ?? 0;
-    const targetAmount = poolTotal * targetWeight;
+    const poolWeight = ETF_ALLOCATION_TOTAL_EQUITY_WEIGHT > 0
+      ? targetWeight / ETF_ALLOCATION_TOTAL_EQUITY_WEIGHT
+      : 0;
+    const targetAmount = poolTotal * poolWeight;
     const progress = targetAmount > 0 ? marketValue / targetAmount : 0;
     return {
       symbol: rule.symbol,
       marketValue,
+      otcMarketValue,
+      exchangeMarketValue,
       targetWeight,
+      poolWeight,
       targetAmount,
       progress,
       progressPercent: progress * 100,
@@ -3955,18 +3959,13 @@ function etfAllocationSnapshot(referenceDate = new Date()) {
   });
   const invested = rawEntries.reduce((sum, item) => sum + item.marketValue, 0);
   const progress = poolTotal > 0 ? invested / poolTotal : 0;
-  const entries = rawEntries.map((entry) => ({
-    ...entry,
-    lead: entry.progress - progress,
-    leadPercent: (entry.progress - progress) * 100
-  }));
   return {
     poolTotal,
     invested,
     progress,
     progressPercent: progress * 100,
     widthPercent: clamp(progress * 100, 0, 100),
-    entries
+    entries: rawEntries
   };
 }
 
@@ -3974,7 +3973,10 @@ function etfAllocationEntry(snapshot, symbol) {
   const normalized = normalizeFundSymbol(symbol);
   return snapshot.entries.find((item) => normalizeFundSymbol(item.symbol) === normalized) ?? {
     marketValue: 0,
+    otcMarketValue: 0,
+    exchangeMarketValue: 0,
     targetWeight: 0,
+    poolWeight: 0,
     targetAmount: 0,
     progress: 0,
     progressPercent: 0,
@@ -3983,49 +3985,17 @@ function etfAllocationEntry(snapshot, symbol) {
   };
 }
 
-function etfRuleDownshiftLevel(level) {
-  const order = ETF_RULE_LEVELS.map((item) => item.key);
-  const index = order.indexOf(level);
-  if (index <= 0) return index === 0 ? order[0] : ETF_RULE_NO_SELECTION.key;
-  return order[index - 1];
-}
-
 function etfRuleExecution(rule, snapshot) {
-  const base = etfRuleEntry(rule.symbol);
   const allocation = etfAllocationEntry(snapshot, rule.symbol);
-  const correctionEnabled = snapshot.invested > ETF_ALLOCATION_CORRECTION_THRESHOLD;
-  if (base.level === ETF_RULE_NO_SELECTION.key || !correctionEnabled) {
+  if (allocation.progress >= 1) {
     return {
-      ...base,
-      baseLevel: base.level,
-      correction: correctionEnabled ? "normal" : "inactive",
-      correctionReason: correctionEnabled ? "仓位进度未触发纠偏" : "ETF持仓超过5万元后启用仓位纠偏"
-    };
-  }
-  if (allocation.lead > ETF_ALLOCATION_LEAD_PAUSE) {
-    return {
-      ...base,
-      baseLevel: base.level,
-      level: ETF_RULE_PAUSED.key,
-      correction: "pause",
-      correctionReason: `单项完成度领先整体 ${percent(allocation.leadPercent, false)}，暂停买入`
-    };
-  }
-  if (allocation.lead > ETF_ALLOCATION_LEAD_DOWNSHIFT) {
-    const level = etfRuleDownshiftLevel(base.level);
-    return {
-      ...base,
-      baseLevel: base.level,
-      level,
-      correction: "downshift",
-      correctionReason: `单项完成度领先整体 ${percent(allocation.leadPercent, false)}，降低一档`
+      planState: ETF_RULE_PAUSED.key,
+      reason: `已达到${percent(allocation.targetWeight * 100, false)}目标，暂停基础定投`
     };
   }
   return {
-    ...base,
-    baseLevel: base.level,
-    correction: "normal",
-    correctionReason: "仓位进度未触发纠偏"
+    planState: ETF_PLAN_ACTIVE.key,
+    reason: "未达到目标仓位，继续基础定投"
   };
 }
 
@@ -4033,13 +4003,13 @@ function renderEtfAllocationBar(entry) {
   return `
     <div class="etf-allocation-progress ${escapeHTML(entry.tone)}">
       <div class="etf-allocation-progress-head">
-        <span>配置进度 · 目标 ${escapeHTML(percent(entry.targetWeight * 100, false))}</span>
+        <span>配置进度 · 总资产目标 ${escapeHTML(percent(entry.targetWeight * 100, false))}</span>
         <strong>${escapeHTML(percent(entry.progressPercent, false))}</strong>
       </div>
       <div class="etf-allocation-bar" style="--progress: ${escapeHTML(String(entry.widthPercent))}%">
         <i></i>
       </div>
-      <small>${escapeHTML(etfAllocationMoney(entry.marketValue))} / 目标 ${escapeHTML(etfAllocationMoney(entry.targetAmount))}</small>
+      <small>场外 ${escapeHTML(etfAllocationMoney(entry.otcMarketValue))} · 场内 ${escapeHTML(etfAllocationMoney(entry.exchangeMarketValue))} · 合计 ${escapeHTML(etfAllocationMoney(entry.marketValue))} / 目标 ${escapeHTML(etfAllocationMoney(entry.targetAmount))}</small>
     </div>
   `;
 }
@@ -4053,81 +4023,801 @@ function renderEtfPoolProgress(snapshot) {
           <strong>${escapeHTML(etfAllocationMoney(snapshot.poolTotal))}</strong>
         </div>
         <div>
-          <span>当前配置</span>
+          <span>配置进度</span>
           <strong>${escapeHTML(percent(snapshot.progressPercent, false))}</strong>
         </div>
       </div>
       <div class="etf-allocation-bar" style="--progress: ${escapeHTML(String(snapshot.widthPercent))}%">
         <i></i>
       </div>
-      <small>已配置 ${escapeHTML(etfAllocationMoney(snapshot.invested))}</small>
+      <small>已配置 ${escapeHTML(etfAllocationMoney(snapshot.invested))} · 权益目标 ${escapeHTML(etfAllocationMoney(snapshot.poolTotal))}</small>
     </div>
   `;
 }
 
-function renderEtfRuleLiveStatus(rule, execution) {
+function etfRuleMetric(status, key) {
+  return (status?.metrics ?? []).find((metric) => metric?.key === key) ?? null;
+}
+
+function etfExecutionPlan(ruleOrSymbol) {
+  const symbol = typeof ruleOrSymbol === "string" ? ruleOrSymbol : ruleOrSymbol?.symbol;
+  const normalized = normalizeFundSymbol(symbol);
+  return (state.etfExecutionPlans ?? []).find((plan) => normalizeFundSymbol(plan?.trackerSymbol) === normalized) ?? null;
+}
+
+function etfExecutionStage(plan, stageKey) {
+  return (plan?.stages ?? []).find((stage) => String(stage?.key ?? "") === String(stageKey ?? "")) ?? null;
+}
+
+function etfDecisionOpportunityPool(rule, allocation) {
+  const persisted = finiteNumber(etfExecutionPlan(rule)?.opportunityPool);
+  if (Number.isFinite(persisted) && persisted > 0) return persisted;
+  const configured = finiteNumber(rule?.tacticalInitialOpportunityPool);
+  if (Number.isFinite(configured) && configured > 0) return configured;
+  return Math.max(0, allocation.targetAmount - allocation.marketValue - rule.dailyBase * ETF_RULE_TRADING_DAYS_PER_YEAR);
+}
+
+function etfDecisionHealth(status) {
+  const signal = String(status?.signalHealth || (etfRuleMetric(status, "drawdown3y")?.available ? "healthy" : "blocked"));
+  const execution = String(status?.executionHealth || "reference");
+  return {
+    signal,
+    execution,
+    blockers: Array.isArray(status?.blockingReasons) ? status.blockingReasons.filter(Boolean) : []
+  };
+}
+
+function etfStageProgress(decision, rule) {
+  if (!decision?.stageKey) return decision;
+  const plan = etfExecutionPlan(rule);
+  const stage = etfExecutionStage(plan, decision.stageKey);
+  const installmentCount = Math.max(1, Number(stage?.installmentCount) || Number(decision.installmentCount) || 2);
+  const plannedAmount = finiteNumber(stage?.plannedAmount) > 0 ? finiteNumber(stage.plannedAmount) : finiteNumber(decision.candidateAmount);
+  const completed = new Set((stage?.installments ?? [])
+    .filter((installment) => Array.isArray(installment?.tradeIds) && installment.tradeIds.length)
+    .map((installment) => Number(installment.number)));
+  const executedAmount = (stage?.installments ?? []).reduce((sum, installment) => sum + (finiteNumber(installment?.executedAmount) ?? 0), 0);
+  const nextInstallment = Array.from({ length: installmentCount }, (_, index) => index + 1).find((number) => !completed.has(number)) ?? null;
+  if (stage?.status === "canceled") {
+    return {
+      ...decision,
+      state: "canceled",
+      tone: "neutral",
+      stateLabel: "本轮已取消",
+      blocker: stage.cancellationReason || "剩余批次已取消",
+      stage,
+      plannedAmount,
+      executedAmount,
+      nextInstallment: null,
+      installmentCount,
+      installmentAmount: 0
+    };
+  }
+  if (!nextInstallment) {
+    return {
+      ...decision,
+      state: "complete",
+      tone: "core",
+      stateLabel: "本档已完成",
+      stage,
+      plannedAmount,
+      executedAmount,
+      nextInstallment: null,
+      installmentCount,
+      installmentAmount: 0
+    };
+  }
+  const storedInstallment = (stage?.installments ?? []).find((item) => Number(item.number) === nextInstallment);
+  const installmentAmount = finiteNumber(storedInstallment?.plannedAmount) > 0
+    ? finiteNumber(storedInstallment.plannedAmount)
+    : plannedAmount / installmentCount;
+  return {
+    ...decision,
+    stage,
+    plannedAmount,
+    executedAmount,
+    nextInstallment,
+    installmentCount,
+    installmentAmount
+  };
+}
+
+function etfWaitingDecision(rule, allocation, drawdown, nextThreshold, opportunityPool, rawPlan) {
+  const distance = Number.isFinite(drawdown) ? Math.max(0, nextThreshold - drawdown) : null;
+  return {
+    state: "waiting",
+    tone: "neutral",
+    stateLabel: "等待机会",
+    trackerSymbol: rule.symbol,
+    tacticalSymbol: rule.tacticalSymbol,
+    opportunityPool,
+    drawdown,
+    nextThreshold,
+    nextDistance: distance,
+    signalAsOf: etfRuleStatus(rule.symbol)?.signalAsOf || etfRuleMetric(etfRuleStatus(rule.symbol), "drawdown3y")?.asOf || "",
+    label: Number.isFinite(drawdown)
+      ? `回撤 ${percent(drawdown, false)}，距离-${nextThreshold}%档 ${percent(distance, false)}`
+      : `等待${rule.tacticalSymbol}核心回撤数据`,
+    detail: rawPlan?.detail || "场外定投继续执行"
+  };
+}
+
+function etfApplyQualityGate(decision, status) {
+  const health = etfDecisionHealth(status);
+  if (health.signal === "blocked") {
+    return { ...decision, state: "blocked", tone: "risk", stateLabel: "信号暂停", blocker: health.blockers[0] || "核心回撤数据不可用" };
+  }
+  if (decision.stageKey && health.execution !== "ready") {
+    const fallback = health.execution === "reference" ? "当前为收盘参考，交易时段刷新后执行" : "场内执行行情不可用";
+    return { ...decision, state: "blocked", tone: "watch", stateLabel: "暂停执行", blocker: health.blockers.find((item) => !item.includes("回撤")) || fallback };
+  }
+  if (health.signal === "degraded" && decision.state === "ready") {
+    return { ...decision, qualityNote: "辅助数据降级，按中性系数执行" };
+  }
+  return decision;
+}
+
+function a500TacticalDecision(rule, allocation, status, rawPlan) {
+  const drawdown = finiteNumber(etfRuleMetric(status, "drawdown3y")?.value);
+  const opportunityPool = etfDecisionOpportunityPool(rule, allocation);
+  const stages = [
+    { threshold: 7, fraction: 0.10 }, { threshold: 12, fraction: 0.20 }, { threshold: 18, fraction: 0.25 },
+    { threshold: 25, fraction: 0.25 }, { threshold: 35, fraction: 0.15 }, { threshold: 45, fraction: 0.05 }
+  ];
+  const reached = stages.filter((item) => Number.isFinite(drawdown) && drawdown >= item.threshold);
+  const stage = reached.at(-1);
+  if (!stage) return etfWaitingDecision(rule, allocation, drawdown, 7, opportunityPool, rawPlan);
+
+  const pePercentile = finiteNumber(etfRuleMetric(status, "pePercentile")?.value);
+  const spreadPercentile = finiteNumber(etfRuleMetric(status, "earningsYieldSpreadPercentile")?.value);
+  const rv20Percentile = finiteNumber(etfRuleMetric(status, "rv20Percentile")?.value);
+  const fiveDayReturn = finiteNumber(etfRuleMetric(status, "fiveDayReturn")?.value);
+  const premium = finiteNumber(etfRuleMetric(status, "etfPremium")?.value);
+  const spread = finiteNumber(etfRuleMetric(status, "bidAskSpread")?.value);
+  let valuationFactor = 1;
+  if (Number.isFinite(pePercentile) && Number.isFinite(spreadPercentile)) {
+    if (pePercentile <= 30 && spreadPercentile >= 70) valuationFactor = 1.25;
+    if (pePercentile >= 75 && spreadPercentile <= 30) valuationFactor = 0.5;
+  }
+  if (stage.threshold >= 25) valuationFactor = 1;
+  if (stage.threshold >= 18 && stage.threshold < 25) valuationFactor = Math.max(0.75, valuationFactor);
+  const panicFactor = stage.threshold < 25 && ((Number.isFinite(rv20Percentile) && rv20Percentile >= 90) || (Number.isFinite(fiveDayReturn) && fiveDayReturn <= -8)) ? 1.25 : 1;
+  const factor = stage.threshold >= 25 ? 1 : clamp(valuationFactor * panicFactor, 0.5, 1.25);
+  const candidateAmount = opportunityPool * stage.fraction * factor;
+  let decision = {
+    state: "ready", tone: "boost", stateLabel: "可执行", trackerSymbol: rule.symbol, tacticalSymbol: rule.tacticalSymbol,
+    stageKey: `dd-${stage.threshold}`, stageThreshold: stage.threshold, candidateAmount, installmentCount: reached.length > 1 ? 3 : 2,
+    opportunityPool, drawdown, signalAsOf: status?.signalAsOf || etfRuleMetric(status, "drawdown3y")?.asOf || "",
+    label: `${rule.tacticalSymbol} -${stage.threshold}%档 · 候选${etfAllocationMoney(candidateAmount)}`, detail: rawPlan?.detail || ""
+  };
+  if (!Number.isFinite(premium) || !Number.isFinite(spread)) {
+    decision = { ...decision, state: "blocked", tone: "watch", stateLabel: "等待报价", blocker: "缺少估算溢价或买卖价差" };
+  } else if (premium > 0.30 || spread > 0.20) {
+    decision = { ...decision, state: "blocked", tone: "risk", stateLabel: "报价不合格", blocker: `溢价${percent(premium, false)} · 价差${percent(spread, false)}` };
+  } else if (premium > 0.15 || spread > 0.15) {
+    decision = { ...decision, state: "blocked", tone: "watch", stateLabel: "等待更好报价", blocker: `需溢价和价差均≤0.15%，当前${percent(premium, false)} / ${percent(spread, false)}` };
+  }
+  return etfApplyQualityGate(etfStageProgress(decision, rule), status);
+}
+
+function dividendTacticalDecision(rule, allocation, status, rawPlan) {
+  const drawdown = finiteNumber(etfRuleMetric(status, "drawdown3y")?.value);
+  const valuationScore = finiteNumber(etfRuleMetric(status, "valuationScore")?.value);
+  const effectiveScore = Number.isFinite(valuationScore) ? valuationScore : 50;
+  const opportunityPool = etfDecisionOpportunityPool(rule, allocation);
+  const firstThreshold = effectiveScore >= 85 ? 4 : 6;
+  const stages = [
+    { threshold: firstThreshold, fraction: 0.15 }, { threshold: 9, fraction: 0.25 },
+    { threshold: 12, fraction: 0.30 }, { threshold: 15, fraction: 0.20 }, { threshold: 20, fraction: 0.10 }
+  ];
+  const reached = stages.filter((item) => Number.isFinite(drawdown) && drawdown >= item.threshold);
+  const stage = reached.at(-1);
+  if (!stage || effectiveScore < 60) return etfWaitingDecision(rule, allocation, drawdown, firstThreshold, opportunityPool, rawPlan);
+  const candidateAmount = opportunityPool * stage.fraction;
+  const decision = etfStageProgress({
+    state: "ready", tone: "boost", stateLabel: "可执行", trackerSymbol: rule.symbol, tacticalSymbol: rule.tacticalSymbol,
+    stageKey: `dd-${stage.threshold}`, stageThreshold: stage.threshold, candidateAmount, installmentCount: 2,
+    opportunityPool, drawdown, signalAsOf: status?.signalAsOf || etfRuleMetric(status, "drawdown3y")?.asOf || "",
+    label: `${rule.tacticalSymbol} -${stage.threshold}%档 · 候选${etfAllocationMoney(candidateAmount)}`, detail: rawPlan?.detail || ""
+  }, rule);
+  return etfApplyQualityGate(decision, status);
+}
+
+function qdiiTacticalDecision(rule, allocation, status, rawPlan, kind) {
+  const drawdown = finiteNumber(etfRuleMetric(status, "drawdown3y")?.value);
+  const cnyDrawdown = finiteNumber(etfRuleMetric(status, "cnyTotalReturnDrawdown")?.value);
+  const pe = finiteNumber(etfRuleMetric(status, "forwardPEPercentile")?.value);
+  const earningsSpread = finiteNumber(etfRuleMetric(status, "earningsYieldSpreadPercentile")?.value);
+  const volatility = finiteNumber(etfRuleMetric(status, kind === "sp500" ? "vix" : "vxn")?.value);
+  const premium = finiteNumber(etfRuleMetric(status, "qdiiPremium")?.value);
+  const opportunityPool = etfDecisionOpportunityPool(rule, allocation);
+  const stages = kind === "sp500"
+    ? [{ threshold: 8, fraction: .10 }, { threshold: 12, fraction: .20 }, { threshold: 18, fraction: .25 }, { threshold: 25, fraction: .25 }, { threshold: 35, fraction: .15 }]
+    : [{ threshold: 10, fraction: .10 }, { threshold: 15, fraction: .20 }, { threshold: 20, fraction: .25 }, { threshold: 30, fraction: .25 }, { threshold: 40, fraction: .15 }];
+  const reached = stages.filter((item) => Number.isFinite(drawdown) && drawdown >= item.threshold);
+  const stage = reached.at(-1);
+  if (!stage) return etfWaitingDecision(rule, allocation, drawdown, stages[0].threshold, opportunityPool, rawPlan);
+  let fraction = stage.fraction;
+  const cheap = kind === "sp500" ? (pe < 40 && earningsSpread > 60) : (pe < 30 || earningsSpread > 70);
+  const expensive = pe > 80 && earningsSpread < 20;
+  if (expensive && stage.threshold <= (kind === "sp500" ? 12 : 15)) fraction *= .5;
+  const nextStage = stages[stages.indexOf(stage) + 1];
+  if (nextStage && (cheap || volatility >= (kind === "sp500" ? 35 : 50))) fraction += nextStage.fraction * .5;
+  let executionFactor = 1;
+  if (!Number.isFinite(cnyDrawdown)) executionFactor = 0;
+  else if (cnyDrawdown < stage.threshold * .5) executionFactor *= .5;
+  if (Number.isFinite(premium) && premium > .5 && premium <= 1) executionFactor *= .5;
+  const candidateAmount = opportunityPool * fraction * executionFactor;
+  let decision = {
+    state: "ready", tone: "boost", stateLabel: "可执行", trackerSymbol: rule.symbol, tacticalSymbol: rule.tacticalSymbol,
+    stageKey: `dd-${stage.threshold}`, stageThreshold: stage.threshold, candidateAmount, installmentCount: volatility >= (kind === "sp500" ? 25 : 30) ? 1 : 2,
+    opportunityPool, drawdown, signalAsOf: status?.signalAsOf || etfRuleMetric(status, "drawdown3y")?.asOf || "",
+    label: `${rule.tacticalSymbol} -${stage.threshold}%档 · 候选${etfAllocationMoney(candidateAmount)}`, detail: rawPlan?.detail || ""
+  };
+  if (!Number.isFinite(cnyDrawdown)) decision = { ...decision, state: "blocked", tone: "watch", stateLabel: "等待人民币回撤", blocker: "人民币全收益回撤缺失" };
+  if (!Number.isFinite(premium)) decision = { ...decision, state: "blocked", tone: "watch", stateLabel: "等待溢价", blocker: "场内估算溢价缺失" };
+  if (Number.isFinite(premium) && premium > 1) decision = { ...decision, state: "blocked", tone: "risk", stateLabel: "溢价过高", blocker: `估算溢价${percent(premium, false)} > 1%` };
+  return etfApplyQualityGate(etfStageProgress(decision, rule), status);
+}
+
+function etfTacticalDecision(rule, allocationSnapshot = etfAllocationSnapshot()) {
+  const allocation = etfAllocationEntry(allocationSnapshot, rule.symbol);
   const status = etfRuleStatus(rule.symbol);
+  const rawPlan = etfRuleDrawdownPlan(status, allocation, rule);
+  if (allocation.progress >= 1) {
+    return { state: "complete", tone: "core", stateLabel: "目标已完成", label: "已达到目标配置", detail: "暂停场外定投与场内机会仓", tacticalSymbol: rule.tacticalSymbol };
+  }
+  if (rule.symbol === "022434") return a500TacticalDecision(rule, allocation, status, rawPlan);
+  if (rule.symbol === "008163") return dividendTacticalDecision(rule, allocation, status, rawPlan);
+  if (rule.symbol === "018738") return qdiiTacticalDecision(rule, allocation, status, rawPlan, "sp500");
+  if (rule.symbol === "021000") return qdiiTacticalDecision(rule, allocation, status, rawPlan, "nasdaq");
+  return { state: "waiting", tone: "neutral", stateLabel: "等待机会", label: rawPlan.label, detail: rawPlan.detail };
+}
+
+function a500TacticalPlan(status, allocation, rule) {
+  const drawdown = finiteNumber(etfRuleMetric(status, "drawdown3y")?.value);
+  const pePercentile = finiteNumber(etfRuleMetric(status, "pePercentile")?.value);
+  const spreadPercentile = finiteNumber(etfRuleMetric(status, "earningsYieldSpreadPercentile")?.value);
+  const rv20Percentile = finiteNumber(etfRuleMetric(status, "rv20Percentile")?.value);
+  const fiveDayReturn = finiteNumber(etfRuleMetric(status, "fiveDayReturn")?.value);
+  const premium = finiteNumber(etfRuleMetric(status, "etfPremium")?.value);
+  const bidAskSpread = finiteNumber(etfRuleMetric(status, "bidAskSpread")?.value);
+  const openingGap = finiteNumber(etfRuleMetric(status, "openingGap")?.value);
+  const opportunityPool = finiteNumber(rule.tacticalInitialOpportunityPool)
+    ?? Math.max(0, allocation.targetAmount - allocation.marketValue - rule.dailyBase * ETF_RULE_TRADING_DAYS_PER_YEAR);
+  const poolText = `本轮固定机会资金P₀ ${etfAllocationMoney(opportunityPool)}`;
+  if (!Number.isFinite(drawdown)) {
+    return { label: "等待中证A500全收益回撤", detail: `${poolText}；022434基础定投照常执行` };
+  }
+  const stages = [
+    { threshold: 7, fraction: 0.10 },
+    { threshold: 12, fraction: 0.20 },
+    { threshold: 18, fraction: 0.25 },
+    { threshold: 25, fraction: 0.25 },
+    { threshold: 35, fraction: 0.15 },
+    { threshold: 45, fraction: 0.05 }
+  ];
+  const reached = stages.filter((item) => drawdown >= item.threshold);
+  const stage = reached.at(-1);
+  const planStart = dateFromKey(rule.tacticalPlanStartDate);
+  const today = etfAllocationReferenceDate();
+  const elapsedMonths = planStart
+    ? Math.max(0, (today.getUTCFullYear() - planStart.getUTCFullYear()) * 12 + today.getUTCMonth() - planStart.getUTCMonth())
+    : 0;
+  const checkpoints = [
+    { month: 3, progress: 0.167 }, { month: 6, progress: 0.333 }, { month: 9, progress: 0.50 },
+    { month: 12, progress: 0.667 }, { month: 15, progress: 0.833 }, { month: 18, progress: 1.00 }
+  ];
+  const checkpoint = checkpoints.filter((item) => elapsedMonths >= item.month).at(-1);
+  const timeGap = checkpoint ? Math.max(0, allocation.targetAmount * checkpoint.progress - allocation.marketValue) : 0;
+  const timeText = timeGap > 0
+    ? `；${checkpoint.month}个月完成率低于${percent(checkpoint.progress * 100, false)}，差额${etfAllocationMoney(timeGap)}应从P₀扣除并分4周补足`
+    : "";
+  if (!stage) {
+    return {
+      label: `全收益回撤${percent(drawdown, false)}，仅场外定投`,
+      detail: `${poolText}；首档需回撤达到7%，估值和恐慌不能单独触发${timeText}`
+    };
+  }
+
+  let valuationFactor = 1;
+  const adjustments = [];
+  if (Number.isFinite(pePercentile) && Number.isFinite(spreadPercentile)) {
+    if (pePercentile <= 30 && spreadPercentile >= 70) {
+      valuationFactor = 1.25;
+      adjustments.push("估值便宜，V=1.25");
+    } else if (pePercentile >= 75 && spreadPercentile <= 30) {
+      valuationFactor = 0.5;
+      adjustments.push("估值偏贵，V=0.5");
+    } else {
+      adjustments.push("估值中性，V=1");
+    }
+  } else {
+    adjustments.push("估值缺失，按V=1");
+  }
+  if (stage.threshold >= 25) {
+    valuationFactor = 1;
+    adjustments.push("回撤≥25%，不再用估值缩放");
+  } else if (stage.threshold >= 18 && valuationFactor < 0.75) {
+    valuationFactor = 0.75;
+    adjustments.push("回撤≥18%，V最低按0.75");
+  }
+
+  const panicTriggered = (Number.isFinite(rv20Percentile) && rv20Percentile >= 90)
+    || (Number.isFinite(fiveDayReturn) && fiveDayReturn <= -8);
+  const panicFactor = stage.threshold >= 25 ? 1 : (panicTriggered ? 1.25 : 1);
+  adjustments.push(panicTriggered ? "恐慌确认，F=1.25" : "恐慌未确认或数据不足，F=1");
+  const combinedFactor = stage.threshold >= 25 ? 1 : clamp(valuationFactor * panicFactor, 0.5, 1.25);
+  const baseAmount = opportunityPool * stage.fraction;
+  const candidate = baseAmount * combinedFactor;
+
+  const tradingMissing = [];
+  if (!Number.isFinite(premium)) tradingMissing.push("估算溢价");
+  if (!Number.isFinite(bidAskSpread)) tradingMissing.push("买卖价差");
+  if (tradingMissing.length) {
+    return {
+      label: `已触发-${stage.threshold}%档，等待交易数据`,
+      detail: `${poolText}；本档候选${etfAllocationMoney(candidate)}；缺少${tradingMissing.join("和")}，不执行159352场内买入`
+    };
+  }
+  if (premium > 0.30 || bidAskSpread > 0.20) {
+    return {
+      label: `159352报价不合格，暂停场内`,
+      detail: `${poolText}；已触发-${stage.threshold}%档，本档候选${etfAllocationMoney(candidate)}；溢价${percent(premium, false)}、价差${percent(bidAskSpread, false)}，继续022434定投并等待`
+    };
+  }
+  const quoteReady = premium <= 0.15 && bidAskSpread <= 0.15;
+  if (!quoteReady) {
+    return {
+      label: `已触发-${stage.threshold}%档，等待更好报价`,
+      detail: `${poolText}；本档候选${etfAllocationMoney(candidate)}；需溢价和买卖价差均≤0.15%，当前分别为${percent(premium, false)}和${percent(bidAskSpread, false)}`
+    };
+  }
+
+  const crossedMultiple = reached.length > 1;
+  const orderText = crossedMultiple
+    ? "单日跨越多档时，累计应买金额按下一交易日、2个交易日后、5个交易日后各1/3执行；后两笔要求指数仍低于最深档位"
+    : `普通单档先买50%约${etfAllocationMoney(candidate / 2)}；第二次收盘仍在线下或再跌2%时买剩余50%，回撤收窄3个百分点则取消第二笔`;
+  const openingText = Number.isFinite(openingGap) && openingGap > 2
+    ? `；当日高开${percent(openingGap, false)}，下单前重新确认回撤仍满足`
+    : "";
+  return {
+    label: `159352触发-${stage.threshold}%档 · 候选${etfAllocationMoney(candidate)}`,
+    detail: `${poolText}；基础额${etfAllocationMoney(baseAmount)}×综合系数${combinedFactor.toFixed(3)}=${etfAllocationMoney(candidate)}；${adjustments.join("；")}；${orderText}${openingText}${timeText}。只用限价单，优先10:00—11:00或14:30—14:55`
+  };
+}
+
+function dividendLowVolTacticalPlan(status, allocation, rule) {
+  const drawdownMetric = etfRuleMetric(status, "drawdown3y");
+  const spreadMetric = etfRuleMetric(status, "dividendSpreadPercentile");
+  const pbMetric = etfRuleMetric(status, "pbPercentile");
+  const scoreMetric = etfRuleMetric(status, "valuationScore");
+  const drawdown = drawdownMetric?.available ? finiteNumber(drawdownMetric.value) : null;
+  const valuationScore = scoreMetric?.available ? finiteNumber(scoreMetric.value) : null;
+  const annualOtc = (finiteNumber(rule.dailyBase) ?? 0) * ETF_RULE_TRADING_DAYS_PER_YEAR;
+  const opportunityPool = Math.max(0, allocation.targetAmount - allocation.marketValue - annualOtc);
+  const poolText = `场内机会资金P ${etfAllocationMoney(opportunityPool)}`;
+  if (!Number.isFinite(drawdown)) {
+    return { label: "等待总回报回撤", detail: `${poolText}；场外定投照常执行` };
+  }
+  if (!Number.isFinite(valuationScore)) {
+    const missing = [];
+    if (!spreadMetric?.available) missing.push("指数股债利差分位");
+    if (!pbMetric?.available) missing.push("PB分位");
+    return {
+      label: `回撤${percent(drawdown, false)}，等待${missing.join("和") || "估值分数"}`,
+      detail: `${poolText}；V未完整确认前不触发场内大额买入`
+    };
+  }
+  if (valuationScore < 40) {
+    return {
+      label: `V ${percent(valuationScore, false)}，仅场外定投`,
+      detail: `${poolText}；估值得分低于40，回撤不单独触发场内买入`
+    };
+  }
+  const firstThreshold = valuationScore >= 85 ? 4 : 6;
+  const stages = [
+    { threshold: 20, fraction: 0.10, cumulative: 1.00, condition: "重新检查后执行剩余资金" },
+    { threshold: 15, fraction: 0.20, cumulative: 0.90, condition: "需人工确认无结构性问题" },
+    { threshold: 12, fraction: 0.30, cumulative: 0.70, condition: "V≥60" },
+    { threshold: 9, fraction: 0.25, cumulative: 0.40, condition: "V≥60" },
+    { threshold: firstThreshold, fraction: 0.15, cumulative: 0.15, condition: valuationScore >= 85 ? "V≥85，首档提前" : "V≥60" }
+  ];
+  const stage = stages.find((item) => drawdown >= item.threshold);
+  if (!stage || valuationScore < 60) {
+    return {
+      label: `回撤${percent(drawdown, false)}，仅场外定投`,
+      detail: `${poolText}；需V≥60且回撤达到${firstThreshold}%才出现首档候选`
+    };
+  }
+  const stageAmount = opportunityPool * stage.fraction;
+  const cumulativeAmount = opportunityPool * stage.cumulative;
+  return {
+    label: `515450触发-${stage.threshold}%档`,
+    detail: `${poolText}；本档${percent(stage.fraction * 100, false)}约${etfAllocationMoney(stageAmount)}，累计上限${etfAllocationMoney(cumulativeAmount)}，扣除本轮已执行档位；${stage.condition}。每档分两笔，单日最多40%P`
+  };
+}
+
+function sp500TacticalPlan(status, allocation, rule) {
+  const drawdown = finiteNumber(etfRuleMetric(status, "drawdown3y")?.value);
+  const cnyDrawdown = finiteNumber(etfRuleMetric(status, "cnyTotalReturnDrawdown")?.value);
+  const pePercentile = finiteNumber(etfRuleMetric(status, "forwardPEPercentile")?.value);
+  const spreadPercentile = finiteNumber(etfRuleMetric(status, "earningsYieldSpreadPercentile")?.value);
+  const earningsRevision = finiteNumber(etfRuleMetric(status, "forwardEarningsRevision3m")?.value);
+  const vix = finiteNumber(etfRuleMetric(status, "vix")?.value);
+  const premium = finiteNumber(etfRuleMetric(status, "qdiiPremium")?.value);
+  const annualOtc = (finiteNumber(rule.dailyBase) ?? 0) * ETF_RULE_TRADING_DAYS_PER_YEAR;
+  const opportunityPool = Math.max(0, allocation.targetAmount - allocation.marketValue - annualOtc);
+  const poolText = `场内机会资金P ${etfAllocationMoney(opportunityPool)}`;
+  if (!Number.isFinite(drawdown)) {
+    return { label: "等待SPTR全收益回撤", detail: `${poolText}；018738基础定投照常执行` };
+  }
+  const stages = [
+    { threshold: 8, fraction: 0.10, cumulative: 0.10 },
+    { threshold: 12, fraction: 0.20, cumulative: 0.30 },
+    { threshold: 18, fraction: 0.25, cumulative: 0.55 },
+    { threshold: 25, fraction: 0.25, cumulative: 0.80 },
+    { threshold: 35, fraction: 0.15, cumulative: 0.95 }
+  ];
+  const reached = stages.filter((item) => drawdown >= item.threshold);
+  const stage = reached.at(-1);
+  if (!stage) {
+    return {
+      label: `SPTR回撤${percent(drawdown, false)}，仅场外定投`,
+      detail: `${poolText}；首档需SPTR全收益回撤达到8%，估值和VIX不能单独触发`
+    };
+  }
+  const missing = [];
+  if (!Number.isFinite(pePercentile)) missing.push("未来PE分位");
+  if (!Number.isFinite(spreadPercentile)) missing.push("盈利利差分位");
+  if (!Number.isFinite(vix)) missing.push("VIX");
+  if (!Number.isFinite(cnyDrawdown)) missing.push("人民币回撤");
+  if (!Number.isFinite(premium)) missing.push(`${rule.tacticalSymbol}估算溢价`);
+  if (missing.length) {
+    return {
+      label: `SPTR触发-${stage.threshold}%档，等待执行指标`,
+      detail: `${poolText}；缺少${missing.join("、")}，不执行场内机会仓`
+    };
+  }
+
+  const cheap = pePercentile < 40 && spreadPercentile > 60;
+  const expensive = pePercentile > 80 && spreadPercentile < 20;
+  const nextStage = stages[stages.indexOf(stage) + 1] ?? null;
+  let stageFraction = stage.fraction;
+  const adjustments = [];
+  if (expensive && stage.threshold <= 12) {
+    stageFraction *= 0.5;
+    adjustments.push("估值昂贵，本档减半");
+  } else if (stage.threshold >= 18) {
+    adjustments.push("深跌档以回撤优先");
+  } else {
+    adjustments.push(cheap ? "估值便宜" : "估值中性");
+  }
+
+  const earningsRevisionConfirmed = Number.isFinite(earningsRevision) && earningsRevision >= -10;
+  const panicAdvance = vix >= 35;
+  if (nextStage && (cheap || panicAdvance) && earningsRevisionConfirmed) {
+    stageFraction += nextStage.fraction * 0.5;
+    adjustments.push(`提前执行-${nextStage.threshold}%档的一半`);
+  } else if (nextStage && (cheap || panicAdvance)) {
+    adjustments.push(Number.isFinite(earningsRevision)
+      ? "盈利预期三个月下调超过10%，取消提前半档"
+      : "盈利预期修正未确认，不提前半档");
+  }
+
+  let executionFactor = 1;
+  if (cnyDrawdown < stage.threshold * 0.5) {
+    executionFactor *= 0.5;
+    adjustments.push(`人民币回撤仅${percent(cnyDrawdown, false)}，减半`);
+  }
+  if (premium > 1) {
+    return {
+      label: `${rule.tacticalSymbol}溢价${percent(premium, false)}，暂停场内`,
+      detail: `${poolText}；SPTR已触发-${stage.threshold}%档，但估算溢价>1%，继续018738场外定投并等待溢价回落`
+    };
+  }
+  if (premium > 0.5) {
+    executionFactor *= 0.5;
+    adjustments.push(`估算溢价${percent(premium, false)}，减半`);
+  } else {
+    adjustments.push(`估算溢价${percent(premium, false)}，允许执行`);
+  }
+
+  const candidate = opportunityPool * stageFraction * executionFactor;
+  const baseStageAmount = opportunityPool * stage.fraction;
+  const speed = vix < 20
+    ? "VIX<20，每档拆成两笔"
+    : vix < 25
+      ? "VIX 20—25，轻度压力，仍拆两笔"
+      : vix < 35
+        ? "VIX 25—35，可一次完成本档"
+        : vix <= 50
+          ? "VIX 35—50，强恐慌并允许提前半档"
+          : "VIX>50，极端恐慌";
+  return {
+    label: `${rule.tacticalSymbol}触发-${stage.threshold}%档 · 候选${etfAllocationMoney(candidate)}`,
+    detail: `${poolText}；本档原额${etfAllocationMoney(baseStageAmount)}，调整后候选${etfAllocationMoney(candidate)}；${adjustments.join("；")}；${speed}。未一次完成时，第二笔间隔2—3个美股交易日或SPTR再跌2%；单个A股交易日最多30%P`
+  };
+}
+
+function nasdaq100TacticalPlan(status, allocation, rule) {
+  const drawdown = finiteNumber(etfRuleMetric(status, "drawdown3y")?.value);
+  const cnyDrawdown = finiteNumber(etfRuleMetric(status, "cnyTotalReturnDrawdown")?.value);
+  const pePercentile = finiteNumber(etfRuleMetric(status, "forwardPEPercentile")?.value);
+  const spreadPercentile = finiteNumber(etfRuleMetric(status, "earningsYieldSpreadPercentile")?.value);
+  const vxn = finiteNumber(etfRuleMetric(status, "vxn")?.value);
+  const premium = finiteNumber(etfRuleMetric(status, "qdiiPremium")?.value);
+  const annualOtc = (finiteNumber(rule.dailyBase) ?? 0) * ETF_RULE_TRADING_DAYS_PER_YEAR;
+  const opportunityPool = Math.max(0, allocation.targetAmount - allocation.marketValue - annualOtc);
+  const poolText = `场内机会资金P ${etfAllocationMoney(opportunityPool)}`;
+  if (!Number.isFinite(drawdown)) {
+    return { label: "等待XNDX全收益回撤", detail: `${poolText}；021000基础定投照常执行` };
+  }
+  const stages = [
+    { threshold: 10, fraction: 0.10, cumulative: 0.10 },
+    { threshold: 15, fraction: 0.20, cumulative: 0.30 },
+    { threshold: 20, fraction: 0.25, cumulative: 0.55 },
+    { threshold: 30, fraction: 0.25, cumulative: 0.80 },
+    { threshold: 40, fraction: 0.15, cumulative: 0.95 }
+  ];
+  const reached = stages.filter((item) => drawdown >= item.threshold);
+  const stage = reached.at(-1);
+  if (!stage) {
+    return {
+      label: `XNDX回撤${percent(drawdown, false)}，仅场外定投`,
+      detail: `${poolText}；首档需XNDX全收益回撤达到10%，估值和VXN不能单独触发`
+    };
+  }
+  const missing = [];
+  if (!Number.isFinite(pePercentile)) missing.push("未来PE分位");
+  if (!Number.isFinite(spreadPercentile)) missing.push("盈利利差分位");
+  if (!Number.isFinite(vxn)) missing.push("VXN");
+  if (!Number.isFinite(cnyDrawdown)) missing.push("人民币回撤");
+  if (!Number.isFinite(premium)) missing.push(`${rule.tacticalSymbol}估算溢价`);
+  if (missing.length) {
+    return {
+      label: `XNDX触发-${stage.threshold}%档，等待执行指标`,
+      detail: `${poolText}；缺少${missing.join("、")}，不执行场内机会仓`
+    };
+  }
+
+  const cheap = pePercentile < 30 || spreadPercentile > 70;
+  const expensive = pePercentile > 80 && spreadPercentile < 20;
+  const nextStage = stages[stages.indexOf(stage) + 1] ?? null;
+  let stageFraction = stage.fraction;
+  const adjustments = [];
+  if (expensive && stage.threshold <= 15) {
+    stageFraction *= 0.5;
+    adjustments.push("估值昂贵，本档减半");
+  } else if (stage.threshold >= 20) {
+    adjustments.push("深跌档以回撤优先");
+  } else {
+    adjustments.push(cheap ? "估值便宜" : "估值中性");
+  }
+
+  const advanceHalf = Boolean(nextStage && (cheap || vxn > 50));
+  if (advanceHalf) {
+    stageFraction += nextStage.fraction * 0.5;
+    adjustments.push(`提前执行-${nextStage.threshold}%档的一半`);
+  }
+
+  let executionFactor = 1;
+  if (cnyDrawdown < stage.threshold * 0.5) {
+    executionFactor *= 0.5;
+    adjustments.push(`人民币回撤仅${percent(cnyDrawdown, false)}，减半`);
+  }
+  if (premium > 1) {
+    return {
+      label: `${rule.tacticalSymbol}溢价${percent(premium, false)}，暂停场内`,
+      detail: `${poolText}；XNDX已触发-${stage.threshold}%档，但估算溢价>1%，等待溢价回落或人工增加021000场外额度`
+    };
+  }
+  if (premium > 0.5) {
+    executionFactor *= 0.5;
+    adjustments.push(`估算溢价${percent(premium, false)}，减半`);
+  } else {
+    adjustments.push(`估算溢价${percent(premium, false)}，允许执行`);
+  }
+
+  const candidate = opportunityPool * stageFraction * executionFactor;
+  const baseStageAmount = opportunityPool * stage.fraction;
+  const speed = vxn < 30
+    ? "VXN<30，每档拆成两笔"
+    : vxn <= 40
+      ? "VXN 30—40，可一次完成本档"
+      : vxn <= 50
+        ? "VXN 40—50，强恐慌，本档优先一次完成"
+        : "VXN>50，极端恐慌并提前半档";
+  return {
+    label: `${rule.tacticalSymbol}触发-${stage.threshold}%档 · 候选${etfAllocationMoney(candidate)}`,
+    detail: `${poolText}；本档原额${etfAllocationMoney(baseStageAmount)}，调整后候选${etfAllocationMoney(candidate)}；${adjustments.join("；")}；${speed}。未一次完成时，第二笔间隔3—5个美股交易日或指数再跌3%；单个A股交易日最多30%P`
+  };
+}
+
+function etfRuleDrawdownPlan(status, allocation, rule) {
+  if (rule?.symbol === "022434") return a500TacticalPlan(status, allocation, rule);
+  if (rule?.symbol === "008163") return dividendLowVolTacticalPlan(status, allocation, rule);
+  if (rule?.symbol === "018738") return sp500TacticalPlan(status, allocation, rule);
+  if (rule?.symbol === "021000") return nasdaq100TacticalPlan(status, allocation, rule);
+  const drawdownMetric = etfRuleMetric(status, "drawdown3y");
+  const drawdown = drawdownMetric?.available ? finiteNumber(drawdownMetric.value) : null;
+  if (!Number.isFinite(drawdown)) {
+    return { label: "等待回撤数据", detail: "基础定投照常执行" };
+  }
+  let fraction = 0;
+  let threshold = 0;
+  if (drawdown >= 30) {
+    fraction = 0.50;
+    threshold = 30;
+  } else if (drawdown >= 20) {
+    fraction = 0.30;
+    threshold = 20;
+  } else if (drawdown >= 10) {
+    fraction = 0.20;
+    threshold = 10;
+  }
+  if (!fraction) {
+    return { label: `回撤${percent(drawdown, false)}，仅基础定投`, detail: "回撤达到10%后才出现额外加仓候选" };
+  }
+  const remaining = Math.max(0, allocation.targetAmount - allocation.marketValue);
+  const candidate = remaining * fraction;
+  return {
+    label: `回撤达到${threshold}%阶段`,
+    detail: `候选加仓当前缺口的${percent(fraction * 100, false)}，约${etfAllocationMoney(candidate)}；人工确认且该阶段只执行一次`
+  };
+}
+
+function renderEtfRuleLiveStatus(rule, execution, allocation, decision) {
+  const status = etfRuleStatus(rule.symbol);
+  const planMeta = etfRulePlanMeta(execution.planState);
+  const dailyAmount = etfRulePlannedDailyAmount(rule, execution);
   if (!status) {
     return `
       <div class="etf-rule-live pending">
-        <span>自动水位</span>
-        <strong>等待更新净值</strong>
-        <small>进入总览页后自动拉取判断条件。</small>
+        <span>水位与加仓</span>
+        <strong>${escapeHTML(`${planMeta.label} · ${etfRuleMoney(dailyAmount, "/日")}`)}</strong>
+        <small>等待水位数据；基础定投不受影响。</small>
       </div>
     `;
   }
-  const statusMeta = etfRuleLevelMeta(status.level);
-  const executionMeta = etfRuleLevelMeta(execution.level);
-  const statusLabel = status.complete ? (status.levelLabel || statusMeta.label || "待数据") : "待确认";
-  const hiddenMetricKeys = rule.symbol === "008163"
-    ? new Set(["dividendYieldPercentile", "china10YBondYield"])
-    : new Set();
+  const hiddenMetricKeys = rule.symbol === "022434"
+    ? new Set(["totalReturnClose", "totalReturnPeak", "indexPE", "china10YBondYield", "earningsYieldSpread", "rv20", "volumeRatio", "breadthBelowMA20", "tacticalMarketPrice", "tacticalOfficialNAV", "tacticalEstimatedNAV", "openingGap"])
+    : rule.symbol === "008163"
+    ? new Set(["dividendSpread", "indexPB", "basketCoverage", "dividendYieldPercentile"])
+    : rule.symbol === "018738"
+      ? new Set(["forwardPE", "us10YBondYield", "earningsYieldSpread", "usdCny", "sp500FuturesChange", "tacticalMarketPrice", "tacticalOfficialNAV", "tacticalEstimatedNAV"])
+    : rule.symbol === "021000"
+      ? new Set(["forwardPE", "us10YBondYield", "earningsYieldSpread", "usdCny", "nasdaqFuturesChange", "tacticalMarketPrice", "tacticalOfficialNAV", "tacticalEstimatedNAV"])
+      : new Set();
   const metrics = (status.metrics ?? [])
     .filter((metric) => !hiddenMetricKeys.has(metric?.key))
-    .map(renderEtfRuleMetric)
+    .map((metric) => renderEtfRuleMetric(metric, rule))
     .join("");
-  const dailyAmount = status.complete ? etfRuleDailyAmount(rule, execution.level) : 0;
   const boundaryText = status.pendingLevel
-    ? `候选${status.pendingLevelLabel || etfRuleLevelMeta(status.pendingLevel).label}连续${status.pendingDays || 0}/5个交易日`
+    ? `候选水位${etfRuleLevelMeta(status.pendingLevel).label}连续${status.pendingDays || 0}/5个交易日`
     : "";
+  const actionAmount = finiteNumber(decision?.installmentAmount) ?? 0;
+  const actionTitle = decision?.stageKey && decision?.nextInstallment
+    ? `第${decision.nextInstallment}/${decision.installmentCount}批 ${etfAllocationMoney(actionAmount)}`
+    : decision?.label || "等待数据";
+  const actionDetail = decision?.blocker || decision?.qualityNote || decision?.detail || "场外定投继续执行";
+  const canRecord = decision?.stageKey && decision?.nextInstallment;
   return `
-    <div class="etf-rule-live ${status.complete ? "complete" : "pending"}">
-      <div>
-        <span>自动水位</span>
-        <strong>${escapeHTML(`估值${statusLabel} · 执行${executionMeta.label}`)}${status.complete && dailyAmount ? ` · ${escapeHTML(etfRuleMoney(dailyAmount, "/日"))}` : ""}</strong>
-        <small>${escapeHTML([status.reason || "等待更多指标确认", execution.correctionReason, boundaryText, status.asOf || status.updatedAt || "-"].filter(Boolean).join(" · "))}</small>
+    <div class="etf-operation-banner ${escapeHTML(decision?.tone || "neutral")}">
+      <div class="etf-operation-copy">
+        <span>当前动作 · ${escapeHTML(decision?.stateLabel || "等待")}</span>
+        <strong>${escapeHTML(actionTitle)}</strong>
+        <small>${escapeHTML(actionDetail)}</small>
+        <small>${escapeHTML([`${planMeta.label}${dailyAmount ? ` ${etfRuleMoney(dailyAmount, "/日")}` : ""}`, boundaryText, `信号 ${status.signalAsOf || status.asOf || "-"}`, `执行 ${status.executionAsOf || "收盘参考"}`].filter(Boolean).join(" · "))}</small>
       </div>
+      <div class="etf-operation-actions">
+        ${decision?.state === "ready" && canRecord ? `<button class="primary-button compact-button" type="button" data-etf-tactical-buy="${escapeHTML(rule.symbol)}">记录本批</button>` : ""}
+        ${decision?.state === "blocked" && canRecord ? `<button class="ghost-button compact-button" type="button" data-etf-tactical-override="${escapeHTML(rule.symbol)}">补记成交</button>` : ""}
+        ${decision?.nextInstallment > 1 && decision?.stage?.status === "partial" ? `<button class="ghost-button compact-button" type="button" data-etf-stage-cancel="${escapeHTML(rule.symbol)}">取消余款</button>` : ""}
+      </div>
+    </div>
+    <div class="etf-rule-live ${status.complete ? "complete" : "pending"}">
+      <div><span>关键指标</span><strong>${escapeHTML(decision?.label || "等待数据")}</strong><small>每项指标保留独立日期与质量状态。</small></div>
       <div class="etf-rule-live-metrics">${metrics}</div>
     </div>
   `;
 }
 
-function renderEtfRuleMetric(metric) {
-  const label = metric?.key === "dividendSpreadPercentile"
-    ? "股息率利差历史分位"
-    : (metric?.label || metric?.key || "指标");
+function renderEtfRuleMetric(metric, rule = null) {
+  const labels = {
+    dividendYield: "篮子TTM股息率",
+    china10YBondYield: "中债10年期",
+    pePercentile: "PE扩展窗口分位",
+    dividendSpreadPercentile: "股债利差5年分位",
+    pbPercentile: "PB五年分位",
+    valuationScore: "估值得分V",
+    forwardPEPercentile: "未来PE十年分位",
+    earningsYieldSpreadPercentile: rule?.symbol === "022434" ? "股债利差扩展窗口分位" : "盈利利差十年分位",
+    forwardEarningsRevision3m: "盈利预期三月修正",
+    cnyTotalReturnDrawdown: "人民币全收益回撤",
+    vix: "VIX",
+    vxn: "VXN",
+    qdiiPremium: "场内估算溢价",
+    rv20Percentile: "RV20五年分位",
+    fiveDayReturn: "近5日全收益",
+    etfPremium: "159352估算溢价",
+    bidAskSpread: "159352买卖价差"
+  };
+  const label = labels[metric?.key] || metric?.label || metric?.key || "指标";
+  const quality = etfQualityMeta(metric?.qualityState, metric?.sourceTier);
+  const message = metric?.available ? (metric?.qualityMessage || quality.label) : sanitizeEtfMetricError(metric?.error);
   return `
-    <div class="etf-rule-metric ${metric?.available ? "" : "pending"}" title="${escapeHTML(label)}">
-      <span>${escapeHTML(label)}</span>
+    <div class="etf-rule-metric ${metric?.available ? "" : "pending"} ${escapeHTML(quality.tone)}" title="${escapeHTML(message)}">
+      <span>${escapeHTML(label)} <em>${escapeHTML(quality.label)}</em></span>
       <strong>${escapeHTML(etfRuleMetricText(metric))}</strong>
-      <small>${escapeHTML(metric?.asOf || "-")}</small>
+      <small>${escapeHTML(metric?.asOf || "-")} · ${escapeHTML(quality.source)}</small>
     </div>
   `;
 }
 
-function etfRuleAmount(rule, level, period) {
-  if (level === "none") return 0;
-  return finiteNumber(rule?.[period]?.[level]) ?? 0;
+function sanitizeEtfMetricError(error) {
+  const text = String(error ?? "").trim();
+  if (!text) return "本次未取得可用数据";
+  if (/403|forbidden|cloudflare|doctype|request failed/i.test(text)) return "数据源暂时拒绝访问";
+  if (/timeout|deadline|超时/i.test(text)) return "数据源响应超时";
+  if (/insufficient|missing|empty|缺少|不足/i.test(text)) return "数据样本暂不完整";
+  return "数据源暂不可用，详细原因已写入日志";
 }
 
-function etfRuleDailyAmountFromWeekly(value) {
-  const weekly = finiteNumber(value) ?? 0;
-  if (weekly <= 0) return 0;
-  return weekly / ETF_RULE_TRADING_DAYS_PER_WEEK;
+function etfQualityMeta(stateName, sourceTier) {
+  const stateMap = {
+    fresh: { label: "新鲜", tone: "fresh" }, degraded: { label: "降级", tone: "degraded" },
+    stale: { label: "过期", tone: "stale" }, unavailable: { label: "缺失", tone: "unavailable" },
+    disputed: { label: "冲突", tone: "disputed" }
+  };
+  const sourceMap = { official: "官方", validated_proxy: "已验证代理", fallback: "备用" };
+  return { ...(stateMap[stateName] || stateMap.unavailable), source: sourceMap[sourceTier] || "待确认" };
 }
 
-function etfRuleDailyAmount(rule, level) {
-  return etfRuleDailyAmountFromWeekly(etfRuleAmount(rule, level, "weekly"));
+function renderEtfStageTimeline(rule, decision) {
+  const plan = etfExecutionPlan(rule);
+  const stages = plan?.stages ?? [];
+  if (!stages.length) return "";
+  return `
+    <section class="etf-stage-section">
+      <div class="etf-detail-section-head"><div><span>分档进度</span><strong>本轮 ${escapeHTML(plan.roundId || "-")}</strong></div><small>机会资金 ${escapeHTML(etfAllocationMoney(plan.opportunityPool))}</small></div>
+      <div class="etf-stage-timeline">
+        ${stages.map((stage) => {
+          const executed = (stage.installments ?? []).reduce((sum, item) => sum + (finiteNumber(item.executedAmount) ?? 0), 0);
+          const active = decision?.stageKey === stage.key;
+          const label = stage.status === "complete" ? "已完成" : stage.status === "partial" ? "进行中" : stage.status === "canceled" ? "已取消" : active ? "已触发" : "未触发";
+          return `<div class="etf-stage-step ${escapeHTML(stage.status || "pending")} ${active ? "active" : ""}"><span>-${escapeHTML(String(stage.threshold))}%</span><strong>${escapeHTML(label)}</strong><small>${stage.plannedAmount ? `${escapeHTML(etfAllocationMoney(executed))} / ${escapeHTML(etfAllocationMoney(stage.plannedAmount))}` : "-"}</small></div>`;
+        }).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderEtfSourceAudit(rule) {
+  const status = etfRuleStatus(rule.symbol);
+  const sources = status?.sources ?? [];
+  if (!sources.length) return "";
+  return `
+    <details class="etf-source-audit">
+      <summary><span>数据来源</span><strong>${escapeHTML(`${sources.length} 个来源`)}</strong></summary>
+      <div class="etf-source-list">
+        ${sources.map((source) => {
+          const quality = etfQualityMeta(source.qualityState, source.tier);
+          return `<div><span>${escapeHTML(source.name || "数据源")}</span><em class="${escapeHTML(quality.tone)}">${escapeHTML(quality.source)} · ${escapeHTML(quality.label)}</em><small>${escapeHTML(source.asOf || status?.asOf || "-")}</small></div>`;
+        }).join("")}
+      </div>
+    </details>
+  `;
+}
+
+function etfRulePlannedDailyAmount(rule, execution) {
+  if (execution?.planState === ETF_RULE_PAUSED.key) return 0;
+  return finiteNumber(rule?.dailyBase) ?? 0;
+}
+
+function etfRulePlannedMonthlyAmount(rule, execution) {
+  if (execution?.planState === ETF_RULE_PAUSED.key) return 0;
+  return finiteNumber(rule?.monthlyBase) ?? 0;
 }
 
 function etfRuleMoney(value, suffix = "") {
@@ -4148,32 +4838,249 @@ function tradeQuantityText(value, isFundTrade = false) {
 function etfRuleTrackerTotals(allocationSnapshot) {
   return ETF_RULE_TRACKER_RULES.reduce((totals, rule) => {
     const entry = etfRuleExecution(rule, allocationSnapshot);
-    totals.daily += etfRuleDailyAmount(rule, entry.level);
-    totals.monthly += etfRuleAmount(rule, entry.level, "monthly");
-    if (entry.level !== "none") totals.active += 1;
+    const daily = etfRulePlannedDailyAmount(rule, entry);
+    totals.daily += daily;
+    totals.monthly += etfRulePlannedMonthlyAmount(rule, entry);
+    totals.annual += daily * ETF_RULE_TRADING_DAYS_PER_YEAR;
+    if (entry.planState === ETF_PLAN_ACTIVE.key) totals.active += 1;
     return totals;
-  }, { daily: 0, monthly: 0, active: 0 });
+  }, { daily: 0, monthly: 0, annual: 0, active: 0 });
 }
 
 function renderEtfRuleConditionItem(rule, level) {
-  const entry = etfRuleEntry(rule.symbol);
   const meta = etfRuleLevelMeta(level);
-  const active = entry.level === level;
   return `
-    <div class="etf-rule-condition ${meta.tone} ${active ? "active" : ""}">
-      <span>${escapeHTML(meta.label)}条件</span>
+    <div class="etf-rule-condition ${meta.tone}">
+      <span>${escapeHTML(meta.label)}</span>
       <strong>${escapeHTML(rule.conditions[level])}</strong>
-      <small>${escapeHTML(etfRuleMoney(etfRuleDailyAmount(rule, level), "/日"))} · ${escapeHTML(etfRuleMoney(rule.monthly[level], "/月"))}</small>
     </div>
   `;
 }
 
-function renderEtfRuleRulebook(rule) {
+function renderA500Rulebook(rule, allocation) {
+  const annualOtc = rule.dailyBase * ETF_RULE_TRADING_DAYS_PER_YEAR;
+  const initialTarget = finiteNumber(rule.tacticalInitialTarget) ?? allocation.targetAmount;
+  const opportunityPool = finiteNumber(rule.tacticalInitialOpportunityPool)
+    ?? Math.max(0, initialTarget - allocation.marketValue - annualOtc);
+  const initialHolding = Math.max(0, initialTarget - annualOtc - opportunityPool);
+  const status = etfRuleStatus(rule.symbol);
+  const peak = finiteNumber(etfRuleMetric(status, "totalReturnPeak")?.value);
+  const thresholdPoint = (drawdown) => Number.isFinite(peak)
+    ? Math.round(peak * (1 - drawdown)).toLocaleString("zh-CN")
+    : "-";
   return `
     <details class="etf-rule-rulebook">
-      <summary>五档规则</summary>
+      <summary>${escapeHTML(rule.tacticalSymbol)}机会仓规则</summary>
       <div class="etf-rule-conditions">
-        ${ETF_RULE_LEVELS.map((level) => renderEtfRuleConditionItem(rule, level.key)).join("")}
+        <div class="etf-rule-condition core">
+          <span>双通道</span>
+          <strong>022434 ${escapeHTML(etfRuleMoney(rule.dailyBase, "/日"))}持续场外定投；${escapeHTML(rule.tacticalSymbol)}只承担场内机会仓，场内外合并计入A500目标。</strong>
+        </div>
+        <div class="etf-rule-condition boost">
+          <span>固定机会资金</span>
+          <strong>P₀=启动目标${escapeHTML(etfAllocationMoney(initialTarget))}－启动持仓${escapeHTML(etfAllocationMoney(initialHolding))}－未来一年场外${escapeHTML(etfAllocationMoney(annualOtc))}=${escapeHTML(etfAllocationMoney(opportunityPool))}。本轮不随涨跌重算。</strong>
+        </div>
+        <div class="etf-rule-condition watch">
+          <span>估值与恐慌</span>
+          <strong>便宜时V=1.25，偏贵时V=0.5，其他或PE缺失时V=1；RV20五年分位≥90%或5日跌幅≥8%时F=1.25。V×F限制在0.5—1.25。</strong>
+        </div>
+        <div class="etf-rule-water-guide">
+          <span>中证A500全收益高点回撤档位${Number.isFinite(peak) ? ` · 当前高点${escapeHTML(peak.toLocaleString("zh-CN", { maximumFractionDigits: 2 }))}` : ""}</span>
+          <div>
+            <div class="etf-rule-condition core"><span>-7% · ${thresholdPoint(0.07)}</span><strong>10%P₀</strong></div>
+            <div class="etf-rule-condition core"><span>-12% · ${thresholdPoint(0.12)}</span><strong>20%P₀</strong></div>
+            <div class="etf-rule-condition boost"><span>-18% · ${thresholdPoint(0.18)}</span><strong>25%P₀，V最低0.75</strong></div>
+            <div class="etf-rule-condition boost"><span>-25% · ${thresholdPoint(0.25)}</span><strong>25%P₀，系数固定1</strong></div>
+            <div class="etf-rule-condition risk"><span>-35% · ${thresholdPoint(0.35)}</span><strong>15%P₀</strong></div>
+            <div class="etf-rule-condition risk"><span>-45% / 期限</span><strong>剩余5%P₀</strong></div>
+          </div>
+        </div>
+        <div class="etf-rule-condition watch">
+          <span>拆单</span>
+          <strong>普通单档先买50%，第二次收盘仍在线下或再跌2%时买余下50%；回撤收窄3个百分点取消第二笔。单日跨多档改为1/3、1/3、1/3，间隔0、2、5个交易日。</strong>
+        </div>
+        <div class="etf-rule-condition risk">
+          <span>成交闸门</span>
+          <strong>只用限价单；溢价和买卖价差均≤0.15%才执行；溢价&gt;0.30%或价差&gt;0.20%不追价。优先10:00—11:00或14:30—14:55，避开开盘前15分钟。</strong>
+        </div>
+        <div class="etf-rule-condition neutral">
+          <span>18个月进度</span>
+          <strong>3/6/9/12/15/18个月最低完成16.7%/33.3%/50%/66.7%/83.3%/100%；不足部分从P₀扣除并分4周补足。极贵时最多延后一季一次。</strong>
+        </div>
+        <div class="etf-rule-condition neutral">
+          <span>停止与复位</span>
+          <strong>达到目标或整体权益达到70%即停止；每档每轮仅一次，全收益创新高后重置。完成后低于90%优先补足，高于110%暂停，高于120%或整体权益超过75%再平衡。</strong>
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function renderDividendLowVolRulebook(rule, allocation) {
+  const annualOtc = rule.dailyBase * ETF_RULE_TRADING_DAYS_PER_YEAR;
+  const opportunityPool = Math.max(0, allocation.targetAmount - allocation.marketValue - annualOtc);
+  return `
+    <details class="etf-rule-rulebook">
+      <summary>515450建仓规则</summary>
+      <div class="etf-rule-conditions">
+        <div class="etf-rule-condition core">
+          <span>双通道</span>
+          <strong>008163 ${escapeHTML(etfRuleMoney(rule.dailyBase, "/日"))}持续定投；515450只承担场内机会建仓。现有563020计入持仓但不再新增。</strong>
+        </div>
+        <div class="etf-rule-condition boost">
+          <span>机会资金</span>
+          <strong>P=max(0，目标${escapeHTML(etfAllocationMoney(allocation.targetAmount))}－当前红利持仓${escapeHTML(etfAllocationMoney(allocation.marketValue))}－未来一年场外${escapeHTML(etfAllocationMoney(annualOtc))})=${escapeHTML(etfAllocationMoney(opportunityPool))}</strong>
+        </div>
+        <div class="etf-rule-condition watch">
+          <span>估值确认</span>
+          <strong>V=75%×股债利差分位+25%×(100－PB历史分位)。V&lt;40不触发；V≥60启用回撤档；V≥85首档提前到-4%。</strong>
+        </div>
+        <div class="etf-rule-water-guide">
+          <span>515450成立以来总回报回撤档位</span>
+          <div>
+            <div class="etf-rule-condition core"><span>-6%</span><strong>15%P</strong></div>
+            <div class="etf-rule-condition core"><span>-9%</span><strong>25%P</strong></div>
+            <div class="etf-rule-condition boost"><span>-12%</span><strong>30%P</strong></div>
+            <div class="etf-rule-condition watch"><span>-15%</span><strong>20%P，确认无结构性问题</strong></div>
+            <div class="etf-rule-condition risk"><span>-20%</span><strong>复核后投入剩余10%P</strong></div>
+          </div>
+        </div>
+        <div class="etf-rule-condition watch">
+          <span>执行护栏</span>
+          <strong>每档每轮只触发一次；每档拆两笔，第二笔间隔3—5个交易日或再跌1.5%—2%；单日最多40%P；创新高后重置。一年未触发的余额分6个月投入。</strong>
+        </div>
+        <div class="etf-rule-condition neutral">
+          <span>恐慌指标</span>
+          <strong>只接受A股期权隐含波动率作半档加速器；VIX不用于515450。自动数据未接入前不触发。</strong>
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function renderSP500Rulebook(rule, allocation) {
+  const annualOtc = rule.dailyBase * ETF_RULE_TRADING_DAYS_PER_YEAR;
+  const opportunityPool = Math.max(0, allocation.targetAmount - allocation.marketValue - annualOtc);
+  return `
+    <details class="etf-rule-rulebook">
+      <summary>${escapeHTML(rule.tacticalSymbol)}机会仓规则</summary>
+      <div class="etf-rule-conditions">
+        <div class="etf-rule-condition core">
+          <span>双通道</span>
+          <strong>018738 ${escapeHTML(etfRuleMoney(rule.dailyBase, "/日"))}持续场外定投；${escapeHTML(rule.tacticalSymbol)}只承担场内机会仓，二者合并计入标普配置。</strong>
+        </div>
+        <div class="etf-rule-condition boost">
+          <span>机会资金</span>
+          <strong>P=max(0，目标${escapeHTML(etfAllocationMoney(allocation.targetAmount))}－当前标普持仓${escapeHTML(etfAllocationMoney(allocation.marketValue))}－未来一年场外${escapeHTML(etfAllocationMoney(annualOtc))})=${escapeHTML(etfAllocationMoney(opportunityPool))}</strong>
+        </div>
+        <div class="etf-rule-condition watch">
+          <span>触发与估值</span>
+          <strong>SPTR全收益回撤决定档位。未来PE&lt;40%且盈利利差&gt;60%可候选提前半档；PE&gt;80%且利差&lt;20%时，-8%与-12%档减半。-18%以下以回撤优先。</strong>
+        </div>
+        <div class="etf-rule-water-guide">
+          <span>SPTR全收益高点回撤档位</span>
+          <div>
+            <div class="etf-rule-condition core"><span>-8%</span><strong>10%P</strong></div>
+            <div class="etf-rule-condition core"><span>-12%</span><strong>20%P</strong></div>
+            <div class="etf-rule-condition boost"><span>-18%</span><strong>25%P</strong></div>
+            <div class="etf-rule-condition boost"><span>-25%</span><strong>25%P</strong></div>
+            <div class="etf-rule-condition risk"><span>-35%</span><strong>15%P</strong></div>
+            <div class="etf-rule-condition neutral"><span>时间仓</span><strong>剩余5%P</strong></div>
+          </div>
+        </div>
+        <div class="etf-rule-condition watch">
+          <span>VIX速度</span>
+          <strong>VIX&lt;20正常拆两笔；20—25轻度压力；25—35可一次完成本档；≥35在SPTR已触发首档后才可候选提前半档。VIX不能单独触发。</strong>
+        </div>
+        <div class="etf-rule-condition neutral">
+          <span>盈利修正</span>
+          <strong>未来盈利预期三个月下调超过10%时取消提前半档；免费同口径数据未确认时也不提前，但不停止018738基础定投。</strong>
+        </div>
+        <div class="etf-rule-condition risk">
+          <span>执行闸门</span>
+          <strong>人民币全收益回撤明显不足时减半；${escapeHTML(rule.tacticalSymbol)}估算溢价≤0.5%正常、0.5%—1%减半、&gt;1%暂停。单个A股交易日最多30%P，只使用限价单。</strong>
+        </div>
+        <div class="etf-rule-condition neutral">
+          <span>复位</span>
+          <strong>每档每轮只触发一次，SPTR全收益创新高后重置。每档拆两笔，第二笔间隔2—3个美股交易日或SPTR再跌2%。</strong>
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function renderNasdaq100Rulebook(rule, allocation) {
+  const annualOtc = rule.dailyBase * ETF_RULE_TRADING_DAYS_PER_YEAR;
+  const opportunityPool = Math.max(0, allocation.targetAmount - allocation.marketValue - annualOtc);
+  return `
+    <details class="etf-rule-rulebook">
+      <summary>${escapeHTML(rule.tacticalSymbol)}机会仓规则</summary>
+      <div class="etf-rule-conditions">
+        <div class="etf-rule-condition core">
+          <span>双通道</span>
+          <strong>021000 ${escapeHTML(etfRuleMoney(rule.dailyBase, "/日"))}持续场外定投；${escapeHTML(rule.tacticalSymbol)}只承担场内机会仓。</strong>
+        </div>
+        <div class="etf-rule-condition boost">
+          <span>机会资金</span>
+          <strong>P=max(0，目标${escapeHTML(etfAllocationMoney(allocation.targetAmount))}－当前纳指持仓${escapeHTML(etfAllocationMoney(allocation.marketValue))}－未来一年场外${escapeHTML(etfAllocationMoney(annualOtc))})=${escapeHTML(etfAllocationMoney(opportunityPool))}</strong>
+        </div>
+        <div class="etf-rule-condition watch">
+          <span>触发与估值</span>
+          <strong>XNDX全收益回撤决定档位。未来PE&lt;30%分位或盈利利差&gt;70%分位可提前半档；PE&gt;80%且利差&lt;20%时，-10%与-15%档减半。-20%以下以回撤优先。</strong>
+        </div>
+        <div class="etf-rule-water-guide">
+          <span>XNDX全收益高点回撤档位</span>
+          <div>
+            <div class="etf-rule-condition core"><span>-10%</span><strong>10%P</strong></div>
+            <div class="etf-rule-condition core"><span>-15%</span><strong>20%P</strong></div>
+            <div class="etf-rule-condition boost"><span>-20%</span><strong>25%P</strong></div>
+            <div class="etf-rule-condition boost"><span>-30%</span><strong>25%P</strong></div>
+            <div class="etf-rule-condition risk"><span>-40%</span><strong>15%P</strong></div>
+            <div class="etf-rule-condition neutral"><span>时间仓</span><strong>剩余5%P</strong></div>
+          </div>
+        </div>
+        <div class="etf-rule-condition watch">
+          <span>VXN速度</span>
+          <strong>VXN&lt;30分两笔；30—40可一次完成本档；40—50为强恐慌；&gt;50可提前下一档的一半。VXN不能单独触发。</strong>
+        </div>
+        <div class="etf-rule-condition risk">
+          <span>执行闸门</span>
+          <strong>人民币全收益回撤明显不足时减半；${escapeHTML(rule.tacticalSymbol)}估算溢价≤0.5%正常、0.5%—1%减半、&gt;1%暂停。单个A股交易日最多30%P，不使用市价单追涨。</strong>
+        </div>
+        <div class="etf-rule-condition neutral">
+          <span>复位与期限</span>
+          <strong>每档每轮只触发一次，XNDX全收益创新高后重置。18个月未出现-10%时，剩余机会仓的一半分6个月投入。</strong>
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function renderEtfRuleRulebook(rule, allocation) {
+  if (rule.symbol === "022434") return renderA500Rulebook(rule, allocation);
+  if (rule.symbol === "008163") return renderDividendLowVolRulebook(rule, allocation);
+  if (rule.symbol === "018738") return renderSP500Rulebook(rule, allocation);
+  if (rule.symbol === "021000") return renderNasdaq100Rulebook(rule, allocation);
+  return `
+    <details class="etf-rule-rulebook">
+      <summary>执行规则</summary>
+      <div class="etf-rule-conditions">
+        <div class="etf-rule-condition core">
+          <span>基础定投</span>
+          <strong>${escapeHTML(`${etfRuleMoney(rule.dailyBase, "/日")} · ${etfRuleMoney(rule.monthlyBase, "/月")}，不根据估值择时`)}</strong>
+        </div>
+        <div class="etf-rule-condition boost">
+          <span>回撤加仓</span>
+          <strong>回撤10% / 20% / 30%时，分别候选投入当前目标缺口的20% / 30% / 50%；人工确认且每阶段只执行一次。</strong>
+        </div>
+        <div class="etf-rule-condition watch">
+          <span>交易渠道</span>
+          <strong>${escapeHTML(rule.venueRule)}</strong>
+        </div>
+        <div class="etf-rule-water-guide">
+          <span>水位参考，不改变基础定投</span>
+          <div>${ETF_RULE_LEVELS.map((level) => renderEtfRuleConditionItem(rule, level.key)).join("")}</div>
+        </div>
       </div>
     </details>
   `;
@@ -4181,58 +5088,119 @@ function renderEtfRuleRulebook(rule) {
 
 function renderEtfRuleCard(rule, allocationSnapshot) {
   const entry = etfRuleExecution(rule, allocationSnapshot);
-  const meta = etfRuleLevelMeta(entry.level);
-  const daily = etfRuleDailyAmount(rule, entry.level);
-  const monthly = etfRuleAmount(rule, entry.level, "monthly");
+  const meta = etfRulePlanMeta(entry.planState);
+  const daily = etfRulePlannedDailyAmount(rule, entry);
+  const monthly = etfRulePlannedMonthlyAmount(rule, entry);
   const allocation = etfAllocationEntry(allocationSnapshot, rule.symbol);
+  const decision = etfTacticalDecision(rule, allocationSnapshot);
   return `
-    <article class="etf-rule-card">
+    <article class="etf-rule-card etf-detail-card">
       <div class="etf-rule-card-head">
         <div>
           <strong>${escapeHTML(rule.name)}</strong>
           <span>${escapeHTML(rule.symbol)}</span>
         </div>
         <div class="etf-rule-card-actions">
-          <button class="etf-rule-buy-button" type="button" data-etf-rule-buy="${escapeHTML(rule.symbol)}" title="&#20080;&#20837; ${escapeHTML(rule.name)}" aria-label="&#20080;&#20837; ${escapeHTML(rule.name)}">&#20080;&#20837;</button>
+          <button class="etf-rule-buy-button" type="button" data-etf-rule-buy="${escapeHTML(rule.symbol)}" title="记录场外定投 ${escapeHTML(rule.name)}" aria-label="记录场外定投 ${escapeHTML(rule.name)}">记录场外</button>
           <em class="${meta.tone}">${escapeHTML(meta.label)}</em>
         </div>
       </div>
       ${renderEtfAllocationBar(allocation)}
       <div class="etf-rule-selected">
         <div>
-          <span>今日计划</span>
+          <span>场外日投</span>
           <strong>${escapeHTML(etfRuleMoney(daily, "/日"))}</strong>
         </div>
         <div>
-          <span>月度节奏</span>
+          <span>场外月投</span>
           <strong>${escapeHTML(etfRuleMoney(monthly, "/月"))}</strong>
         </div>
       </div>
-      ${renderEtfRuleLiveStatus(rule, entry)}
-      ${renderEtfRuleRulebook(rule)}
+      ${renderEtfRuleLiveStatus(rule, entry, allocation, decision)}
+      ${renderEtfStageTimeline(rule, decision)}
+      ${renderEtfSourceAudit(rule)}
+      ${renderEtfRuleRulebook(rule, allocation)}
     </article>
   `;
 }
 
 function renderEtfRuleActionItem(rule, allocationSnapshot) {
   const entry = etfRuleExecution(rule, allocationSnapshot);
-  const meta = etfRuleLevelMeta(entry.level);
+  const meta = etfRulePlanMeta(entry.planState);
   const status = etfRuleStatus(rule.symbol);
-  const daily = etfRuleDailyAmount(rule, entry.level);
+  const daily = etfRulePlannedDailyAmount(rule, entry);
   const allocation = etfAllocationEntry(allocationSnapshot, rule.symbol);
   const statusDate = status?.asOf || status?.updatedAt || "-";
+  const decision = etfTacticalDecision(rule, allocationSnapshot);
+  const primary = decision.state === "ready"
+    ? `第${decision.nextInstallment}/${decision.installmentCount}批 ${etfAllocationMoney(decision.installmentAmount)}`
+    : decision.state === "blocked"
+      ? `${decision.stageKey && decision.nextInstallment ? `第${decision.nextInstallment}/${decision.installmentCount}批 ${etfAllocationMoney(decision.installmentAmount)} · ` : ""}${decision.blocker || "暂停执行"}`
+      : decision.label;
   return `
-    <article class="etf-rule-action-item">
-      <div>
+    <article class="etf-rule-action-item ${escapeHTML(decision.tone || "neutral")}" data-etf-detail-open="${escapeHTML(rule.symbol)}" tabindex="0">
+      <div class="etf-rule-action-main">
         <strong>${escapeHTML(rule.name)}</strong>
-        <span>${escapeHTML(rule.symbol)} · ${escapeHTML(statusDate)}</span>
+        <span>${escapeHTML(rule.symbol)} · 场外 ${escapeHTML(etfRuleMoney(daily, "/日"))} · 配置 ${escapeHTML(percent(allocation.progressPercent, false))}</span>
+        <small>${escapeHTML(primary || "等待数据")}</small>
       </div>
       <div class="etf-rule-action-state">
-        <em class="${meta.tone}">${escapeHTML(meta.label)}</em>
-        <strong>${escapeHTML(etfRuleMoney(daily, "/日"))}</strong>
-        <small>${escapeHTML(percent(allocation.progressPercent, false))}</small>
+        <em class="${escapeHTML(decision.tone || meta.tone)}">${escapeHTML(decision.stateLabel || meta.label)}</em>
+        <strong>${escapeHTML(rule.tacticalSymbol)}</strong>
+        <small>${escapeHTML(status?.signalAsOf || statusDate)}</small>
       </div>
     </article>
+  `;
+}
+
+function etfTrackerHealthSummary() {
+  const statuses = ETF_RULE_TRACKER_RULES.map((rule) => etfRuleStatus(rule.symbol));
+  const healthy = statuses.filter((status) => status?.signalHealth === "healthy" && status?.executionHealth !== "blocked").length;
+  const degraded = statuses.filter((status) => status?.signalHealth === "degraded").length;
+  const blocked = statuses.filter((status) => !status || status?.signalHealth === "blocked" || status?.executionHealth === "blocked").length;
+  const usable = statuses.filter((status) => status && status.signalHealth !== "blocked" && status.executionHealth !== "blocked").length;
+  const updatedAt = statuses.map((status) => String(status?.updatedAt || "")).filter(Boolean).sort().at(-1) || "-";
+  return { healthy, degraded, blocked, usable, updatedAt };
+}
+
+function renderEtfOverview(allocationSnapshot) {
+  return `
+    <div class="etf-overview-grid">
+      ${ETF_RULE_TRACKER_RULES.map((rule) => {
+        const status = etfRuleStatus(rule.symbol);
+        const allocation = etfAllocationEntry(allocationSnapshot, rule.symbol);
+        const decision = etfTacticalDecision(rule, allocationSnapshot);
+        const health = etfDecisionHealth(status);
+        return `<button type="button" class="etf-overview-item" data-etf-detail-open="${escapeHTML(rule.symbol)}">
+          <span>${escapeHTML(rule.name)}</span>
+          <strong>${escapeHTML(decision.state === "ready" ? `第${decision.nextInstallment}批 ${etfAllocationMoney(decision.installmentAmount)}` : decision.stateLabel)}</strong>
+          <small>配置 ${escapeHTML(percent(allocation.progressPercent, false))} · 信号${escapeHTML(health.signal === "healthy" ? "正常" : health.signal === "degraded" ? "降级" : "暂停")}</small>
+        </button>`;
+      }).join("")}
+    </div>
+  `;
+}
+
+function preferredEtfDetail(allocationSnapshot) {
+  const decisions = ETF_RULE_TRACKER_RULES.map((rule) => ({ rule, decision: etfTacticalDecision(rule, allocationSnapshot) }));
+  return decisions.find((item) => item.decision.state === "ready")?.rule.symbol
+    || decisions.find((item) => item.decision.stageKey)?.rule.symbol
+    || "overview";
+}
+
+function renderEtfDetailWorkspace(allocationSnapshot) {
+  if (!activeEtfDetailSymbol) activeEtfDetailSymbol = preferredEtfDetail(allocationSnapshot);
+  const selectedRule = etfRuleBySymbol(activeEtfDetailSymbol);
+  return `
+    <div class="etf-detail-workspace">
+      <div class="etf-detail-tabs" role="tablist" aria-label="ETF追踪详情">
+        <button type="button" class="${activeEtfDetailSymbol === "overview" ? "active" : ""}" data-etf-detail-tab="overview">总览</button>
+        ${ETF_RULE_TRACKER_RULES.map((rule) => `<button type="button" class="${activeEtfDetailSymbol === rule.symbol ? "active" : ""}" data-etf-detail-tab="${escapeHTML(rule.symbol)}">${escapeHTML(rule.symbol === "022434" ? "A500" : rule.symbol === "008163" ? "红利低波" : rule.symbol === "018738" ? "标普500" : "纳指100")}</button>`).join("")}
+      </div>
+      <div class="etf-detail-content">
+        ${selectedRule ? renderEtfRuleCard(selectedRule, allocationSnapshot) : renderEtfOverview(allocationSnapshot)}
+      </div>
+    </div>
   `;
 }
 
@@ -4240,6 +5208,9 @@ function renderEtfRuleTracker() {
   if (!elements.etfRuleTracker) return;
   const allocationSnapshot = etfAllocationSnapshot();
   const totals = etfRuleTrackerTotals(allocationSnapshot);
+  const decisions = ETF_RULE_TRACKER_RULES.map((rule) => etfTacticalDecision(rule, allocationSnapshot));
+  const opportunityCount = decisions.filter((decision) => decision.state === "ready").length;
+  const health = etfTrackerHealthSummary();
   elements.etfRuleTracker.innerHTML = `
     <div class="etf-rule-tracker">
       <div class="panel-head compact etf-rule-head">
@@ -4247,25 +5218,21 @@ function renderEtfRuleTracker() {
           <p class="eyebrow">ETF Rules</p>
           <h2>ETF追踪</h2>
         </div>
-        ${renderEtfPoolProgress(allocationSnapshot)}
+        <div class="etf-head-tools">
+          ${renderEtfPoolProgress(allocationSnapshot)}
+          <button type="button" class="icon-button etf-refresh-button" data-etf-execution-refresh title="刷新场内执行行情" aria-label="刷新场内执行行情">↻</button>
+        </div>
       </div>
       <div class="etf-rule-summary">
-        <div><span>日计划</span><strong>${escapeHTML(etfRuleMoney(totals.daily, "/日"))}</strong></div>
-        <div><span>月计划</span><strong>${escapeHTML(etfRuleMoney(totals.monthly, "/月"))}</strong></div>
-        <div><span>自动触发</span><strong>${escapeHTML(`${totals.active}/4`)}</strong></div>
+        <div><span>场外定投</span><strong>${escapeHTML(`${totals.active}/${ETF_RULE_TRACKER_RULES.length}`)}</strong><small>${escapeHTML(etfRuleMoney(totals.daily, "/日"))}</small></div>
+        <div><span>场内机会</span><strong>${escapeHTML(String(opportunityCount))}</strong><small>${opportunityCount ? "需要处理" : "暂无可执行"}</small></div>
+        <div><span>数据健康</span><strong>${escapeHTML(`${health.usable}/${ETF_RULE_TRACKER_RULES.length}`)}</strong><small>${escapeHTML([health.degraded ? `${health.degraded}项降级` : "", health.blocked ? `${health.blocked}项暂停` : ""].filter(Boolean).join(" · ") || "关键数据正常")}</small></div>
+        <div><span>最近更新</span><strong>${escapeHTML(health.updatedAt === "-" ? "-" : health.updatedAt.slice(5, 16))}</strong><small>${chinaAshareMarketOpenClient() ? "盘中每60秒" : "收盘参考"}</small></div>
       </div>
       <div class="etf-rule-action-list">
         ${ETF_RULE_TRACKER_RULES.map((rule) => renderEtfRuleActionItem(rule, allocationSnapshot)).join("")}
       </div>
-      <details class="etf-rule-detail-layer">
-        <summary>
-          <span>规则明细</span>
-          <strong>自动水位指标和五档规则</strong>
-        </summary>
-        <div class="etf-rule-grid">
-          ${ETF_RULE_TRACKER_RULES.map((rule) => renderEtfRuleCard(rule, allocationSnapshot)).join("")}
-        </div>
-      </details>
+      ${renderEtfDetailWorkspace(allocationSnapshot)}
     </div>
   `;
 }
@@ -7482,44 +8449,79 @@ function setEtfBuyField(name, value) {
   if (field) field.value = value;
 }
 
-function openEtfBuyDialog(symbol) {
+function openEtfBuyDialog(symbol, options = {}) {
   const rule = etfRuleBySymbol(symbol);
   if (!rule || !elements.etfBuyDialog || !elements.etfBuyForm) return;
-  const fund = findTradeFund(rule.symbol);
-  const entry = etfRuleEntry(rule.symbol);
-  const daily = etfRuleDailyAmount(rule, entry.level);
-  const currentPrice = finiteNumber(fund?.currentPrice);
+  const tactical = Boolean(options.tactical);
+  const override = Boolean(options.override);
+  const allocationSnapshot = etfAllocationSnapshot();
+  const decision = etfTacticalDecision(rule, allocationSnapshot);
+  const targetSymbol = tactical ? rule.tacticalSymbol : rule.symbol;
+  const targetName = tactical ? rule.tacticalName : rule.name;
+  const fund = findTradeFund(targetSymbol);
+  const execution = etfRuleExecution(rule, allocationSnapshot);
+  const daily = etfRulePlannedDailyAmount(rule, execution);
+  const metricPrice = finiteNumber(etfRuleMetric(etfRuleStatus(rule.symbol), "tacticalMarketPrice")?.value);
+  const fundPrice = finiteNumber(fund?.currentPrice);
+  const currentPrice = Number.isFinite(fundPrice) && fundPrice > 0 ? fundPrice : metricPrice;
+  const amount = tactical ? finiteNumber(decision.installmentAmount) : daily;
+  if (tactical && (!decision.stageKey || !decision.nextInstallment)) {
+    window.alert("当前没有可记录的场内批次");
+    return;
+  }
 
   elements.etfBuyForm.reset();
-  setEtfBuyField("symbol", rule.symbol);
-  setEtfBuyField("name", rule.name);
+  setEtfBuyField("symbol", targetSymbol);
+  setEtfBuyField("name", targetName);
+  setEtfBuyField("mode", tactical ? "tactical" : "otc");
+  setEtfBuyField("trackerSymbol", rule.symbol);
+  setEtfBuyField("roundId", etfExecutionPlan(rule)?.roundId || "");
+  setEtfBuyField("stageKey", decision.stageKey || "");
+  setEtfBuyField("stageThreshold", decision.stageThreshold || "");
+  setEtfBuyField("installment", decision.nextInstallment || "");
+  setEtfBuyField("installmentCount", decision.installmentCount || "");
+  setEtfBuyField("signalAsOf", decision.signalAsOf || "");
+  setEtfBuyField("recommendedAmount", decision.installmentAmount || "");
+  setEtfBuyField("stagePlannedAmount", decision.plannedAmount || decision.candidateAmount || "");
+  setEtfBuyField("override", override ? "true" : "false");
   setEtfBuyField("price", Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice.toFixed(4) : "");
-  setEtfBuyField("amount", daily > 0 ? String(daily) : "");
-  setEtfBuyField("reason", "ETF\u8ffd\u8e2a\u4e70\u5165\uff1a" + rule.name);
-  if (elements.etfBuyFundLabel) {
-    elements.etfBuyFundLabel.textContent = `${rule.name} ${rule.symbol}`;
+  setEtfBuyField("amount", amount > 0 ? String(Math.round(amount * 100) / 100) : "");
+  setEtfBuyField("reason", tactical
+    ? `${override ? "非规则补记" : "ETF场内机会仓"}：${rule.tacticalSymbol} ${decision.stageKey} 第${decision.nextInstallment}批`
+    : "ETF追踪买入：" + rule.name);
+  if (elements.etfBuyFundLabel) elements.etfBuyFundLabel.textContent = `${targetName} ${targetSymbol}`;
+  if (elements.etfBuyModeLabel) elements.etfBuyModeLabel.textContent = tactical ? "场内批次" : "场外基金";
+  if (elements.etfBuyPriceLabel) elements.etfBuyPriceLabel.textContent = tactical ? "成交价格" : "买入净值";
+  if (elements.etfBuyAmountLabel) elements.etfBuyAmountLabel.textContent = tactical ? "成交金额" : "买入金额";
+  if (elements.etfBuyContext) {
+    elements.etfBuyContext.hidden = !tactical;
+    elements.etfBuyContext.textContent = tactical
+      ? `${decision.stateLabel} · ${decision.stageKey} · 建议${etfAllocationMoney(decision.installmentAmount)}${override ? " · 本次将标记为非规则执行" : ""}`
+      : "";
   }
   elements.etfBuyDialog.showModal();
 }
 
 function tradeFromEtfRuleBuyForm(formData) {
   const symbol = normalizeFundSymbol(formData.get("symbol"));
-  const rule = etfRuleBySymbol(symbol);
+  const mode = String(formData.get("mode") || "otc");
+  const trackerSymbol = normalizeFundSymbol(formData.get("trackerSymbol") || symbol);
+  const rule = etfRuleBySymbol(trackerSymbol);
   const fund = findTradeFund(symbol);
   const price = Number(formData.get("price"));
   const amount = Number(formData.get("amount"));
   const reason = String(formData.get("reason") ?? "").trim();
   const currentPrice = finiteNumber(fund?.currentPrice);
-  if (!rule) throw new Error("\u672a\u627e\u5230\u5bf9\u5e94\u7684ETF\u8ffd\u8e2a\u57fa\u91d1");
-  if (!Number.isFinite(price) || price <= 0) throw new Error("\u4e70\u5165\u51c0\u503c\u5fc5\u987b\u5927\u4e8e0");
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error("\u4e70\u5165\u91d1\u989d\u5fc5\u987b\u5927\u4e8e0");
-  if (!reason) throw new Error("\u8bf7\u586b\u5199\u4e70\u5165\u7406\u7531");
-  return {
+  if (!rule) throw new Error("未找到对应的ETF追踪基金");
+  if (!Number.isFinite(price) || price <= 0) throw new Error("成交价格必须大于0");
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("买入金额必须大于0");
+  if (!reason) throw new Error("请填写买入理由");
+  const trade = {
     id: Date.now(),
     date: new Date().toISOString().slice(0, 10),
     assetType: "fund",
-    symbol: rule.symbol,
-    name: fund?.name || rule.name,
+    symbol,
+    name: fund?.name || String(formData.get("name") || rule.name),
     side: "buy",
     shares: amount / price,
     price,
@@ -7527,6 +8529,24 @@ function tradeFromEtfRuleBuyForm(formData) {
     currentPrice: Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice : price,
     reason
   };
+  if (mode === "tactical") {
+    const isOverride = String(formData.get("override")) === "true";
+    trade.etfExecution = {
+      trackerSymbol: rule.symbol,
+      tacticalSymbol: rule.tacticalSymbol,
+      roundId: String(formData.get("roundId") || ""),
+      stageKey: String(formData.get("stageKey") || ""),
+      stageThreshold: Number(formData.get("stageThreshold")),
+      installment: Number(formData.get("installment")),
+      installmentCount: Number(formData.get("installmentCount")),
+      signalAsOf: String(formData.get("signalAsOf") || ""),
+      recommendedAmount: Number(formData.get("recommendedAmount")),
+      stagePlannedAmount: Number(formData.get("stagePlannedAmount")),
+      override: isOverride,
+      overrideReason: isOverride ? reason : ""
+    };
+  }
+  return trade;
 }
 
 async function addTrade(formData) {
@@ -7730,6 +8750,66 @@ async function updateQuotes() {
   } else {
     setQuoteUpdateStatus(`已更新 ${result.updated} 项行情`, "success");
   }
+}
+
+function chinaAshareMarketOpenClient(referenceDate = new Date()) {
+  const day = referenceDate.getDay();
+  if (day === 0 || day === 6) return false;
+  const minutes = referenceDate.getHours() * 60 + referenceDate.getMinutes();
+  return (minutes >= 9 * 60 + 30 && minutes <= 11 * 60 + 30) || (minutes >= 13 * 60 && minutes <= 15 * 60);
+}
+
+async function updateETFExecutionQuotes({ silent = false } = {}) {
+  if (!USE_BACKEND || etfExecutionQuoteUpdating) return;
+  etfExecutionQuoteUpdating = true;
+  const buttons = document.querySelectorAll("[data-etf-execution-refresh]");
+  buttons.forEach((button) => {
+    button.disabled = true;
+    button.classList.add("is-loading");
+  });
+  if (!silent) setQuoteUpdateStatus("正在刷新四只场内ETF执行行情...");
+  try {
+    const result = await requestJSON("/api/etf/execution-quotes/update", { method: "POST", timeoutMs: 90000 });
+    setLoadedState(result.state);
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+    const skipped = result.skipped ?? [];
+    if (!silent) {
+      setQuoteUpdateStatus(skipped.length
+        ? `场内行情已刷新，${skipped.length}项暂不可用`
+        : `场内行情已刷新 ${result.updated}/${ETF_RULE_TRACKER_RULES.length}`,
+      skipped.length ? "error" : "success");
+    }
+  } catch (error) {
+    if (!silent) setQuoteUpdateStatus(`场内行情刷新失败：${error.message}`, "error");
+  } finally {
+    etfExecutionQuoteUpdating = false;
+    document.querySelectorAll("[data-etf-execution-refresh]").forEach((button) => {
+      button.disabled = false;
+      button.classList.remove("is-loading");
+    });
+  }
+}
+
+function scheduleETFExecutionQuoteRefresh() {
+  if (etfExecutionQuoteTimer) window.clearInterval(etfExecutionQuoteTimer);
+  etfExecutionQuoteTimer = window.setInterval(() => {
+    if (!document.hidden && chinaAshareMarketOpenClient()) updateETFExecutionQuotes({ silent: true });
+  }, 60000);
+}
+
+async function cancelETFExecutionStage(rule) {
+  const decision = etfTacticalDecision(rule, etfAllocationSnapshot());
+  const plan = etfExecutionPlan(rule);
+  if (!decision.stageKey || !plan) return;
+  const reason = window.prompt("填写取消剩余批次的原因");
+  if (!reason?.trim()) return;
+  setLoadedState(await requestJSON("/api/etf/execution-stages/cancel", {
+    method: "POST",
+    body: JSON.stringify({ trackerSymbol: rule.symbol, roundId: plan.roundId, stageKey: decision.stageKey, reason: reason.trim() })
+  }));
+  localStorage.removeItem(STORAGE_KEY);
+  render();
 }
 
 async function syncCloudPortfolio() {
@@ -8350,6 +9430,56 @@ document.addEventListener("click", (event) => {
   openEtfBuyDialog(button.dataset.etfRuleBuy);
 });
 
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-etf-tactical-buy]");
+  if (!button) return;
+  openEtfBuyDialog(button.dataset.etfTacticalBuy, { tactical: true });
+});
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-etf-tactical-override]");
+  if (!button) return;
+  openEtfBuyDialog(button.dataset.etfTacticalOverride, { tactical: true, override: true });
+});
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-etf-stage-cancel]");
+  if (!button) return;
+  const rule = etfRuleBySymbol(button.dataset.etfStageCancel);
+  if (!rule) return;
+  try {
+    button.disabled = true;
+    await cancelETFExecutionStage(rule);
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-etf-execution-refresh]");
+  if (!button) return;
+  updateETFExecutionQuotes();
+});
+
+document.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-etf-detail-tab], [data-etf-detail-open]");
+  if (!target || event.target.closest("button[data-etf-tactical-buy], button[data-etf-tactical-override], button[data-etf-stage-cancel], button[data-etf-rule-buy]")) return;
+  activeEtfDetailSymbol = target.dataset.etfDetailTab || target.dataset.etfDetailOpen || "overview";
+  renderEtfRuleTracker();
+  document.querySelector(".etf-detail-workspace")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const target = event.target.closest("[data-etf-detail-open]");
+  if (!target) return;
+  event.preventDefault();
+  activeEtfDetailSymbol = target.dataset.etfDetailOpen;
+  renderEtfRuleTracker();
+});
+
 document.querySelector("#closeEtfBuyPanel")?.addEventListener("click", () => {
   elements.etfBuyDialog?.close();
 });
@@ -8480,6 +9610,12 @@ async function init() {
   }
   syncCash();
   handleRoute(window.location.hash.slice(1));
+  scheduleETFExecutionQuoteRefresh();
+  if (!document.hidden && chinaAshareMarketOpenClient()) updateETFExecutionQuotes({ silent: true });
 }
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && chinaAshareMarketOpenClient()) updateETFExecutionQuotes({ silent: true });
+});
 
 init();

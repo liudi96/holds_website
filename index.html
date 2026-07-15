@@ -338,18 +338,31 @@
 
         <input name="symbol" type="hidden" />
         <input name="name" type="hidden" />
+        <input name="mode" type="hidden" value="otc" />
+        <input name="trackerSymbol" type="hidden" />
+        <input name="roundId" type="hidden" />
+        <input name="stageKey" type="hidden" />
+        <input name="stageThreshold" type="hidden" />
+        <input name="installment" type="hidden" />
+        <input name="installmentCount" type="hidden" />
+        <input name="signalAsOf" type="hidden" />
+        <input name="recommendedAmount" type="hidden" />
+        <input name="stagePlannedAmount" type="hidden" />
+        <input name="override" type="hidden" value="false" />
         <div class="etf-buy-target">
-          <span>&#22522;&#37329;</span>
+          <span id="etfBuyModeLabel">&#22522;&#37329;</span>
           <strong id="etfBuyFundLabel">-</strong>
         </div>
 
+        <p class="etf-buy-context" id="etfBuyContext" hidden></p>
+
         <div class="form-grid">
           <label>
-            &#20080;&#20837;&#20928;&#20540;
+            <span id="etfBuyPriceLabel">&#20080;&#20837;&#20928;&#20540;</span>
             <input name="price" type="number" min="0.0001" step="0.0001" inputmode="decimal" required />
           </label>
           <label>
-            &#20080;&#20837;&#37329;&#39069;
+            <span id="etfBuyAmountLabel">&#20080;&#20837;&#37329;&#39069;</span>
             <input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required />
           </label>
           <label class="form-grid-wide">

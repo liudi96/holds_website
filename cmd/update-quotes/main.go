@@ -32,28 +32,32 @@ func defaultDataPath(name string) string {
 }
 
 type AppState struct {
-	TotalCapital float64            `json:"totalCapital"`
-	Cash         float64            `json:"cash"`
-	FX           map[string]float64 `json:"fx"`
-	Trades       []Trade            `json:"trades"`
-	DecisionLogs []DecisionLog      `json:"decisionLogs"`
-	Funds        []Fund             `json:"funds,omitempty"`
-	Holdings     []Holding          `json:"holdings"`
-	Plan         []PlanItem         `json:"plan"`
-	Candidates   []Candidate        `json:"candidates"`
-	Rules        []Rule             `json:"rules"`
+	TotalCapital      float64            `json:"totalCapital"`
+	Cash              float64            `json:"cash"`
+	FX                map[string]float64 `json:"fx"`
+	Trades            []Trade            `json:"trades"`
+	DecisionLogs      []DecisionLog      `json:"decisionLogs"`
+	ETFExecutionPlans json.RawMessage    `json:"etfExecutionPlans,omitempty"`
+	Funds             []Fund             `json:"funds,omitempty"`
+	Holdings          []Holding          `json:"holdings"`
+	Plan              []PlanItem         `json:"plan"`
+	Candidates        []Candidate        `json:"candidates"`
+	Rules             []Rule             `json:"rules"`
 }
 
 type Trade struct {
-	ID           int64   `json:"id"`
-	Date         string  `json:"date"`
-	Symbol       string  `json:"symbol"`
-	Name         string  `json:"name"`
-	Side         string  `json:"side"`
-	Shares       float64 `json:"shares"`
-	Price        float64 `json:"price"`
-	Currency     string  `json:"currency"`
-	CurrentPrice float64 `json:"currentPrice"`
+	ID           int64           `json:"id"`
+	Date         string          `json:"date"`
+	Symbol       string          `json:"symbol"`
+	Name         string          `json:"name"`
+	Side         string          `json:"side"`
+	Shares       float64         `json:"shares"`
+	Price        float64         `json:"price"`
+	Currency     string          `json:"currency"`
+	CurrentPrice float64         `json:"currentPrice"`
+	AssetType    string          `json:"assetType,omitempty"`
+	Reason       string          `json:"reason,omitempty"`
+	ETFExecution json.RawMessage `json:"etfExecution,omitempty"`
 }
 
 type DecisionLog struct {

@@ -43,21 +43,22 @@ var (
 var bundledPortfolioJSON []byte
 
 type AppState struct {
-	TotalCapital     float64            `json:"totalCapital"`
-	Cash             float64            `json:"cash"`
-	FX               map[string]float64 `json:"fx"`
-	Trades           []Trade            `json:"trades"`
-	DecisionLogs     []DecisionLog      `json:"decisionLogs"`
-	PnlHistory       []PnlHistoryEntry  `json:"pnlHistory,omitempty"`
-	Stocks           []Stock            `json:"stocks,omitempty"`
-	Funds            []Fund             `json:"funds,omitempty"`
-	ETFRuleStatuses  []ETFRuleStatus    `json:"etfRuleStatuses,omitempty"`
-	ScreeningWeights ScreeningWeights   `json:"screeningWeights"`
-	Holdings         []Holding          `json:"holdings,omitempty"`
-	Plan             []PlanItem         `json:"plan"`
-	Candidates       []Candidate        `json:"candidates,omitempty"`
-	Rules            []Rule             `json:"rules"`
-	DataStatus       *DataStatus        `json:"dataStatus,omitempty"`
+	TotalCapital      float64            `json:"totalCapital"`
+	Cash              float64            `json:"cash"`
+	FX                map[string]float64 `json:"fx"`
+	Trades            []Trade            `json:"trades"`
+	DecisionLogs      []DecisionLog      `json:"decisionLogs"`
+	PnlHistory        []PnlHistoryEntry  `json:"pnlHistory,omitempty"`
+	Stocks            []Stock            `json:"stocks,omitempty"`
+	Funds             []Fund             `json:"funds,omitempty"`
+	ETFRuleStatuses   []ETFRuleStatus    `json:"etfRuleStatuses,omitempty"`
+	ETFExecutionPlans []ETFExecutionPlan `json:"etfExecutionPlans,omitempty"`
+	ScreeningWeights  ScreeningWeights   `json:"screeningWeights"`
+	Holdings          []Holding          `json:"holdings,omitempty"`
+	Plan              []PlanItem         `json:"plan"`
+	Candidates        []Candidate        `json:"candidates,omitempty"`
+	Rules             []Rule             `json:"rules"`
+	DataStatus        *DataStatus        `json:"dataStatus,omitempty"`
 }
 
 type DataStatus struct {
@@ -85,17 +86,18 @@ type DataStatusIssue struct {
 }
 
 type Trade struct {
-	ID           int64   `json:"id"`
-	Date         string  `json:"date"`
-	AssetType    string  `json:"assetType,omitempty"`
-	Symbol       string  `json:"symbol"`
-	Name         string  `json:"name"`
-	Side         string  `json:"side"`
-	Shares       float64 `json:"shares"`
-	Price        float64 `json:"price"`
-	Currency     string  `json:"currency"`
-	CurrentPrice float64 `json:"currentPrice"`
-	Reason       string  `json:"reason,omitempty"`
+	ID           int64                  `json:"id"`
+	Date         string                 `json:"date"`
+	AssetType    string                 `json:"assetType,omitempty"`
+	Symbol       string                 `json:"symbol"`
+	Name         string                 `json:"name"`
+	Side         string                 `json:"side"`
+	Shares       float64                `json:"shares"`
+	Price        float64                `json:"price"`
+	Currency     string                 `json:"currency"`
+	CurrentPrice float64                `json:"currentPrice"`
+	Reason       string                 `json:"reason,omitempty"`
+	ETFExecution *ETFExecutionTradeMeta `json:"etfExecution,omitempty"`
 }
 
 type DecisionLog struct {
@@ -376,6 +378,8 @@ func main() {
 	mux.HandleFunc("POST /api/research/import", server.handleImportResearch)
 	mux.HandleFunc("GET /api/chatgpt/export", server.handleExportChatGPTContext)
 	mux.HandleFunc("POST /api/quotes/update", server.handleUpdateQuotes)
+	mux.HandleFunc("POST /api/etf/execution-quotes/update", server.handleUpdateETFExecutionQuotes)
+	mux.HandleFunc("POST /api/etf/execution-stages/cancel", server.handleCancelETFExecutionStage)
 	mux.HandleFunc("POST /api/quotes/stocks/update", server.handleUpdateStockQuotes)
 	mux.HandleFunc("POST /api/cloud/sync", server.handleSyncCloudPortfolio)
 	mux.HandleFunc("POST /api/valuation-history/update", server.handleUpdateValuationHistory)
@@ -619,7 +623,12 @@ func (s *Server) handleCreateTrade(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to backup portfolio data")
 		return
 	}
+	if err := validateETFExecutionTrade(&nextState, trade); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	applyTradeToState(&nextState, trade)
+	recordETFExecutionTrade(&nextState, trade)
 	appendTradeDecisionLog(&nextState, trade)
 	if err := saveState(nextState); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save state")
@@ -667,6 +676,7 @@ func (s *Server) handleDeleteTrade(w http.ResponseWriter, r *http.Request) {
 	nextState.Trades = append(nextState.Trades[:tradeIndex], nextState.Trades[tradeIndex+1:]...)
 	reverseTradeFromState(&nextState, trade)
 	removeGeneratedTradeLog(&nextState, trade)
+	rebuildETFExecutionStagesFromTrades(&nextState)
 
 	if err := saveAndHydrateState(&nextState); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -1852,6 +1862,8 @@ func hydrateState(state *AppState) error {
 	if err := mergeRuntimeQuotes(state); err != nil {
 		return err
 	}
+	applyETFDataQuality(state.ETFRuleStatuses, time.Now())
+	syncETFExecutionPlans(state, time.Now())
 	syncStocksFromLegacy(state)
 	status := buildDataStatus()
 	state.DataStatus = &status

@@ -37,27 +37,46 @@ type ETFRuleStatus struct {
 	PendingSince      string          `json:"pendingSince,omitempty"`
 	PendingAsOf       string          `json:"pendingAsOf,omitempty"`
 	PendingDays       int             `json:"pendingDays,omitempty"`
+	SignalHealth      string          `json:"signalHealth,omitempty"`
+	ExecutionHealth   string          `json:"executionHealth,omitempty"`
+	SignalAsOf        string          `json:"signalAsOf,omitempty"`
+	ExecutionAsOf     string          `json:"executionAsOf,omitempty"`
+	BlockingReasons   []string        `json:"blockingReasons,omitempty"`
+	QualityUpdatedAt  string          `json:"qualityUpdatedAt,omitempty"`
 	Metrics           []ETFRuleMetric `json:"metrics,omitempty"`
 	Sources           []ETFRuleSource `json:"sources,omitempty"`
 }
 
 type ETFRuleMetric struct {
-	Key       string   `json:"key"`
-	Label     string   `json:"label"`
-	Value     *float64 `json:"value,omitempty"`
-	Unit      string   `json:"unit,omitempty"`
-	AsOf      string   `json:"asOf,omitempty"`
-	Available bool     `json:"available"`
-	Error     string   `json:"error,omitempty"`
+	Key               string   `json:"key"`
+	Label             string   `json:"label"`
+	Value             *float64 `json:"value,omitempty"`
+	Unit              string   `json:"unit,omitempty"`
+	AsOf              string   `json:"asOf,omitempty"`
+	Available         bool     `json:"available"`
+	Error             string   `json:"error,omitempty"`
+	SourceTier        string   `json:"sourceTier,omitempty"`
+	QualityState      string   `json:"qualityState,omitempty"`
+	QualityMessage    string   `json:"qualityMessage,omitempty"`
+	FetchedAt         string   `json:"fetchedAt,omitempty"`
+	MaxAgeSeconds     int      `json:"maxAgeSeconds,omitempty"`
+	SourceIDs         []string `json:"sourceIds,omitempty"`
+	ValidationValue   *float64 `json:"validationValue,omitempty"`
+	ValidationSource  string   `json:"validationSource,omitempty"`
+	ConflictTolerance float64  `json:"conflictTolerance,omitempty"`
 }
 
 type ETFRuleSource struct {
-	Name string `json:"name"`
-	URL  string `json:"url,omitempty"`
+	Name         string `json:"name"`
+	URL          string `json:"url,omitempty"`
+	Tier         string `json:"tier,omitempty"`
+	QualityState string `json:"qualityState,omitempty"`
+	AsOf         string `json:"asOf,omitempty"`
 }
 
 const (
 	etfRuleDailyMetricMaxAgeDays      = 7
+	etfRuleWeeklyMetricMaxAgeDays     = 14
 	etfRuleMonthlyMetricMaxAgeDays    = 60
 	etfRuleRuntimeTimestampDateLayout = "2006-01-02"
 	historyOfMarketSP500PEURL         = "https://historyofmarket.com/api/sp500/pe.json"
@@ -70,6 +89,7 @@ const (
 	primaryValuationMaxLagDays        = 3
 	chinaBondHistoryURL               = "https://yield.chinabond.com.cn/cbweb-pbc-web/pbc/historyQuery"
 	eastmoneyTreasuryYieldURL         = "https://datacenter-web.eastmoney.com/api/data/get"
+	spChinaLowVolDividendIndexURL     = "https://www.spglobal.com/spdji/en/indices/dividends-factors/sp-china-a-share-largecap-low-volatility-high-dividend-50-index/"
 )
 
 type etfRuleLevel struct {
@@ -94,14 +114,17 @@ type etfRuleConfig struct {
 }
 
 type etfRuleInputs struct {
-	Drawdown                 *float64
-	DrawdownAsOf             string
-	ValuationPercentile      *float64
-	ValuationZScore          *float64
-	DividendYield            *float64
-	DividendYieldPercentile  *float64
-	DividendSpreadPercentile *float64
-	ValuationAsOf            string
+	Drawdown                      *float64
+	DrawdownAsOf                  string
+	ValuationPercentile           *float64
+	ValuationZScore               *float64
+	DividendYield                 *float64
+	DividendYieldPercentile       *float64
+	DividendSpreadPercentile      *float64
+	PBPercentile                  *float64
+	ValuationScore                *float64
+	EarningsYieldSpreadPercentile *float64
+	ValuationAsOf                 string
 }
 
 type etfRuleEvaluation struct {
@@ -111,57 +134,57 @@ type etfRuleEvaluation struct {
 }
 
 var etfRuleLevels = map[string]etfRuleLevel{
-	"quarter": {Key: "quarter", Label: "0.25倍"},
-	"half":    {Key: "half", Label: "0.5倍"},
-	"one":     {Key: "one", Label: "1倍"},
-	"oneHalf": {Key: "oneHalf", Label: "1.5倍"},
-	"two":     {Key: "two", Label: "2倍"},
+	"quarter": {Key: "quarter", Label: "高估"},
+	"half":    {Key: "half", Label: "偏高"},
+	"one":     {Key: "one", Label: "中性"},
+	"oneHalf": {Key: "oneHalf", Label: "偏低"},
+	"two":     {Key: "two", Label: "低估"},
 }
 
 var etfRuleConfigs = []etfRuleConfig{
 	{
 		Symbol:              "022434",
 		Name:                "南方中证A500ETF联接A",
-		PriceSymbol:         "000510CNY010",
-		PriceSourceName:     "中证指数中证A500全收益指数日线",
-		PriceSourceURL:      "https://www.csindex.com.cn/",
+		PriceSymbol:         a500TotalReturnIndexCode,
+		PriceSourceName:     "中证指数中证A500全收益指数官方日线",
+		PriceSourceURL:      a500TotalReturnIndexURL,
 		ValuationMetricKey:  "pePercentile",
-		ValuationMetricName: "中证A500 PE分位",
-		ValuationSourceName: "韭圈儿中证A500 PE分位（优先；乐咕乐股备援）",
-		ValuationSourceURL:  fundDBIndexPageURL,
+		ValuationMetricName: "中证A500滚动PE扩展窗口分位",
+		ValuationSourceName: "中证指数中证A500滚动PE官方序列",
+		ValuationSourceURL:  a500PEHistoryURL,
 		Levels:              etfRuleLevels,
-		Monthly:             map[string]float64{"quarter": 4900, "half": 9800, "one": 19600, "oneHalf": 29400, "two": 39200},
-		Weekly:              map[string]float64{"quarter": 1225, "half": 2450, "one": 4900, "oneHalf": 7350, "two": 9800},
+		Monthly:             fixedETFRuleAmounts(5000),
+		Weekly:              fixedETFRuleAmounts(1250),
 		Evaluate:            evaluateA500Rule,
 	},
 	{
 		Symbol:              "018738",
 		Name:                "博时标普500ETF联接E(人民币)",
-		PriceSymbol:         "SPY",
-		PriceSourceName:     "Nasdaq SPY日线 + State Street官方分红（标普500总收益代理）",
-		PriceSourceURL:      "https://www.ssga.com/library-content/products/fund-data/etfs/us/spdr-etf-historical-distributions.xlsx",
-		ValuationMetricKey:  "pePercentile",
-		ValuationMetricName: "标普500 PE分位",
-		ValuationSourceName: "韭圈儿标普500 PE分位（优先；History of Market CAPE备援）",
-		ValuationSourceURL:  fundDBIndexPageURL,
+		PriceSymbol:         sp500TotalReturnSymbol,
+		PriceSourceName:     "S&P 500 Total Return（SPTR）公开日线",
+		PriceSourceURL:      sp500TotalReturnDataURL,
+		ValuationMetricKey:  "forwardPEPercentile",
+		ValuationMetricName: "标普500未来PE十年分位",
+		ValuationSourceName: "History of Market S&P 500 Forward PE（同一序列计算PE与盈利利差分位）",
+		ValuationSourceURL:  sp500ForwardPEURL,
 		Levels:              etfRuleLevels,
-		Monthly:             map[string]float64{"quarter": 4200, "half": 8400, "one": 16800, "oneHalf": 25200, "two": 33600},
-		Weekly:              map[string]float64{"quarter": 1050, "half": 2100, "one": 4200, "oneHalf": 6300, "two": 8400},
+		Monthly:             fixedETFRuleAmounts(5000),
+		Weekly:              fixedETFRuleAmounts(1250),
 		Evaluate:            evaluateSP500Rule,
 	},
 	{
 		Symbol:              "008163",
 		Name:                "南方标普红利低波50ETF联接A",
 		PriceSymbol:         "515450.SH",
-		PriceSourceName:     "腾讯515450未复权日线 + 东方财富分红（红利指数全收益代理）",
-		PriceSourceURL:      "https://quote.eastmoney.com/sh515450.html",
-		ValuationMetricKey:  "dividendYieldPercentile",
-		ValuationMetricName: "红利低波股息率历史分位",
-		ValuationSourceName: "515450股息率历史（利差主口径；绝对值回退）",
-		ValuationSourceURL:  "https://fundf10.eastmoney.com/fhsp_515450.html",
+		PriceSourceName:     "东方财富515450单位净值 + 每份分红（分红再投资总回报）",
+		PriceSourceURL:      "https://fund.eastmoney.com/515450.html",
+		ValuationMetricKey:  "valuationScore",
+		ValuationMetricName: "红利低波估值得分V",
+		ValuationSourceName: "南方基金515450申购赎回篮子 + 东方财富成分股PB与分红（场内代理）",
+		ValuationSourceURL:  southernETFPCFPageURL,
 		Levels:              etfRuleLevels,
-		Monthly:             map[string]float64{"quarter": 3500, "half": 7000, "one": 14000, "oneHalf": 21000, "two": 28000},
-		Weekly:              map[string]float64{"quarter": 875, "half": 1750, "one": 3500, "oneHalf": 5250, "two": 7000},
+		Monthly:             fixedETFRuleAmounts(5000),
+		Weekly:              fixedETFRuleAmounts(1250),
 		Evaluate:            evaluateDividendLowVolRule,
 	},
 	{
@@ -170,15 +193,25 @@ var etfRuleConfigs = []etfRuleConfig{
 		PriceSymbol:         "XNDX",
 		PriceSourceName:     "Nasdaq官方纳斯达克100总收益指数日线",
 		PriceSourceURL:      "https://indexes.nasdaq.com/Index/Overview/XNDX",
-		ValuationMetricKey:  "pePercentile",
-		ValuationMetricName: "纳指100 PE分位",
-		ValuationSourceName: "韭圈儿纳斯达克100 PE分位（优先；History of Market Forward PE备援）",
-		ValuationSourceURL:  fundDBIndexPageURL,
+		ValuationMetricKey:  "forwardPEPercentile",
+		ValuationMetricName: "纳指100未来PE十年分位",
+		ValuationSourceName: "History of Market Nasdaq 100 Forward PE（同一序列计算PE与盈利利差分位）",
+		ValuationSourceURL:  historyOfMarketNDXForwardPEURL,
 		Levels:              etfRuleLevels,
-		Monthly:             map[string]float64{"quarter": 1400, "half": 2800, "one": 5600, "oneHalf": 8400, "two": 11200},
-		Weekly:              map[string]float64{"quarter": 350, "half": 700, "one": 1400, "oneHalf": 2100, "two": 2800},
+		Monthly:             fixedETFRuleAmounts(5000),
+		Weekly:              fixedETFRuleAmounts(1250),
 		Evaluate:            evaluateNasdaq100Rule,
 	},
+}
+
+func fixedETFRuleAmounts(amount float64) map[string]float64 {
+	return map[string]float64{
+		"quarter": amount,
+		"half":    amount,
+		"one":     amount,
+		"oneHalf": amount,
+		"two":     amount,
+	}
 }
 
 func updateETFRuleStatuses(client *http.Client, now time.Time) ([]ETFRuleStatus, []QuoteSkip) {
@@ -200,50 +233,303 @@ func fetchETFRuleStatus(client *http.Client, config etfRuleConfig, now time.Time
 	sources := []ETFRuleSource{{Name: config.PriceSourceName, URL: config.PriceSourceURL}}
 	statusErrs := []string{}
 
-	drawdown, drawdownDate, err := fetchETFRuleDrawdown(client, config)
-	if err != nil {
-		statusErrs = append(statusErrs, "回撤："+err.Error())
-		metrics = append(metrics, ETFRuleMetric{Key: "drawdown3y", Label: "近3年总收益回撤", Unit: "%", Available: false, Error: err.Error()})
+	var nasdaqSnapshot nasdaqOpportunitySnapshot
+	var nasdaqIssues nasdaqOpportunityErrors
+	var sp500Snapshot sp500OpportunitySnapshot
+	var sp500Issues sp500OpportunityErrors
+	var a500Snapshot a500OpportunitySnapshot
+	var a500Issues a500OpportunityErrors
+	if config.Symbol == "022434" {
+		a500Snapshot, a500Issues = fetchA500OpportunitySnapshot(client, now)
+	}
+	if config.Symbol == "018738" {
+		sp500Snapshot, sp500Issues = fetchSP500OpportunitySnapshot(client, now)
+	}
+	if config.Symbol == "022434" {
+		if a500Issues.Drawdown != nil {
+			statusErrs = append(statusErrs, "中证A500全收益回撤："+a500Issues.Drawdown.Error())
+			metrics = append(metrics, ETFRuleMetric{Key: "drawdown3y", Label: "中证A500全收益高点回撤", Unit: "%", Available: false, Error: a500Issues.Drawdown.Error()})
+		} else {
+			inputs.Drawdown = &a500Snapshot.Drawdown
+			inputs.DrawdownAsOf = a500Snapshot.Date
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "drawdown3y", Label: "中证A500全收益高点回撤", Value: percentMetric(a500Snapshot.Drawdown), Unit: "%", AsOf: a500Snapshot.Date, Available: true},
+				ETFRuleMetric{Key: "totalReturnClose", Label: "中证A500全收益指数", Value: floatMetric(a500Snapshot.IndexClose), AsOf: a500Snapshot.Date, Available: true},
+				ETFRuleMetric{Key: "totalReturnPeak", Label: "本轮全收益高点", Value: floatMetric(a500Snapshot.PeakClose), AsOf: a500Snapshot.PeakDate, Available: true},
+			)
+		}
+	} else if config.Symbol == "021000" {
+		nasdaqSnapshot, nasdaqIssues = fetchNasdaqOpportunitySnapshot(client, now)
+		if nasdaqIssues.Drawdown != nil {
+			statusErrs = append(statusErrs, "XNDX全收益回撤："+nasdaqIssues.Drawdown.Error())
+			metrics = append(metrics, ETFRuleMetric{Key: "drawdown3y", Label: "XNDX十年全收益高点回撤", Unit: "%", Available: false, Error: nasdaqIssues.Drawdown.Error()})
+		} else {
+			inputs.Drawdown = &nasdaqSnapshot.Drawdown
+			inputs.DrawdownAsOf = nasdaqSnapshot.Date
+			metrics = append(metrics, ETFRuleMetric{Key: "drawdown3y", Label: "XNDX十年全收益高点回撤", Value: percentMetric(nasdaqSnapshot.Drawdown), Unit: "%", AsOf: nasdaqSnapshot.Date, Available: true})
+		}
+	} else if config.Symbol == "018738" {
+		drawdownLabel := "SPTR全收益高点回撤"
+		if !sp500Snapshot.DirectSPTR && strings.TrimSpace(sp500Snapshot.IndexSource) != "" {
+			drawdownLabel = "标普500总回报回撤（SPY备援）"
+		}
+		if sp500Issues.Drawdown != nil {
+			statusErrs = append(statusErrs, "SPTR全收益回撤："+sp500Issues.Drawdown.Error())
+			metrics = append(metrics, ETFRuleMetric{Key: "drawdown3y", Label: drawdownLabel, Unit: "%", Available: false, Error: sp500Issues.Drawdown.Error()})
+		} else {
+			inputs.Drawdown = &sp500Snapshot.Drawdown
+			inputs.DrawdownAsOf = sp500Snapshot.Date
+			metrics = append(metrics, ETFRuleMetric{Key: "drawdown3y", Label: drawdownLabel, Value: percentMetric(sp500Snapshot.Drawdown), Unit: "%", AsOf: sp500Snapshot.Date, Available: true})
+		}
 	} else {
-		inputs.Drawdown = &drawdown
-		inputs.DrawdownAsOf = drawdownDate
-		metrics = append(metrics, ETFRuleMetric{Key: "drawdown3y", Label: "近3年总收益回撤", Value: percentMetric(drawdown), Unit: "%", AsOf: drawdownDate, Available: true})
+		drawdown, drawdownDate, err := fetchETFRuleDrawdown(client, config)
+		drawdownLabel := "近3年总收益回撤"
+		if config.Symbol == "008163" {
+			drawdownLabel = "515450成立以来总回报回撤"
+		}
+		if err != nil {
+			statusErrs = append(statusErrs, "回撤："+err.Error())
+			metrics = append(metrics, ETFRuleMetric{Key: "drawdown3y", Label: drawdownLabel, Unit: "%", Available: false, Error: err.Error()})
+		} else {
+			inputs.Drawdown = &drawdown
+			inputs.DrawdownAsOf = drawdownDate
+			metrics = append(metrics, ETFRuleMetric{Key: "drawdown3y", Label: drawdownLabel, Value: percentMetric(drawdown), Unit: "%", AsOf: drawdownDate, Available: true})
+		}
 	}
 
-	if config.Symbol == "008163" {
-		valuation, valuationErr := fetchDividendLowVolValuationSnapshot(client)
-		if valuationErr != nil {
-			statusErrs = append(statusErrs, "红利低波估值："+valuationErr.Error())
+	if config.Symbol == "022434" {
+		if a500Issues.Valuation != nil {
+			for _, metric := range []ETFRuleMetric{
+				{Key: "indexPE", Label: "中证A500滚动PE", Available: false},
+				{Key: "pePercentile", Label: "滚动PE扩展窗口分位", Unit: "%", Available: false},
+				{Key: "china10YBondYield", Label: "中债10年期国债收益率", Unit: "%", Available: false},
+				{Key: "earningsYieldSpread", Label: "A500股债利差", Unit: "%", Available: false},
+				{Key: "earningsYieldSpreadPercentile", Label: "股债利差扩展窗口分位", Unit: "%", Available: false},
+			} {
+				metric.Error = a500Issues.Valuation.Error()
+				metrics = append(metrics, metric)
+			}
+		} else {
+			inputs.ValuationPercentile = &a500Snapshot.PEPercentile
+			inputs.EarningsYieldSpreadPercentile = &a500Snapshot.SpreadPercentile
+			inputs.ValuationAsOf = a500Snapshot.Date
 			metrics = append(metrics,
-				ETFRuleMetric{Key: "dividendYield", Label: "515450绝对股息率", Unit: "%", Available: false, Error: valuationErr.Error()},
-				ETFRuleMetric{Key: "dividendYieldPercentile", Label: "股息率历史分位", Unit: "%", Available: false, Error: valuationErr.Error()},
-				ETFRuleMetric{Key: "china10YBondYield", Label: "中债10年国债收益率", Unit: "%", Available: false, Error: valuationErr.Error()},
-				ETFRuleMetric{Key: "dividendSpread", Label: "股息率利差", Unit: "%", Available: false, Error: valuationErr.Error()},
-				ETFRuleMetric{Key: "dividendSpreadPercentile", Label: "股息率利差历史分位", Unit: "%", Available: false, Error: valuationErr.Error()},
+				ETFRuleMetric{Key: "indexPE", Label: "中证A500滚动PE", Value: floatMetric(a500Snapshot.PE), AsOf: a500Snapshot.Date, Available: true},
+				ETFRuleMetric{Key: "pePercentile", Label: fmt.Sprintf("滚动PE扩展窗口分位（%d日）", a500Snapshot.PEObservationCount), Value: percentMetric(a500Snapshot.PEPercentile), Unit: "%", AsOf: a500Snapshot.Date, Available: true},
+				ETFRuleMetric{Key: "china10YBondYield", Label: "中债10年期国债收益率", Value: percentMetric(a500Snapshot.China10YBondYield), Unit: "%", AsOf: a500Snapshot.BondDate, Available: true},
+				ETFRuleMetric{Key: "earningsYieldSpread", Label: "A500股债利差", Value: percentMetric(a500Snapshot.EarningsYieldSpread), Unit: "%", AsOf: a500Snapshot.Date, Available: true},
+				ETFRuleMetric{Key: "earningsYieldSpreadPercentile", Label: fmt.Sprintf("股债利差扩展窗口分位（%d日）", a500Snapshot.SpreadObservationCount), Value: percentMetric(a500Snapshot.SpreadPercentile), Unit: "%", AsOf: a500Snapshot.Date, Available: true},
+			)
+		}
+		if a500Issues.Panic != nil {
+			for _, metric := range []ETFRuleMetric{
+				{Key: "rv20", Label: "20日实现波动率", Unit: "%", Available: false},
+				{Key: "rv20Percentile", Label: "RV20五年分位", Unit: "%", Available: false},
+				{Key: "fiveDayReturn", Label: "近5个交易日全收益", Unit: "%", Available: false},
+				{Key: "volumeRatio", Label: "成交额/20日均值", Unit: "倍", Available: false},
+			} {
+				metric.Error = a500Issues.Panic.Error()
+				metrics = append(metrics, metric)
+			}
+		} else {
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "rv20", Label: "20日实现波动率", Value: percentMetric(a500Snapshot.RV20), Unit: "%", AsOf: a500Snapshot.Date, Available: true},
+				ETFRuleMetric{Key: "rv20Percentile", Label: fmt.Sprintf("RV20五年分位（%d日）", a500Snapshot.RV20ObservationCount), Value: percentMetric(a500Snapshot.RV20Percentile), Unit: "%", AsOf: a500Snapshot.Date, Available: true},
+				ETFRuleMetric{Key: "fiveDayReturn", Label: "近5个交易日全收益", Value: percentMetric(a500Snapshot.FiveDayReturn), Unit: "%", AsOf: a500Snapshot.Date, Available: true},
+				ETFRuleMetric{Key: "volumeRatio", Label: "成交额/20日均值", Value: floatMetric(a500Snapshot.VolumeRatio), Unit: "倍", AsOf: a500Snapshot.Date, Available: a500Snapshot.VolumeRatio > 0},
+			)
+		}
+		metrics = append(metrics, ETFRuleMetric{Key: "breadthBelowMA20", Label: "成份股低于20日均线比例", Unit: "%", Available: false, Error: "免费官方成份股广度序列未接入，恐慌系数不使用此条件"})
+		if a500Issues.Trading != nil {
+			for _, metric := range []ETFRuleMetric{
+				{Key: "tacticalMarketPrice", Label: a500TacticalETFCode + "场内价格", Available: false},
+				{Key: "tacticalEstimatedNAV", Label: a500TacticalETFCode + "估算净值", Available: false},
+				{Key: "etfPremium", Label: a500TacticalETFCode + "估算溢价", Unit: "%", Available: false},
+				{Key: "bidAskSpread", Label: a500TacticalETFCode + "买卖价差", Unit: "%", Available: false},
+				{Key: "openingGap", Label: a500TacticalETFCode + "开盘涨跌", Unit: "%", Available: false},
+			} {
+				metric.Error = a500Issues.Trading.Error()
+				metrics = append(metrics, metric)
+			}
+		} else {
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "tacticalMarketPrice", Label: a500TacticalETFCode + "场内价格", Value: floatMetric(a500Snapshot.MarketPrice), AsOf: a500Snapshot.MarketPriceDate, Available: true},
+				ETFRuleMetric{Key: "tacticalOfficialNAV", Label: a500TacticalETFCode + "最近公布净值", Value: floatMetric(a500Snapshot.OfficialNAV), AsOf: a500Snapshot.OfficialNAVDate, Available: true},
+				ETFRuleMetric{Key: "tacticalEstimatedNAV", Label: a500TacticalETFCode + "估算净值", Value: floatMetric(a500Snapshot.EstimatedNAV), AsOf: a500Snapshot.MarketPriceDate, Available: true},
+				ETFRuleMetric{Key: "etfPremium", Label: a500TacticalETFCode + "估算溢价", Value: percentMetric(a500Snapshot.Premium), Unit: "%", AsOf: a500Snapshot.MarketPriceDate, Available: true},
+				ETFRuleMetric{Key: "bidAskSpread", Label: a500TacticalETFCode + "买卖价差", Value: percentMetric(a500Snapshot.BidAskSpread), Unit: "%", AsOf: a500Snapshot.MarketPriceDate, Available: true},
+				ETFRuleMetric{Key: "openingGap", Label: a500TacticalETFCode + "开盘涨跌", Value: percentMetric(a500Snapshot.OpeningGap), Unit: "%", AsOf: a500Snapshot.MarketPriceDate, Available: true},
+			)
+		}
+	} else if config.Symbol == "008163" {
+		valuation, valuationErr := fetchDividendLowVolIndexValuation(client, now)
+		if valuationErr != nil {
+			statusErrs = append(statusErrs, "红利低波场内估值代理："+valuationErr.Error())
+			errorText := "515450篮子估值代理不可用：" + valuationErr.Error()
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "dividendYield", Label: "515450篮子TTM股息率（代理）", Unit: "%", Available: false, Error: errorText},
+				ETFRuleMetric{Key: "china10YBondYield", Label: "中债10年期国债收益率", Unit: "%", Available: false, Error: errorText},
+				ETFRuleMetric{Key: "dividendSpread", Label: "篮子股债利差（代理）", Unit: "%", Available: false, Error: errorText},
+				ETFRuleMetric{Key: "dividendSpreadPercentile", Label: "篮子股债利差5年分位（代理）", Unit: "%", Available: false, Error: errorText},
+				ETFRuleMetric{Key: "indexPB", Label: "515450篮子PB（代理）", Available: false, Error: errorText},
+				ETFRuleMetric{Key: "pbPercentile", Label: "篮子PB五年历史分位（代理）", Unit: "%", Available: false, Error: errorText},
+				ETFRuleMetric{Key: "valuationScore", Label: "红利估值得分V", Unit: "%", Available: false, Error: errorText},
+				ETFRuleMetric{Key: "basketCoverage", Label: "篮子有效覆盖", Unit: "%", Available: false, Error: errorText},
 			)
 		} else {
-			inputs.DividendYield = &valuation.Yield
-			inputs.DividendYieldPercentile = &valuation.Percentile
+			inputs.DividendYield = &valuation.DividendYield
+			inputs.DividendSpreadPercentile = &valuation.SpreadPercentile
+			inputs.PBPercentile = &valuation.PBPercentile
+			inputs.ValuationScore = &valuation.ValuationScore
 			inputs.ValuationAsOf = valuation.Date
 			metrics = append(metrics,
-				ETFRuleMetric{Key: "dividendYield", Label: "515450绝对股息率", Value: percentMetric(valuation.Yield), Unit: "%", AsOf: valuation.Date, Available: true},
-				ETFRuleMetric{Key: "dividendYieldPercentile", Label: "股息率历史分位", Value: percentMetric(valuation.Percentile), Unit: "%", AsOf: valuation.Date, Available: true},
+				ETFRuleMetric{Key: "dividendYield", Label: "515450篮子TTM股息率（代理）", Value: percentMetric(valuation.DividendYield), Unit: "%", AsOf: valuation.Date, Available: true},
+				ETFRuleMetric{Key: "china10YBondYield", Label: "中债10年期国债收益率", Value: percentMetric(valuation.BondYield), Unit: "%", AsOf: valuation.BondDate, Available: true},
+				ETFRuleMetric{Key: "dividendSpread", Label: "篮子股债利差（代理）", Value: percentMetric(valuation.Spread), Unit: "%", AsOf: valuation.Date, Available: true},
+				ETFRuleMetric{Key: "dividendSpreadPercentile", Label: "篮子股债利差5年分位（代理）", Value: percentMetric(valuation.SpreadPercentile), Unit: "%", AsOf: valuation.Date, Available: true},
+				ETFRuleMetric{Key: "indexPB", Label: "515450篮子PB（代理）", Value: floatMetric(valuation.PB), AsOf: valuation.Date, Available: true},
+				ETFRuleMetric{Key: "pbPercentile", Label: "篮子PB五年历史分位（代理）", Value: percentMetric(valuation.PBPercentile), Unit: "%", AsOf: valuation.Date, Available: true},
+				ETFRuleMetric{Key: "valuationScore", Label: "红利估值得分V", Value: percentMetric(valuation.ValuationScore), Unit: "%", AsOf: valuation.Date, Available: true},
+				ETFRuleMetric{Key: "basketCoverage", Label: fmt.Sprintf("篮子有效覆盖（%d/%d）", valuation.ValidComponentCount, valuation.ComponentCount), Value: percentMetric(valuation.Coverage), Unit: "%", AsOf: valuation.Date, Available: true},
 			)
-			if valuation.SpreadAvailable {
-				inputs.DividendSpreadPercentile = &valuation.SpreadPercentile
-				inputs.ValuationAsOf = valuation.SpreadDate
-				metrics = append(metrics,
-					ETFRuleMetric{Key: "china10YBondYield", Label: "中债10年国债收益率", Value: percentMetric(valuation.BondYield), Unit: "%", AsOf: valuation.BondDate, Available: true},
-					ETFRuleMetric{Key: "dividendSpread", Label: "股息率利差", Value: percentMetric(valuation.Spread), Unit: "%", AsOf: valuation.SpreadDate, Available: true},
-					ETFRuleMetric{Key: "dividendSpreadPercentile", Label: "股息率利差历史分位", Value: percentMetric(valuation.SpreadPercentile), Unit: "%", AsOf: valuation.SpreadDate, Available: true},
-				)
-			} else {
-				metrics = append(metrics,
-					ETFRuleMetric{Key: "china10YBondYield", Label: "中债10年国债收益率", Unit: "%", Available: false, Error: valuation.SpreadError},
-					ETFRuleMetric{Key: "dividendSpread", Label: "股息率利差", Unit: "%", Available: false, Error: valuation.SpreadError},
-					ETFRuleMetric{Key: "dividendSpreadPercentile", Label: "股息率利差历史分位", Unit: "%", Available: false, Error: valuation.SpreadError},
-				)
+		}
+		market, marketErr := fetchEastmoneyQuote(client, "515450.SH")
+		if marketErr != nil || market.Price <= 0 {
+			errorText := "515450场内行情暂不可用"
+			if marketErr != nil {
+				errorText = marketErr.Error()
 			}
+			metrics = append(metrics, ETFRuleMetric{Key: "tacticalMarketPrice", Label: "515450场内价格", Available: false, Error: errorText})
+			statusErrs = append(statusErrs, "515450场内行情："+errorText)
+		} else {
+			metrics = append(metrics, ETFRuleMetric{Key: "tacticalMarketPrice", Label: "515450场内价格", Value: floatMetric(market.Price), AsOf: market.PriceDate, Available: true})
+		}
+	} else if config.Symbol == "018738" {
+		if sp500Issues.Valuation != nil {
+			statusErrs = append(statusErrs, "标普估值："+sp500Issues.Valuation.Error())
+			for _, metric := range []ETFRuleMetric{
+				{Key: "forwardPE", Label: "标普500未来12个月PE", Available: false},
+				{Key: "forwardPEPercentile", Label: "未来PE十年周度分位", Unit: "%", Available: false},
+				{Key: "us10YBondYield", Label: "美国10年期国债收益率", Unit: "%", Available: false},
+				{Key: "earningsYieldSpread", Label: "盈利收益率利差", Unit: "%", Available: false},
+				{Key: "earningsYieldSpreadPercentile", Label: "盈利利差十年周度分位", Unit: "%", Available: false},
+			} {
+				metric.Error = sp500Issues.Valuation.Error()
+				metrics = append(metrics, metric)
+			}
+		} else {
+			inputs.ValuationPercentile = &sp500Snapshot.ForwardPEPercentile
+			inputs.EarningsYieldSpreadPercentile = &sp500Snapshot.SpreadPercentile
+			inputs.ValuationAsOf = sp500Snapshot.ValuationDate
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "forwardPE", Label: "标普500未来12个月PE", Value: floatMetric(sp500Snapshot.ForwardPE), AsOf: sp500Snapshot.ValuationDate, Available: true},
+				ETFRuleMetric{Key: "forwardPEPercentile", Label: "未来PE十年周度分位", Value: percentMetric(sp500Snapshot.ForwardPEPercentile), Unit: "%", AsOf: sp500Snapshot.ValuationDate, Available: true},
+				ETFRuleMetric{Key: "us10YBondYield", Label: "美国10年期国债收益率", Value: percentMetric(sp500Snapshot.US10YBondYield), Unit: "%", AsOf: sp500Snapshot.ValuationDate, Available: true},
+				ETFRuleMetric{Key: "earningsYieldSpread", Label: "盈利收益率利差", Value: percentMetric(sp500Snapshot.EarningsYieldSpread), Unit: "%", AsOf: sp500Snapshot.ValuationDate, Available: true},
+				ETFRuleMetric{Key: "earningsYieldSpreadPercentile", Label: fmt.Sprintf("盈利利差十年周度分位（%d周）", sp500Snapshot.ValuationObservationCnt), Value: percentMetric(sp500Snapshot.SpreadPercentile), Unit: "%", AsOf: sp500Snapshot.ValuationDate, Available: true},
+			)
+		}
+		metrics = append(metrics, ETFRuleMetric{
+			Key:       "forwardEarningsRevision3m",
+			Label:     "未来盈利预期三个月修正",
+			Unit:      "%",
+			Available: false,
+			Error:     sp500Issues.EarningsRevision.Error(),
+		})
+		if sp500Issues.VIX != nil {
+			statusErrs = append(statusErrs, "VIX："+sp500Issues.VIX.Error())
+			metrics = append(metrics, ETFRuleMetric{Key: "vix", Label: "Cboe标普500波动率VIX", Available: false, Error: sp500Issues.VIX.Error()})
+		} else {
+			metrics = append(metrics, ETFRuleMetric{Key: "vix", Label: "Cboe标普500波动率VIX", Value: floatMetric(sp500Snapshot.VIX), AsOf: sp500Snapshot.VIXDate, Available: true})
+		}
+		if sp500Issues.CNYDrawdown != nil {
+			statusErrs = append(statusErrs, "人民币全收益回撤："+sp500Issues.CNYDrawdown.Error())
+			metrics = append(metrics, ETFRuleMetric{Key: "cnyTotalReturnDrawdown", Label: "人民币口径全收益回撤", Unit: "%", Available: false, Error: sp500Issues.CNYDrawdown.Error()})
+		} else {
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "cnyTotalReturnDrawdown", Label: "人民币口径全收益回撤", Value: percentMetric(sp500Snapshot.CNYDrawdown), Unit: "%", AsOf: sp500Snapshot.Date, Available: true},
+				ETFRuleMetric{Key: "usdCny", Label: "USD/CNY参考汇率", Value: floatMetric(sp500Snapshot.USDToCNY), AsOf: sp500Snapshot.FXDate, Available: true},
+			)
+		}
+		if sp500Issues.Premium != nil {
+			statusErrs = append(statusErrs, sp500TacticalETFCode+"估算溢价："+sp500Issues.Premium.Error())
+			for _, metric := range []ETFRuleMetric{
+				{Key: "sp500FuturesChange", Label: "标普500期货当日变动", Unit: "%", Available: false},
+				{Key: "tacticalMarketPrice", Label: sp500TacticalETFCode + "场内价格", Available: false},
+				{Key: "tacticalEstimatedNAV", Label: sp500TacticalETFCode + "估算实时净值", Available: false},
+				{Key: "qdiiPremium", Label: sp500TacticalETFCode + "估算溢价", Unit: "%", Available: false},
+			} {
+				metric.Error = sp500Issues.Premium.Error()
+				metrics = append(metrics, metric)
+			}
+		} else {
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "sp500FuturesChange", Label: "标普500期货当日变动", Value: percentMetric(sp500Snapshot.FuturesChange), Unit: "%", AsOf: sp500Snapshot.FuturesDate, Available: true},
+				ETFRuleMetric{Key: "tacticalMarketPrice", Label: sp500TacticalETFCode + "场内价格", Value: floatMetric(sp500Snapshot.MarketPrice), AsOf: sp500Snapshot.MarketPriceDate, Available: true},
+				ETFRuleMetric{Key: "tacticalOfficialNAV", Label: sp500TacticalETFCode + "最近公布净值", Value: floatMetric(sp500Snapshot.OfficialNAV), AsOf: sp500Snapshot.OfficialNAVDate, Available: true},
+				ETFRuleMetric{Key: "tacticalEstimatedNAV", Label: sp500TacticalETFCode + "估算实时净值", Value: floatMetric(sp500Snapshot.EstimatedNAV), AsOf: sp500Snapshot.MarketPriceDate, Available: true},
+				ETFRuleMetric{Key: "qdiiPremium", Label: sp500TacticalETFCode + "估算溢价", Value: percentMetric(sp500Snapshot.Premium), Unit: "%", AsOf: sp500Snapshot.MarketPriceDate, Available: true},
+			)
+		}
+	} else if config.Symbol == "021000" {
+		if nasdaqIssues.Valuation != nil {
+			statusErrs = append(statusErrs, "纳指估值："+nasdaqIssues.Valuation.Error())
+			for _, metric := range []ETFRuleMetric{
+				{Key: "forwardPE", Label: "纳指100未来12个月PE", Available: false},
+				{Key: "forwardPEPercentile", Label: "未来PE十年周度分位", Unit: "%", Available: false},
+				{Key: "us10YBondYield", Label: "美国10年期国债收益率", Unit: "%", Available: false},
+				{Key: "earningsYieldSpread", Label: "盈利收益率利差", Unit: "%", Available: false},
+				{Key: "earningsYieldSpreadPercentile", Label: "盈利利差十年周度分位", Unit: "%", Available: false},
+			} {
+				metric.Error = nasdaqIssues.Valuation.Error()
+				metrics = append(metrics, metric)
+			}
+		} else {
+			inputs.ValuationPercentile = &nasdaqSnapshot.ForwardPEPercentile
+			inputs.EarningsYieldSpreadPercentile = &nasdaqSnapshot.SpreadPercentile
+			inputs.ValuationAsOf = nasdaqSnapshot.ValuationDate
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "forwardPE", Label: "纳指100未来12个月PE", Value: floatMetric(nasdaqSnapshot.ForwardPE), AsOf: nasdaqSnapshot.ValuationDate, Available: true},
+				ETFRuleMetric{Key: "forwardPEPercentile", Label: "未来PE十年周度分位", Value: percentMetric(nasdaqSnapshot.ForwardPEPercentile), Unit: "%", AsOf: nasdaqSnapshot.ValuationDate, Available: true},
+				ETFRuleMetric{Key: "us10YBondYield", Label: "美国10年期国债收益率", Value: percentMetric(nasdaqSnapshot.US10YBondYield), Unit: "%", AsOf: nasdaqSnapshot.ValuationDate, Available: true},
+				ETFRuleMetric{Key: "earningsYieldSpread", Label: "盈利收益率利差", Value: percentMetric(nasdaqSnapshot.EarningsYieldSpread), Unit: "%", AsOf: nasdaqSnapshot.ValuationDate, Available: true},
+				ETFRuleMetric{Key: "earningsYieldSpreadPercentile", Label: fmt.Sprintf("盈利利差十年周度分位（%d周）", nasdaqSnapshot.ValuationObservationCnt), Value: percentMetric(nasdaqSnapshot.SpreadPercentile), Unit: "%", AsOf: nasdaqSnapshot.ValuationDate, Available: true},
+			)
+		}
+		if nasdaqIssues.VXN != nil {
+			statusErrs = append(statusErrs, "VXN："+nasdaqIssues.VXN.Error())
+			metrics = append(metrics, ETFRuleMetric{Key: "vxn", Label: "Cboe纳指100波动率VXN", Available: false, Error: nasdaqIssues.VXN.Error()})
+		} else {
+			metrics = append(metrics, ETFRuleMetric{Key: "vxn", Label: "Cboe纳指100波动率VXN", Value: floatMetric(nasdaqSnapshot.VXN), AsOf: nasdaqSnapshot.VXNDate, Available: true})
+		}
+		if nasdaqIssues.CNYDrawdown != nil {
+			statusErrs = append(statusErrs, "人民币全收益回撤："+nasdaqIssues.CNYDrawdown.Error())
+			metrics = append(metrics, ETFRuleMetric{Key: "cnyTotalReturnDrawdown", Label: "人民币口径全收益回撤", Unit: "%", Available: false, Error: nasdaqIssues.CNYDrawdown.Error()})
+		} else {
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "cnyTotalReturnDrawdown", Label: "人民币口径全收益回撤", Value: percentMetric(nasdaqSnapshot.CNYDrawdown), Unit: "%", AsOf: nasdaqSnapshot.Date, Available: true},
+				ETFRuleMetric{Key: "usdCny", Label: "USD/CNY参考汇率", Value: floatMetric(nasdaqSnapshot.USDToCNY), AsOf: nasdaqSnapshot.FXDate, Available: true},
+			)
+		}
+		if nasdaqIssues.Premium != nil {
+			statusErrs = append(statusErrs, nasdaqTacticalETFCode+"估算溢价："+nasdaqIssues.Premium.Error())
+			for _, metric := range []ETFRuleMetric{
+				{Key: "nasdaqFuturesChange", Label: "纳指期货当日变动", Unit: "%", Available: false},
+				{Key: "tacticalMarketPrice", Label: nasdaqTacticalETFCode + "场内价格", Available: false},
+				{Key: "tacticalEstimatedNAV", Label: nasdaqTacticalETFCode + "估算实时净值", Available: false},
+				{Key: "qdiiPremium", Label: nasdaqTacticalETFCode + "估算溢价", Unit: "%", Available: false},
+			} {
+				metric.Error = nasdaqIssues.Premium.Error()
+				metrics = append(metrics, metric)
+			}
+		} else {
+			metrics = append(metrics,
+				ETFRuleMetric{Key: "nasdaqFuturesChange", Label: "纳指期货当日变动", Value: percentMetric(nasdaqSnapshot.FuturesChange), Unit: "%", AsOf: nasdaqSnapshot.FuturesDate, Available: true},
+				ETFRuleMetric{Key: "tacticalMarketPrice", Label: nasdaqTacticalETFCode + "场内价格", Value: floatMetric(nasdaqSnapshot.MarketPrice), AsOf: nasdaqSnapshot.MarketPriceDate, Available: true},
+				ETFRuleMetric{Key: "tacticalOfficialNAV", Label: nasdaqTacticalETFCode + "最近公布净值", Value: floatMetric(nasdaqSnapshot.OfficialNAV), AsOf: nasdaqSnapshot.OfficialNAVDate, Available: true},
+				ETFRuleMetric{Key: "tacticalEstimatedNAV", Label: nasdaqTacticalETFCode + "估算实时净值", Value: floatMetric(nasdaqSnapshot.EstimatedNAV), AsOf: nasdaqSnapshot.MarketPriceDate, Available: true},
+				ETFRuleMetric{Key: "qdiiPremium", Label: nasdaqTacticalETFCode + "估算溢价", Value: percentMetric(nasdaqSnapshot.Premium), Unit: "%", AsOf: nasdaqSnapshot.MarketPriceDate, Available: true},
+			)
 		}
 	} else {
 		valuation, valuationErr := fetchETFRuleValuation(client, config)
@@ -265,10 +551,45 @@ func fetchETFRuleStatus(client *http.Client, config etfRuleConfig, now time.Time
 	if strings.TrimSpace(config.ValuationSourceName) != "" {
 		sources = append(sources, ETFRuleSource{Name: config.ValuationSourceName, URL: config.ValuationSourceURL})
 	}
-	if config.Symbol == "008163" {
+	if config.Symbol == "022434" {
 		sources = append(sources,
+			ETFRuleSource{Name: "中证指数中证A500全收益指数", URL: a500TotalReturnIndexURL},
+			ETFRuleSource{Name: "中证指数中证A500滚动PE", URL: a500PEHistoryURL},
 			ETFRuleSource{Name: "中债10年期国债收益率（官网校验）", URL: chinaBondHistoryURL},
 			ETFRuleSource{Name: "东方财富中债收益率历史序列", URL: "https://data.eastmoney.com/cjsj/zmgzsyl.html"},
+			ETFRuleSource{Name: "腾讯" + a500TacticalETFCode + "五档盘口", URL: "http://qt.gtimg.cn/q=sz" + a500TacticalETFCode},
+			ETFRuleSource{Name: "东方财富" + a500TacticalETFCode + "基金净值", URL: a500TacticalETFNetValueURL},
+		)
+	} else if config.Symbol == "008163" {
+		sources = append(sources,
+			ETFRuleSource{Name: "东方财富A股历史PB与收盘价", URL: eastmoneyValueAnalysisPageURL},
+			ETFRuleSource{Name: "东方财富A股分红送配", URL: eastmoneyShareBonusPageURL},
+			ETFRuleSource{Name: "标普中国A股大盘红利低波50指数", URL: spChinaLowVolDividendIndexURL},
+			ETFRuleSource{Name: "中债10年期国债收益率（官网校验）", URL: chinaBondHistoryURL},
+			ETFRuleSource{Name: "东方财富中债收益率历史序列", URL: "https://data.eastmoney.com/cjsj/zmgzsyl.html"},
+			ETFRuleSource{Name: "东方财富515450场内行情", URL: "https://quote.eastmoney.com/sh515450.html"},
+		)
+	} else if config.Symbol == "018738" {
+		sources = append(sources,
+			ETFRuleSource{Name: "S&P Dow Jones Indices标普500官方说明", URL: sp500OfficialIndexURL},
+			ETFRuleSource{Name: "美国财政部10年期国债收益率", URL: nasdaqUS10YTreasuryURL},
+			ETFRuleSource{Name: "Cboe VIX官方历史数据", URL: sp500VIXHistoryURL},
+			ETFRuleSource{Name: "Frankfurter/欧洲央行USD-CNY参考汇率", URL: nasdaqFXHistoryBaseURL},
+			ETFRuleSource{Name: "东方财富" + sp500TacticalETFCode + "场内行情", URL: sp500TacticalETFQuoteURL},
+			ETFRuleSource{Name: "东方财富" + sp500TacticalETFCode + "基金净值", URL: sp500TacticalETFNetValuePageURL},
+			ETFRuleSource{Name: "新浪标普500期货行情（Yahoo Finance备援，估算净值辅助）", URL: sp500SinaFuturesURL},
+		)
+		if !sp500Snapshot.DirectSPTR && strings.TrimSpace(sp500Snapshot.IndexSource) != "" {
+			sources = append(sources, ETFRuleSource{Name: sp500Snapshot.IndexSource, URL: sp500Snapshot.IndexSourceURL})
+		}
+	} else if config.Symbol == "021000" {
+		sources = append(sources,
+			ETFRuleSource{Name: "美国财政部10年期国债收益率", URL: nasdaqUS10YTreasuryURL},
+			ETFRuleSource{Name: "Cboe VXN官方历史数据", URL: nasdaqVXNHistoryURL},
+			ETFRuleSource{Name: "Frankfurter/欧洲央行USD-CNY参考汇率", URL: nasdaqFXHistoryBaseURL},
+			ETFRuleSource{Name: "东方财富" + nasdaqTacticalETFCode + "场内行情", URL: nasdaqTacticalETFQuoteURL},
+			ETFRuleSource{Name: "东方财富" + nasdaqTacticalETFCode + "基金净值", URL: nasdaqTacticalETFNetValuePageURL},
+			ETFRuleSource{Name: "新浪纳指期货行情（Yahoo Finance备援，估算净值辅助）", URL: nasdaqSinaFuturesURL},
 		)
 	}
 
@@ -279,8 +600,8 @@ func fetchETFRuleStatus(client *http.Client, config etfRuleConfig, now time.Time
 		Name:          config.Name,
 		Level:         evaluation.Level,
 		LevelLabel:    level.Label,
-		MonthlyAmount: config.Monthly[evaluation.Level],
-		WeeklyAmount:  config.Weekly[evaluation.Level],
+		MonthlyAmount: config.Monthly["one"],
+		WeeklyAmount:  config.Weekly["one"],
 		Complete:      evaluation.Complete,
 		Reason:        evaluation.Reason,
 		AsOf:          firstNonEmpty(inputs.DrawdownAsOf, inputs.ValuationAsOf),
@@ -315,16 +636,19 @@ func fetchETFRuleDrawdown(client *http.Client, config etfRuleConfig) (float64, s
 	case "022434":
 		closes, err = fetchCSIIndexPerformance(client, "000510CNY010", time.Now().AddDate(-3, 0, 0), time.Now())
 	case "018738":
-		closes, err = fetchSPYTotalReturnCloses(client, tradingDays+40)
+		closes, err = fetchSP500TotalReturnCloses(client)
 	case "008163":
-		closes, err = fetchDividendLowVolTotalReturnCloses(client, tradingDays+40)
+		closes, err = fetchDividendLowVolTotalReturnCloses(client, 7*252+80)
 	case "021000":
-		closes, err = fetchNasdaqIndexHistoryChart(client, "XNDX", time.Now().AddDate(-3, 0, 0), time.Now())
+		closes, err = fetchNasdaqIndexHistoryChart(client, "XNDX", time.Now().AddDate(-nasdaqTacticalHistoryYears, 0, -14), time.Now())
 	default:
 		closes, err = fetchRuleDailyCloses(client, config.PriceSymbol, tradingDays+40)
 	}
 	if err != nil {
 		return 0, "", err
+	}
+	if config.Symbol == "008163" || config.Symbol == "018738" {
+		return drawdownFromRecentHigh(closes, len(closes))
 	}
 	return drawdownFromRecentHigh(closes, tradingDays)
 }
@@ -437,15 +761,79 @@ func fetchSPYTotalReturnCloses(client *http.Client, limit int) ([]dailyClose, er
 }
 
 func fetchDividendLowVolTotalReturnCloses(client *http.Client, limit int) ([]dailyClose, error) {
-	closes, err := fetchTencentRawDailyCloses(client, "515450.SH", limit)
+	closes, events, err := fetchEastmoneyFundNAVTrend(client, "515450")
 	if err != nil {
 		return nil, err
 	}
-	events, err := fetchEastmoneyFundDividends(client, "515450")
-	if err != nil {
-		return nil, err
+	if limit > 0 && len(closes) > limit {
+		closes = closes[len(closes)-limit:]
 	}
 	return totalReturnCloses(closes, events)
+}
+
+func fetchEastmoneyFundNAVTrend(client *http.Client, code string) ([]dailyClose, []cashDividendEvent, error) {
+	normalized := normalizeFundSymbol(code)
+	endpoint := "https://fund.eastmoney.com/pingzhongdata/" + url.PathEscape(normalized) + ".js"
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	req.Header.Set("Accept", "application/javascript,text/javascript,*/*")
+	req.Header.Set("Referer", "https://fund.eastmoney.com/"+url.PathEscape(normalized)+".html")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; holds-website etf rule updater)")
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, nil, fmt.Errorf("fund NAV trend request failed: %s %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+	if err != nil {
+		return nil, nil, err
+	}
+	return parseEastmoneyFundNAVTrend(body)
+}
+
+func parseEastmoneyFundNAVTrend(body []byte) ([]dailyClose, []cashDividendEvent, error) {
+	const marker = "var Data_netWorthTrend = "
+	text := string(body)
+	start := strings.Index(text, marker)
+	if start < 0 {
+		return nil, nil, errors.New("missing fund NAV trend")
+	}
+	start += len(marker)
+	end := strings.Index(text[start:], ";")
+	if end < 0 {
+		return nil, nil, errors.New("incomplete fund NAV trend")
+	}
+	var points []struct {
+		Timestamp int64   `json:"x"`
+		NAV       float64 `json:"y"`
+		UnitMoney string  `json:"unitMoney"`
+	}
+	if err := json.Unmarshal([]byte(text[start:start+end]), &points); err != nil {
+		return nil, nil, err
+	}
+	closes := make([]dailyClose, 0, len(points))
+	events := []cashDividendEvent{}
+	for _, point := range points {
+		if point.Timestamp <= 0 || point.NAV <= 0 {
+			continue
+		}
+		date := time.UnixMilli(point.Timestamp).In(time.FixedZone("Asia/Shanghai", 8*60*60)).Format(etfRuleRuntimeTimestampDateLayout)
+		closes = append(closes, dailyClose{Date: date, Price: point.NAV})
+		if amount, err := fundDividendAmount(point.UnitMoney); err == nil && amount > 0 {
+			events = append(events, cashDividendEvent{Date: date, Amount: amount})
+		}
+	}
+	if len(closes) < 2 {
+		return nil, nil, errors.New("insufficient fund NAV trend")
+	}
+	sort.Slice(closes, func(i, j int) bool { return closes[i].Date < closes[j].Date })
+	return closes, events, nil
 }
 
 func totalReturnCloses(closes []dailyClose, events []cashDividendEvent) ([]dailyClose, error) {
@@ -1025,15 +1413,20 @@ type fundDBIndexPEPoint struct {
 	Date       string
 }
 
-func fetchFundDBIndexPEPercentile(client *http.Client, indexCode string, category string) (float64, string, error) {
-	payload := map[string]any{
-		"gu_code":     strings.TrimSpace(indexCode),
-		"pe_category": "pe",
-		"year":        10,
-		"category":    strings.TrimSpace(category),
-		"ver":         "new",
+func fetchFundDBIndexPBPercentile(client *http.Client, indexCode string, category string) (float64, string, error) {
+	body, err := fetchFundDBIndexValuationPayload(client, indexCode, category)
+	if err != nil {
+		return 0, "", err
 	}
-	body, err := fundDBPost(client, "/v2/guzhi/newtubiaodata", payload)
+	point, err := parseFundDBIndexPercentile(body, "pb", "PB")
+	if err != nil {
+		return 0, "", err
+	}
+	return point.Percentile, point.Date, nil
+}
+
+func fetchFundDBIndexPEPercentile(client *http.Client, indexCode string, category string) (float64, string, error) {
+	body, err := fetchFundDBIndexValuationPayload(client, indexCode, category)
 	if err != nil {
 		return 0, "", err
 	}
@@ -1044,7 +1437,30 @@ func fetchFundDBIndexPEPercentile(client *http.Client, indexCode string, categor
 	return point.Percentile, point.Date, nil
 }
 
+func fetchFundDBIndexValuationPayload(client *http.Client, indexCode string, category string) ([]byte, error) {
+	payload := map[string]any{
+		"gu_code":     strings.TrimSpace(indexCode),
+		"pe_category": "pe",
+		"year":        10,
+		"category":    strings.TrimSpace(category),
+		"ver":         "new",
+	}
+	body, err := fundDBPost(client, "/v2/guzhi/newtubiaodata", payload)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
 func parseFundDBIndexPEPercentile(body []byte) (fundDBIndexPEPoint, error) {
+	return parseFundDBIndexPercentile(body, "pe", "PE")
+}
+
+func parseFundDBIndexPBPercentile(body []byte) (fundDBIndexPEPoint, error) {
+	return parseFundDBIndexPercentile(body, "pb", "PB")
+}
+
+func parseFundDBIndexPercentile(body []byte, attribute string, label string) (fundDBIndexPEPoint, error) {
 	var payload struct {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
@@ -1070,7 +1486,7 @@ func parseFundDBIndexPEPercentile(body []byte) (fundDBIndexPEPoint, error) {
 		return fundDBIndexPEPoint{}, fmt.Errorf("funddb missing update date: %s", date)
 	}
 	for _, item := range payload.Data.TopData {
-		if strings.TrimSpace(item.Attribute) != "pe" && !strings.Contains(item.Name, "市盈率") {
+		if strings.TrimSpace(item.Attribute) != strings.TrimSpace(attribute) {
 			continue
 		}
 		percentile, err := parseFundDBPercentile(item.NewPercentValue.Value)
@@ -1079,7 +1495,7 @@ func parseFundDBIndexPEPercentile(body []byte) (fundDBIndexPEPoint, error) {
 		}
 		return fundDBIndexPEPoint{Percentile: percentile, Date: date}, nil
 	}
-	return fundDBIndexPEPoint{}, errors.New("funddb missing PE percentile")
+	return fundDBIndexPEPoint{}, fmt.Errorf("funddb missing %s percentile", label)
 }
 
 func parseFundDBPercentile(value string) (float64, error) {
@@ -1743,6 +2159,8 @@ type datedRate struct {
 	Value float64
 }
 
+// fetchDividendLowVolValuationSnapshot is a legacy fund-payout diagnostic. It
+// must not be used as the target index's TTM dividend yield or trading signal.
 func fetchDividendLowVolValuationSnapshot(client *http.Client) (dividendLowVolValuationSnapshot, error) {
 	closes, err := fetchTencentRawDailyCloses(client, "515450.SH", 10*252+80)
 	if err != nil {
@@ -2603,60 +3021,78 @@ func normalPercentileFromZ(zScore float64) float64 {
 }
 
 func evaluateA500Rule(inputs etfRuleInputs) etfRuleEvaluation {
-	return evaluatePEPercentileRule(inputs, "中证A500", 0.12, 0.18)
+	pePercentile := valueOrNaN(inputs.ValuationPercentile)
+	spreadPercentile := valueOrNaN(inputs.EarningsYieldSpreadPercentile)
+	if !known(pePercentile) || !known(spreadPercentile) {
+		return completeRule("one", "估值数据缺失，按中性系数V=1处理；全收益回撤仍是唯一主触发")
+	}
+	switch {
+	case pePercentile <= 0.30 && spreadPercentile >= 0.70:
+		return completeRule("oneHalf", "估值便宜：PE不高于30%分位且股债利差不低于70%分位，机会仓金额系数V=1.25")
+	case pePercentile >= 0.75 && spreadPercentile <= 0.30:
+		return completeRule("quarter", "估值偏贵：PE不低于75%分位且股债利差不高于30%分位，机会仓金额系数V=0.5")
+	default:
+		return completeRule("one", "估值中性：机会仓金额系数V=1，全收益回撤决定是否触发")
+	}
 }
 
 func evaluateSP500Rule(inputs etfRuleInputs) etfRuleEvaluation {
-	return evaluatePEPercentileRule(inputs, "标普500", 0.15, 0.20)
+	pePercentile := valueOrNaN(inputs.ValuationPercentile)
+	spreadPercentile := valueOrNaN(inputs.EarningsYieldSpreadPercentile)
+	if !known(pePercentile) || !known(spreadPercentile) {
+		return pendingRule("需要同源未来PE分位和盈利收益率利差分位判断标普机会仓估值")
+	}
+	switch {
+	case pePercentile < 0.40 && spreadPercentile > 0.60:
+		return completeRule("oneHalf", "估值便宜：未来PE低于40%分位且盈利利差高于60%分位；只调整机会仓金额，不单独触发买入")
+	case pePercentile > 0.80 && spreadPercentile < 0.20:
+		return completeRule("quarter", "估值昂贵：未来PE高于80%分位且盈利利差低于20%分位；-8%和-12%档金额减半")
+	default:
+		return completeRule("one", "估值中性：SPTR全收益回撤决定档位，估值只调整本档金额")
+	}
 }
 
 func evaluateDividendLowVolRule(inputs etfRuleInputs) etfRuleEvaluation {
-	drawdown := valueOrNaN(inputs.Drawdown)
+	valuationScore := valueOrNaN(inputs.ValuationScore)
 	spreadPercentile := valueOrNaN(inputs.DividendSpreadPercentile)
-	base := ""
-	reason := ""
-	if known(spreadPercentile) {
-		base = dividendAttractivenessBaseLevel(spreadPercentile)
-		reason = "按股息率利差历史分位确定基础倍数"
-	} else {
-		yield := valueOrNaN(inputs.DividendYield)
-		yieldPercentile := valueOrNaN(inputs.DividendYieldPercentile)
-		if !known(yield) || !known(yieldPercentile) {
-			return pendingRule("利差暂不可得，需要绝对股息率和股息率历史分位共同确认")
-		}
-		yieldLevel := dividendYieldBaseLevel(yield)
-		percentileLevel := dividendAttractivenessBaseLevel(yieldPercentile)
-		base = lowerETFRuleLevel(yieldLevel, percentileLevel)
-		reason = fmt.Sprintf("利差暂不可得，绝对股息率%s、历史分位%s，取较低档%s", etfRuleLevels[yieldLevel].Label, etfRuleLevels[percentileLevel].Label, etfRuleLevels[base].Label)
+	if known(valuationScore) {
+		base := dividendAttractivenessBaseLevel(valuationScore)
+		return completeRule(base, "按75%股债利差分位+25%PB便宜度计算估值得分V；场外基础定投不择时")
 	}
-	return confirmAccelerationByDrawdown(base, drawdown, 0.08, 0.12, reason)
+	if known(spreadPercentile) {
+		base := dividendAttractivenessBaseLevel(spreadPercentile)
+		return completeRule(base, "PB分位待数据，暂按股债利差分位显示水位；V未确认前不触发场内大额买入")
+	}
+	return pendingRule("需要标的指数股债利差分位判断水位；不单独使用PE、绝对股息率或恐慌指数")
+}
+
+func dividendLowVolValuationScore(spreadPercentile float64, pbPercentile float64) float64 {
+	return 0.75*spreadPercentile + 0.25*(1-pbPercentile)
 }
 
 func evaluateNasdaq100Rule(inputs etfRuleInputs) etfRuleEvaluation {
-	return evaluatePEPercentileRule(inputs, "纳斯达克100", 0.20, 0.30)
+	pePercentile := valueOrNaN(inputs.ValuationPercentile)
+	spreadPercentile := valueOrNaN(inputs.EarningsYieldSpreadPercentile)
+	if !known(pePercentile) || !known(spreadPercentile) {
+		return pendingRule("需要同源未来PE分位和盈利收益率利差分位判断纳指机会仓估值")
+	}
+	switch {
+	case pePercentile < 0.30 || spreadPercentile > 0.70:
+		return completeRule("oneHalf", "估值便宜：未来PE低于30%分位或盈利利差高于70%分位；只调整机会仓金额，不单独触发买入")
+	case pePercentile > 0.80 && spreadPercentile < 0.20:
+		return completeRule("quarter", "估值昂贵：未来PE高于80%分位且盈利利差低于20%分位；-10%和-15%档金额减半")
+	default:
+		return completeRule("one", "估值中性：XNDX全收益回撤决定档位，估值只调整本档金额")
+	}
 }
 
-func evaluatePEPercentileRule(inputs etfRuleInputs, name string, oneHalfDrawdown float64, twoDrawdown float64) etfRuleEvaluation {
+func evaluatePEPercentileWaterLevel(inputs etfRuleInputs, name string) etfRuleEvaluation {
 	valuation := valueOrNaN(inputs.ValuationPercentile)
 	if !known(valuation) {
-		return pendingRule("需要" + name + " PE分位决定基础倍数")
+		return pendingRule("需要" + name + " PE分位判断水位")
 	}
-	base := percentileBaseLevel(valuation, 0.80, 0.60, 0.40, 0.20)
-	return confirmAccelerationByDrawdown(base, valueOrNaN(inputs.Drawdown), oneHalfDrawdown, twoDrawdown, "按PE分位确定基础倍数")
-}
-
-func confirmAccelerationByDrawdown(base string, drawdown float64, oneHalfDrawdown float64, twoDrawdown float64, reason string) etfRuleEvaluation {
-	switch base {
-	case "oneHalf":
-		if !known(drawdown) || drawdown < oneHalfDrawdown {
-			return completeRule("one", fmt.Sprintf("%s；1.5倍候选回撤未达到%.0f%%，执行1倍", reason, oneHalfDrawdown*100))
-		}
-	case "two":
-		if !known(drawdown) || drawdown < twoDrawdown {
-			return completeRule("oneHalf", fmt.Sprintf("%s；2倍候选回撤未达到%.0f%%，执行1.5倍", reason, twoDrawdown*100))
-		}
-	}
-	return completeRule(base, reason+"；回撤只确认加速")
+	level := percentileBaseLevel(valuation, 0.80, 0.60, 0.40, 0.20)
+	return completeRule(level, "按PE分位判断水位；基础定投不根据估值择时")
 }
 
 func percentileBaseLevel(value float64, quarterThreshold float64, halfThreshold float64, oneThreshold float64, oneHalfThreshold float64) string {
@@ -2813,11 +3249,19 @@ func mergeETFRuleStatusWithExisting(next ETFRuleStatus, existing ETFRuleStatus, 
 		if next.Metrics[i].Available {
 			continue
 		}
+		if retiredDividendLowVolProxyMetric(next.Symbol, next.Metrics[i]) {
+			continue
+		}
 		previous, ok := existingMetrics[next.Metrics[i].Key]
 		if !ok || !previous.Available {
 			continue
 		}
+		if next.Symbol == "008163" && dividendLowVolValuationMetric(previous.Key) && !dividendLowVolStatusUsesBasketProxy(existing) {
+			continue
+		}
 		previous.Error = ""
+		previous.QualityState = etfQualityDegraded
+		previous.QualityMessage = "本次更新失败，沿用上次成功值"
 		next.Metrics[i] = previous
 		usedFallback = true
 	}
@@ -2829,6 +3273,34 @@ func mergeETFRuleStatusWithExisting(next ETFRuleStatus, existing ETFRuleStatus, 
 		next = stabilizeETFRuleLevel(next, existing, config)
 	}
 	return next
+}
+
+func dividendLowVolValuationMetric(key string) bool {
+	switch strings.TrimSpace(key) {
+	case "dividendYield", "china10YBondYield", "dividendSpread", "dividendSpreadPercentile", "indexPB", "pbPercentile", "valuationScore", "basketCoverage":
+		return true
+	default:
+		return false
+	}
+}
+
+func dividendLowVolStatusUsesBasketProxy(status ETFRuleStatus) bool {
+	for _, source := range status.Sources {
+		if strings.Contains(source.Name, "515450申购赎回篮子") {
+			return true
+		}
+	}
+	return false
+}
+
+func retiredDividendLowVolProxyMetric(symbol string, metric ETFRuleMetric) bool {
+	if symbol != "008163" {
+		return false
+	}
+	if metric.Key != "dividendSpread" && metric.Key != "dividendSpreadPercentile" {
+		return false
+	}
+	return strings.Contains(metric.Error, "基金现金分红不代替指数股息率")
 }
 
 func stabilizeETFRuleLevel(next ETFRuleStatus, existing ETFRuleStatus, config etfRuleConfig) ETFRuleStatus {
@@ -2873,7 +3345,7 @@ func stabilizeETFRuleLevel(next ETFRuleStatus, existing ETFRuleStatus, config et
 	next.MonthlyAmount = config.Monthly[existing.Level]
 	next.WeeklyAmount = config.Weekly[existing.Level]
 	next.LevelUpdatedAt = firstNonEmpty(existing.LevelUpdatedAt, existing.AsOf)
-	next.Reason = fmt.Sprintf("候选%s跨档确认中，继续执行%s", candidateLabel, next.LevelLabel)
+	next.Reason = fmt.Sprintf("候选水位%s跨档确认中，继续显示%s", candidateLabel, next.LevelLabel)
 	return next
 }
 
@@ -2922,6 +3394,18 @@ func refreshETFRuleStatusFromMetrics(status ETFRuleStatus) ETFRuleStatus {
 			value := *metric.Value / 100
 			inputs.DividendSpreadPercentile = &value
 			inputs.ValuationAsOf = metric.AsOf
+		case "pbPercentile":
+			value := *metric.Value / 100
+			inputs.PBPercentile = &value
+			inputs.ValuationAsOf = metric.AsOf
+		case "valuationScore":
+			value := *metric.Value / 100
+			inputs.ValuationScore = &value
+			inputs.ValuationAsOf = metric.AsOf
+		case "earningsYieldSpreadPercentile":
+			value := *metric.Value / 100
+			inputs.EarningsYieldSpreadPercentile = &value
+			inputs.ValuationAsOf = metric.AsOf
 		case config.ValuationMetricKey:
 			if metric.Key == "peZScore" || strings.TrimSpace(metric.Unit) == "σ" {
 				value := *metric.Value
@@ -2937,8 +3421,8 @@ func refreshETFRuleStatusFromMetrics(status ETFRuleStatus) ETFRuleStatus {
 	level := config.Levels[evaluation.Level]
 	status.Level = evaluation.Level
 	status.LevelLabel = level.Label
-	status.MonthlyAmount = config.Monthly[evaluation.Level]
-	status.WeeklyAmount = config.Weekly[evaluation.Level]
+	status.MonthlyAmount = config.Monthly["one"]
+	status.WeeklyAmount = config.Weekly["one"]
 	status.Complete = evaluation.Complete
 	status.Reason = evaluation.Reason
 	status.AsOf = firstNonEmpty(inputs.DrawdownAsOf, inputs.ValuationAsOf, status.AsOf)
@@ -2960,22 +3444,15 @@ func etfRuleConfigBySymbol(symbol string) (etfRuleConfig, bool) {
 
 func enforceETFRuleStatusConfidence(status ETFRuleStatus, config etfRuleConfig, now time.Time) ETFRuleStatus {
 	if !status.Complete {
-		return zeroETFRuleExecutableAmount(status)
+		return status
 	}
 	if len(etfRuleStatusConfidenceIssues(status, config, now)) == 0 {
 		return status
 	}
-	status = zeroETFRuleExecutableAmount(status)
+	status.Complete = false
 	if strings.TrimSpace(status.Reason) == "" {
 		status.Reason = "等待指标刷新"
 	}
-	return status
-}
-
-func zeroETFRuleExecutableAmount(status ETFRuleStatus) ETFRuleStatus {
-	status.Complete = false
-	status.MonthlyAmount = 0
-	status.WeeklyAmount = 0
 	return status
 }
 
@@ -3003,15 +3480,19 @@ func etfRuleStatusConfidenceIssues(status ETFRuleStatus, config etfRuleConfig, n
 }
 
 func etfRuleRequiredValuationMetricKeys(status ETFRuleStatus, config etfRuleConfig) []string {
+	if config.Symbol == "022434" {
+		return []string{"drawdown3y", "etfPremium", "bidAskSpread"}
+	}
+	if config.Symbol == "018738" {
+		return []string{"forwardPE", "forwardPEPercentile", "us10YBondYield", "earningsYieldSpreadPercentile", "vix", "cnyTotalReturnDrawdown", "qdiiPremium"}
+	}
+	if config.Symbol == "021000" {
+		return []string{"forwardPE", "forwardPEPercentile", "us10YBondYield", "earningsYieldSpreadPercentile", "vxn", "cnyTotalReturnDrawdown", "qdiiPremium"}
+	}
 	if config.Symbol != "008163" {
 		return []string{config.ValuationMetricKey}
 	}
-	for _, metric := range status.Metrics {
-		if metric.Key == "dividendSpreadPercentile" && metric.Available && metric.Value != nil {
-			return []string{"dividendSpreadPercentile"}
-		}
-	}
-	return []string{"dividendYield", "dividendYieldPercentile"}
+	return []string{"dividendYield", "china10YBondYield", "dividendSpreadPercentile", "pbPercentile", "valuationScore", "basketCoverage"}
 }
 
 func etfRuleMetricConfidenceIssues(metric ETFRuleMetric, config etfRuleConfig, now time.Time) []string {
@@ -3045,14 +3526,34 @@ func etfRuleMetricConfidenceIssues(metric ETFRuleMetric, config etfRuleConfig, n
 
 func etfRuleMetricValueInExpectedRange(metric ETFRuleMetric, config etfRuleConfig, value float64) bool {
 	switch metric.Key {
-	case "drawdown3y":
+	case "drawdown3y", "cnyTotalReturnDrawdown":
 		return value >= 0 && value <= 100
-	case "dividendYield", "china10YBondYield":
+	case "dividendYield", "china10YBondYield", "us10YBondYield":
 		return value > 0 && value <= 20
-	case "dividendSpread":
+	case "dividendSpread", "earningsYieldSpread":
 		return value >= -20 && value <= 20
-	case "dividendYieldPercentile", "dividendSpreadPercentile":
+	case "forwardPE", "indexPE":
+		return value >= 5 && value <= 100
+	case "vix", "vxn":
+		return value >= 5 && value <= 150
+	case "usdCny":
+		return value >= 4 && value <= 12
+	case "nasdaqFuturesChange", "sp500FuturesChange", "qdiiPremium", "etfPremium", "bidAskSpread", "openingGap", "fiveDayReturn", "forwardEarningsRevision3m":
+		return value >= -50 && value <= 100
+	case "tacticalMarketPrice", "tacticalOfficialNAV", "tacticalEstimatedNAV":
+		return value > 0 && value <= 100
+	case "indexPB":
+		return value >= 0.05 && value <= 20
+	case "basketCoverage":
+		return value >= dividendLowVolMinimumCoverage*100 && value <= 100
+	case "dividendYieldPercentile", "dividendSpreadPercentile", "pbPercentile", "valuationScore", "forwardPEPercentile", "pePercentile", "earningsYieldSpreadPercentile", "rv20Percentile", "breadthBelowMA20":
 		return value >= 0 && value <= 100
+	case "rv20":
+		return value >= 0 && value <= 200
+	case "volumeRatio":
+		return value >= 0 && value <= 20
+	case "totalReturnClose", "totalReturnPeak":
+		return value > 0
 	case config.ValuationMetricKey:
 		if metric.Key == "peZScore" || strings.TrimSpace(metric.Unit) == "σ" {
 			return value >= -6 && value <= 6
@@ -3064,7 +3565,10 @@ func etfRuleMetricValueInExpectedRange(metric ETFRuleMetric, config etfRuleConfi
 }
 
 func etfRuleMetricMaxAgeDays(metric ETFRuleMetric, config etfRuleConfig) int {
-	if metric.Key == "dividendYieldPercentile" || metric.Key == "dividendSpreadPercentile" {
+	if config.Symbol == "008163" && dividendLowVolValuationMetric(metric.Key) {
+		return etfRuleWeeklyMetricMaxAgeDays
+	}
+	if metric.Key == "dividendYieldPercentile" || metric.Key == "dividendSpreadPercentile" || metric.Key == "pbPercentile" || metric.Key == "valuationScore" || metric.Key == "forwardPE" || metric.Key == "forwardPEPercentile" || metric.Key == "pePercentile" || metric.Key == "earningsYieldSpreadPercentile" {
 		return etfRuleMonthlyMetricMaxAgeDays
 	}
 	if metric.Key == config.ValuationMetricKey && (config.Symbol == "018738" || config.Symbol == "021000") {

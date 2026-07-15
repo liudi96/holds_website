@@ -108,29 +108,49 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 	requireContains(t, js, `ETF_RULE_TRACKER_RULES`)
 	requireContains(t, js, `etfRuleStatuses`)
 	requireContains(t, js, `renderEtfRuleTracker();`)
-	requireContains(t, js, `status?.complete`)
 	requireContains(t, js, `renderEtfRuleMetric`)
 	requireContains(t, js, `renderEtfRuleRulebook`)
 	requireContains(t, js, `ETF_ALLOCATION_POOL_BASE`)
+	requireContains(t, js, `ETF_ALLOCATION_POOL_BASE = 1400000`)
 	requireContains(t, js, `ETF_ALLOCATION_MONTHLY_INFLOW`)
-	requireContains(t, js, `ETF_ALLOCATION_CORRECTION_THRESHOLD`)
-	requireContains(t, js, `ETF_RULE_TRADING_DAYS_PER_WEEK`)
-	requireContains(t, js, `function etfRuleDailyAmount`)
+	requireContains(t, js, `ETF_ALLOCATION_MONTHLY_INFLOW = 20000`)
+	requireContains(t, js, `ETF_ALLOCATION_TOTAL_EQUITY_WEIGHT`)
+	requireContains(t, js, `ETF_RULE_TRADING_DAYS_PER_YEAR`)
+	requireContains(t, js, `function etfRulePlannedDailyAmount`)
+	requireContains(t, js, `function etfRuleDrawdownPlan`)
+	requireContains(t, js, `function dividendLowVolTacticalPlan`)
+	requireContains(t, js, `function sp500TacticalPlan`)
+	requireContains(t, js, `function nasdaq100TacticalPlan`)
+	requireContains(t, js, `function renderDividendLowVolRulebook`)
+	requireContains(t, js, `function renderSP500Rulebook`)
+	requireContains(t, js, `function renderNasdaq100Rulebook`)
+	requireContains(t, js, `function renderA500Rulebook`)
+	requireContains(t, js, `function a500TacticalPlan`)
 	requireContains(t, js, `function etfAllocationSnapshot`)
 	requireContains(t, js, `function etfRuleExecution`)
 	requireContains(t, js, `renderEtfAllocationBar`)
 	requireContains(t, js, `renderEtfPoolProgress`)
 	requireContains(t, js, `renderEtfRuleActionItem`)
 	requireContains(t, js, `etf-rule-action-list`)
-	requireContains(t, js, `etf-rule-detail-layer`)
-	requireContains(t, js, `日计划`)
-	requireContains(t, js, `今日计划`)
+	requireContains(t, js, `etf-detail-workspace`)
+	requireContains(t, js, `function etfTacticalDecision`)
+	requireContains(t, js, `function renderEtfStageTimeline`)
+	requireContains(t, js, `function renderEtfSourceAudit`)
+	requireContains(t, js, `data-etf-tactical-buy`)
+	requireContains(t, js, `data-etf-tactical-override`)
+	requireContains(t, js, `data-etf-execution-refresh`)
+	requireContains(t, js, `场内机会`)
+	requireContains(t, js, `数据健康`)
+	requireContains(t, js, `最近更新`)
+	requireContains(t, js, `场外日投`)
+	requireContains(t, js, `场外月投`)
+	requireContains(t, js, `场内机会资金P`)
 	requireContains(t, js, `data-etf-rule-buy`)
 	requireContains(t, js, `function openEtfBuyDialog`)
 	requireContains(t, js, `function tradeFromEtfRuleBuyForm`)
 	requireContains(t, js, `async function saveEtfRuleBuy`)
 	requireContains(t, js, `async function saveTradeRecord`)
-	for _, symbol := range []string{"022434", "018738", "008163", "021000", "563020"} {
+	for _, symbol := range []string{"022434", "008163", "018738", "021000", "159352", "515450", "563020", "513650", "159659"} {
 		requireContains(t, js, symbol)
 	}
 	for _, fundName := range []string{
@@ -145,20 +165,34 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 		requireContains(t, js, level)
 	}
 	for _, condition := range []string{
-		"PE分位>80%",
-		"PE分位60%—80%",
-		"PE分位20%—40%；回撤<15%则降为1倍",
-		"回退口径取绝对股息率与历史分位较低档",
-		"PE分位<20%；回撤<30%则降为1.5倍",
-		`targetWeight: 0.35`,
-		`targetWeight: 0.25`,
-		`targetWeight: 0.30`,
-		`targetWeight: 0.10`,
-		`quarter: 4900, half: 9800, one: 19600, oneHalf: 29400, two: 39200`,
-		`quarter: 1400, half: 2800, one: 5600, oneHalf: 8400, two: 11200`,
+		"V=75%×股债利差分位+25%×(100－PB历史分位)",
+		"515450成立以来总回报回撤档位",
+		"P=max(0，目标",
+		"每档拆两笔",
+		"单日最多40%P",
+		"VIX不用于515450",
+		"SPTR全收益高点回撤档位",
+		"VIX不能单独触发",
+		"未来盈利预期三个月下调超过10%",
+		"513650只承担场内机会仓",
+		"XNDX全收益高点回撤档位",
+		"VXN不能单独触发",
+		"场内估算溢价",
+		"中证A500全收益高点回撤档位",
+		"本轮不随涨跌重算",
+		"RV20五年分位",
+		"溢价和买卖价差均≤0.15%",
+		"3/6/9/12/15/18个月最低完成",
+		`targetWeight: 0.175`,
+		`dailyBase: 250`,
+		`monthlyBase: 5000`,
 	} {
 		requireContains(t, js, condition)
 	}
+	requireNotContains(t, js, `targetWeight: 0.40`)
+	requireNotContains(t, js, `targetWeight: 0.35`)
+	requireNotContains(t, js, `targetWeight: 0.30`)
+	requireNotContains(t, js, `targetWeight: 0.20`)
 	requireNotContains(t, js, `ETF_RULE_TRACKER_KEY`)
 	requireNotContains(t, js, `data-etf-rule-level`)
 	requireNotContains(t, js, `data-etf-rule-done`)
@@ -181,6 +215,7 @@ func TestEtfRuleTrackerRendersOnOverviewPage(t *testing.T) {
 	requireContains(t, css, `.etf-rule-live`)
 	requireContains(t, css, `.etf-rule-metric`)
 	requireContains(t, css, `.etf-rule-rulebook`)
+	requireContains(t, css, `.etf-rule-water-guide`)
 	requireContains(t, css, `.etf-rule-condition.boost`)
 	requireNotContains(t, js, `etf-rule-levels`)
 	requireNotContains(t, js, `etf-rule-active-condition`)
@@ -230,6 +265,9 @@ func TestOverviewAutoRefreshesStockQuotesOnly(t *testing.T) {
 	requireContains(t, js, `if (route.page === "overview")`)
 	requireContains(t, js, `void autoRefreshOverviewStockQuotes();`)
 	requireContains(t, goMain, `mux.HandleFunc("POST /api/quotes/stocks/update", server.handleUpdateStockQuotes)`)
+	requireContains(t, goMain, `mux.HandleFunc("POST /api/etf/execution-quotes/update", server.handleUpdateETFExecutionQuotes)`)
+	requireContains(t, js, `requestJSON("/api/etf/execution-quotes/update"`)
+	requireContains(t, js, `}, 60000)`)
 	requireContains(t, js, `if (window.location.hash.slice(1) === view)`)
 	requireContains(t, js, `handleRoute(view);`)
 }

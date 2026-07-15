@@ -110,6 +110,17 @@ func saveRuntimeMarketData(records []RuntimeQuote, statuses []ETFRuleStatus, upd
 	if book.ETFRuleStatuses == nil {
 		book.ETFRuleStatuses = map[string]ETFRuleStatus{}
 	}
+	if statuses != nil {
+		activeSymbols := make(map[string]struct{}, len(etfRuleConfigs))
+		for _, config := range etfRuleConfigs {
+			activeSymbols[normalizeFundSymbol(config.Symbol)] = struct{}{}
+		}
+		for symbol := range book.ETFRuleStatuses {
+			if _, active := activeSymbols[normalizeFundSymbol(symbol)]; !active {
+				delete(book.ETFRuleStatuses, symbol)
+			}
+		}
+	}
 	for _, record := range records {
 		symbol := normalizeSymbol(record.Symbol)
 		if symbol == "" {
@@ -125,7 +136,9 @@ func saveRuntimeMarketData(records []RuntimeQuote, statuses []ETFRuleStatus, upd
 			continue
 		}
 		status.Symbol = symbol
-		status = mergeETFRuleStatusWithExisting(status, book.ETFRuleStatuses[symbol], runtimeQuoteBookUpdateTime(updatedAt))
+		qualityTime := runtimeQuoteBookUpdateTime(updatedAt)
+		status = mergeETFRuleStatusWithExisting(status, book.ETFRuleStatuses[symbol], qualityTime)
+		applyETFStatusDataQuality(&status, qualityTime)
 		book.ETFRuleStatuses[symbol] = status
 	}
 	return saveRuntimeQuoteBook(book)
